@@ -5732,6 +5732,20 @@ static int stv090x_init(struct dvb_frontend *fe)
 	if (stv090x_write_reg(state, STV090x_AGCRF2CFG, reg) < 0)
 		goto err;
 	printk("stv090x_init: AGCRF2CFG = 0x%02X\n", reg);
+	/* ADC1 range */
+	reg = stv090x_read_reg(state, STV090x_TSTTNR1);
+	STV090x_SETFIELD(reg, ADC1_INMODE_FIELD,
+					 (config->adc1_range == STV090x_ADC_1Vpp) ? 0 : 1);
+	if (stv090x_write_reg(state, STV090x_TSTTNR1, reg) < 0)
+		goto err;
+	printk("stv090x_init: TSTTNR1 = 0x%02X (range %d)\n", reg, config->adc1_range);
+	/* ADC2 range */
+	reg = stv090x_read_reg(state, STV090x_TSTTNR3);
+	STV090x_SETFIELD(reg, ADC2_INMODE_FIELD,
+					 (config->adc2_range == STV090x_ADC_1Vpp) ? 0 : 1);
+	if (stv090x_write_reg(state, STV090x_TSTTNR3, reg) < 0)
+		goto err;
+	printk("stv090x_init: TSTTNR3 = 0x%02X (range %d)\n", reg, config->adc2_range);
 	if (config->tuner_set_mode)
 	{
 		if (config->tuner_set_mode(fe, TUNER_WAKE) < 0)
