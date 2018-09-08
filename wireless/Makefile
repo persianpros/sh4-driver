@@ -5,4 +5,5 @@ obj-y += rt5370sta/
 obj-y += rtl8188eu/
 obj-y += rtl8192cu/
 obj-y += rtl8192du/
+obj-y += rtl8192eu/
 obj-y += rtl871x/
