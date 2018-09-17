@@ -149,13 +149,13 @@ int StartFeed(struct dvb_demux_feed *Feed)
 	}
 	if (tsm_reset && reset_tsm)
 	{
-		printk(KERN_WARNING "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
+		printk(KERN_DEBUG "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
 		stm_tsm_init(1);
 	}
 #else
 	if (Context->numRunningFeeds == 0 && reset_tsm)
 	{
-		printk(KERN_WARNING "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
+		printk(KERN_DEBUG "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
 		stm_tsm_init(1);
 	}
 #endif
