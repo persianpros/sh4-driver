@@ -438,7 +438,7 @@ void spark_stm_tsm_init(void)
 		reinit = 1;
 	if (reinit)
 	{
-		printk("[Spark] reinit stream routing...\n");
+		printk(KERN_DEBUG "[Spark] reinit stream routing...\n");
 	}
 	else
 	{
@@ -650,7 +650,7 @@ void stm_tsm_init(int use_cimax)
 		reinit = 1;
 	if (reinit)
 	{
-		printk("[TSM] reinit stream routing...\n");
+		printk(KERN_DEBUG "[TSM] reinit stream routing...\n");
 	}
 	else
 	{
@@ -1462,10 +1462,10 @@ void stm_tsm_init(int use_cimax)
 	{
 		/* bypass cimax */
 		int n;
-		printk("Bypass ci\n");
+//		printk("Bypass ci\n");
 		if (reinit)
 		{
-			printk("reinit\n");
+//			printk("reinit\n");
 		}
 		else
 		{
@@ -1486,7 +1486,7 @@ void stm_tsm_init(int use_cimax)
 		 j00zek: when tuner hangs starting streaming from DVB-T USB, something wrong is with this section */
 #if defined(SAGEMCOM88) \
  || defined(SPARK7162)
-		printk(">>Init st7105 DVBT-USB\n");
+//		printk(">>Init st7105 DVBT-USB\n");
 		// STi7105
 		// 0-3 - 4xTS
 		// 4-6 - 3xSWTS
@@ -1656,7 +1656,7 @@ void stm_tsm_init(int use_cimax)
 				   TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
 				   tsm_io + TSM_STREAM_CONF(chan));
 #else
-			printk("TsinMode = Parallel *st-merger*\n\t");
+//			printk("TsinMode = Parallel *st-merger*\n\t");
 			writel((readl(tsm_io + TSM_STREAM_CONF(chan)) & TSM_RAM_ALLOC_START(0xff)) |
 				   (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0) |
 				   (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
