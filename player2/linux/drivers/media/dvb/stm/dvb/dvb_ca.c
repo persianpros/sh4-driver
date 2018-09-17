@@ -253,6 +253,7 @@ static int CaIoctl(struct inode *Inode,
 			return 0;
 			break;
 		}
+#if 0
 		case CA_SET_DESCR_DATA:
 		{
 			int altDescr = 40000, sess = 10000;
@@ -304,6 +305,7 @@ static int CaIoctl(struct inode *Inode,
 			return 0;
 			break;
 		}
+#endif
 		default:
 			printk("%s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
 	}
