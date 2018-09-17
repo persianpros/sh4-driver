@@ -217,6 +217,32 @@ static int CaIoctl(struct inode *Inode,
 			return 0;
 			break;
 		}
+		case CA_SET_DESCR_MODE:
+		{
+			ca_descr_mode_t *descr_mode = (ca_descr_mode_t*) Parameter;
+			dprintk("CA_SET_DESCR_MODE\n");
+			if (descr_mode->index >= 16)
+				return -EINVAL;
+			if (descr_mode->algo > 2)
+				return -EINVAL;
+			dprintk("index = %d algo = %d\n", descr_mode->index, descr_mode->algo);
+			if(descr_mode->index < 0 || descr_mode->index >= NUMBER_OF_DESCRAMBLERS){
+				printk("Error descrambler %d not supported! needs to be in range 0 - %d\n", descr_mode->index, NUMBER_OF_DESCRAMBLERS-1);
+				return -1;
+			}
+			if (&Context->DvbContext->Lock != NULL)
+				mutex_lock (&Context->DvbContext->Lock);
+			if (pSession->algo[descr_mode->index] != descr_mode->algo) {
+				printk("Session = %d index = %d new algo = %d\n",pSession->session, descr_mode->index, descr_mode->algo);
+				if (pti_hal_descrambler_set_mode(pSession->session, pSession->descramblers[descr_mode->index], descr_mode->algo) != 0)
+					printk("Error while setting descrambler mode\n");
+				else pSession->algo[descr_mode->index] = descr_mode->algo;
+			}
+			if (&Context->DvbContext->Lock != NULL)
+				mutex_unlock (&Context->DvbContext->Lock);
+			return 0;
+			break;
+		}
 		case CA_SET_DESCR:
 		{
 			ca_descr_t *descr = (ca_descr_t *) Parameter;

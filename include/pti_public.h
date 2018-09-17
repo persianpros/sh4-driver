@@ -10,7 +10,7 @@
 	#define NUMBER_OF_DESCRAMBLERS 4
 #else
 	/*quack: 6 is the max for HDBOX maybe other values have to be chosen for other boxes*/
-	#define NUMBER_OF_DESCRAMBLERS 6
+	#define NUMBER_OF_DESCRAMBLERS 9
 #endif
 
 struct PtiSession
@@ -30,6 +30,7 @@ struct PtiSession
 	int		descramblers[NUMBER_OF_DESCRAMBLERS];
 	int		descramblerindex[32];
 	int		source;
+	int		algo[NUMBER_OF_DESCRAMBLERS];
 };
 
 typedef enum

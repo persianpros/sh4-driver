@@ -44,6 +44,7 @@ struct StreamContext_s;
 
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/dmx.h>
+#include <linux/dvb/ca.h>
 
 #include "pti.h"
 
@@ -874,6 +875,12 @@ int pti_hal_descrambler_set ( int session_handle, int descrambler_handle,
         return 0;
 }
 
+int pti_hal_descrambler_set_mode ( int session_handle, int descrambler_handle,
+			      enum ca_descr_algo algo )
+{
+        return 0;
+}
+
 int pti_hal_descrambler_unlink ( int session_handle, int descrambler_handle )
 {
         return 0;
@@ -1112,6 +1119,7 @@ EXPORT_SYMBOL(paceSwtsByPti);
 
 EXPORT_SYMBOL(pti_hal_descrambler_set);
 EXPORT_SYMBOL(pti_hal_descrambler_set_aes);
+EXPORT_SYMBOL(pti_hal_descrambler_set_mode);
 EXPORT_SYMBOL(pti_hal_descrambler_unlink);
 EXPORT_SYMBOL(pti_hal_descrambler_link);
 EXPORT_SYMBOL(pti_hal_get_new_descrambler);
