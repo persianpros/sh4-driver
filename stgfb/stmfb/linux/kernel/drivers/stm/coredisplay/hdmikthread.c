@@ -537,7 +537,7 @@ static void stmhdmi_handle_wait_queue_timeout(struct stm_hdmi *hdmi)
 
 static void stmhdmi_restart_display(struct stm_hdmi *hdmi)
 {
-  printk(KERN_INFO "stmfb: Starting HDMI Output hdmi = %p\n",hdmi);
+  printk(KERN_DEBUG "stmfb: Starting HDMI Output hdmi = %p\n",hdmi);
 
   /*
    * We always re-read the EDID, as we might have received a hotplug

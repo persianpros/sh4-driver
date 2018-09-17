@@ -397,7 +397,7 @@ static int AudioIoctlSetBypassMode(struct DeviceContext_s *Context, unsigned int
 		if (kcontrol[vLoop]->private_value == PSEUDO_ADDR(spdif_bypass))
 		{
 			single_control = kcontrol[vLoop];
-			printk("Find spdif_bypass control at %p\n", single_control);
+			printk(KERN_DEBUG "Find spdif_bypass control at %p\n", single_control);
 			break;
 		}
 	}
@@ -418,7 +418,7 @@ static int AudioIoctlSetBypassMode(struct DeviceContext_s *Context, unsigned int
 		if (kcontrol[vLoop]->private_value == PSEUDO_ADDR(hdmi_bypass))
 		{
 			single_control = kcontrol[vLoop];
-			printk("Find hdmi_bypass control at %p\n", single_control);
+			printk(KERN_DEBUG "Find hdmi_bypass control at %p\n", single_control);
 			break;
 		}
 	}
@@ -1121,7 +1121,7 @@ static unsigned int AudioPoll(struct file *File, poll_table *Wait)
 	// So not really a problem but still not nice
 	if (DvbStreamCheckDrained(Context->AudioStream) == 1)
 	{
-		printk("Audio Stream drained\n");
+		printk(KERN_DEBUG "Audio Stream drained\n");
 		Mask |= (POLLIN);
 	}
 #endif

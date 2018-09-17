@@ -71,7 +71,7 @@ int proc_hdmi_audio_source_write(struct file *file, const char __user *buf,
 	ssize_t ret = -ENOMEM;
 	unsigned int value;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
-	printk("%s %ld - ", __FUNCTION__, count);
+	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (page)
@@ -81,7 +81,7 @@ int proc_hdmi_audio_source_write(struct file *file, const char __user *buf,
 			goto out;
 		strncpy(myString, page, count);
 		myString[count] = '\0';
-		printk("%s\n", myString);
+		printk(KERN_DEBUG "%s\n", myString);
 		if (strncmp("spdif", myString, count - 1) == 0)
 		{
 			value = STMHDMIIO_AUDIO_SOURCE_SPDIF;
@@ -114,10 +114,10 @@ int proc_hdmi_audio_source_read(char *page, char **start, off_t off, int count,
 {
 	int len = 0;
 	unsigned int value = 0;
-	printk("%s\n", __FUNCTION__);
+	printk(KERN_DEBUG "%s\n", __FUNCTION__);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	stmhdmiio_get_audio_source(&value);
-	printk("%s - %u\n", __FUNCTION__, value);
+	printk(KERN_DEBUG "%s - %u\n", __FUNCTION__, value);
 	switch (value)
 	{
 		case STMHDMIIO_AUDIO_SOURCE_2CH_I2S:
@@ -142,7 +142,7 @@ int proc_hdmi_audio_source_choices_read(char *page, char **start, off_t off, int
 										int *eof, void *data_unused)
 {
 	int len = 0;
-	printk("%s\n", __FUNCTION__);
+	printk(KERN_DEBUG "%s\n", __FUNCTION__);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	len = sprintf(page, "pcm spdif 8ch none\n");
 	mutex_unlock(&(ProcDeviceContext->DvbContext->Lock));
@@ -158,7 +158,7 @@ int proc_hdmi_edid_handling_write(struct file *file, const char __user *buf,
 	int argument = -1;
 	int test = -1;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
-	printk("%s %ld - ", __FUNCTION__, count);
+	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (page)
@@ -168,7 +168,7 @@ int proc_hdmi_edid_handling_write(struct file *file, const char __user *buf,
 			goto out;
 		strncpy(myString, page, count);
 		myString[count] = '\0';
-		printk("[HDMI] EDID handling arg: %s\n", myString);
+		printk(KERN_DEBUG "[HDMI] EDID handling arg: %s\n", myString);
 		test = sscanf(myString, "%d", &argument);
 		if ((0 < test) && (0 == argument))
 		{
@@ -178,7 +178,7 @@ int proc_hdmi_edid_handling_write(struct file *file, const char __user *buf,
 		{
 			value = STMHDMIIO_EDID_NON_STRICT_MODE_HANDLING;
 		}
-		printk("[HDMI] EDID handling: %s\n", (value == STMHDMIIO_EDID_STRICT_MODE_HANDLING) ? "strict" : "none strict");
+		printk(KERN_DEBUG "[HDMI] EDID handling: %s\n", (value == STMHDMIIO_EDID_STRICT_MODE_HANDLING) ? "strict" : "none strict");
 		stmhdmiio_set_edid_handling(value);
 		/* always return count to avoid endless loop */
 		ret = count;
@@ -195,10 +195,10 @@ int proc_hdmi_edid_handling_read(char *page, char **start, off_t off, int count,
 {
 	int len = 0;
 	unsigned int value = 0;
-	printk("%s\n", __FUNCTION__);
+	printk(KERN_DEBUG "%s\n", __FUNCTION__);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	stmhdmiio_get_edid_handling(&value);
-	printk("%s - %u\n", __FUNCTION__, value);
+	printk(KERN_DEBUG "%s - %u\n", __FUNCTION__, value);
 	switch (value)
 	{
 		case STMHDMIIO_EDID_NON_STRICT_MODE_HANDLING:
@@ -221,7 +221,7 @@ int proc_hdmi_output_write(struct file *file, const char __user *buf,
 	struct stmfbio_output_configuration outputConfig = {0};
 	struct stmfb_info *info = NULL;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
-	printk("%s %ld - ", __FUNCTION__, count);
+	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (page)
@@ -231,7 +231,7 @@ int proc_hdmi_output_write(struct file *file, const char __user *buf,
 			goto out;
 		strncpy(myString, page, count);
 		myString[count] = '\0';
-		printk("%s\n", myString);
+		printk(KERN_DEBUG "%s\n", myString);
 		outputConfig.outputid = 1;
 		info = stmfb_get_fbinfo_ptr();
 		stmfb_get_output_configuration(&outputConfig, info);
@@ -270,7 +270,7 @@ int proc_hdmi_output_read(char *page, char **start, off_t off, int count,
 	info = stmfb_get_fbinfo_ptr();
 	stmfb_get_output_configuration(&outputConfig, info);
 	disabled = (outputConfig.hdmi_config & STMFBIO_OUTPUT_HDMI_DISABLED) ? 1 : 0;
-	printk("%s - %u\n", __FUNCTION__, disabled);
+	printk(KERN_DEBUG "%s - %u\n", __FUNCTION__, disabled);
 	switch (disabled)
 	{
 		case 0:
@@ -289,7 +289,7 @@ int proc_hdmi_output_choices_read(char *page, char **start, off_t off, int count
 								  int *eof, void *data_unused)
 {
 	int len = 0;
-	printk("%s\n", __FUNCTION__);
+	printk(KERN_DEBUG "%s\n", __FUNCTION__);
 	len = sprintf(page, "on off\n");
 	return len;
 }

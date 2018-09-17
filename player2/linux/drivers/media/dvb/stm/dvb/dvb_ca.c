@@ -88,11 +88,11 @@ extern int init_ci_controller(struct dvb_adapter *dvb_adap);
 struct dvb_device *CaInit(struct DeviceContext_s *DeviceContext)
 {
 #ifdef __TDT__
-	printk("CaInit()\n");
+	printk(KERN_DEBUG "CaInit()\n");
 	if (!caInitialized)
 	{
 		/* the following call creates ca0 associated with the cimax hardware */
-		printk("Initializing CI Controller\n");
+		printk(KERN_DEBUG "Initializing CI Controller\n");
 #if !defined(VIP2_V1) \
  && !defined (SPARK) \
  && !defined (SPARK7162) \
@@ -155,7 +155,7 @@ static int CaIoctl(struct inode *Inode,
 			int vLoop;
 			unsigned short pid = service_pid->pid;
 			int descramble_index = service_pid->index;
-			printk("CA_SET_PID index = %d pid %d\n", descramble_index, pid);
+			printk(KERN_DEBUG "CA_SET_PID index = %d pid %d\n", descramble_index, pid);
 			if (descramble_index >= 0)
 			{
 				if (descramble_index >= NUMBER_OF_DESCRAMBLERS)
@@ -195,7 +195,7 @@ static int CaIoctl(struct inode *Inode,
 								}
 								else
 								{
-									printk("pid %x is already linked to descrambler %d\n", pid, descramble_index);
+									printk(KERN_DEBUG "pid %x is already linked to descrambler %d\n", pid, descramble_index);
 									return 0;
 								}
 							}
@@ -212,7 +212,7 @@ static int CaIoctl(struct inode *Inode,
 						}
 					}
 				}
-				printk("pid %x not found in pidtable, it might be inactive\n", pid);
+				printk(KERN_DEBUG "pid %x not found in pidtable, it might be inactive\n", pid);
 			}
 			return 0;
 			break;

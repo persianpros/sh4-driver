@@ -369,7 +369,7 @@ long stmhdmiio_set_audio_source(unsigned int arg)
   unsigned long val;
   long retval=0;
 
-  printk("%s - %p\n", __func__, HACK_dev);
+  printk(KERN_DEBUG "%s - %p\n", __func__, HACK_dev);
 
   if(mutex_lock_interruptible(&HACK_dev->lock))
     return -ERESTARTSYS;
@@ -430,7 +430,7 @@ long stmhdmiio_get_audio_source(unsigned int * arg)
   long retval=0;
   struct stm_hdmi *dev = HACK_dev;
 
-  printk("%s - %p\n", __func__, dev);
+  printk(KERN_DEBUG "%s - %p\n", __func__, dev);
 
   if(mutex_lock_interruptible(&dev->lock))
     return -ERESTARTSYS;
@@ -468,7 +468,7 @@ long stmhdmiio_set_edid_handling(unsigned int arg)
   long retval=0;
   struct stm_hdmi *dev = HACK_dev;
 
-  printk("%s - %p\n", __func__, HACK_dev);
+  printk(KERN_DEBUG "%s - %p\n", __func__, HACK_dev);
 
   if(mutex_lock_interruptible(&HACK_dev->lock))
     return -ERESTARTSYS;
@@ -487,7 +487,7 @@ long stmhdmiio_get_edid_handling(unsigned int * arg)
   long retval=0;
   struct stm_hdmi *dev = HACK_dev;
 
-  printk("%s - %p\n", __func__, dev);
+  printk(KERN_DEBUG "%s - %p\n", __func__, dev);
 
   if(mutex_lock_interruptible(&dev->lock))
     return -ERESTARTSYS;
@@ -505,7 +505,7 @@ long stmhdmiio_get_cec_address(unsigned int * arg)
   long retval=0;
   struct stm_hdmi *dev = HACK_dev;
 
-  printk("%s - %p\n", __func__, dev);
+  printk(KERN_DEBUG "%s - %p\n", __func__, dev);
 
   if(mutex_lock_interruptible(&dev->lock))
     return -ERESTARTSYS;
