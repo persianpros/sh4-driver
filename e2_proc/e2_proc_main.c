@@ -118,6 +118,8 @@
  *  |           |
  *  |           --------- led0_pattern
  *  |           |
+ *  |           --------- led1_pattern
+ *  |           |
  *  |           --------- led_pattern_speed
  *  |           |
  *  |           |
@@ -206,6 +208,10 @@
  *  |           --------- dst_width   |
  *  |           |                     |
  *  |           --------- dst_height /
+ *  |
+ *  ---------- power
+ *  |           |
+ *  |           --------- standbyled
  *
  */
 
@@ -605,6 +611,10 @@ struct ProcStructure_s e2Proc[] =
 {
 	{cProcEntry, "progress"                                                         , NULL, NULL, NULL, NULL, ""},
 
+#if defined(SPARK) || defined(SPARK7162)
+	{cProcEntry, "vfd"                                                              , NULL, NULL, NULL, NULL, ""},
+#endif
+
 	{cProcEntry, "bus/nim_sockets"                                                  , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb"                                                              , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/audio"                                                        , NULL, NULL, NULL, NULL, ""},
@@ -666,11 +676,35 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/fp/lnb_sense1"                                                , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/lnb_sense2"                                                , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/led0_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/led1_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
 	{cProcEntry, "stb/fp/led_pattern_speed"                                         , NULL, NULL, default_write_proc, NULL, ""},
 	{cProcEntry, "stb/fp/version"                                                   , NULL, zero_read, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/wakeup_time"                                               , NULL, wakeup_time_read, wakeup_time_write, NULL, ""},
 	{cProcEntry, "stb/fp/was_timer_wakeup"                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/rtc"                                                       , NULL, zero_read, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/rtc_offset"                                                , NULL, zero_read, default_write_proc, NULL, ""},
+#if defined(SPARK) || defined(SPARK7162)
+	{cProcEntry, "stb/fp/aotom"                                                     , NULL, NULL, NULL, NULL, ""},
+	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/scroll_delay"                                             , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/show_symbols"                                             , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_network"                                           , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_usb"                                               , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_hdd"                                               , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_hddprogress"                                       , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_signal"                                            , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_timeshift"                                         , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_tv"                                                , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_recording"                                         , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_record_1"                                          , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_record_2"                                          , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_smartcard"                                         , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_parent_rating"                                     , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_play"                                              , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/oled_brightness"                                          , NULL, NULL, NULL, NULL, ""},
+	{cProcDir  , "stb/power"                                                        , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/power/standbyled"                                             , NULL, NULL, NULL, NULL, ""},
+#endif
 
 	{cProcDir  , "stb/tsmux"                                                        , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/tsmux/input0"                                                 , NULL, NULL, NULL, NULL, ""},

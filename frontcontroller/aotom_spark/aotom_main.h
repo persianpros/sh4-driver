@@ -225,6 +225,16 @@ typedef struct YWPANEL_I2CData_s
 
 } YWPANEL_I2CData_t;
 
+typedef struct
+{
+	int state;
+	int period;
+	int stop;
+	int enable;
+	struct task_struct *led_task;
+	struct semaphore led_sem;
+} tLedState;
+
 typedef enum YWPANEL_DataType_e
 {
 	YWPANEL_DATATYPE_LBD = 0x01,
@@ -630,6 +640,7 @@ extern u8(*YWPANEL_VFD_ScanKeyboard)(void);
 extern int (*YWPANEL_VFD_ShowString)(char *);
 
 extern int YWPANEL_width;
+extern tLedState led_state[LED_COUNT + 1];
 
 YWPANEL_VFDSTATE_t YWPANEL_FP_GetVFDStatus(void);
 int YWPANEL_FP_SetVFDStatus(YWPANEL_VFDSTATE_t state);

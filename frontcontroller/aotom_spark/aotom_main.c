@@ -5,6 +5,7 @@
  * (c) 2011 oSaoYa
  * (c) 2012-2013 Stefan Seyfried
  * (c) 2012-2013 martii
+ * (c) 2014 skl
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +54,7 @@
 #include <linux/rtc.h>
 #include <linux/platform_device.h>
 
+#include "aotom_ywdefs.h"
 #include "aotom_main.h"
 
 static short paramDebug = 0;
@@ -74,16 +76,7 @@ static int open_count = 0;
 
 #define FRONTPANEL_MINOR_VFD    0
 
-typedef struct
-{
-	int state;
-	int period;
-	int stop;
-	struct task_struct *led_task;
-	struct semaphore led_sem;
-} tLedState;
-
-static tLedState led_state[LED_COUNT + 1];
+tLedState led_state[LED_COUNT + 1];
 static int led_count = LED_COUNT;
 
 static struct semaphore write_sem;
@@ -115,7 +108,8 @@ static struct task_struct *draw_task = 0;
 #define DRAW_THREAD_STATUS_INIT     2
 static int draw_thread_status = DRAW_THREAD_STATUS_STOPPED;
 
-static int aotomSetIcon(int which, int on);
+int aotomSetIcon(int which, int on);
+int aotomSetLed(int which, int on);
 
 int vfdlen_open(struct inode *inode, struct  file *file) {
   return single_open(file, vfdlen_show, NULL);
@@ -372,7 +366,7 @@ int vfd_init_func(void)
 	return 0;
 }
 
-static int aotomSetIcon(int which, int on)
+int aotomSetIcon(int which, int on)
 {
 	int  res = 0;
 	dprintk(5, "%s > %d, %d\n", __func__, which, on);
@@ -391,8 +385,77 @@ static int aotomSetIcon(int which, int on)
 	return res;
 }
 
+int aotomSetLed(int which, int on)
+{
+	int  res = 0;
+	dprintk(5, "%s > %d, %d\n", __func__, which, on);
+	if (which < 0 || which >= LED_COUNT)
+	{
+		printk("VFD/AOTOM led number out of range %d\n", which);
+		return -EINVAL;
+	}
+	if (led_state[which].enable) {
+		res = YWPANEL_VFD_SetLed(which,on);
+		led_state[which].state = on;
+	}
+	return res;
+}
+
+int aotomEnableLed(int which, int on)
+{
+	int  res = 0;
+	if (which < 0 || which >= LED_COUNT)
+	{
+		printk("VFD/AOTOM led number out of range %d\n", which);
+		return -EINVAL;
+	}
+	led_state[which].enable = on;
+	return res;
+}
+
+int aotomWriteText(char *buf, size_t len)
+{
+	int res = 0;
+	struct vfd_ioctl_data data;
+	if (len > sizeof(data.data))
+		data.length = sizeof(data.data);
+	else
+		data.length = len;
+	while ((data.length > 0) && (buf[data.length - 1 ] == '\n'))
+	  data.length--;
+	if (data.length > sizeof(data.data))
+		len = data.length = sizeof(data.data);
+	memcpy(data.data, buf, data.length);
+	res = run_draw_thread(&data);
+	if (res < 0)
+		return res;
+	return len;
+}
+
+int aotomSetBrightness(int level)
+{
+	int  res = 0;
+	dprintk(5, "%s > %d\n", __func__, level);
+	if (level < 0)
+		level = 0;
+	else if (level > 7)
+		level = 7;
+	res = YWPANEL_VFD_SetBrightness(level);
+	return res;
+}
+
+int aotomGetVersion()
+{
+	return panel_version.DisplayInfo;
+}
+
 /* export for later use in e2_proc */
-//EXPORT_SYMBOL(aotomSetIcon);
+EXPORT_SYMBOL(aotomSetIcon);
+EXPORT_SYMBOL(aotomSetLed);
+EXPORT_SYMBOL(aotomWriteText);
+EXPORT_SYMBOL(aotomEnableLed);
+EXPORT_SYMBOL(aotomSetBrightness);
+EXPORT_SYMBOL(aotomGetVersion);
 
 static ssize_t AOTOMdev_write(struct file *filp, const char *buff, size_t len, loff_t *off)
 {
@@ -424,7 +487,7 @@ static ssize_t AOTOMdev_write(struct file *filp, const char *buff, size_t len, l
 	return len;
 }
 
-static void flashLED(int led, int ms)
+void flashLED(int led, int ms)
 {
 	if (!led_state[led].led_task || (ms < 1 && led < LED_COUNT - 1))
 		return;
@@ -959,6 +1022,11 @@ static struct platform_driver aotom_rtc_driver =
 	},
 };
 
+extern void create_proc_fp(void);
+extern void remove_proc_fp(void);
+
+static struct class *vfd_class = 0;
+
 static int __init aotom_init_module(void)
 {
 	int i;
@@ -974,6 +1042,8 @@ static int __init aotom_init_module(void)
 		return -1;
 	if (register_chrdev(VFD_MAJOR, "VFD", &vfd_fops))
 		printk("unable to get major %d for VFD\n", VFD_MAJOR);
+	vfd_class = class_create(THIS_MODULE, "VFD");
+	device_create(vfd_class, NULL, MKDEV(VFD_MAJOR,0), NULL, "dbox!oled0");
 	sema_init(&write_sem, 1);
 	sema_init(&draw_thread_sem, 1);
 	for (i = 0; i < LED_COUNT; i++)
@@ -981,6 +1051,7 @@ static int __init aotom_init_module(void)
 		led_state[i].state = LED_OFF;
 		led_state[i].period = 0;
 		led_state[i].stop = 1;
+		led_state[i].enable = 1;
 		sema_init(&led_state[i].led_sem, 0);
 		led_state[i].led_task = kthread_run(led_thread, (void *) i, "led_thread");
 	}
@@ -1001,6 +1072,7 @@ static int __init aotom_init_module(void)
 		rtc_pdev = platform_device_register_simple(RTC_NAME, -1, NULL, 0);
 	if (IS_ERR(rtc_pdev))
 		printk(KERN_ERR "%s platform_device_register_simple failed: %ld\n", __func__, PTR_ERR(rtc_pdev));
+	create_proc_fp();
 	dprintk(5, "%s <\n", __func__);
 	proc_create("vfdlen", 0, NULL, &vfdlen_fops);
 	return 0;
@@ -1034,10 +1106,16 @@ static void __exit aotom_cleanup_module(void)
 		msleep(1);
 	dprintk(5, "[BTN] unloading ...\n");
 	button_dev_exit();
+	device_destroy(vfd_class, MKDEV(VFD_MAJOR, 0));
+	class_unregister(vfd_class);
+	class_destroy(vfd_class);
 	unregister_chrdev(VFD_MAJOR, "VFD");
 	YWPANEL_VFD_Term();
 	remove_proc_entry("vfdlen", NULL);
 	printk("Fulan front panel module unloading\n");
+
+	remove_proc_fp();
+
 }
 
 module_init(aotom_init_module);
