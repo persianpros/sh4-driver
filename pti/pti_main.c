@@ -1,18 +1,3 @@
-
-/*
- * ST-PTI DVB driver
- *
- * Copyright (c) STMicroelectronics 2005
- *
- *   Author:Peter Bennett <peter.bennett@st.com>
- * __TDT__: mod by teamducktales
- *
- *	This program is free software; you can redistribute it and/or
- *	modify it under the terms of the GNU General Public License as
- *	published by the Free Software Foundation; either version 2 of
- *	the License, or (at your option) any later version.
- */
-#include <linux/version.h>
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/wait.h>
@@ -21,1145 +6,589 @@
 #include <linux/delay.h>
 #include <linux/time.h>
 #include <linux/errno.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
-#include <asm/semaphore.h>
-#else
+
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 #include <linux/semaphore.h>
+#else
+#include <asm/semaphore.h>
 #endif
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/io.h>
 
+#if defined (CONFIG_KERNELVERSION) || LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 #include <linux/bpa2.h>
+#else
+#include <linux/bigphysarea.h>
+#endif
 
-struct DeviceContext_s;
-struct StreamContext_s;
-
-#include "dvb_frontend.h"
-#include "dmxdev.h"
-#include "dvb_demux.h"
-#include "dvb_net.h"
-#include <linux/dvb/dmx.h>
-
-#include <linux/dvb/frontend.h>
-#include <linux/dvb/dmx.h>
 #include <linux/dvb/ca.h>
 
-#include "pti.h"
-
-#if defined(PLAYER_179) || defined(PLAYER_191)
-#if (defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1) || defined(SPARK) || defined(SPARK7162)) || defined(SAGEMCOM88) || defined(PACE7241)
-static int waitMS=20;
-static int videoMem=4096;
-#endif
-#elif defined(PLAYER_131)
-#else
-#endif
-
-int debug ;
-#define dprintk(x...) do { if (debug) printk(KERN_WARNING x); } while (0)
-
-#ifdef __TDT__
-unsigned int dma_0_buffer_base;
-unsigned int dma_0_buffer_top;
-unsigned int dma_0_buffer_rp;
-#define TAG_COUNT 4
-#define AUX_COUNT 20
-#else
-#define TAG_COUNT 3
-#define AUX_COUNT 20
-#endif
-
-struct tSlot
-{
-  int Handle;			/* Our Handle */
-  int inUse;
-  int tcIndex;
-  u16 pid;			/* Current set pid */
-};
-
-struct pti_internal {
-  struct  dvb_demux* demux[TAG_COUNT];
-  #if defined(SPARK7162)
-  int		demux_tag[TAG_COUNT];
-  #endif
-  int	  err_count;
-
-  wait_queue_head_t queue;
-
-  char *back_buffer;
-  unsigned int pti_io;
-
-  short int *pidtable;
-  short int *num_pids;
-  short int *pidsearch;
-  volatile unsigned short int *psize;
-  volatile unsigned short int *pread;
-  volatile unsigned short int *thrown_away;
-  volatile unsigned short int *packet_size;
-  volatile unsigned short int *header_size;
-  volatile unsigned short int *pwrite;
-  volatile unsigned short int *discard;
-
-  unsigned int loop_count;
-  unsigned int loop_count2;
-  unsigned int packet_count;
-
-  struct tSlot **vSlots;
-};
-
-
-static struct stpti *external = NULL;
-static struct pti_internal *internal = NULL;
-static void (*demultiplex_dvb_packets)(struct dvb_demux* demux, const u8 *buf, int count) = NULL;
-
-#ifdef __TDT__
-#define DMA_POLLING_INTERVAL (1)
-#else
-#define DMA_POLLING_INTERVAL msecs_to_jiffies(2)
-#endif
-#define HEADER_SIZE (6)
-#define PACKET_SIZE (188+HEADER_SIZE)
-
-#ifdef __TDT__
-#define PACKET_SIZE_WO_HEADER (188)
-#endif
-
-#define PTI_BUFFER_SIZE (PACKET_SIZE * 4096) /*(188*1024)*/
-
-static struct timer_list ptiTimer;
-
-#define SLOT_HANDLE_OFFSET		20000
-#define QUEUE_SIZE 400
-
-/* The work queue is a communication means between the process
-   polling the DMA and the process injecting the TS data into the
-   demultiplexer. It is assumed that the injector process is fast
-   enough to process the entries in the work queue. */
-static struct
-{
-  int offset;
-  int count;
-} workQueue[QUEUE_SIZE];
-
-static struct semaphore workSem;
-
-static int readIndex;
-static int writeIndex;
-
-/* PTI write ignores byte enables */
-static void PtiWrite(volatile unsigned short int *addr,unsigned short int value)
-{
-  unsigned int *addr2 = (unsigned int*)(((unsigned int)addr) & ~3);
-  unsigned int old_value  = *addr2;
-
-  if (((unsigned)addr & 2)) old_value = (old_value & 0x0000ffff) | value << 16;
-  else old_value = (old_value & 0xffff0000) | value;
-
-  *addr2 = old_value;
-}
-
-/***********************************************************************************/
-
-#define TCASM_LM_SUPPORT
 #include "tc_code.h"
+#include "pti.h"
+#include <pti_public.h>
 
-static void loadtc(struct pti_internal *pti)
-{
-  int n;
-
-  printk("%s: >\n",__FUNCTION__);
-
-  for (n=0;n<=TCASM_LableMap[0].Value;n+=4)
-    writel(transport_controller_code[n/4], pti->pti_io + PTI_IRAM_BASE + n );
-
-  for (n=0;n<(sizeof(transport_controller_data) * 2);n+=4)
-    writel(transport_controller_data[n/4], pti->pti_io + PTI_DRAM_BASE + n);
-
-  printk("%s: <\n",__FUNCTION__);
-}
-
-static void *getsymbol(struct pti_internal *pti, const char *symbol)
-{
-  char temp[128];
-  void *result = NULL;
-  int n;
-
-  temp[120] = 0;
-  sprintf(temp,"::_%s",symbol);
-
-  for (n=0;n<TRANSPORT_CONTROLLER_LABLE_MAP_SIZE;n++)
-  	if (!strcmp(temp,TCASM_LableMap[n].Name))
-  	result = (void*)(pti->pti_io + TCASM_LableMap[n].Value);
-
-  return result;
-
-}
-
-/***************************************************************************************/
-
-static void stpti_setup_dma(struct pti_internal *pti)
-{
-  /* Setup DMA0 to transfer the data to the buffer */
-  writel( virt_to_phys(pti->back_buffer), pti->pti_io + PTI_DMA_0_BASE );
-  writel( virt_to_phys(pti->back_buffer), pti->pti_io + PTI_DMA_0_WRITE);
-  writel( virt_to_phys(pti->back_buffer), pti->pti_io + PTI_DMA_0_READ );
-  writel( virt_to_phys(pti->back_buffer + PTI_BUFFER_SIZE - 1), pti->pti_io + PTI_DMA_0_TOP );
-#ifdef __TDT__
-	dma_0_buffer_base = virt_to_phys(pti->back_buffer);
-	dma_0_buffer_top = virt_to_phys(pti->back_buffer) + PTI_BUFFER_SIZE;
-	dma_0_buffer_rp = dma_0_buffer_base;
+#ifdef UFS910
+int camRouting = 0;
 #endif
 
-  writel( 0x8, pti->pti_io + PTI_DMA_0_SETUP ); /* 8 word burst */
-}
+int debug = 0;
 
-static void stpti_start_dma(struct pti_internal *pti)
-{
-  /* Enable the DMA */
-  writel( readl(pti->pti_io + PTI_DMA_ENABLE) | 0x1, pti->pti_io + PTI_DMA_ENABLE);
-
-  /* Tell PTI we have lots of room in buffer */
-  PtiWrite(pti->pread, 0);
-  PtiWrite(pti->pwrite,0);
-  PtiWrite(pti->discard, 0);
-
-  /* Reset all the counts */
-  pti->loop_count = 0;
-  pti->loop_count2 = 0;
-  pti->packet_count=0;
-}
-
-static void stpti_stop_dma(struct pti_internal *pti)
-{
-int loop_count = 0;
-
-  /* Stop DMAing data */
-  PtiWrite(pti->pread, 0);
-
-  while (*pti->pwrite != *pti->psize +2)
-  {
-    PtiWrite(pti->pwrite, *pti->psize + 2);
-    PtiWrite(pti->pwrite, *pti->psize + 2);
-    dprintk("%s: Pwrite = %u Psize = %u\n",__FUNCTION__,*pti->pwrite,*pti->psize);
-  };
-
-  udelay(100);
-
-  /* Ensure DMA is enabled */
-  writel( readl(pti->pti_io + PTI_DMA_ENABLE) | 0x1, pti->pti_io + PTI_DMA_ENABLE );
-
-  /* Do DMA Done to ensure all data has been transfered */
-  writel( PTI_DMA_DONE , pti->pti_io + PTI_DMA_0_STATUS );
-
-  while( (readl(pti->pti_io + PTI_DMA_0_STATUS) & PTI_DMA_DONE) &&
-	 (loop_count<100))
-    { udelay(1000); loop_count++; };
-
-  /* Disable the DMA */
-  writel(readl(pti->pti_io + PTI_DMA_ENABLE) & ~0x1, pti->pti_io + PTI_DMA_ENABLE);
-}
-
-static void stpti_reset_dma(struct pti_internal *pti)
-{
-  /* Stop the DMA */
-  stpti_stop_dma(pti);
-
-  /* Reset dma pointers */
-  stpti_setup_dma(pti);
-}
-
-
-/*
-
-0x10   ----------------- <--- PTI_DMA_x_BASE
-       |               |   |
-       |               |  \|/
-       |               | <--- PTI_DMA_x_READ  (Last address sent to ADSC)
-       |               |
-       |               |
-       |               | <--- PTI_DMA_x_WRITE (Last address written by PTI)
-       |               |   ^
-       |               |   |  (free space)
-       |               |   |
-0x1000 ----------------- <--- PTI_DMA_x_TOP
-
-0x10   ----------------- <--- PTI_DMA_x_BASE
-       |               |
-       |               |
-       |               | <--- PTI_DMA_x_WRITE (Last address written by PTI)
-       |               |   |
-       |               |   | (free space)
-       |               | <--- PTI_DMA_x_READ  (Last address sent to ADSC)
-       |               |
-       |               |
-       |               |
-0x1000 ----------------- <--- PTI_DMA_x_TOP
-
-*/
-
-static int stream_injector(void *user_data)
-{
-  int offset, count;
-  int overflow = 0;
-
-//aktivate STREAMCHECK for debug
-//#define STREAMCHECK
-#ifdef STREAMCHECK
-	u8 vpidhigh=0; //high byte of the video stream to check
-	u8 vpidlow=0x65; //low byte of the video stream to check
-	u8 apidhigh=0; //high byte of the audio stream to check
-	u8 apidlow=0x66; //low byte of the audio stream to check
-	int vc=99; //video count
-	int ac=99; //audio count
-	u8 tc; //temp count
-	unsigned long prv=30000; //print video output after xxxx counts
-	unsigned long pra=30000; //print audio autput after xxxx counts
+/* video memory in dvb packets */
+#ifdef UFS910
+int videoMem = 2048;
+#else
+int videoMem = 4096;
 #endif
 
-  daemonize ("ts-injector");
+/* waiting time in ms for wait queue in pti_prcoess.c */
+int waitMS = 20;
 
-  allow_signal(SIGKILL);
-  allow_signal(SIGTERM);
+#ifdef CONFIG_PRINTK
+/* enable statistic output on pti */
+int enableStatistic = 0;
+#else
+int enableSysStatistic = 1;
 
-#ifdef __TDT__
-  //set high thread priority
-  set_user_nice(current, -20);
+unsigned long pti_last_time = 0;
+unsigned long pti_count = 0;
 #endif
 
-  while(1)
-  {
-	/* the polling process increments the semaphore whenever it writes
-           an entry into the queue */
-	if(down_interruptible(&workSem))
-	  break;
+static void *stpti_MemoryAlign(void *Memory_p, u32 Alignment)
+{
+	return (void *)((u32)((u32)Memory_p + Alignment - 1) & ~(Alignment - 1));
+}
 
-	if(writeIndex == readIndex)
+static size_t stpti_BufferSizeAdjust(size_t Size)
+{
+	return ((size_t)stpti_MemoryAlign((void *)Size, STPTI_BUFFER_SIZE_MULTIPLE));
+}
+
+static void *stpti_BufferBaseAdjust(void *Base_p)
+{
+	return (stpti_MemoryAlign(Base_p, STPTI_BUFFER_ALIGN_MULTIPLE));
+}
+
+/* *****************************
+ * Global vars
+ */
+TCDevice_t *myTC = NULL;
+STPTI_TCParameters_t tc_params;
+
+#define STSYS_WriteRegDev32LE(a, b) writel(b,a)
+#define STSYS_ReadRegDev32LE(x) readl(x)
+
+static void stopTc(TCDevice_t *TC_Device)
+{
+	STSYS_WriteRegDev32LE((void *)&TC_Device->IIFFIFOEnable, 0x00); /* Stop the IIF */
+	STSYS_WriteRegDev32LE((void *)&TC_Device->TCMode, 0x00);        /* Stop the TC */
+	/* --- Perform a software reset --- */
+	STSYS_WriteRegDev32LE((void *)&TC_Device->DMAPTI3Prog, 0x01);   /* PTI3 Mode */
+	STSYS_WriteRegDev32LE((void *)&TC_Device->DMAFlush, 0x01);      /* Flush DMA 0 */
+	/* For PTI4SL, if we do not enable the DMA here, the flush never occurs... */
+	STSYS_WriteRegDev32LE((void *)&TC_Device->DMAEnable, 0x01);     /* Enable the DMA */
+	while (STSYS_ReadRegDev32LE((void *)&TC_Device->DMAFlush) & 0X01)
+		udelay(100 * 64); /* 6400us */
+	STSYS_WriteRegDev32LE((void *)&TC_Device->TCMode, 0x08);        /* Full Reset the TC */
+	udelay(200 * 64); /* 12800us */             /* Wait */
+	STSYS_WriteRegDev32LE((void *)&TC_Device->TCMode, 0x00);        /* Finish Full Reset the TC */
+	udelay(10 * 64); /* 640us */
+}
+
+/* ************************************
+ * From InitializeDevice in basic.c
+ * the TC is only for pti4 otherwise
+ * another loader should be used
+ */
+void pti_main_loadtc(struct stpti *pti)
+{
+	STPTI_DevicePtr_t CodeStart;
+	TCDevice_t        *TC_Device;
+	u16               IIFSyncPeriod;
+	u16               TagBytes;
+	u32               PTI4_Base, i;
+	TCGlobalInfo_t    *TCGlobalInfo;
+	static u8         DmaFifoFlushingTarget[188 + DMAScratchAreaSize];
+	int               session;  /* Initialize session info structures */
+	u8                *base_p;
+	u8                *top_p;
+	size_t            DMABufferSize = 0;
+	int               block, index;
+	TCSectionFilterArrays_t *TC_SectionFilterArrays_p;
+	STPTI_TCParameters_t  *TC_Params_p;
+	TCInterruptDMAConfig_t *TCInterruptDMAConfig_p;
+	myTC = (TCDevice_t *) pti->pti_io;
+	CodeStart = &myTC->TC_Code[0];
+	PTI4_Base = (u32)((u32)CodeStart - 0XC000);
+	TC_Params_p = &tc_params;
+	ioremap_nocache((unsigned long)&myTC, sizeof(TCDevice_t));
+// normally before start loading tc we should stop tc but in our
+// case I hope there isnt running later on we should do this
+// ->see stptiHelper_TCInit_Stop
+	//stopTc(myTC);
+	// *********************************
+	//Load TC
+	printk("Load real TC Code\n");
+	printk("TC_Data = %p, TC_Code = %p\n", myTC->TC_Data, myTC->TC_Code);
+	TC_Params_p->TC_CodeStart                  = (STPTI_DevicePtr_t)VERSION;
+	TC_Params_p->TC_CodeStart                  = CodeStart;
+	TC_Params_p->TC_CodeSize                   = TRANSPORT_CONTROLLER_CODE_SIZE * sizeof(u32);
+	TC_Params_p->TC_DataStart                  = (u32 *)(((u32)PTI4_Base) + 0X8000);
+#if (defined(UFS912) || defined(UFS913) || defined(SPARK) || defined(SPARK7162) || defined(ATEVIO7500) || defined(HS7810A) || defined(HS7110)) && defined(SECURE_LITE2) && defined(A18)
+	TC_Params_p->TC_LookupTableStart           = (u32 *)(((u32)PTI4_Base) + 0X8000);
+	TC_Params_p->TC_SystemKeyStart             = (u32 *)(((u32)PTI4_Base) + 0X80C0);
+	TC_Params_p->TC_GlobalDataStart            = (u32 *)(((u32)PTI4_Base) + 0X850C);
+	TC_Params_p->TC_StatusBlockStart           = (u32 *)(((u32)PTI4_Base) + 0X8560);
+	TC_Params_p->TC_MainInfoStart              = (u32 *)(((u32)PTI4_Base) + 0X8598);
+	TC_Params_p->TC_DMAConfigStart             = (u32 *)(((u32)PTI4_Base) + 0X8E98);
+	TC_Params_p->TC_DescramblerKeysStart       = (u32 *)(((u32)PTI4_Base) + 0X9578);
+	TC_Params_p->TC_TransportFilterStart       = (u32 *)(((u32)PTI4_Base) + 0X9C1C);
+	TC_Params_p->TC_SCDFilterTableStart        = (u32 *)(((u32)PTI4_Base) + 0X9C1C);
+	TC_Params_p->TC_PESFilterStart             = (u32 *)(((u32)PTI4_Base) + 0X9CDC);
+	TC_Params_p->TC_SubstituteDataStart        = (u32 *)(((u32)PTI4_Base) + 0X81C8);
+	TC_Params_p->TC_SFStatusStart              = (u32 *)(((u32)PTI4_Base) + 0X9CDC);
+	TC_Params_p->TC_InterruptDMAConfigStart    = (u32 *)(((u32)PTI4_Base) + 0XB0DC);
+	TC_Params_p->TC_SessionDataStart           = (u32 *)(((u32)PTI4_Base) + 0XB0EC);
+	TC_Params_p->TC_EMMStart                   = (u32 *)(((u32)PTI4_Base) + 0XB2A4);
+	TC_Params_p->TC_ECMStart                   = (u32 *)(((u32)PTI4_Base) + 0XB2A4);
+	TC_Params_p->TC_VersionID                  = (u32 *)(((u32)PTI4_Base) + 0XB2E4);
+	TC_Params_p->TC_NumberCarousels            = 0X0001;
+	TC_Params_p->TC_NumberSystemKeys           = 0X0001;
+	TC_Params_p->TC_NumberDMAs                 = 0X0037;
+	TC_Params_p->TC_NumberDescramblerKeys      = 0X0019;
+	TC_Params_p->TC_SizeOfDescramblerKeys      = 0X0044;
+	TC_Params_p->TC_NumberPesFilters           = 0X0000;
+	TC_Params_p->TC_NumberSectionFilters       = 0X0080;
+	TC_Params_p->TC_NumberSlots                = 0X0060;
+	TC_Params_p->TC_NumberOfSessions           = 0X0005;
+	TC_Params_p->TC_NumberIndexs               = 0X0060;
+	TC_Params_p->TC_NumberTransportFilters     = 0X0000;
+	TC_Params_p->TC_NumberSCDFilters           = 0X0018;
+	TC_Params_p->TC_SignalEveryTransportPacket = 0X0001;
+	TC_Params_p->TC_NumberEMMFilters           = 0X0000;
+	TC_Params_p->TC_SizeOfEMMFilter            = 0X001C;
+	TC_Params_p->TC_NumberECMFilters           = 0X0060;
+	TC_Params_p->TC_AutomaticSectionFiltering  = FALSE;
 	{
-		if(!overflow)
+		STPTI_DevicePtr_t DataStart = (u32 *)(((u32)CodeStart & 0xffff0000) | 0X8000);
+		for (i = 0; i < (0X3800 / 4); ++i)
 		{
-			printk("PTI: queue overflow\n");
-			overflow = 1;
+			writel(0x00 , (u32)&DataStart[i]);
 		}
-		/* discard the buffer because the injector is too slow */
-		continue;
-	}
-	overflow = 0;
-
-	/* copy the start offset and the packet count to local variables */
-	offset = workQueue[readIndex].offset;
-	count = workQueue[readIndex].count;
-
-	//printk(".");
-
-	/* invalidate the cache */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
-	dma_cache_inv((void*)&internal->back_buffer[offset],
-			count * PACKET_SIZE);
-#else
-	invalidate_ioremap_region(0, internal->back_buffer,
-			offset, count * PACKET_SIZE);
-#endif
-
-#ifdef STREAMCHECK
-	/* The first bytes of the packet after the header should
-	   always be a 0x47 if not we got problems */
-	if (internal->back_buffer[offset + HEADER_SIZE] != 0x47)
-		printk("\n!0x47\n");
-#endif
-
-	/* Now go through each packet, check it's tag and
-           place it in the correct demux buffer */
-	if(demultiplex_dvb_packets != NULL)
-	{
-	  u8 *pFrom = &internal->back_buffer[offset];
-#ifdef __TDT__
-	  static u8 auxbuf[TAG_COUNT][PACKET_SIZE_WO_HEADER * AUX_COUNT];
-	  u8 *pTo[TAG_COUNT] = {auxbuf[0],auxbuf[1],auxbuf[2],auxbuf[3]};
-	  int count1[TAG_COUNT] = {0, 0, 0, 0};
-#else
-		static u8 auxbuf[TAG_COUNT][(PACKET_SIZE - HEADER_SIZE) * AUX_COUNT];
-		u8 *pTo[TAG_COUNT] = {auxbuf[0],auxbuf[1],auxbuf[2]};
-	  int count1[TAG_COUNT] = {0, 0, 0};
-#endif
-	  int n;
-
-	  /* sort the packets according to the tag,
-	     remove the TS merger tags and squeeze the
-	     packets to improve the performance */
-	  for (n = 0; n < count; n++)
-	  {
-	    /* Only the tag IDs of TS inputs are taken into account.
-	       The lower two bits of the tag ID are as follows:
-	       00 - TS0
-	       01 - TS1
-	       10 - TS2
-				 11 - SWTS0 */
-	    int tag = (pFrom[0] >> 2) & 0xf;
-	    /* only copy if the demux exists */
-	#if defined(SPARK7162)
-	    if((tag < TAG_COUNT) &&
-	       (internal->demux[internal->demux_tag[tag]] != NULL))
-	#else
-	    if((tag < TAG_COUNT) &&
-	       (internal->demux[tag] != NULL))
-	#endif
-	    {
-
-#ifdef STREAMCHECK
-				//check for startbyte of all paket
-				if (pFrom[6] != 0x47)
-					printk("[STREAMCHECK] first byte of packet not 0x47\n");
-
-				//check count of the choised videostream
-				if((pFrom[7]&0x1f)==vpidhigh && pFrom[8]==vpidlow) {
-					prv++;
-					if(prv>20000) {
-						printk("[STREAMCHECK] 20000 video PIDs found 0x%x%x\n",(pFrom[7]&0x1f),pFrom[8]);
-  					prv=0;
-					}
-					tc=pFrom[9];
-					tc=(tc<<4);
-					tc=(tc>>4);
-					if(vc==99)
-						vc=tc;
-					else {
-						vc++;
-						if(vc>15) vc=0;
-						if(vc!=tc) {
-							printk("[STREAMCHECK] invalide video count - count=%d, packetcount=%d, pid=0x%x%x\n",vc,tc,(pFrom[7]&0x1f),pFrom[8]);
-							vc=tc;
-						}
-					}
-				}
-
-				//check count of the choised audiostream
-				if((pFrom[7]&0x1f)==apidhigh && pFrom[8]==apidlow) {
-					pra++;
-					if(pra>20000) {
-						printk("[STREAMCHECK] 20000 audio PID found 0x%x%x\n",(pFrom[7]&0x1f),pFrom[8]);
-						pra=0;
-					}
-					tc=pFrom[9];
-					tc=(tc<<4);
-					tc=(tc>>4);
-					if(ac==99)
-  					ac=tc;
-					else {
-						ac++;
-						if(ac>15) ac=0;
-						if(ac!=tc) {
-							printk("[STREAMCHECK] invalide audio count - count=%d, packetcount=%d, pid=0x%x%x\n",ac,tc,(pFrom[7]&0x1f),pFrom[8]);
-							ac=tc;
-						}
-					}
-				}
-#endif
-#ifdef __TDT__
-	      memmove(pTo[tag], pFrom + HEADER_SIZE, PACKET_SIZE_WO_HEADER);
-	      pTo[tag] += PACKET_SIZE_WO_HEADER;
-#else
-				memmove(pTo[tag], pFrom + HEADER_SIZE,
-		      PACKET_SIZE - HEADER_SIZE);
-	      pTo[tag] += PACKET_SIZE - HEADER_SIZE;
-#endif
-	      count1[tag]++;
-	      if(count1[tag] >= AUX_COUNT)
-	      {
-		//printk("%d", tag);
-		/* inject the packets */
-	#if defined(SPARK7162)
-			demultiplex_dvb_packets(internal->demux[internal->demux_tag[tag]],
-						auxbuf[tag], count1[tag]);
-	#else
-			demultiplex_dvb_packets(internal->demux[tag],
-						auxbuf[tag], count1[tag]);
-	#endif
-		pTo[tag] = auxbuf[tag];
-		count1[tag] = 0;
-	      }
-	    }
-	    pFrom += PACKET_SIZE;
-	  }
-	  for(n = 0; n < TAG_COUNT; n++)
-	  {
-	    /* inject remainders if any */
-	#if defined(SPARK7162)
-	    if((count1[n] > 0) && (internal->demux[internal->demux_tag[n]] != NULL))
-	      demultiplex_dvb_packets(internal->demux[internal->demux_tag[n]], auxbuf[n], count1[n]);
-	#else
-	    if((count1[n] > 0) && (internal->demux[n] != NULL))
-	      demultiplex_dvb_packets(internal->demux[n], auxbuf[n], count1[n]);
-	#endif
-	  }
-	}
-
-	/* increment the readIndex */
-	readIndex = (readIndex + 1) % QUEUE_SIZE;
-  }
-
-  return 0;
-}
-
-/* This function is called periodically to poll the TC DMA structures.
-   The original version used interrupts which caused high CPU load.
-   In order to have a higher priority than the injector thread this function
-   is called by a timer as opposed to execution in a thread.
-   The published TC DMA code is not robust enough when the buffer contains
-   lots of packets (presumably > 500) even if the buffer is not full.
-   Therefore, it is important that the polling process always does its work
-   on time. */
-#ifdef __TDT__
-static void process_pti_dma(unsigned long data)
-{
-  unsigned int pti_wp, num_packets, pti_status;
-  bool buffer_round=0;
-
-	/* Load the write pointers, so we know where we are in the buffers */
-	pti_wp = readl(internal->pti_io + PTI_DMA_0_WRITE);
-
-	//align dma write pointer to packet size
-	pti_wp = pti_wp - ((pti_wp - dma_0_buffer_base) % PACKET_SIZE);
-
-	/* Read status registers */
-	pti_status = readl(internal->pti_io + PTI_IIF_FIFO_COUNT);
-
-	/* Error if we overflow */
-	if (pti_status & PTI_IIF_FIFO_FULL)
-	{
-		internal->err_count++;
-		printk(KERN_WARNING "%s: IIF Overflow\n",__FUNCTION__);
-	}
-
-	/* If the PTI had to drop packets because we couldn't process in time error */
-	if (*internal->discard)
-	{
-		printk(KERN_WARNING "%s: PTI had to discard %u packets %u %u\n",__func__,
-			*internal->discard,*internal->pread,*internal->pwrite);
-
-		internal->err_count++;
-		stpti_reset_dma(internal);
-		//writeIndex = 0;
-		//readIndex = 0;
-		//the semaphore must by also resetet to 0, fix later
-		stpti_start_dma(internal);
-	} else
-	{
-		/* If we get to the bottom of the buffer wrap the pointer back to the top */
-		if ((dma_0_buffer_rp & ~0xf) == (dma_0_buffer_top & ~0xf)) dma_0_buffer_rp = dma_0_buffer_base;
-
-		/* Calculate the amount of bytes used in the buffer */
-		if (dma_0_buffer_rp <= pti_wp) num_packets = (pti_wp - dma_0_buffer_rp) / PACKET_SIZE;
-		else
+		for (i = 0; i < 0X1000; ++i)
 		{
-			num_packets = ((dma_0_buffer_top - dma_0_buffer_rp) + (pti_wp - dma_0_buffer_base)) / PACKET_SIZE;
-			internal->loop_count2++;
-			internal->packet_count = 0;
-			buffer_round=1;
+			writel(0x00 , (u32)&CodeStart[i]);
 		}
-
-		/* If we have some packets */
-		if (num_packets)
+		for (i = 0; i < TRANSPORT_CONTROLLER_CODE_SIZE; ++i)
 		{
-			/* And the PTI has acknowledged the updated the packets */
-			if (!*internal->pread)
-			{
-				/* Increment the loop counter */
-				internal->loop_count++;
-
-				/* Increment the packet_count, by the number of packets we have processed */
-				internal->packet_count+=num_packets;
-
-				/* Now update the read pointer in the DMA engine */
-				writel(pti_wp, internal->pti_io + PTI_DMA_0_READ );
-
-				/* Now tell the firmware how many packets we have read */
-				PtiWrite(internal->pread, num_packets);
-
-				/* notify the injector thread */
-				if(buffer_round) {
-					unsigned int num_packets1 = (dma_0_buffer_top - dma_0_buffer_rp) / PACKET_SIZE;
-					workQueue[writeIndex].offset = dma_0_buffer_rp - dma_0_buffer_base;
-					workQueue[writeIndex].count = num_packets1;
-					writeIndex = (writeIndex + 1) % QUEUE_SIZE;
-					up(&workSem);
-
-					workQueue[writeIndex].offset = 0;
-					workQueue[writeIndex].count = num_packets-num_packets1;
-					writeIndex = (writeIndex + 1) % QUEUE_SIZE;
-					up(&workSem);
-				}
-				else {
-					workQueue[writeIndex].offset = dma_0_buffer_rp - dma_0_buffer_base;
-					workQueue[writeIndex].count = num_packets;
-					writeIndex = (writeIndex + 1) % QUEUE_SIZE;
-					up(&workSem);
-				}
-				dma_0_buffer_rp = pti_wp;
-			} // not read
-		} // num_packet
-	} // discard
-
-	/* reschedule the timer */
-	ptiTimer.expires = jiffies + DMA_POLLING_INTERVAL;
-	add_timer(&ptiTimer);
-}
-
-#else
-
-static void process_pti_dma(unsigned long data)
-{
-    unsigned int pti_rp, pti_wp, pti_base, pti_top, size_first, num_packets,
-		new_rp, pti_status, dma_status;
-    static unsigned int pti_status_old=0;
-    static unsigned int dma_status_old=0;
-
-	  /* Load the read and write pointers, so we know where we are in the buffers */
-	  pti_rp   = readl(internal->pti_io + PTI_DMA_0_READ);
-	  pti_wp   = readl(internal->pti_io + PTI_DMA_0_WRITE);
-	  pti_base = readl(internal->pti_io + PTI_DMA_0_BASE);
-	  pti_top  = pti_base + PTI_BUFFER_SIZE;
-
-	  /* Read status registers */
-	  pti_status = readl(internal->pti_io + PTI_IIF_FIFO_COUNT);
-	  dma_status = readl(internal->pti_io + PTI_DMA_0_STATUS);
-
-	  /* Error if we overflow */
-	  if (pti_status & PTI_IIF_FIFO_FULL)
-	  {
-	     internal->err_count++;
-	     printk(KERN_WARNING "%s: IIF Overflow\n",__FUNCTION__);
-	  }
-
-	  if (dma_status != dma_status_old)
-	  	dprintk("%s: DMA Status %x %x\n",__FUNCTION__,dma_status,internal->loop_count);
-
-	  /* If the PTI had to drop packets because we couldn't process in time error */
-	  if (*internal->discard)
-	  {
-	    printk(KERN_WARNING "%s: PTI had to discard %u packets %u %u\n",__func__,
-			*internal->discard,*internal->pread,*internal->pwrite);
-	    printk(KERN_WARNING "%s: Reseting DMA\n",__FUNCTION__);
-
-		internal->err_count++;
-	        stpti_reset_dma(internal);
-	        stpti_start_dma(internal);
-	  } else
-	  {
-
-	     pti_status_old = pti_status;
-	     dma_status_old = dma_status;
-
-	     /* If we get to the bottom of the buffer wrap the pointer back to the top */
-	     if ((pti_rp & ~0xf) == (pti_top & ~0xf)) pti_rp = pti_base;
-
-	  /* Calculate the amount of bytes used in the buffer */
-	  if (pti_rp <= pti_wp) size_first = pti_wp - pti_rp;
-	  else size_first = pti_top - pti_rp;
-
-	  /* Calculate the number of packets in the buffer */
-	  num_packets = size_first / PACKET_SIZE;
-
-	  /* If we have some packets */
-	  if (num_packets)
-	  {
-	    /* And the PTI has acknowledged the updated the packets */
-	    if (!*internal->pread)
-	    {
-	      int start_offset = pti_rp - pti_base;
-
-	      /* Increment the loop counter */
-	      internal->loop_count++;
-
-	      /* The read pointer should always be a multiple of the packet size */
-	      if ((pti_rp - pti_base) % PACKET_SIZE)
-		printk(KERN_WARNING "%s: 0x%x not multiple of %d\n",__FUNCTION__,(pti_rp - pti_base),PACKET_SIZE);
-
-		/* Update the read pointer based on the number of packets we have processed */
-		new_rp = pti_rp + num_packets * PACKET_SIZE;
-
-		/* Increment the packet_count, by the number of packets we have processed */
-		internal->packet_count+=num_packets;
-		if (new_rp > pti_top) dprintk("You b@*tard you killed kenny\n");
-
-		/* If we have gone round the buffer */
-		if (new_rp >= pti_top)
-		{
-		  //printk("+");
-		  /* Update the read pointer so it now points back to the top */
-		  new_rp = pti_base + (new_rp - pti_top); internal->loop_count2++;
-
-		  /* Print out some useful debug information when debugging is on */
-		  dprintk("%s: round the buffer %u times %u=pwrite %u=packet_count %u=num_packets %lu=jiffies %u %u\n",__FUNCTION__,
-			  internal->loop_count2,*internal->pwrite,internal->packet_count,num_packets,jiffies,pti_rp,pti_wp);
-
-		  /* Update the packet count */
-		  internal->packet_count = 0;
+			writel(transport_controller_code[i], (u32)&CodeStart[i]);
 		}
-
-		/* Now update the read pointer in the DMA engine */
-		writel(new_rp, internal->pti_io + PTI_DMA_0_READ );
-
-		/* Now tell the firmware how many packets we have read */
-		PtiWrite(internal->pread,num_packets);
-
-		//printk("*");
-
-		/* notify the injector thread */
-		workQueue[writeIndex].offset = start_offset;
-		workQueue[writeIndex].count = num_packets;
-		writeIndex = (writeIndex + 1) % QUEUE_SIZE;
-		up(&workSem);
-	    } // not read
-  	  } // num_packet
-        } // discard
-
-	/* reschedule the timer */
-	ptiTimer.expires = jiffies + DMA_POLLING_INTERVAL;
-	add_timer(&ptiTimer);
-}
-#endif
-
-/********************************************************/
-
-void pti_hal_init ( struct stpti *pti , struct dvb_demux* demux, void (*_demultiplex_dvb_packets)(struct dvb_demux* demux, const u8 *buf, int count))
-{
-  unsigned long start;
-  int vLoopSlots;
-
-  if(_demultiplex_dvb_packets == NULL)
-  {
-    printk("%s: no demultiplex function provided\n", __func__);
-    return;
-  }
-
-  demultiplex_dvb_packets = _demultiplex_dvb_packets;
-  external = pti;
-
-  internal = kmalloc(sizeof(struct pti_internal), GFP_KERNEL);
-
-  memset(internal, 0, sizeof(struct pti_internal));
-
-	#if defined(SPARK7162)
-	{
-		int i;
-		for (i = 0; i < TAG_COUNT; i++)
+		writel(0X5354 | (0X5054 << 16), (u32) & (TC_Params_p->TC_VersionID[0]));
+		writel(0X4934 | (0X001F << 16), (u32) & (TC_Params_p->TC_VersionID[1]));
+		writel(0X0803 | (0X0000 << 16), (u32) & (TC_Params_p->TC_VersionID[2]));
+		printk("Readback TC ... ");
+		for (i = 0; i < TRANSPORT_CONTROLLER_CODE_SIZE; ++i)
 		{
-			internal->demux_tag[i] = i;
-		}
-	}
-	#endif
-
-  /* Allocate the back buffer */
-  internal->back_buffer = (char*)bigphysarea_alloc_pages((PTI_BUFFER_SIZE+PAGE_SIZE-1) / PAGE_SIZE,0,GFP_KERNEL);
-
-  if (internal->back_buffer == NULL)
-     printk("error allocating back buffer !!!!!!!!!!!!!!!!!!!!!!!!\n");
-
-  /* ioremap the pti address space */
-#if defined(UFS912) \
- || defined(UFS913) \
- || defined(SPARK) \
- || defined(SPARK7162) \
- || defined(ATEVIO7500) \
- || defined(HS7110) \
- || defined(HS7810A) \
- || defined(HS7420) \
- || defined(HS7429) \
- || defined(HS7119) \
- || defined(HS7819) \
- || defined(ATEMIO520) \
- || defined(ATEMIO530) \
- || defined(VITAMIN_HD5000) \
- || defined(SAGEMCOM88)
-  start = 0xfe230000;
-#else
-  start = 0x19230000;
-#endif
-
-  internal->pti_io = (unsigned long)ioremap((unsigned long) start, 0xFFFF);
-
-  printk("pti ioremap 0x%.8lx -> 0x%.8x\n", start, internal->pti_io);
-
-  /* Resolve pointers we need for later */
-  internal->pidtable    = getsymbol(internal, "pidtable");
-  internal->num_pids    = getsymbol(internal, "num_pids");
-  internal->pidsearch   = getsymbol(internal, "pidsearch");
-
-  internal->psize       = getsymbol(internal, "psize");
-  internal->pread       = getsymbol(internal, "pread");
-  internal->pwrite      = getsymbol(internal, "pwrite");
-  internal->packet_size = getsymbol(internal, "packet_size");
-
-  internal->discard     = getsymbol(internal, "discard");
-  internal->header_size = getsymbol(internal, "header_size");
-  internal->thrown_away = getsymbol(internal, "thrown_away");
-
-  /* Setup PTI */
-  writel(0x1, internal->pti_io + PTI_DMA_PTI3_PROG);
-
-  printk("Load TC ...\n");
-
-  /* Write instructions and data */
-  loadtc(internal);
-
-  printk("Load TC done\n");
-
-  PtiWrite(internal->packet_size,PACKET_SIZE);
-  PtiWrite(internal->header_size,HEADER_SIZE);
-
-  /* Enable IIF */
-  writel(0x0,         internal->pti_io + PTI_IIF_SYNC_LOCK);
-  writel(0x0,         internal->pti_io + PTI_IIF_SYNC_DROP);
-  writel(PACKET_SIZE, internal->pti_io + PTI_IIF_SYNC_PERIOD);
-  writel(0x0,         internal->pti_io + PTI_IIF_SYNC_CONFIG);
-  writel(0x1,         internal->pti_io + PTI_IIF_FIFO_ENABLE);
-
-  /* Start the TC */
-  writel(PTI_MODE_ENABLE, internal->pti_io + PTI_MODE );
-
-  /* Setup packet count */
-  PtiWrite(internal->psize, (PTI_BUFFER_SIZE / (PACKET_SIZE)) - 2);
-  PtiWrite(internal->num_pids,0);
-
-  /* Reset the DMA */
-  stpti_setup_dma(internal);
-  stpti_reset_dma(internal);
-
-  /* Enable the DMA of data */
-#ifdef __TDT__
-	stpti_start_dma(internal);
-#else
-  writel( readl(internal->pti_io + PTI_DMA_ENABLE) | 0x1, internal->pti_io + PTI_DMA_ENABLE );
-#endif
-
-  internal->vSlots =
-      kmalloc ( sizeof ( struct tSlot * ) * 32,	GFP_KERNEL );
-
-  for ( vLoopSlots = 0; vLoopSlots < 32; vLoopSlots++ )
-  {
-      internal->vSlots[vLoopSlots] =
-	kmalloc ( sizeof ( struct tSlot ), GFP_KERNEL );
-
-      memset ( internal->vSlots[vLoopSlots], 0, sizeof ( struct tSlot ) );
-
-      internal->vSlots[vLoopSlots]->Handle = SLOT_HANDLE_OFFSET + vLoopSlots;
-      internal->vSlots[vLoopSlots]->tcIndex = -1;
-      internal->vSlots[vLoopSlots]->pid = 0xffff;
-  }
-
-  /* set up the processing thread */
-  sema_init(&workSem, 0);
-  kernel_thread ( stream_injector, internal, 0 );
-
-  /* schedule the polling process */
-  init_timer(&ptiTimer);
-  ptiTimer.expires = jiffies + DMA_POLLING_INTERVAL;
-  ptiTimer.function = process_pti_dma;
-  ptiTimer.data = 0;
-  add_timer(&ptiTimer);
-
-  return;
-}
-
-int pti_hal_descrambler_set_aes ( int session_handle, int descrambler_handle,
-			      u8 * Data, int parity, int data_type )
-{
-	return 0;
-}
-
-int pti_hal_descrambler_set ( int session_handle, int descrambler_handle,
-			      u8 * Data, int parity )
-{
-        return 0;
-}
-
-int pti_hal_descrambler_set_mode ( int session_handle, int descrambler_handle,
-			      enum ca_descr_algo algo )
-{
-        return 0;
-}
-
-int pti_hal_descrambler_unlink ( int session_handle, int descrambler_handle )
-{
-        return 0;
-}
-
-int pti_hal_descrambler_link ( int session_handle, int descrambler_handle,
-			       int slot_handle )
-{
-        return 0;
-}
-
-int pti_hal_get_new_descrambler ( int session_handle )
-{
-	return 1;
-}
-
-int pti_hal_slot_clear_pid ( int session_handle, int slot_handle )
-{
-  int i;
-
-  slot_handle -= SLOT_HANDLE_OFFSET;
-
-  printk("%s slot = %d, tc = %d, num = %d\n", __FUNCTION__, slot_handle,
-		internal->vSlots[slot_handle]->tcIndex,
-		*internal->num_pids);
-
-  if ((internal->vSlots[slot_handle]->tcIndex < 0) ||
-	(internal->vSlots[slot_handle]->pid == 0xffff))
-  {
-       printk("error pid not set, can't clear\n");
-       return -1;
-  }
-
-  /* Now reallocate the PIDs in the DMA table.
-     Move the last PID to the TC index to be cleared (shift operation
-     in the original code disturbs other PIDs). The sleep operation seems
-     to be necessary because without it the transport stream is disturbed. */
-  PtiWrite(&internal->pidtable[internal->vSlots[slot_handle]->tcIndex],
-		internal->pidtable[*internal->num_pids - 1]);
-  msleep(10);
-  PtiWrite(internal->num_pids , *internal->num_pids - 1);
-
-  /* ... and update id information */
-  for(i = 0; i < 32; i++)
-  {
-    /* find the slot using the moved TC index */
-    if(*internal->num_pids == internal->vSlots[i]->tcIndex)
-    {
-      internal->vSlots[i]->tcIndex = internal->vSlots[slot_handle]->tcIndex;
-      break;
-    }
-  }
-
-  internal->vSlots[slot_handle]->tcIndex = -1;
-
-  internal->err_count = 0;
-
-  return 0;
-}
-
-int pti_hal_slot_free ( int session_handle, int slot_handle )
-{
-  printk("%s %d\n", __FUNCTION__, slot_handle);
-
-  if(internal->vSlots[slot_handle - SLOT_HANDLE_OFFSET]->tcIndex != -1)
-    pti_hal_slot_clear_pid (session_handle, slot_handle );
-
-  slot_handle -= SLOT_HANDLE_OFFSET;
-
-  internal->vSlots[slot_handle]->inUse = 0;
-  internal->vSlots[slot_handle]->pid = 0xffff;
-  internal->vSlots[slot_handle]->tcIndex = -1;
-
-  internal->err_count = 0;
-
-  return 0;
-}
-
-int pti_hal_slot_unlink_buffer ( int session_handle, int slot_handle)
-{
-        return 0;
-}
-
-int pti_hal_slot_link_buffer ( int session_handle, int slot_handle,
-			       int bufType)
-{
-        return 0;
-}
-
-
-int pti_hal_slot_set_pid ( int session_handle, int slot_handle, u16 pid )
-{
-  int vLoop;
-
-  printk("%s: %d %d %d\n", __FUNCTION__, session_handle, slot_handle, pid);
-
-  for (vLoop = 0; vLoop < (*internal->num_pids); vLoop++)
-  {
-	  if ((unsigned short) internal->pidtable[vLoop] == (unsigned short) pid)
-	  {
-		 printk("pid %d already collecting. ignoring ... \n", pid);
-		 return -1;
-	  }
-  }
-
-  for (vLoop = 0; vLoop < 32; vLoop++)
-  {
-     if (internal->vSlots[vLoop]->Handle == slot_handle)
-     {
-	if ( internal->vSlots[vLoop]->inUse == 1 )
-	{
-	   internal->vSlots[vLoop]->pid = pid;
-	   internal->vSlots[vLoop]->tcIndex = *internal->num_pids;
-
-	   printk("%s ok (pid %d, tc = %d)\n", __FUNCTION__, pid, *internal->num_pids);
-
-	   PtiWrite(&internal->pidtable[*internal->num_pids], pid);
-	   msleep(10);
-	   PtiWrite(internal->num_pids,*internal->num_pids + 1);
-
-           return 0;
-	} else
-	{
-	   printk("%s failed1\n", __FUNCTION__);
-	   return -1;
-        }
-     }
-  }
-
-  printk("%s failed2\n", __FUNCTION__);
-  return -1;
-
-}
-
-int pti_hal_get_new_slot_handle ( int session_handle, int dvb_type,
-				  int dvb_pes_type, struct dvb_demux *demux,
-				  struct StreamContext_s *DemuxStream,
-				  struct DeviceContext_s *DeviceContext )
-{
-  int vLoopSlots;
-
-  for ( vLoopSlots = 0; vLoopSlots < 32; vLoopSlots++ )
-  {
-	if ( internal->vSlots[vLoopSlots]->inUse == 0 )
-	{
-          internal->vSlots[vLoopSlots]->inUse = 1;
-          internal->vSlots[vLoopSlots]->tcIndex = -1;
-
-	  printk("ret slothandle = %d\n", internal->vSlots[vLoopSlots]->Handle);
-
-          return internal->vSlots[vLoopSlots]->Handle;
-	}
-  }
-
-  return -1;
-}
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17)
-int pti_hal_set_source(int session_handle, const int source)
-//FIXME int pti_hal_set_source ( int session_handle, const dmx_source_t source )
-#else
-int pti_hal_set_source ( int session_handle, const dmx_source_t source )
-#endif
-{
-		printk("source %d, session_handle %d\n", source, session_handle);
-		#if defined(SPARK7162)
-		{
-			int i;
-			int old_session;
-			int old_source = -1;
-			old_session = internal->demux_tag[source];
-			printk("before\n");
-			for (i = 0; i < TAG_COUNT; i++)
+			unsigned long res = readl((u32)&CodeStart[i]);
+			if (res != transport_controller_code[i])
 			{
-				printk("internal->demux[%d] = 0x%x\n",
-						i, (int)internal->demux[i]);
-				printk("internal->demux_tag[%d] = %d\n",
-						i, internal->demux_tag[i]);
-			}
-			if (old_session == session_handle)
-			{
-        		return 1;
-			}
-			for (i = 0; i < TAG_COUNT; i++)
-			{
-			    if (internal->demux[i])
-			    {
-			        if (internal->demux_tag[i] == session_handle)
-			        {
-			            old_source = i;
-			        }
-			    }
-			}
-			internal->demux_tag[source] = session_handle;
-			if (old_source > -1)
-			{
-				internal->demux_tag[old_source] = old_session;
-			}
-
-			printk("after\n");
-			for (i = 0; i < TAG_COUNT; i++)
-			{
-				printk("internal->demux[%d] = 0x%x\n",
-						i, (int)internal->demux[i]);
-				printk("internal->demux_tag[%d] = %d\n",
-						i, internal->demux_tag[i]);
+				printk("failed !!!!\n");
+				break;
 			}
 		}
-		#endif
-        return 1;
-}
-
-int pti_hal_get_session_handle ( int tc_session_number )
-{
-	return 1;
-}
-
-int pti_hal_get_new_session_handle ( int source, struct dvb_demux * demux )
-{
-	if((source >= 0) && (source < TAG_COUNT))
-	{
-		printk("session %d, demux %p\n", source, demux);
-		internal->demux[source] = demux;
-		#if defined(SPARK7162)
-		internal->demux_tag[source] = source;
-		#endif
+		if (i == TRANSPORT_CONTROLLER_CODE_SIZE)
+		{
+			printk("successfull\n");
+		}
 	}
-
-	return source;
+#elif defined(A18)
+	TC_Params_p->TC_LookupTableStart           = (u32 *)(((u32)PTI4_Base) + 0X8000);
+	TC_Params_p->TC_SystemKeyStart             = (u32 *)(((u32)PTI4_Base) + 0X80C0);
+	TC_Params_p->TC_GlobalDataStart            = (u32 *)(((u32)PTI4_Base) + 0X8270);
+	TC_Params_p->TC_StatusBlockStart           = (u32 *)(((u32)PTI4_Base) + 0X82B8);
+	TC_Params_p->TC_MainInfoStart              = (u32 *)(((u32)PTI4_Base) + 0X82E0);
+	TC_Params_p->TC_DMAConfigStart             = (u32 *)(((u32)PTI4_Base) + 0X8A60);
+	TC_Params_p->TC_DescramblerKeysStart       = (u32 *)(((u32)PTI4_Base) + 0X902C);
+	TC_Params_p->TC_TransportFilterStart       = (u32 *)(((u32)PTI4_Base) + 0X9194);
+	TC_Params_p->TC_SCDFilterTableStart        = (u32 *)(((u32)PTI4_Base) + 0X9194);
+	TC_Params_p->TC_PESFilterStart             = (u32 *)(((u32)PTI4_Base) + 0X9194);
+	TC_Params_p->TC_SubstituteDataStart        = (u32 *)(((u32)PTI4_Base) + 0X81A8);
+	TC_Params_p->TC_SFStatusStart              = (u32 *)(((u32)PTI4_Base) + 0X9194);
+	TC_Params_p->TC_InterruptDMAConfigStart    = (u32 *)(((u32)PTI4_Base) + 0X9894);
+	TC_Params_p->TC_SessionDataStart           = (u32 *)(((u32)PTI4_Base) + 0X98A4);
+	TC_Params_p->TC_EMMStart                   = (u32 *)(((u32)PTI4_Base) + 0X9970);
+	TC_Params_p->TC_ECMStart                   = (u32 *)(((u32)PTI4_Base) + 0X9970);
+	TC_Params_p->TC_VersionID                  = (u32 *)(((u32)PTI4_Base) + 0X9970);
+	TC_Params_p->TC_NumberCarousels            = 0X0001;
+	TC_Params_p->TC_NumberSystemKeys           = 0X0000;
+	TC_Params_p->TC_NumberDMAs                 = 0X0035;
+	TC_Params_p->TC_NumberDescramblerKeys      = 0X0012;
+	TC_Params_p->TC_SizeOfDescramblerKeys      = 0X0014;
+	TC_Params_p->TC_NumberPesFilters           = 0X0000;
+	TC_Params_p->TC_NumberSectionFilters       = 0X0040;
+	TC_Params_p->TC_NumberSlots                = 0X0060;
+	TC_Params_p->TC_NumberOfSessions           = 0X0003;
+	TC_Params_p->TC_NumberIndexs               = 0X0060;
+	TC_Params_p->TC_NumberTransportFilters     = 0X0000;
+	TC_Params_p->TC_NumberSCDFilters           = 0X0000;
+	TC_Params_p->TC_SignalEveryTransportPacket = 0X0001;
+	TC_Params_p->TC_NumberEMMFilters           = 0X0000;
+	TC_Params_p->TC_SizeOfEMMFilter            = 0X001C;
+	TC_Params_p->TC_NumberECMFilters           = 0X0060;
+	TC_Params_p->TC_AutomaticSectionFiltering  = FALSE;
+	{
+		STPTI_DevicePtr_t DataStart = (u32 *)(((u32)CodeStart & 0xffff0000) | 0X8000);
+		for (i = 0; i < (0X1A00 / 4); ++i)
+		{
+			writel(0x00 , (u32)&DataStart[i]);
+		}
+		for (i = 0; i < 0X0780; ++i)
+		{
+			writel(0x00 , (u32)&CodeStart[i]);
+		}
+		for (i = 0; i < TRANSPORT_CONTROLLER_CODE_SIZE; ++i)
+		{
+			writel(transport_controller_code[i], (u32)&CodeStart[i]);
+		}
+		writel(0X5354 | (0X5054 << 16), (u32) & (TC_Params_p->TC_VersionID[0]));
+		writel(0X4934 | (0X0000 << 16), (u32) & (TC_Params_p->TC_VersionID[1]));
+		writel(0X0803 | (0X0000 << 16), (u32) & (TC_Params_p->TC_VersionID[2]));
+		printk("Readback TC ... ");
+		for (i = 0; i < TRANSPORT_CONTROLLER_CODE_SIZE; ++i)
+		{
+			unsigned long res = readl((u32)&CodeStart[i]);
+			if (res != transport_controller_code[i])
+			{
+				printk("failed !!!!\n");
+				break;
+			}
+		}
+		if (i == TRANSPORT_CONTROLLER_CODE_SIZE)
+		{
+			printk("successfull\n");
+		}
+	}
+#else
+	TC_Params_p->TC_LookupTableStart           = (u32 *)(((u32)PTI4_Base) + 0X8000);
+	TC_Params_p->TC_SystemKeyStart             = (u32 *)(((u32)PTI4_Base) + 0X80C0);
+	TC_Params_p->TC_GlobalDataStart            = (u32 *)(((u32)PTI4_Base) + 0X826C);
+	TC_Params_p->TC_StatusBlockStart           = (u32 *)(((u32)PTI4_Base) + 0X82B4);
+	TC_Params_p->TC_MainInfoStart              = (u32 *)(((u32)PTI4_Base) + 0X82D8);
+	TC_Params_p->TC_DMAConfigStart             = (u32 *)(((u32)PTI4_Base) + 0X8A58);
+	TC_Params_p->TC_DescramblerKeysStart       = (u32 *)(((u32)PTI4_Base) + 0X905C);
+	TC_Params_p->TC_TransportFilterStart       = (u32 *)(((u32)PTI4_Base) + 0X91C4);
+	TC_Params_p->TC_SCDFilterTableStart        = (u32 *)(((u32)PTI4_Base) + 0X91C4);
+	TC_Params_p->TC_PESFilterStart             = (u32 *)(((u32)PTI4_Base) + 0X91C4);
+	TC_Params_p->TC_SubstituteDataStart        = (u32 *)(((u32)PTI4_Base) + 0X81A8);
+	TC_Params_p->TC_SFStatusStart              = (u32 *)(((u32)PTI4_Base) + 0X91C4);
+	TC_Params_p->TC_InterruptDMAConfigStart    = (u32 *)(((u32)PTI4_Base) + 0X98C4);
+	TC_Params_p->TC_SessionDataStart           = (u32 *)(((u32)PTI4_Base) + 0X98D4);
+	TC_Params_p->TC_EMMStart                   = (u32 *)(((u32)PTI4_Base) + 0X9994);
+	TC_Params_p->TC_ECMStart                   = (u32 *)(((u32)PTI4_Base) + 0X9994);
+	TC_Params_p->TC_VersionID                  = (u32 *)(((u32)PTI4_Base) + 0X99B4);
+	TC_Params_p->TC_NumberCarousels            = 0X0001;
+	TC_Params_p->TC_NumberSystemKeys           = 0X0000;
+	TC_Params_p->TC_NumberDMAs                 = 0X0037;
+	TC_Params_p->TC_NumberDescramblerKeys      = 0X0012;
+	TC_Params_p->TC_SizeOfDescramblerKeys      = 0X0014;
+	TC_Params_p->TC_NumberPesFilters           = 0X0000;
+	TC_Params_p->TC_NumberSectionFilters       = 0X0040;
+	TC_Params_p->TC_NumberSlots                = 0X0060;
+	TC_Params_p->TC_NumberOfSessions           = 0X0003;
+	TC_Params_p->TC_NumberIndexs               = 0X0060;
+	TC_Params_p->TC_NumberTransportFilters     = 0X0000;
+	TC_Params_p->TC_NumberSCDFilters           = 0X0000;
+	TC_Params_p->TC_SignalEveryTransportPacket = 0X0001;
+	TC_Params_p->TC_NumberEMMFilters           = 0X0000;
+	TC_Params_p->TC_NumberECMFilters           = 0X0060;
+	TC_Params_p->TC_AutomaticSectionFiltering  = FALSE;
+	{
+		STPTI_DevicePtr_t DataStart = (u32 *)(((u32)CodeStart & 0xffff0000) | 0X8000);
+		for (i = 0; i < (0X1A00 / 4); ++i)
+		{
+			writel(0x00 , (u32)&DataStart[i]);
+		}
+		for (i = 0; i < 0X0900; ++i)
+		{
+			writel(0x00 , (u32)&CodeStart[i]);
+		}
+		for (i = 0; i < TRANSPORT_CONTROLLER_CODE_SIZE; ++i)
+		{
+			writel(transport_controller_code[i], (u32)&CodeStart[i]);
+		}
+		writel(0X5354 | (0X5054 << 16), (u32) & (TC_Params_p->TC_VersionID[0]));
+		writel(0X4934 | (0X0000 << 16), (u32) & (TC_Params_p->TC_VersionID[1]));
+		writel(0X84D0 | (0X0000 << 16), (u32) & (TC_Params_p->TC_VersionID[2]));
+		printk("Readback TC ... ");
+		for (i = 0; i < TRANSPORT_CONTROLLER_CODE_SIZE; ++i)
+		{
+			unsigned long res = readl((u32)&CodeStart[i]);
+			if (res != transport_controller_code[i])
+			{
+				printk("failed !!!!\n");
+				break;
+			}
+		}
+		if (i == TRANSPORT_CONTROLLER_CODE_SIZE)
+		{
+			printk("successfull\n");
+		}
+	}
+#endif
+	//stopTc(myTC);
+	//Load TC
+	// *********************************
+	// *********************************
+	//Init Hardware (stptiHelper_TCInit_Hardware)
+	TC_Device = myTC;
+	IIFSyncPeriod = 188 /* DVB_TS_PACKET_LENGTH*/; /* default is 188 for DVB */
+	TagBytes = 0; /* default is TSMERGER in bypass mode (or no TSMERGER) */
+	/* --- Initialize TC registers --- */
+	writel(0 , (void *)&TC_Device->TCMode);
+	writel(0xffff, (void *)&TC_Device->PTIIntAck0);
+	writel(0xffff, (void *)&TC_Device->PTIIntAck1);
+	writel(0xffff, (void *)&TC_Device->PTIIntAck2);
+	writel(0xffff, (void *)&TC_Device->PTIIntAck3);
+	/* disable all interrupts */
+	writel(0 , (void *)&TC_Device->PTIIntEnable0);
+	writel(0 , (void *)&TC_Device->PTIIntEnable1);
+	writel(0 , (void *)&TC_Device->PTIIntEnable2);
+	writel(0 , (void *)&TC_Device->PTIIntEnable3);
+	/* Initialise various registers */
+	writel(0 , (void *)&TC_Device->STCTimer0);
+	writel(0 , (void *)&TC_Device->STCTimer1);
+	/* Initialise DMA Registers */
+	writel(0 , (void *)&TC_Device->DMAEnable);             /* Disable DMAs */
+	writel(1 , (void *)&TC_Device->DMAPTI3Prog);           /* PTI3 Mode */
+	writel(0 , (void *)&TC_Device->DMA0Base);
+	writel(0 , (void *)&TC_Device->DMA0Top);
+	writel(0 , (void *)&TC_Device->DMA0Write);
+	writel(0 , (void *)&TC_Device->DMA0Read);
+	writel(0 , (void *)&TC_Device->DMA0Setup);
+	writel((1 | (1 << 16)), (void *)&TC_Device->DMA0Holdoff);
+	writel(0 , (void *)&TC_Device->DMA0Status);
+	writel(0 , (void *)&TC_Device->DMA1Base);
+	writel(0 , (void *)&TC_Device->DMA1Top);
+	writel(0 , (void *)&TC_Device->DMA1Write);
+	writel(0 , (void *)&TC_Device->DMA1Read);
+	writel(0 , (void *)&TC_Device->DMA1Setup);
+	writel((1 | (1 << 16)) , (void *)&TC_Device->DMA1Holdoff);
+	writel(0 , (void *)&TC_Device->DMA1CDAddr);
+	writel(0 , (void *)&TC_Device->DMASecStart);
+	writel(0 , (void *)&TC_Device->DMA2Base);
+	writel(0 , (void *)&TC_Device->DMA2Top);
+	writel(0 , (void *)&TC_Device->DMA2Write);
+	writel(0 , (void *)&TC_Device->DMA2Read);
+	writel(0 , (void *)&TC_Device->DMA2Setup);
+	writel((1 | (1 << 16)), (void *)&TC_Device->DMA2Holdoff);
+	writel(0 , (void *)&TC_Device->DMA2CDAddr);
+	writel(0 , (void *)&TC_Device->DMAFlush);
+	writel(0 , (void *)&TC_Device->DMA3Base);
+	writel(0 , (void *)&TC_Device->DMA3Top);
+	writel(0 , (void *)&TC_Device->DMA3Write);
+	writel(0 , (void *)&TC_Device->DMA3Read);
+	writel(0 , (void *)&TC_Device->DMA3Setup);
+	writel((1 | (1 << 16)), (void *)&TC_Device->DMA3Holdoff);
+	writel(0 , (void *)&TC_Device->DMA3CDAddr);
+	writel(0xf , (void *)&TC_Device->DMAEnable);              /* Enable DMAs */
+	/* Initialise IIF Registers */
+	writel(0 , (void *)&TC_Device->IIFFIFOEnable);
+	writel(1/*Device_p->AlternateOutputLatency*/ , (void *)&TC_Device->IIFAltLatency);
+	writel(0/*Device_p->SyncLock*/, (void *)&TC_Device->IIFSyncLock);
+	writel(0/*Device_p->SyncDrop*/, (void *)&TC_Device->IIFSyncDrop);
+	writel(IIF_SYNC_CONFIG_USE_SOP , (void *)&TC_Device->IIFSyncConfig);
+	TagBytes = 6;
+	writel(IIFSyncPeriod + TagBytes , (void *)&TC_Device->IIFSyncPeriod);
+	writel(1 , (void *)&TC_Device->IIFCAMode);
+	//Init Hardware
+	// *********************************
+	// *********************************************************
+	//Init PidSearchEngine (stptiHelper_TCInit_PidSearchEngine)
+	for (i = 0; i < TC_Params_p->TC_NumberSlots; i++)
+	{
+		volatile u16 *Addr_p = (volatile u16 *) TC_Params_p->TC_LookupTableStart;
+		PutTCData(&Addr_p[i], TC_INVALID_PID);
+	}
+	//Init PidSearchEngine (stptiHelper_TCInit_PidSearchEngine)
+	// *********************************************************
+	// *****************************************
+	//Init GlobalInfo (stptiHelper_TCInit_GlobalInfo)
+	TCGlobalInfo = (TCGlobalInfo_t *)TC_Params_p->TC_GlobalDataStart;
+	/* Set the scratch area so TC can dump DMA0 data (in cdfifo-ish mode). Be paranoid
+	 and set the buffer to a DVB packet plus alignment/guard bytes */
+	writel((((u32)(DmaFifoFlushingTarget)) + 15) & (~0x0f) , (void *)&TCGlobalInfo->GlobalScratch);
+	STSYS_WriteTCReg16LE((void *)&TCGlobalInfo->GlobalSFTimeout, 1429); /* default is 1429 iterations * 7 tc cycles = 10003 tc cycles */
+	//Init GlobalInfo (stptiHelper_TCInit_GlobalInfo)
+	// *****************************************
+	// ******************************************
+	//Init MainInfo (stptiHelper_TCInit_MainInfo)
+	for (i = 0; i < TC_Params_p->TC_NumberSlots; i++)
+	{
+		TCMainInfo_t *MainInfo = &((TCMainInfo_t *) TC_Params_p->TC_MainInfoStart)[i];
+		STSYS_WriteTCReg16LE((void *)&MainInfo->SlotState, 0);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->SlotMode, 0);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->DescramblerKeys_p, TC_INVALID_LINK);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->DMACtrl_indices, 0xFFFF);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->StartCodeIndexing_p, 0);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->SectionPesFilter_p, TC_INVALID_LINK);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->RemainingPESLength, 0);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->PacketCount, 0);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->SlotState, 0);
+		STSYS_WriteTCReg16LE((void *)&MainInfo->SlotMode, 0);
+	}
+	//Init MainInfo (stptiHelper_TCInit_MainInfo)
+	// ******************************************
+	// ******************************************
+	//Init SessionInfo (stptiHelper_TCInit_SessionInfo)
+	for (session = 0; session < TC_Params_p->TC_NumberOfSessions; session++)
+	{
+		TCSessionInfo_t *SessionInfo_p = &((TCSessionInfo_t *) TC_Params_p->TC_SessionDataStart)[session];
+		STSYS_WriteTCReg16LE((void *)&SessionInfo_p->SessionTSmergerTag, SESSION_NOT_ALLOCATED);
+#if defined(A18)
+		STSYS_WriteTCReg16LE((void *)&SessionInfo_p->SessionEMMFilterOffset, session * TC_Params_p->TC_SizeOfEMMFilter);
+#endif
+		/* Set SlotInterrupt in the Interrupt Mask */
+		STSYS_SetTCMask16LE((void *)&SessionInfo_p->SessionInterruptMask0, STATUS_FLAGS_PACKET_SIGNAL);
+		STSYS_SetTCMask16LE((void *)&SessionInfo_p->SessionInterruptMask0, STATUS_FLAGS_PACKET_SIGNAL_RECORD_BUFFER);
+	}
+	//Init SessionInfo (stptiHelper_TCInit_SessionInfo)
+	// ******************************************
+	// ******************************************
+	//Init SlotList (stptiHelper_SlotList_Init)
+	//fixme: weggelassen, hier holen sie sich speicher fuer die Slots der Sessions; etc
+	//->PrivateData
+	//Init SlotList (stptiHelper_SlotList_Init)
+	// ******************************************
+	// ******************************************
+	//Init Interrupt DMA (stptiHelper_TCInit_InterruptDMA)
+	TCInterruptDMAConfig_p = (TCInterruptDMAConfig_t *) TC_Params_p->TC_InterruptDMAConfigStart;
+	/* Adjust the buffer size to make sure it is valid */
+	DMABufferSize = stpti_BufferSizeAdjust(sizeof(TCStatus_t) * NO_OF_STATUS_BLOCKS);
+	pti->InterruptDMABufferSize = DMABufferSize + DMAScratchAreaSize;
+	base_p = (u8 *)dma_alloc_coherent(NULL,
+					  pti->InterruptDMABufferSize,
+					  (dma_addr_t *) & (pti->InterruptDMABufferInfo),
+					  GFP_KERNEL);
+	if (base_p == NULL)
+	{
+		printk("!!!!!!!!!! NO MEMORY !!!!!!!!!!!!!!!\n");
+		pti->InterruptBufferStart_p = NULL;
+		return;
+	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
+	__flush_purge_region((void *) base_p, DMABufferSize + DMAScratchAreaSize);
+#else
+	dma_cache_wback_inv((void *) base_p, DMABufferSize + DMAScratchAreaSize);
+#endif
+	base_p = stpti_BufferBaseAdjust(base_p);
+	pti->InterruptBufferStart_p = base_p;
+#if defined (CONFIG_KERNELVERSION) || LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
+	/* Convert to a physical address for TC. */
+	base_p = (u8 *)virt_to_phys(base_p);
+#else
+	/* Convert to a physical address for TC. */
+	base_p = (u8 *)virt_to_bus(base_p);
+#endif
+	/* Sort out base and top alignment */
+	top_p = base_p + DMABufferSize;
+	/* set top_p, btm, read_p & write_p ( qwrite_p etc not required ) */
+	writel((u32) base_p, (void *)&TCInterruptDMAConfig_p->DMABase_p);
+	writel(((u32) top_p - 1) & ~0X0f , (void *)&TCInterruptDMAConfig_p->DMATop_p);
+	writel((u32) base_p , (void *)&TCInterruptDMAConfig_p->DMARead_p);
+	writel((u32) base_p , (void *)&TCInterruptDMAConfig_p->DMAWrite_p);
+	//Init Interrupt DMA (stptiHelper_TCInit_InterruptDMA)
+	// ******************************************
+	// ******************************************
+	//Alloc PrivateData (stptiHelper_TCInit_AllocPrivateData)
+	//fixme erstmal wechgelassen (SlotHandle etc werden alloziiert)
+	//Alloc PrivateData
+	// ******************************************
+	// ******************************************
+	//TcCam Init (TcCam_Initialize)
+	TC_SectionFilterArrays_p = (TCSectionFilterArrays_t *) &TC_Device->TC_SectionFilterArrays;
+	//ClearAllCams( TC_SectionFilterArrays_p );
+	for (block = 0; block < SF_NUM_BLOCKS_PER_CAM; block++)
+	{
+		for (index = 0; index < SF_FILTER_LENGTH; index++)
+		{
+			TC_SectionFilterArrays_p->CamA_Block[block].Index[index].Data.Word = 0xffffffff;
+			TC_SectionFilterArrays_p->CamA_Block[block].Index[index].Mask.Word = 0xffffffff;
+			TC_SectionFilterArrays_p->CamB_Block[block].Index[index].Data.Word = 0xffffffff;
+			TC_SectionFilterArrays_p->CamB_Block[block].Index[index].Mask.Word = 0xffffffff;
+		}
+	}
+	for (index = 0; index < TC_NUMBER_OF_HARDWARE_NOT_FILTERS; index++)
+	{
+		TC_SectionFilterArrays_p->NotFilter[index] = 0;
+	}
+	//fixme: auch hier hab ich die ganze interne verwaltung wegoptimiert ;-)
+	//TcCam Init (TcCam_Initialize)
+	// ******************************************
+	// ******************************************
+	//Start (stptiHelper_TCInit_Start)
+#if 0
+	STSYS_WriteRegDev32LE((void *)&TC_Device->TCMode, 0x08);        /* Full Reset the TC  */
+	udelay(200 * 64); /* 12800us */             /* Wait */
+	STSYS_WriteRegDev32LE((void *)&TC_Device->TCMode, 0x00);        /* Finish Full Reset the TC  */
+	udelay(10 * 64); /* 640us */
+#endif
+	writel(1, (void *)&TC_Device->IIFFIFOEnable);
+	writel(2, (void *)&TC_Device->TCMode);
+	writel(1, (void *)&TC_Device->TCMode);
 }
-
-void paceSwtsByPti(void)
-{
-}
-
-EXPORT_SYMBOL(paceSwtsByPti);
-
-EXPORT_SYMBOL(pti_hal_descrambler_set);
-EXPORT_SYMBOL(pti_hal_descrambler_set_aes);
-EXPORT_SYMBOL(pti_hal_descrambler_set_mode);
-EXPORT_SYMBOL(pti_hal_descrambler_unlink);
-EXPORT_SYMBOL(pti_hal_descrambler_link);
-EXPORT_SYMBOL(pti_hal_get_new_descrambler);
-EXPORT_SYMBOL(pti_hal_slot_free);
-EXPORT_SYMBOL(pti_hal_slot_unlink_buffer);
-EXPORT_SYMBOL(pti_hal_slot_link_buffer);
-EXPORT_SYMBOL(pti_hal_slot_clear_pid);
-EXPORT_SYMBOL(pti_hal_slot_set_pid);
-EXPORT_SYMBOL(pti_hal_get_new_slot_handle);
-EXPORT_SYMBOL(pti_hal_set_source);
-EXPORT_SYMBOL(pti_hal_get_session_handle);
-EXPORT_SYMBOL(pti_hal_get_new_session_handle);
-EXPORT_SYMBOL(pti_hal_init);
 
 int __init pti_init(void)
 {
-   printk("pti loaded\n");
-   return 0;
-}
-
-static void __exit pti_exit(void)
-{
-   printk("pti unloaded\n");
-}
-
-module_init             (pti_init);
-module_exit             (pti_exit);
-
-#if defined(PLAYER_179) || defined(PLAYER_191)
-#if (defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1) || defined(SPARK) || defined(SPARK7162)) || defined(SAGEMCOM88)
-module_param(waitMS, int, 0444);
-MODULE_PARM_DESC(waitMS, "waitMS");
-
-module_param(videoMem, int, 0444);
-MODULE_PARM_DESC(videoMem, "videoMem\n");
+	printk("pti loaded (videoMem = %d, waitMS = %d", videoMem, waitMS);
+#ifdef UFS910
+	printk(", camRouting = %d", camRouting);
 #endif
-#elif defined(PLAYER_131)
+#ifdef CONFIG_PRINTK
+	printk(", enableStatistic = %d", enableStatistic);
 #else
+	printk(", enableSysStatistic = %d", enableSysStatistic);
+#endif
+	printk(")\n");
+	return 0;
+}
+
+void __exit pti_exit(void)
+{
+	printk("pti unloaded\n");
+}
+
+module_init(pti_init);
+module_exit(pti_exit);
+
+MODULE_DESCRIPTION("PTI driver");
+MODULE_AUTHOR("Team Ducktales");
+MODULE_LICENSE("NO");
+
+#ifdef UFS910
+module_param(camRouting, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(camRouting, "ufs910 only! 1=if stream not scrambled do not route it through cimax");
 #endif
 
-MODULE_AUTHOR("Peter Bennett <peter.bennett@st.com>; adapted by TDT");
-MODULE_DESCRIPTION("STPTI DVB Driver");
-MODULE_LICENSE("GPL");
+module_param(videoMem, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(videoMem, "memory for video pid buffer in dvb packets (188 byte). default 2048");
+
+module_param(waitMS, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(waitMS, "waiting time in ms before processing next data (default=20)");
+
+#ifdef CONFIG_PRINTK
+module_param(enableStatistic, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(enableStatistic, "enable statistic output on pids arriving pti (default=0=disabled)");
+#else
+module_param(enableSysStatistic, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(enableSysStatistic, "enable sys statistic output on pids arriving pti (default=1=disabled)");
+
+module_param(pti_last_time, ulong, S_IRUSR | S_IRGRP);
+MODULE_PARM_DESC(pti_last_time, "last time pti task called");
+
+module_param(pti_count, ulong, S_IRUSR | S_IRGRP);
+MODULE_PARM_DESC(pti_count, "pti package counter");
+#endif
