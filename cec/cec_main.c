@@ -51,7 +51,7 @@
 static unsigned char cancelStart = 0;
 int activemode = 0;
 int debug = 0;
-char *deviceName = "DUCKBOX";
+char *deviceName = "SH4";
 unsigned char deviceType = DEVICE_TYPE_DVD;
 
 //----------------------------
@@ -143,5 +143,5 @@ module_param(deviceName, charp, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(debug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 MODULE_PARM_DESC(activemode, "Active mode 0=disabled >0=enabled(activemode)");
 MODULE_PARM_DESC(deviceType, "Device type (default: 4 (DVD))");
-MODULE_PARM_DESC(deviceName, "Name (default: DUCKBOX)");
+MODULE_PARM_DESC(deviceName, "Name (default: SH4)");
 

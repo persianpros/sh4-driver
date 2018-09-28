@@ -1507,7 +1507,7 @@ int nuvoton_init_func(void)
 	}
 #if !defined(HS7810A) && !defined(HS7819) && !defined(HS7110) && !defined(HS7119) //VFD models
 	res |= nuvotonSetBrightness(7);
-	res |= nuvotonWriteString("T.-Ducktales", strlen("T.-Ducktales"));
+	res |= nuvotonWriteString("SH4", strlen("SH4"));
 #elif defined(FORTIS_HDBOX) || defined(OCTAGON1008) //models with icons
 	for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX; vLoop++)
 	{
@@ -1550,7 +1550,7 @@ int nuvoton_init_func(void)
 	res |= nuvotonWriteCommand(init4, sizeof(init4), 0);  //clear wakeup time
 	res |= nuvotonSetBrightness(7);
 
-	res |= nuvotonWriteString("T.-Ducktales", strlen("T.-Ducktales"));
+	res |= nuvotonWriteString("SH4", strlen("SH4"));
 
 	dprintk(100, "%s <\n", __func__);
 	return 0;
