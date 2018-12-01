@@ -4,7 +4,7 @@
 *.la
 *.so
 *.o
-.*.cmd
+*.cmd
 *.ko
 *.a
 *.mod.c
@@ -16,5 +16,3 @@
 .deps/
 .dirstamp
 Module.symvers
-frontends/multituner.org/
-pti_np
