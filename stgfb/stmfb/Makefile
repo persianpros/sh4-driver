@@ -120,13 +120,19 @@ STX710XSRCS += $(addprefix $(SRC_TOPDIR)/soc/stb7100/,                         \
 stx710x-display-objs := $(patsubst %.cpp,%.o,$(ALLSRCS) $(STX710XSRCS))
 stx710x-display-objs := $(patsubst %.c,%.o,$(stx710x-display-objs))
 
+ifeq ($(CONFIG_SH_ST_MB442),y)
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifeq ($(CONFIG_SH_ST_MB448),y)
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
 ifeq ($(CONFIG_SH_ST_MB602),y)
 obj-m += stmcore-display-sti5202.o
 stmcore-display-sti5202-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/sti5202.o
-endif
-ifdef HL101
-obj-m += stmcore-display-stx7109c3.o
-stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 else
 obj-m += stmcore-display-stx7100.o
 obj-m += stmcore-display-stx7109c2.o
@@ -135,8 +141,6 @@ obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
 stmcore-display-stx7109c2-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c2.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
-endif
-
 endif
 
 ifeq ($(CONFIG_CPU_SUBTYPE_STX7200),y)
@@ -201,6 +205,11 @@ sti7111-display-objs := $(patsubst %.c,%.o,$(sti7111-display-objs))
 
 
 ifeq ($(CONFIG_CPU_SUBTYPE_STX7111),y)
+obj-m += stmcore-display-sti7111.o
+stmcore-display-sti7111-objs := $(sti7111-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/sti7111_7141/sti7111.o
+endif
+
+ifeq ($(CONFIG_SH_ST_HDK7111),y)
 obj-m += stmcore-display-sti7111.o
 stmcore-display-sti7111-objs := $(sti7111-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/sti7111_7141/sti7111.o
 endif
