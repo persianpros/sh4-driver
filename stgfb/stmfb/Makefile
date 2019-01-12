@@ -133,6 +133,10 @@ endif
 ifeq ($(CONFIG_SH_ST_MB602),y)
 obj-m += stmcore-display-sti5202.o
 stmcore-display-sti5202-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/sti5202.o
+endif
+ifdef HL101
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 else
 obj-m += stmcore-display-stx7100.o
 obj-m += stmcore-display-stx7109c2.o
