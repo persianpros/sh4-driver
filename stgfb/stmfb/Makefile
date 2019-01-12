@@ -120,31 +120,110 @@ STX710XSRCS += $(addprefix $(SRC_TOPDIR)/soc/stb7100/,                         \
 stx710x-display-objs := $(patsubst %.cpp,%.o,$(ALLSRCS) $(STX710XSRCS))
 stx710x-display-objs := $(patsubst %.c,%.o,$(stx710x-display-objs))
 
-ifeq ($(CONFIG_SH_ST_MB442),y)
-obj-m += stmcore-display-stx7109c3.o
-stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
-endif
-
-ifeq ($(CONFIG_SH_ST_MB448),y)
-obj-m += stmcore-display-stx7109c3.o
-stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
-endif
-
 ifeq ($(CONFIG_SH_ST_MB602),y)
 obj-m += stmcore-display-sti5202.o
 stmcore-display-sti5202-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/sti5202.o
 endif
+
+ifdef ADB_BOX
+obj-m += stmcore-display-stx7100.o
+stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
+endif
+
+ifdef ARIVALINK200
+obj-m += stmcore-display-stx7100.o
+stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
+endif
+
+ifdef CUBEREVO
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef CUBEREVO_2000HD
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef CUBEREVO_250HD
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef CUBEREVO_3000HD
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef CUBEREVO_MINI
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef CUBEREVO_MINI2
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef FORTIS_HDBOX
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
 ifdef HL101
 obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
-else
-obj-m += stmcore-display-stx7100.o
-obj-m += stmcore-display-stx7109c2.o
+endif
+
+ifdef IPBOX55
 obj-m += stmcore-display-stx7109c3.o
-stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
-stmcore-display-stx7109c2-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c2.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif
+
+ifdef IPBOX99
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef IPBOX9900
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef OCTAGON1080
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef TF7700
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef UFC960
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
+ifdef UFS910
+obj-m += stmcore-display-stx7100.o
+stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
+endif
+
+ifdef UFS922
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+#else
+#obj-m += stmcore-display-stx7100.o
+#obj-m += stmcore-display-stx7109c2.o
+#obj-m += stmcore-display-stx7109c3.o
+#
+#stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
+#stmcore-display-stx7109c2-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c2.o
+#stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+#endif
+
 endif
 
 ifeq ($(CONFIG_CPU_SUBTYPE_STX7200),y)
