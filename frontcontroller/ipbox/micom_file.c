@@ -65,7 +65,7 @@ struct saved_data_s
 
 int currentDisplayTime = 0; //display text not time
 
-#ifdef CUBEREVO
+#if defined(CUBEREVO) || defined(CUBEREVO_9500HD)
 /* animation timer for Play Symbol on 9000er */
 static struct timer_list playTimer;
 #endif
@@ -298,7 +298,7 @@ special_char_t special2seg_14dotmatrix[] =
 	{'$',     20},
 	{'%',     21},
 	{'&',     22},
-	{'´',     23},
+	{'Â´',     23},
 	{'(',     24},
 	{')',     25},
 	{'*',     26},
@@ -319,7 +319,7 @@ special_char_t special2seg_14dotmatrix[] =
 	{'{',    107},
 	{'}',    109},
 	/* eurosymbol  {'',    116},*/
-	{'§',    129},
+	{'Â§',    129},
 	{'\'',   144},
 };
 
@@ -483,7 +483,7 @@ struct iconToInternal micom_14seg_Icons[] =
 	{ "ICON_TIMESHIFT" , ICON_TIMESHIFT , 0x03, 0x01, 1},
 };
 
-#ifdef CUBEREVO
+#if defined(CUBEREVO) || defined(CUBEREVO_9500HD)
 int micomWriteCommand(char *buffer, int len, int needAck);
 
 #define cNumberSymbols      8
@@ -832,7 +832,7 @@ int micomSetIcon(int which, int on)
 	}
 	else
 	{
-#ifdef CUBEREVO
+#if defined(CUBEREVO) || defined(CUBEREVO_9500HD)
 		if ((which == ICON_Play) && (front_seg_num == 12) && (on))
 		{
 			/* display circle */
@@ -1165,13 +1165,13 @@ int micomGetMicom(void)
 
 #else
 
-#if defined(CUBEREVO)
+#if defined(CUBEREVO) || defined(CUBEREVO_9500HD)
 	if ((micom_year == 2008) && (micom_month == 3))
 #elif defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) /* fixme: not sure if true for MINI2 !!! */
 	if ((micom_year == 2008) && (micom_month == 4))
 #endif
 	{
-#if defined(CUBEREVO)
+#if defined(CUBEREVO) || defined(CUBEREVO_9500HD)
 		front_seg_num = 12;
 		num2seg = num2seg_12dotmatrix;
 		Char2seg = Char2seg_12dotmatrix;
@@ -1387,6 +1387,8 @@ int micom_init_func(void)
 	printk("Cuberevo 250 HD VFD initializing (V%s)\n", driver_version);
 #elif defined(CUBEREVO)
 	printk("Cuberevo 9000 HD VFD initializing (V%s)\n", driver_version);
+#elif defined(CUBEREVO_9500HD)
+	printk("Cuberevo 9500 HD VFD initializing (V%s)\n", driver_version);
 #elif defined(CUBEREVO_2000HD)
 	printk("Cuberevo 2000 HD VFD initializing (V%s)\n", driver_version);
 #elif defined(CUBEREVO_3000HD)
@@ -1410,7 +1412,7 @@ int micom_init_func(void)
 			micomSetIcon(vLoop, 0);
 #endif
 
-#ifdef CUBEREVO
+#if defined(CUBEREVO) || defined(CUBEREVO_9500HD)
 	if (front_seg_num == 12)
 	{
 		init_timer(&playTimer);
