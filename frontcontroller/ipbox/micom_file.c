@@ -1386,7 +1386,7 @@ int micom_init_func(void)
 #elif defined(CUBEREVO_250HD)
 	printk("Cuberevo 250 HD VFD initializing (V%s)\n", driver_version);
 #elif defined(CUBEREVO)
-	printk("Cuberevo 9000 HD VFD initializing (V%s)\n", driver_version);
+	printk("Cuberevo HD VFD initializing (V%s)\n", driver_version);
 #elif defined(CUBEREVO_9500HD)
 	printk("Cuberevo 9500 HD VFD initializing (V%s)\n", driver_version);
 #elif defined(CUBEREVO_2000HD)
