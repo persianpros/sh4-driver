@@ -12,3 +12,13 @@ fi
 
 # Flush eth0 device which is set by kernel cmdline
 ip addr flush dev eth0 scope global
+
+if [ ! -e /boot/audio.elf ] ; then
+	echo "Audio Firmware Missing!"
+	echo "Audio FW Missing!" > /dev/vfd
+fi
+
+if [ ! -e /boot/video.elf ] ; then
+	echo "Video Firmware Missing!"
+	echo "Video FW Missing!" > /dev/vfd
+fi
