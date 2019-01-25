@@ -19,7 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  *
- * Fortis HDBOX FS9000/9200 / HS9510 / HS7XXX Front panel driver.
+ * Fortis HDBOX FS9000/9200 / HS8200 / HS9510 / HS8200 / HS7XXX Front panel driver.
  *
  * Devices:
  *  - /dev/vfd (vfd ioctls and read/write function)
@@ -32,7 +32,13 @@
  *
  * Date     By              Description
  * --------------------------------------------------------------------------------------
- * 20130929 Audioniek
+ * 20130929 Audioniek       Initial version.
+ * 20160523 Audioniek       procfs added.
+ * 20170115 Audioniek       Response on getFrontInfo added.
+ * 20170120 Audioniek       Spinner thread for FS9000/9200 added.
+ * 20170128 Audioniek       Spinner thread for HS8200 added.
+ * 20170202 Audioniek       Icon thread for HS8200 added.
+ * 20170417 Audioniek       GMT offset parameter added, default plus one hour.
  *
  ****************************************************************************************/
 
@@ -76,6 +82,7 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/termbits.h>
+#include <linux/kthread.h>
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/delay.h>
@@ -102,9 +109,11 @@
 
 #define EVENT_ANSWER_GETTIME       0x15
 #define EVENT_ANSWER_WAKEUP_REASON 0x81
-#define EVENT_ANSWER_FRONTINFO     0xe4 /* unused */
-#define EVENT_ANSWER_GETIRCODE     0xa5 /* unused */
+#define EVENT_ANSWER_GETIRCODE     0xa5
 #define EVENT_ANSWER_GETPORT       0xb3 /* unused */
+#define EVENT_ANSWER_FRONTINFO     0xd4
+#define EVENT_ANSWER_E9            0xe9
+#define EVENT_ANSWER_F9            0xf9
 
 #define DATA_BTN_EVENT             2
 
@@ -112,9 +121,11 @@
 
 short paramDebug = 10;
 int waitTime = 1000;
-
+int dataflag = 0;
 static unsigned char expectEventData = 0;
 static unsigned char expectEventId   = 1;
+char *gmt_offset = "3600";  // GMT offset is plus one hour as default
+int rtc_offset;
 
 #define ACK_WAIT_TIME msecs_to_jiffies(500)
 
@@ -124,6 +135,10 @@ static unsigned char expectEventId   = 1;
 
 #define cGetTimeSize         9
 #define cGetWakeupReasonSize 5
+#define cGetGetIrCodeSize   18
+#define cGetFrontInfoSize    8
+#define cGetE9Size          13
+#define cGetF9Size          13
 
 #if defined(ATEVIO7500) \
  || defined(FORTIS_HDBOX) \
@@ -143,9 +158,9 @@ static int           KeyBufferStart = 0, KeyBufferEnd = 0;
 static unsigned char OutBuffer [BUFFERSIZE];
 static int           OutBufferStart = 0, OutBufferEnd = 0;
 
-static wait_queue_head_t   wq;
-static wait_queue_head_t   rx_wq;
-static wait_queue_head_t   ack_wq;
+static wait_queue_head_t wq;
+static wait_queue_head_t rx_wq;
+static wait_queue_head_t ack_wq;
 static int dataReady = 0;
 
 /****************************************************************************************/
@@ -180,23 +195,24 @@ int ack_sem_down(void)
 	err  = wait_event_interruptible_timeout(ack_wq, dataReady == 1, ACK_WAIT_TIME);
 	if (err == -ERESTARTSYS)
 	{
-		printk("wait_event_interruptible failed\n");
+		dprintk(1, "wait_event_interruptible failed\n");
 		return err;
 	}
 	else if (err == 0)
 	{
-		printk("timeout waiting on ack\n");
+		dprintk(1, "Timeout waiting on ACK\n");
 	}
 	else
 	{
-		dprintk(20, "command processed - remaining jiffies %d\n", err);
+		dprintk(20, "Command processed - remaining jiffies %d\n", err);
 	}
+	dataflag = dataReady;
 	return 0;
 }
-
 EXPORT_SYMBOL(ack_sem_down);
 
 //------------------------------------------------------------------
+
 int getLen(int expectedLen)
 {
 	int i, j, len;
@@ -242,7 +258,7 @@ void getRCData(unsigned char *data, int *len)
 
 		if (wait_event_interruptible(wq, KeyBufferStart != KeyBufferEnd))
 		{
-			printk("wait_event_interruptible failed\n");
+			dprintk(1, "wait_event_interruptible failed\n");
 			return;
 		}
 	}
@@ -284,7 +300,7 @@ void getRCData(unsigned char *data, int *len)
 	}
 
 	KeyBufferEnd = (KeyBufferEnd + *len) % BUFFERSIZE;
-	dprintk(150, " <len %d, End %d\n", *len, KeyBufferEnd);
+	dprintk(150, " < len %d, End %d\n", *len, KeyBufferEnd);
 }
 
 void handleCopyData(int len)
@@ -299,6 +315,7 @@ void handleCopyData(int len)
 	while (i != len - 4)
 	{
 		data[i] = RCVBuffer[j];
+		dprintk(1, "Received data[%02d]=0x%02x\n", i, data[i]);
 		j++;
 		i++;
 
@@ -333,7 +350,7 @@ void dumpData(void)
 	i = RCVBufferEnd;
 	for (j = 0; j < len; j++)
 	{
-		printk("0x%02x ", RCVBuffer[i]);
+		dprintk(1, "Dump #%02d: 0x%02x\n", i, RCVBuffer[i]);
 		i++;
 
 		if (i >= BUFFERSIZE)
@@ -365,7 +382,7 @@ void dumpValues(void)
 
 static void processResponse(void)
 {
-	int len, i;
+	int len, sizelen, i;
 
 	dumpData();
 	len = getLen(-1);
@@ -374,7 +391,6 @@ static void processResponse(void)
 	{
 		return;
 	}
-
 	dumpData();
 
 	if (expectEventId)
@@ -459,45 +475,51 @@ static void processResponse(void)
 			}
 			case EVENT_ANSWER_GETTIME:
 			{
-				len = getLen(cGetTimeSize);
-				if (len == 0)
-				{
-					goto out_switch;
-				}
-				if (len < cGetTimeSize)
-				{
-					goto out_switch;
-				}
-				handleCopyData(len);
-
-				dprintk(20, "Pos. response received\n");
-				errorOccured = 0;
-				ack_sem_up();
-
-				RCVBufferEnd = (RCVBufferEnd + cGetTimeSize) % BUFFERSIZE;
-				break;
+				sizelen = cGetTimeSize;
+				goto rsp_common;
 			}
 			case EVENT_ANSWER_WAKEUP_REASON:
 			{
-				len = getLen(cGetWakeupReasonSize);
+				sizelen = cGetWakeupReasonSize;
+				goto rsp_common;
+			}
+			case EVENT_ANSWER_FRONTINFO:
+			{
+				sizelen = cGetFrontInfoSize;
+				goto rsp_common;
+			}
+#if 1
+			case EVENT_ANSWER_E9:
+			{
+				sizelen = cGetE9Size;
+				goto rsp_common;
+			}
+			case EVENT_ANSWER_F9:
+			{
+				sizelen = cGetF9Size;
+				goto rsp_common;
+			}
+#endif
+rsp_common:
+			{
+				len = getLen(sizelen);
 
 				if (len == 0)
 				{
 					goto out_switch;
 				}
 
-				if (len < cGetWakeupReasonSize)
+				if (len < sizelen)
 				{
 					goto out_switch;
 				}
 				handleCopyData(len);
-				dprintk(1, "Pos. response received\n");
+				dprintk(20, "Pos. response received\n");
 				errorOccured = 0;
 				ack_sem_up();
-				RCVBufferEnd = (RCVBufferEnd + cGetWakeupReasonSize) % BUFFERSIZE;
+				RCVBufferEnd = (RCVBufferEnd + sizelen) % BUFFERSIZE;
 				break;
 			}
-			case EVENT_ANSWER_FRONTINFO:
 			case EVENT_ANSWER_GETIRCODE:
 			case EVENT_ANSWER_GETPORT:
 			default: // Ignore Response
@@ -529,7 +551,7 @@ static irqreturn_t FP_interrupt(int irq, void *dev_id)
 
 	if (paramDebug > 100)
 	{
-		printk("i - ");
+		dprintk(1, "i - ");
 	}
 
 	while (*ASC_X_INT_STA & ASC_INT_STA_RBF)
@@ -545,7 +567,7 @@ static irqreturn_t FP_interrupt(int irq, void *dev_id)
 
 		if (RCVBufferStart == RCVBufferEnd)
 		{
-			printk("FP: RCV buffer overflow!!! (%d - %d)\n", RCVBufferStart, RCVBufferEnd);
+			dprintk(1, "FP: RCV buffer overflow!!! (%d - %d)\n", RCVBufferStart, RCVBufferEnd);
 		}
 	}
 
@@ -586,7 +608,7 @@ int nuvotonTask(void *dummy)
 		int dataAvailable = 0;
 		if (wait_event_interruptible(rx_wq, (RCVBufferStart != RCVBufferEnd)))
 		{
-			printk("wait_event_interruptible failed\n");
+			dprintk(1, "wait_event_interruptible failed\n");
 			continue;
 		}
 
@@ -611,16 +633,434 @@ int nuvotonTask(void *dummy)
 
 //----------------------------------------------
 
+#if defined(FORTIS_HDBOX)
+/*********************************************************************
+ *
+ * spinner_thread: Thread to display the spinner on FS9000/9200.
+ *
+ */
+static int spinner_thread(void *arg)
+{
+	int i = 0;
+	int res = 0;
+	char buffer[9];
+
+	if (spinner_state.status == ICON_THREAD_STATUS_RUNNING)
+	{
+		return 0;
+	}
+	dprintk(10, "%s: starting\n", __func__);
+	spinner_state.status = ICON_THREAD_STATUS_INIT;
+
+	buffer[0] = SOP;
+	buffer[1] = cCommandSetIconII;
+	buffer[2] = 0x20;
+	buffer[8] = EOP;
+
+	spinner_state.status = ICON_THREAD_STATUS_RUNNING;
+	dprintk(10, "%s: started\n", __func__);
+
+	while (!kthread_should_stop())
+	{
+		if (!down_interruptible(&spinner_state.sem))
+		{
+			if (kthread_should_stop())
+			{
+				break;
+			}
+
+			while (!down_trylock(&spinner_state.sem));
+			{
+				dprintk(10, "Start spinner, period = %d ms\n", spinner_state.period);
+				regs[0x20] |= 0x01; // Circ0 on
+
+				while ((spinner_state.state) && !kthread_should_stop())
+				{
+					spinner_state.status == ICON_THREAD_STATUS_RUNNING;
+					switch (i) // display a rotating disc in 16 states
+					{
+						case 0:
+						{
+							regs[0x20] |= 0x01;  // Circ1 on
+							regs[0x21] &= 0xfc;  // Circ3 & Circ8 off
+							regs[0x22] &= 0xfc;  // Circ2 & Circ6 off
+							regs[0x23] &= 0xfc;  // Circ4 & Circ7 off
+							regs[0x24] &= 0xfd;  // Circ5 off
+							break;
+						}
+						case 1:
+						{
+							regs[0x22] |= 0x01;  // Circ2 on
+							break;
+						}
+						case 2:
+						{
+							regs[0x21] |= 0x02;  // Circ3 on
+							break;
+						}
+						case 3:
+						{
+							regs[0x23] |= 0x02;  // Circ4 on
+							break;
+						}
+						case 4:
+						{
+							regs[0x24] |= 0x02;  // Circ5 on
+							break;
+						}
+						case 5:
+						{
+							regs[0x22] |= 0x02;  // Circ6 on
+							break;
+						}
+						case 6:
+						{
+							regs[0x23] |= 0x01;  // Circ7 on
+							break;
+						}
+						case 7:
+						{
+							regs[0x21] |= 0x01;  // Circ8 on
+							break;
+						}
+						case 8:
+						{
+							regs[0x20] &= 0xfe;  // Circ1 off
+							break;
+						}
+						case 9:
+						{
+							regs[0x22] &= 0xfe;  // Circ2 off
+							break;
+						}
+						case 10:
+						{
+							regs[0x21] &= 0xfd;  // Circ3 off
+							break;
+						}
+						case 11:
+						{
+							regs[0x23] &= 0xfd;  // Circ4 off
+							break;
+						}
+						case 12:
+						{
+							regs[0x24] &= 0xfd;  // Circ5 off
+							break;
+						}
+						case 13:
+						{
+							regs[0x22] &= 0xfd;  // Circ6 off
+							break;
+						}
+						case 14:
+						{
+							regs[0x23] &= 0xfe;  // Circ7 off
+							break;
+						}
+						case 15:
+						{
+							regs[0x21] &= 0xfe;  // Circ8 off
+							break;
+						}
+					}
+					buffer[3] = regs[0x20];
+					buffer[4] = regs[0x21];
+					buffer[5] = regs[0x22];
+					buffer[6] = regs[0x23];
+					buffer[7] = regs[0x24];
+					res = nuvotonWriteCommand(buffer, 9, 0);
+					i++;
+					i %= 16;
+					msleep(spinner_state.period);
+				}
+				buffer[3] = regs[0x20] &= 0xfe;  // Circ1 off
+				buffer[4] = regs[0x21] &= 0xfc;  // Circ3 & Circ8 off
+				buffer[5] = regs[0x22] &= 0xfc;  // Circ2 & Circ6 off
+				buffer[6] = regs[0x23] &= 0xfc;  // Circ4 & Circ7 off
+				buffer[7] = regs[0x24] &= 0xfc;  // Circ0 & Circ5 off
+				res |= nuvotonWriteCommand(buffer, 9, 0);
+				spinner_state.status = ICON_THREAD_STATUS_HALTED;
+				dprintk(1, "%s: Spinner stopped\n", __func__);
+			}
+		}
+	}
+	dprintk(1, "%s stopped\n", __func__);
+	spinner_state.status = ICON_THREAD_STATUS_STOPPED;
+	spinner_state.task = 0;
+	return res;
+}
+#endif
+
+#if defined(ATEVIO7500)
+/*********************************************************************
+ *
+ * spinner_thread: Thread to display the spinner on HS8200.
+ *
+ */
+static int spinner_thread(void *arg)
+{
+	int i;
+	int res = 0;
+	char buffer[9];
+
+	if (spinner_state.status == ICON_THREAD_STATUS_RUNNING)
+	{
+		return 0;
+	}
+	dprintk(100, "%s: starting\n", __func__);
+	spinner_state.status = ICON_THREAD_STATUS_INIT;
+
+	buffer[0] = SOP;
+	buffer[1] = cCommandSetIconII;
+	buffer[2] = 0x27;
+	buffer[8] = EOP;
+
+	dprintk(100, "%s: started\n", __func__);
+	spinner_state.status = ICON_THREAD_STATUS_RUNNING;
+
+	while (!kthread_should_stop())
+	{
+		if (!down_interruptible(&spinner_state.sem))
+		{
+			if (kthread_should_stop())
+			{
+				goto stop;
+			}
+
+			while (!down_trylock(&spinner_state.sem));
+			{
+				dprintk(10, "%s: Start spinner, period = %d ms\n", __func__, spinner_state.period);
+				i = 0;
+				while ((spinner_state.state) && !kthread_should_stop())
+				{
+					spinner_state.status = ICON_THREAD_STATUS_RUNNING;
+					switch (i) // display a bar in 16 states
+					{
+						case 0: 
+						{
+							regs[0x27] = 0x00;
+							regs[0x28] = 0x00;
+							regs[0x29] = 0x0e;
+							regs[0x2a] = 0x00;
+							regs[0x2b] = 0x00;
+							break;
+						}
+						case 1:
+						{
+							regs[0x2a] |= 0x04;
+							regs[0x2b] |= 0x02;
+							break;
+						}
+						case 2:
+						{
+							regs[0x2a] |= 0x08;
+							regs[0x2b] |= 0x08;
+							break;
+						}
+						case 3:
+						{
+							regs[0x2a] |= 0x10;
+							regs[0x2b] |= 0x20;
+							break;
+						}
+						case 4:
+						{
+							regs[0x29] |= 0x30;
+							break;
+						}
+						case 5:
+						{
+							regs[0x27] |= 0x20;
+							regs[0x28] |= 0x10;
+							break;
+						}
+						case 6:
+						{
+							regs[0x27] |= 0x08;
+							regs[0x28] |= 0x08;
+							break;
+						}
+						case 7: // full 8 segments
+						{
+							regs[0x27] |= 0x02;
+							regs[0x28] |= 0x04;
+							break;
+						}
+						case 8: 
+						{
+							regs[0x29] &= 0xf8;
+							break;
+						}
+						case 9:
+						{
+							regs[0x2a] &= 0xfb;
+							regs[0x2b] &= 0xfd;
+							break;
+						}
+						case 10:
+						{
+							regs[0x2a] &= 0xf7;
+							regs[0x2b] &= 0xf7;
+							break;
+						}
+						case 11:
+						{
+							regs[0x2a] &= 0xef;
+							regs[0x2b] &= 0xdf;
+							break;
+						}
+						case 12:
+						{
+							regs[0x29] &= 0xcf;
+							break;
+						}
+						case 13:
+						{
+							regs[0x27] &= 0xdf;
+							regs[0x28] &= 0xef;
+							break;
+						}
+						case 14:
+						{
+							regs[0x27] &= 0xf7;
+							regs[0x28] &= 0xf7;
+							break;
+						}
+						case 15:
+						{
+							regs[0x27] &= 0xfd;
+							regs[0x28] &= 0xfb;
+							break;
+						}
+					}
+					buffer[3] = regs[0x27];
+					buffer[4] = regs[0x28];
+					buffer[5] = regs[0x29];
+					buffer[6] = regs[0x2a];
+					buffer[7] = regs[0x2b];
+					res = nuvotonWriteCommand(buffer, 9, 0);
+					i++;
+					i %= 16;
+					msleep(spinner_state.period);
+				}
+				spinner_state.status = ICON_THREAD_STATUS_HALTED;
+			}
+stop:
+			buffer[3] = regs[0x27] = 0x00;
+			buffer[4] = regs[0x28] = 0x00;
+			buffer[5] = regs[0x29] = 0x00;
+			buffer[6] = regs[0x2a] = 0x00;
+			buffer[7] = regs[0x2b] = 0x00;
+			res |= nuvotonWriteCommand(buffer, 9, 0);
+			dprintk(100, "%s: Spinner stopped\n", __func__);
+		}
+	}
+	spinner_state.status = ICON_THREAD_STATUS_STOPPED;
+	spinner_state.task = 0;
+	dprintk(100, "%s: stopped\n", __func__);
+	return res;
+}
+
+/*********************************************************************
+ *
+ * icon_thread: Thread to display icons on HS8200.
+ * TODO: expand to animated icons
+ *
+ */
+int icon_thread(void *arg)
+{
+	int i = 0;
+	int res = 0;
+	char buffer[9];
+
+	if (icon_state.status == ICON_THREAD_STATUS_RUNNING || lastdata.icon_state[ICON_SPINNER])
+	{
+		return 0;
+	}
+	dprintk(100, "%s: starting\n", __func__);
+	spinner_state.status = ICON_THREAD_STATUS_INIT;
+
+	buffer[0] = SOP;
+	buffer[1] = cCommandSetIconII;
+	buffer[2] = 0x27;
+	buffer[8] = EOP;
+
+	icon_state.status = ICON_THREAD_STATUS_RUNNING;
+	dprintk(100, "%s: started\n", __func__);
+
+	while (!kthread_should_stop())
+	{
+		if (!down_interruptible(&icon_state.sem))
+		{
+			if (kthread_should_stop())
+			{
+				goto stop_icon;
+			}
+			while (!down_trylock(&icon_state.sem));
+			{
+				while ((icon_state.state) && !kthread_should_stop())
+				{
+					icon_state.status = ICON_THREAD_STATUS_RUNNING;
+					if (lastdata.icon_count > 1)
+					{
+//						dprintk(1, "Display multiple icons\n");
+						for (i = ICON_MIN + 1; i < ICON_MAX; i++)
+						{
+							if (lastdata.icon_state[i])
+							{
+								res |= nuvotonSetIcon(i, 1);
+								msleep(3000);
+							}
+							if (!icon_state.state)
+							{
+								break;
+							}
+						}
+					}
+					else if (lastdata.icon_count == 1)
+					{
+						for (i = ICON_MIN + 1; i < ICON_MAX; i++)
+						{
+							if (lastdata.icon_state[i])
+							{
+//								dprintk(1, "Show icon %02d in animation\n", i);
+// TODO: animation routine
+								res = nuvotonSetIcon(i, 1);
+								msleep(1500);
+							}			
+							if (!icon_state.state)
+							{
+								break;
+							}
+						}
+					}
+				}
+				icon_state.status = ICON_THREAD_STATUS_HALTED;
+			}
+		}
+	}
+stop_icon:
+	icon_state.status = ICON_THREAD_STATUS_STOPPED;
+	icon_state.task = 0;
+	dprintk(100, "%s stopped\n", __func__);
+	return res;
+}
+#endif
+
+extern void create_proc_fp(void);
+extern void remove_proc_fp(void);
+
 static int __init nuvoton_init_module(void)
 {
 	int i = 0;
 
 	// Address for Interrupt enable/disable
 	unsigned int *ASC_X_INT_EN = (unsigned int *)(ASCXBaseAddress + ASC_INT_EN);
-	// Address for FiFo enable/disable
+	// Address for FIFO enable/disable
 	unsigned int *ASC_X_CTRL   = (unsigned int *)(ASCXBaseAddress + ASC_CTRL);
-	dprintk(5, "%s >\n", __func__);
-	//Disable all ASC 2 interrupts
+	dprintk(100, "%s >\n", __func__);
+	// Disable all ASC 2 interrupts
 	*ASC_X_INT_EN = *ASC_X_INT_EN & ~0x000001ff;
 
 	serial_init();
@@ -651,7 +1091,7 @@ static int __init nuvoton_init_module(void)
 	}
 	else
 	{
-		printk("FP: Cannot get irq\n");
+		dprintk(1, "Cannot get irq\n");
 	}
 
 	msleep(waitTime);
@@ -659,16 +1099,72 @@ static int __init nuvoton_init_module(void)
 
 	if (register_chrdev(VFD_MAJOR, "VFD", &vfd_fops))
 	{
-		printk("Unable to get major %d for VFD/NUVOTON\n", VFD_MAJOR);
+		dprintk(1, "Unable to get major %d for VFD/NUVOTON\n", VFD_MAJOR);
 	}
 
-	dprintk(10, "%s <\n", __func__);
+#if defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)
+	spinner_state.state = 0;
+	spinner_state.period = 0;
+	spinner_state.status = ICON_THREAD_STATUS_STOPPED;
+	sema_init(&spinner_state.sem, 0);
+	spinner_state.task = kthread_run(spinner_thread, (void *) ICON_SPINNER, "spinner_thread");
+#if defined(ATEVIO7500)
+	icon_state.state = 0;
+	icon_state.period = 0;
+	icon_state.status = ICON_THREAD_STATUS_STOPPED;
+	sema_init(&icon_state.sem, 0);
+	icon_state.task = kthread_run(icon_thread, (void *) ICON_MIN, "icon_thread");
+#endif
+#endif
+	create_proc_fp();
+
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
+#if 0
+static int icon_thread_active(void)
+{
+	int i;
+
+	for (i = 0; i < ICON_SPINNER + 2; i++)
+	{
+		if (!icon_state[i].status && icon_state[i].icon_task)
+		{
+			return -1;
+		}
+	}
+	return 0;
+}
+#endif
+
 static void __exit nuvoton_cleanup_module(void)
 {
-	printk("NUVOTON frontcontroller module unloading\n");
+	printk("[nuvoton] NUVOTON front processor module unloading\n");
+	remove_proc_fp();
+
+#if defined(FORTIS_HDBOX)
+	if (!(spinner_state.status == ICON_THREAD_STATUS_STOPPED) && spinner_state.task)
+	{
+		dprintk(50, "Stopping spinner thread\n");
+		up(&spinner_state.sem);
+		kthread_stop(spinner_state.task);
+	}
+#elif defined(ATEVIO7500)
+	if (!(spinner_state.status == ICON_THREAD_STATUS_STOPPED) && spinner_state.task)
+	{
+		dprintk(50, "Stopping spinner thread\n");
+		up(&icon_state.sem);
+		kthread_stop(spinner_state.task);
+	}
+	if (!(icon_state.status == ICON_THREAD_STATUS_STOPPED) && icon_state.task)
+	{
+		dprintk(50, "Stopping icon thread\n");
+		up(&icon_state.sem);
+		kthread_stop(icon_state.task);
+	}
+#endif
 	unregister_chrdev(VFD_MAJOR, "VFD");
 	free_irq(InterruptLine, NULL);
 }
@@ -679,7 +1175,7 @@ module_init(nuvoton_init_module);
 module_exit(nuvoton_cleanup_module);
 
 MODULE_DESCRIPTION("NUVOTON frontcontroller module");
-MODULE_AUTHOR("Dagobert & Schischu & Konfetti");
+MODULE_AUTHOR("Dagobert, Schischu, Konfetti & Audioniek");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
@@ -687,3 +1183,7 @@ MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
 module_param(waitTime, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(waitTime, "Wait before init in ms (default=1000)");
+
+module_param(gmt_offset, charp, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(gmt_offset, "GMT offset (default 3600");
+// vim:ts=4

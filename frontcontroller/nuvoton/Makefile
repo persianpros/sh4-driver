@@ -4,6 +4,7 @@ ifeq ($(KERNELRELEASE),)
 else
     nuvoton-objs += nuvoton_file.o
     nuvoton-objs += nuvoton_asc.o
+    nuvoton-objs += nuvoton_procfs.o
     nuvoton-objs += nuvoton_main.o
 
     obj-m += nuvoton.o

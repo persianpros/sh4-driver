@@ -85,7 +85,7 @@ void serial_init(void)
 	*(unsigned int *)(ASCXBaseAddress + ASC_INT_EN)   = 0x00000000; // TODO: Why do we set here the INT_EN again ???
 	*(unsigned int *)(ASCXBaseAddress + ASC_CTRL)     = 0x00001589;
 	*(unsigned int *)(ASCXBaseAddress + ASC_TIMEOUT)  = 0x00000010;
-	*(unsigned int *)(ASCXBaseAddress + ASC_BAUDRATE) = 0x000000c9;
+	*(unsigned int *)(ASCXBaseAddress + ASC_BAUDRATE) = 0x000000c9; // 19200 baud
 	*(unsigned int *)(ASCXBaseAddress + ASC_TX_RST)   = 0;
 	*(unsigned int *)(ASCXBaseAddress + ASC_RX_RST)   = 0;
 }
@@ -103,7 +103,7 @@ int serial_putc(char Data)
 
 	if (Counter == 0)
 	{
-		dprintk(1, "Error writing char\n");
+		dprintk(1, "Error writing data byte.\n");
 	}
 
 	*ASCn_TX_BUFF = Data;

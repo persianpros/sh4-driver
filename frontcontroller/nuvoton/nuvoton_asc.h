@@ -44,24 +44,24 @@
  || defined(HS7429) \
  || defined(HS7810A) \
  || defined(HS7819)
-#define ASC0BaseAddress 0xfd030000
-#define ASC1BaseAddress 0xfd031000
-#define ASC2BaseAddress 0xfd032000
-#if defined(HS7110) \
- || defined(HS7119) \
- || defined(HS7420) \
- || defined(HS7429) \
- || defined(HS7810A) \
- || defined(HS7819)
-#define ASC3BaseAddress 0xfd034000
-#else //ATEVIO7500
-#define ASC3BaseAddress 0xfd033000
-#endif
-#else
-#define ASC0BaseAddress 0xb8030000
-#define ASC1BaseAddress 0xb8031000
-#define ASC2BaseAddress 0xb8032000
-#define ASC3BaseAddress 0xb8033000
+	#define ASC0BaseAddress 0xfd030000
+	#define ASC1BaseAddress 0xfd031000
+	#define ASC2BaseAddress 0xfd032000
+	#if defined(HS7110) \
+	 || defined(HS7119) \
+	 || defined(HS7420) \
+	 || defined(HS7429) \
+	 || defined(HS7810A) \
+	 || defined(HS7819)
+		#define ASC3BaseAddress 0xfd034000
+	#else //ATEVIO7500
+		#define ASC3BaseAddress 0xfd033000
+	#endif
+#else //1G receivers
+	#define ASC0BaseAddress 0xb8030000
+	#define ASC1BaseAddress 0xb8031000
+	#define ASC2BaseAddress 0xb8032000
+	#define ASC3BaseAddress 0xb8033000
 #endif
 
 #define ASC_BAUDRATE      0x00

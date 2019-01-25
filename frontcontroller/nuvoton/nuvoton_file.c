@@ -55,12 +55,71 @@
  * 20151231 Audioniek       HS7420/HS7429 added.
  * 20160103 Audioniek       Compiler warning fixed, references to ATEMIO530
  *                          removed.
+ * 20160424 Audioniek       VFDGETVERSION added.
+ * 20160522 Audioniek       VFDSETPOWERONTIME and VFDGETWAKEUPTIME added.
+ * 20160523 Audioniek       procfs added.
+ * 20161006 Audioniek       Logo brightness for Octagon1008 added.
+ * 20170111 Audioniek       VFDTEST added, conditionally compiled.
+ * 20170112 Audioniek       FS9000/9200 use same nuvotonWriteString as HS8200,
+ *                          thus have UTF8 support now.
+ * 20170113 Audioniek       Version for FS9000/9200 with all icons working on
+ *                          both old and new front processors.
+ * 20170115 Audioniek       Icon support for HS8200 added.
+ * 20170117 Audioniek       Icon support for HS742X added.
+ * 20170119 Audioniek       Colon on HS7119/7810A/7819 can also be controlled
+ *                          as an icon; periods on HS7810A/7819 as well.
+ * 20170120 Audioniek       Spinner for FS9000/9200 added, based on aotom
+ *                          code.
+ * 20170121 Audioniek       Brightness control for LED models added.
+ * 20170123 Audioniek       nuvotonSetDisplayOnOff on FS9000/9200 fixed.
+ * 20170123 Audioniek       Typos and small errors removed.
+ * 20170125 Audioniek       nuvotonSetDisplayOnOff on HS8200 fixed.
+ * 20170126 Audioniek       nuvotonSetDisplayOnOff on HS7119/7420/7429/
+ *                          7810A/7819 fixed.
+ * 20170128 Audioniek       nuvotonGetVersion now returns actual bootloader
+ *                          version instead of string constant.
+ * 20170128 Audioniek       Spinner for HS8200 added.
+ * 20170202 Audioniek       Multiple icons now displayed in a thread on
+ *                          HS8200; spinner code simplified.
+ * 20170204 Audioniek       Spinner switched off when using (re)set all icons;
+ *                          on FS9000/9200 this is also done when one of the
+ *                          circle icons is (re)set.
+ * 20170205 Audioniek       nuvotonGetVersion reports resellerID as well.
+ * 20170417 Audioniek       New nuvoton module parameter: gmt_offset.
+ * 20170418 Audioniek       Init: bug fixed with boot_on string length.
+ * 20170419 Audioniek       nuvotonWriteString for HS7810A/7819 rewritten.
+ * 20170516 Audioniek       Missing character entries for : and ; added for
+ *                          HS9510/7420/7429.
+ * 20180113 Audioniek       Fix build error with HS7110.
  *
- *****************************************************************************/
+ *****************************************************************************
+ *
+ * Note on model designations: Three Fortis models have historically been
+ * indicated by a reseller model number instead of the generic internal Fortis
+ * model designation:
+ *
+ * FORTIS_HDBOX: Strictly speaking the FS9000. The chosen name is confusing,
+ *               as HDBOX is one of the resellers selling Fortis receivers.
+ *               In Germany the FS9000 was sold as Octagon SF1018 and
+ *               Atevio AV7000.
+ *               The FS9200 is completely hardware compatible with the FS9000
+ *               and does not have a separate designation. In Germany this
+ *               model was sold as Astro ASR1200.
+ * OCTAGON1008:  The HS9510 and its variants. In Germany sold as
+ *               Octagon SF1008P, Octagon SF1008SE, Atevio AV700 and
+ *               Astro ASR1100.
+ * ATEVIO7500:   The HS8200. In Germany sold as Octagon SF1028, Atevio AV7500,
+ *               Atemio AV7600 and Opticum Actus Duo.
+ * All other Fortis models are designated by the internal Fortis model
+ * number that can be found on the component side of the main board, usually
+ * near the front panel.
+ */
+
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/termbits.h>
+#include <linux/kthread.h>
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/delay.h>
@@ -75,24 +134,18 @@
 #include <linux/interrupt.h>
 #include <linux/time.h>
 #include <linux/poll.h>
+#include <linux/mtd/mtd.h>
+#include <linux/err.h>
 
 #include "nuvoton.h"
 #include "nuvoton_asc.h"
 #include "nuvoton_utf.h"
 
-#if defined(OCTAGON1008) \
- || defined(HS7420) \
- || defined(HS7429)
-#define DISP_SIZE 8
-#elif defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)
-#define DISP_SIZE 12
-#elif defined(HS7810A) \
- || defined(HS7119) \
- || defined(HS7819)
-#define DISP_SIZE 4
-#elif defined(HS7110)
-#define DISP_SIZE 0
+#if defined(FORTIS_HDBOX)
+tIconState spinner_state;
+#elif defined(ATEVIO7500)
+tIconState spinner_state;
+tIconState icon_state;
 #endif
 
 extern void ack_sem_up(void);
@@ -102,113 +155,99 @@ extern void nuvoton_putc(unsigned char data);
 
 struct semaphore write_sem;
 int errorOccured = 0;
-static char ioctl_data[8];
+extern int dataflag;
+static char ioctl_data[9];
+static char wakeup_time[5];
 
 tFrontPanelOpen FrontPanelOpen [LASTMINOR];
+struct saved_data_s lastdata;
+u8 regs[0x100];  // array with copy values of FP registers
 
-struct saved_data_s
-{
-	int length;
-	char data[128];
-};
-
-u8 regs[0xff];  // array with copy values of FP registers
+/***************************************************************************
+ *
+ * Character definitions.
+ *
+ ***************************************************************************/
 
 #if defined(OCTAGON1008) || defined(HS7420) || defined(HS7429)
-/* Note on adding HS742X: The front panel controller is almost
-   equal to the one on the Octagon1008 (the board it is built
-   on says HS-9510HD FRONT B-Type) but has a different VFD tube
-   mounted on it.
-   The VFD has eight 15 segment characters and four icons: a red
-   dot and three colons between the main characters.
-   Stock firmware does not control the icons; the red dot is used
-   as remote feedback, a function internal to the front processor.
-   After testing the conclusion was reached that the icons on the
-   HS742X models cannot be controlled by the user.
-*/
-
-/* Dagobert: On octagon 1008 the "normal" fp setting does not work.
-   it seems that with this command we set the segment elements
-   direct (not sure here). I dont know how this works but ...
-
-   Added by Audioniek:
-   Command format for set icon (Octagon1008 only):
-   SOP 0xc4 byte_pos byte_1 byte_2 byte_3 EOP
-   byte pos is 0..8 (0=rightmost, 8 is collection of icons on left)
-*/
-
-/* character layout for positions 0..7:
-       icon
-    aaaaaaaaa
-   fj   i   hb
-   f j  i  h b
- p f  j i h  b
-   f   jih   b
-    llllgkkkk
-   e   onm   c
- p e  o n m  c
-   e o  n  m c
-   eo   n   mc
-    ddddddddd
-
-bit = 1 -> segment on
-bit = 0 -> segment off
-
-icon on top is byte_1, bit 0
-
-segment l is byte_2, bit 0 (  1)
-segment c is byte_2, bit 1 (  2)
-segment e is byte_2, bit 2 (  4)
-segment m is byte_2, bit 3 (  8)
-segment n is byte_2, bit 4 ( 16)
-segment o is byte_2, bit 5 ( 32)
-segment d is byte_2, bit 6 ( 64)
-segment p is byte_2, bit 7 (128) (colon, only on positions 1, 3 & 5 and only on Octagon1008)
-
-segment a is byte_3, bit 0 (  1)
-segment h is byte_3, bit 1 (  2)
-segment i is byte_3, bit 2 (  4)
-segment j is byte_3, bit 3 (  8)
-segment b is byte_3, bit 4 ( 16)
-segment f is byte_3, bit 5 ( 32)
-segment k is byte_3, bit 6 ( 64)
-segment g is byte_3, bit 7 (128)
-
-top icons on positions 0 .. 7: (Octagon1008 only, not on HS742X)
-(0) ICON_DOLBY, ICON_DTS, ICON_VIDEO, ICON_AUDIO, ICON_LINK, ICON_HDD, ICON_DISC, ICON_DVB (7)
-
-icons on position 8: (Octagon1008 only, not on HS742X)
-ICON_DVD     is byte_1, bit 0 (  1)
-
-ICON_TIMER   is byte_2, bit 0 (  1)
-ICON_TIME    is byte_2, bit 1 (  2)
-ICON_CARD    is byte_2, bit 2 (  4)
-ICON_1       is byte_2, bit 3 (  8)
-ICON_2       is byte_2, bit 4 ( 16)
-ICON_KEY     is byte_2, bit 5 ( 32)
-ICON_16_9    is byte_2, bit 6 ( 64)
-ICON_USB     is byte_2, bit 7 (128)
-
-ICON_CRYPTED is byte_3, bit 0 (  1)
-ICON_PLAY    is byte_3, bit 1 (  2)
-ICON_REWIND  is byte_3, bit 2 (  4)
-ICON_PAUSE   is byte_3, bit 3 (  8)
-ICON_FF      is byte_3, bit 4 ( 16)
-none         is byte_3, bit 5 ( 32)
-ICON_REC     is byte_3, bit 6 ( 64)
-ICON_ARROW   is byte_3, bit 7 (128) (RC feedback)
-*/
+/***************************************************************************
+ *
+ * Characters for HS9510/7420/7429 (8 character VFD models)
+ *
+ * Note on adding HS742X: The front panel controller is almost
+ * equal to the one on the Octagon1008 (the board it is built
+ * on says HS-9510HD FRONT B-Type) but has a different VFD tube
+ * mounted on it.
+ * The VFD has eight 15 segment characters and four icons: a red
+ * dot and three colons between the main characters.
+ * Stock firmware does not control the icons; the red dot is used
+ * as remote feedback, a function internal to the front processor.
+ *
+ * Dagobert: On octagon 1008 the "normal" fp setting does not work.
+ * it seems that with this command we set the segment elements
+ * direct (not sure here). I dont know how this works but ...
+ *
+ * Added by Audioniek:
+ * Command format for set icon (Octagon1008 and HS742X only):
+ * SOP 0xc4 byte_pos byte_1 byte_2 byte_3 EOP
+ * byte pos is 0..8 (0=rightmost, 8 is collection of icons on left; HS9510 only)
+ *
+ * Character layout for positions 0..7:
+ *      icon
+ *    aaaaaaaaa
+ *   fj   i   hb
+ *   f j  i  h b
+ * p f  j i h  b
+ *   f   jih   b
+ *    llllgkkkk
+ *   e   onm   c
+ * p e  o n m  c
+ *   e o  n  m c
+ *   eo   n   mc
+ *    ddddddddd
+ *
+ * bit = 1 -> segment on
+ * bit = 0 -> segment off
+ *
+ * icon on top is byte_1, bit 0
+ *
+ * segment l is byte_2, bit 0 (  1)
+ * segment c is byte_2, bit 1 (  2)
+ * segment e is byte_2, bit 2 (  4)
+ * segment m is byte_2, bit 3 (  8)
+ * segment n is byte_2, bit 4 ( 16)
+ * segment o is byte_2, bit 5 ( 32)
+ * segment d is byte_2, bit 6 ( 64)
+ * segment p is byte_2, bit 7 (128) (colon, only on positions 1, 3 & 5)
+ *
+ * segment a is byte_3, bit 0 (  1)
+ * segment h is byte_3, bit 1 (  2)
+ * segment i is byte_3, bit 2 (  4)
+ * segment j is byte_3, bit 3 (  8)
+ * segment b is byte_3, bit 4 ( 16)
+ * segment f is byte_3, bit 5 ( 32)
+ * segment k is byte_3, bit 6 ( 64)
+ * segment g is byte_3, bit 7 (128)
+ *
+ * top icons on positions 0 .. 7: (see below)
+ * HS9510 (Octagon1008):
+ * (0) ICON_DOLBY, ICON_DTS, ICON_VIDEO, ICON_AUDIO, ICON_LINK, ICON_HDD, ICON_DISC, ICON_DVB (7)
+ * HS742X:
+ * (0) none, none, ICON_COLON3, none, ICON_COLON2, none, ICON_COLON3, ICON_DOT (7)
+ *
+ * Position 8 (leftmost!) is a collection of icons (see below, Octagon1008 only)
+ */
 struct vfd_buffer vfdbuf[9];
 
 struct chars
 {
 	u8 s1;
 	u8 s2;
-	u8 c;
+	u8 character;
 } octagon_chars[] =
 {
 	{0x00, 0x00, ' '},
-	{0x10, 0x84, '!'}, //0x21
+	{0x10, 0x84, '!'},  //0x21
 	{0x00, 0x30, '"'},
 	{0x00, 0x00, '#'},
 	{0x43, 0xe1, '$'},
@@ -223,7 +262,7 @@ struct chars
 	{0x01, 0xc0, '-'},
 	{0x04, 0x00, '.'},
 	{0x20, 0x82, '/'},
-	{0x46, 0x31, '0'},
+	{0x46, 0x31, '0'}, //x030
 	{0x02, 0x12, '1'},
 	{0x60, 0xd1, '2'},
 	{0x43, 0xd1, '3'},
@@ -233,6 +272,8 @@ struct chars
 	{0x20, 0x83, '7'},
 	{0x47, 0xf1, '8'},
 	{0x43, 0xf1, '9'},
+	{0x10, 0x04, ':'}, //x03A
+	{0x20, 0x04, ';'},
 	{0x08, 0x82, '<'},
 	{0x41, 0xc0, '='},
 	{0x20, 0x88, '>'},
@@ -270,29 +311,29 @@ struct chars
 	{0x00, 0x31, '^'},
 	{0x40, 0x00, '_'},
 	{0x00, 0x08, '`'},
-	{0x62, 0xc0, 'a'}, // {0x62, 0xd1, 'a'},
+	{0x62, 0xc0, 'a'},  // {0x62, 0xd1, 'a'},
 	{0x4d, 0xa0, 'b'},
-	{0x45, 0xc0, 'c'}, // {0x44, 0x21, 'c'},
+	{0x45, 0xc0, 'c'},  // {0x44, 0x21, 'c'},
 	{0x62, 0xd0, 'd'},
 	{0x45, 0xa3, 'e'},
 	{0x05, 0xa1, 'f'},
 	{0x42, 0xd9, 'g'},
 	{0x07, 0xe0, 'h'},
-	{0x10, 0x80, 'i'}, // {0x10, 0x84, 'i'},
-	{0x42, 0x10, 'j'}, // {0x46, 0x10, 'j'},
+	{0x10, 0x80, 'i'},  // {0x10, 0x84, 'i'},
+	{0x42, 0x10, 'j'},  // {0x46, 0x10, 'j'},
 	{0x18, 0xc4, 'k'},
 	{0x10, 0x84, 'l'},
-	{0x17, 0xc0, 'm'}, // {0x16, 0xb5, 'm'},
-	{0x07, 0xc0, 'n'}, // {0x06, 0x31, 'n'},
-	{0x47, 0xc0, 'o'}, // {0x46, 0x31, 'o'},
+	{0x17, 0xc0, 'm'},  // {0x16, 0xb5, 'm'},
+	{0x07, 0xc0, 'n'},  // {0x06, 0x31, 'n'},
+	{0x47, 0xc0, 'o'},  // {0x46, 0x31, 'o'},
 	{0x05, 0xa3, 'p'},
 	{0x02, 0xd9, 'q'},
-	{0x05, 0xc0, 'r'}, // {0x04, 0x21, 'r'},
+	{0x05, 0xc0, 'r'},  // {0x04, 0x21, 'r'},
 	{0x43, 0xe1, 's'},
 	{0x45, 0xa0, 't'},
-	{0x46, 0x00, 'u'}, // {0x46, 0x30, 'u'},
-	{0x24, 0x00, 'v'}, // {0x24, 0xa2, 'v'},
-	{0x56, 0x00, 'w'}, // {0x56, 0xb0, 'w'},
+	{0x46, 0x00, 'u'},  // {0x46, 0x30, 'u'},
+	{0x24, 0x00, 'v'},  // {0x24, 0xa2, 'v'},
+	{0x56, 0x00, 'w'},  // {0x56, 0xb0, 'w'},
 	{0x28, 0x8a, 'x'},
 	{0x42, 0xd8, 'y'},
 	{0x60, 0x83, 'z'},
@@ -300,139 +341,42 @@ struct chars
 	{0x10, 0x84, '|'},
 	{0x42, 0x11, '}'},
 	{0x01, 0xc0, '~'},
-	{0xff, 0xff, 0x7f} //0x7f
+	{0xff, 0xff, 0x7f}  //0x7f
 };
 
-#if defined(OCTAGON1008)
-enum //HS9510 icon numbers and their names, HS742X models do not have user controllable icons)
-{
-	ICON_MIN,     // 00
-	ICON_DOLBY,   // 01
-	ICON_DTS,     // 02
-	ICON_VIDEO,   // 03
-	ICON_AUDIO,   // 04
-	ICON_LINK,    // 05
-	ICON_HDD,     // 06
-	ICON_DISC,    // 07
-	ICON_DVB,     // 08
-	ICON_DVD,     // 09
-	ICON_TIMER,   // 10
-	ICON_TIME,    // 11
-	ICON_CARD,    // 12
-	ICON_1,       // 13
-	ICON_2,       // 14
-	ICON_KEY,     // 15
-	ICON_16_9,    // 16
-	ICON_USB,     // 17
-	ICON_CRYPTED, // 18
-	ICON_PLAY,    // 19
-	ICON_REWIND,  // 20
-	ICON_PAUSE,   // 21
-	ICON_FF,      // 22
-	ICON_NONE,    // 23
-	ICON_REC,     // 24
-	ICON_ARROW,   // 25
-	ICON_COLON1,  // 26
-	ICON_COLON2,  // 27
-	ICON_COLON3,  // 28
-	ICON_MAX      // 29
-};
+#elif defined(HS7119) || defined(HS7810A) || defined(HS7819)
+/***************************************************************************
+ *
+ * Characters for HS7119/7810A/7819 (LED models)
+ *
+ *
+ * character layout:
+ *
+ *      aaaaaaaaa
+ *     f         b
+ *     f         b
+ *     f         b  i
+ *     f         b
+ *      ggggggggg
+ *     e         c
+ *     e         c  i
+ *     e         c
+ *     e         c
+ *      ddddddddd  h
+ *
+ *  segment a is bit 0 (  1)
+ *  segment b is bit 1 (  2)
+ *  segment c is bit 2 (  4)
+ *  segment d is bit 3 (  8)
+ *  segment e is bit 4 ( 16, 0x10)
+ *  segment f is bit 5 ( 32, 0x20)
+ *  segment g is bit 6 ( 64, 0x40)
+ *  segment h is bit 7 (128, 0x80, positions 2, 3 & 4, cmd byte 2, 3 & 5, not on HS7119)
+ *  segment i is bit 7 (128, 0x80, position 3 only, cmd byte 4)
+ *  NOTE: period on 1st position cannot be controlled
+ */
 
-/*
-top icons on positions 0 .. 7: (0=rightmost)
-(0) ICON_DOLBY, ICON_DTS, ICON_VIDEO, ICON_AUDIO, ICON_LINK, ICON_HDD, ICON_DISC, ICON_DVB (7)
-
-icons on position 8:
-ICON_DVD     is byte_1, bit 0 (  1)
-
-ICON_TIMER   is byte_2, bit 0 (  1)
-ICON_TIME    is byte_2, bit 1 (  2)
-ICON_CARD    is byte_2, bit 2 (  4)
-ICON_1       is byte_2, bit 3 (  8)
-ICON_2       is byte_2, bit 4 ( 16)
-ICON_KEY     is byte_2, bit 5 ( 32)
-ICON_16_9    is byte_2, bit 6 ( 64)
-ICON_USB     is byte_2, bit 7 (128)
-
-ICON_CRYPTED is byte_3, bit 0 (  1)
-ICON_PLAY    is byte_3, bit 1 (  2)
-ICON_REWIND  is byte_3, bit 2 (  4)
-ICON_PAUSE   is byte_3, bit 3 (  8)
-ICON_FF      is byte_3, bit 4 ( 16)
-none         is byte_3, bit 5 ( 32)
-ICON_REC     is byte_3, bit 6 ( 64)
-ICON_ARROW   is byte_3, bit 7 (128) (RC feedback)
-*/
-struct iconToInternal
-{
-	char *name;
-	u16 icon;
-	u8 pos;    //display position (0=rightmost)
-	u8 mask1;  //bitmask for on/off,(byte 1)
-	u8 mask2;  //bitmask for on/off,(byte 2)
-	u8 mask3;  //bitmask for on/off,(byte 3)
-} nuvotonIcons[] =
-{
-	/*- Name -------- icon -------- pos - mask1 mask2 mask3 -----*/
-	{ "ICON_DOLBY"  , ICON_DOLBY  , 0x00, 0x01, 0x00, 0x00}, // 01
-	{ "ICON_DTS"    , ICON_DTS    , 0x01, 0x01, 0x00, 0x00}, // 02
-	{ "ICON_VIDEO"  , ICON_VIDEO  , 0x02, 0x01, 0x00, 0x00}, // 03
-	{ "ICON_AUDIO"  , ICON_AUDIO  , 0x03, 0x01, 0x00, 0x00}, // 04
-	{ "ICON_LINK"   , ICON_LINK   , 0x04, 0x01, 0x00, 0x00}, // 05
-	{ "ICON_HDD"    , ICON_HDD    , 0x05, 0x01, 0x00, 0x00}, // 06
-	{ "ICON_DISC"   , ICON_DISC   , 0x06, 0x01, 0x00, 0x00}, // 07
-	{ "ICON_DVB"    , ICON_DVB    , 0x07, 0x01, 0x00, 0x00}, // 08
-	{ "ICON_DVD"    , ICON_DVD    , 0x08, 0x01, 0x00, 0x00}, // 09
-	{ "ICON_TIMER"  , ICON_TIMER  , 0x08, 0x00, 0x01, 0x00}, // 10
-	{ "ICON_TIME"   , ICON_TIME   , 0x08, 0x00, 0x02, 0x00}, // 11
-	{ "ICON_CARD"   , ICON_CARD   , 0x08, 0x00, 0x04, 0x00}, // 12
-	{ "ICON_1"      , ICON_1      , 0x08, 0x00, 0x08, 0x00}, // 13
-	{ "ICON_2"      , ICON_2      , 0x08, 0x00, 0x10, 0x00}, // 14
-	{ "ICON_KEY"    , ICON_KEY    , 0x08, 0x00, 0x20, 0x00}, // 15
-	{ "ICON_16_9"   , ICON_16_9   , 0x08, 0x00, 0x40, 0x00}, // 16
-	{ "ICON_USB"    , ICON_USB    , 0x08, 0x00, 0x80, 0x00}, // 17
-	{ "ICON_CRYPTED", ICON_CRYPTED, 0x08, 0x00, 0x00, 0x01}, // 18
-	{ "ICON_PLAY"   , ICON_PLAY   , 0x08, 0x00, 0x00, 0x02}, // 19
-	{ "ICON_REWIND" , ICON_REWIND , 0x08, 0x00, 0x00, 0x04}, // 20
-	{ "ICON_PAUSE"  , ICON_PAUSE  , 0x08, 0x00, 0x00, 0x08}, // 21
-	{ "ICON_FF"     , ICON_FF     , 0x08, 0x00, 0x00, 0x10}, // 22
-	{ "ICON_NONE"   , ICON_NONE   , 0x08, 0x00, 0x00, 0x20}, // 23
-	{ "ICON_REC"    , ICON_REC    , 0x08, 0x00, 0x00, 0x40}, // 24
-	{ "ICON_ARROW"  , ICON_ARROW  , 0x08, 0x00, 0x00, 0x80}, // 25
-	{ "ICON_COLON1" , ICON_COLON1 , 0x01, 0x00, 0x80, 0x00}, // 26
-	{ "ICON_COLON2" , ICON_COLON2 , 0x03, 0x00, 0x80, 0x00}, // 27
-	{ "ICON_COLON3" , ICON_COLON3 , 0x05, 0x00, 0x80, 0x00}, // 28
-};
-#endif //Octagon1008 only (icon definitions)
-#endif //Octagon1008, HS7420 & HS7429 (character stuff)
-
-#if defined(HS7119) || defined(HS7810A) || defined(HS7819)
 static int _7seg_fonts[] =
-	/* character layout:
-
-	    aaaaaaaaa
-	   f         b
-	   f         b
-	   f         b  i
-	   f         b
-	    ggggggggg
-	   e         c
-	   e         c  i
-	   e         c
-	   e         c
-	    ddddddddd  h
-
-	segment a is bit 0 (  1)
-	segment b is bit 1 (  2)
-	segment c is bit 2 (  4)
-	segment d is bit 3 (  8)
-	segment e is bit 4 ( 16, 0x10)
-	segment f is bit 5 ( 32, 0x20)
-	segment g is bit 6 ( 64, 0x40)
-	segment h is bit 7 (128, 0x80, positions 2, 3 & 4, cmd byte 2, 3 & 5, not on HS7119)
-	segment i is bit 7 (128, 0x80, position 3 only, cmd byte 4)
-	NOTE: period on 1st position cannot be controlled */
-
 {
 //	' '   '!'    '"'   '#'   '$'   '%'   '&'  '
 	0x00, 0x06, 0x22, 0x5c, 0x6d, 0x52, 0x7d, 0x02,
@@ -459,162 +403,265 @@ static int _7seg_fonts[] =
 //	'x'   'y'   'z'   '{'   '|'   '}'   '~'   DEL
 	0x76, 0x6e, 0x5b, 0x39, 0x06, 0x0f, 0x40, 0x5c
 };
-#endif
+#endif  // Character definitions
 
-
-#if defined(FORTIS_HDBOX)
-enum
-{
-	ICON_MIN,       // 00
-	ICON_STANDBY,   // 01
-	ICON_SAT,       // 02
-	ICON_REC,       // 03
-	ICON_TIMESHIFT, // 04
-	ICON_TIMER,     // 05
-	ICON_HD,        // 06
-	ICON_USB,       // 07
-	ICON_SCRAMBLED, // 08
-	ICON_DOLBY,     // 09
-	ICON_MUTE,      // 10
-	ICON_TUNER1,    // 11
-	ICON_TUNER2,    // 12
-	ICON_MP3,       // 13
-	ICON_REPEAT,    // 14
-	ICON_PLAY,      // 15
-	ICON_Circ0,     // 16
-	ICON_Circ1,     // 17
-	ICON_Circ2,     // 18
-	ICON_Circ3,     // 19
-	ICON_Circ4,     // 20
-	ICON_Circ5,     // 21
-	ICON_Circ6,     // 22
-	ICON_Circ7,     // 23
-	ICON_Circ8,     // 24
-	ICON_FILE,      // 25
-	ICON_TER,       // 26
-	ICON_480i,      // 27
-	ICON_480p,      // 28
-	ICON_576i,      // 29
-	ICON_576p,      // 30
-	ICON_720p,      // 31
-	ICON_1080i,     // 32
-	ICON_1080p,     // 33
-	ICON_COLON1,    // 34
-	ICON_COLON2,    // 35
-	ICON_COLON3,    // 36
-	ICON_COLON4,    // 37
-	ICON_TV,        // 38
-	ICON_RADIO,     // 39
-	ICON_MAX        // 40
-};
-
+/***************************************************************************
+ *
+ * Icon definitions.
+ *
+ ***************************************************************************/
+#if defined(OCTAGON1008)
+/***************************************************************************
+ *
+ * Icons for HS9510
+ *
+ * Top icons on positions 0 .. 7: (0=rightmost)
+ * (0) ICON_DOLBY, ICON_DTS, ICON_VIDEO, ICON_AUDIO, ICON_LINK, ICON_HDD, ICON_DISC, ICON_DVB (7)
+ *
+ * Icons on position 8:
+ * ICON_DVD     is byte_1, bit 0 (  1)
+ *
+ * ICON_TIMER   is byte_2, bit 0 (  1)
+ * ICON_TIME    is byte_2, bit 1 (  2)
+ * ICON_CARD    is byte_2, bit 2 (  4)
+ * ICON_1       is byte_2, bit 3 (  8)
+ * ICON_2       is byte_2, bit 4 ( 16)
+ * ICON_KEY     is byte_2, bit 5 ( 32)
+ * ICON_16_9    is byte_2, bit 6 ( 64)
+ * ICON_USB     is byte_2, bit 7 (128)
+ *
+ * ICON_CRYPTED is byte_3, bit 0 (  1)
+ * ICON_PLAY    is byte_3, bit 1 (  2)
+ * ICON_REWIND  is byte_3, bit 2 (  4)
+ * ICON_PAUSE   is byte_3, bit 3 (  8)
+ * ICON_FF      is byte_3, bit 4 ( 16)
+ * none         is byte_3, bit 5 ( 32)
+ * ICON_REC     is byte_3, bit 6 ( 64)
+ * ICON_ARROW   is byte_3, bit 7 (128) (RC feedback)
+ */
 struct iconToInternal
-/* TODO: Icons 1 through 16 work on all models, but others only on early production ones */
 {
 	char *name;
 	u16 icon;
-	u8 internalCode1; //FP register number
-	u8 SymbolData1;   //bitmask for on/off
-	u8 internalCode2; //FP register number #2 for double icons, 0xff=single icon
-	u8 SymbolData2;   //bitmask #2 for on/off for double icons
+	u8 pos;    // display position (0=rightmost)
+	u8 mask1;  // bitmask for on (byte 1)
+	u8 mask2;  // bitmask for on (byte 2)
+	u8 mask3;  // bitmask for on (byte 3)
 } nuvotonIcons[] =
 {
-	/*- Name ------------ icon --------- code1 data1 code2 data2 -----*/
-	{ "ICON_STANDBY"  , ICON_STANDBY   , 0x20, 0x08, 0xff, 0x00}, // 01
-	{ "ICON_SAT"      , ICON_SAT       , 0x20, 0x04, 0xff, 0x00}, // 02
-	{ "ICON_REC"      , ICON_REC       , 0x30, 0x01, 0xff, 0x00}, // 03
-	{ "ICON_TIMESHIFT", ICON_TIMESHIFT , 0x31, 0x02, 0x32, 0x02}, // 04
-	{ "ICON_TIMER"    , ICON_TIMER     , 0x33, 0x02, 0xff, 0x00}, // 05
-	{ "ICON_HD"       , ICON_HD        , 0x34, 0x02, 0xff, 0x00}, // 06
-	{ "ICON_USB"      , ICON_USB       , 0x35, 0x02, 0xff, 0x00}, // 07
-	{ "ICON_SCRAMBLED", ICON_SCRAMBLED , 0x36, 0x02, 0xff, 0x00}, // 08
-	{ "ICON_DOLBY"    , ICON_DOLBY     , 0x37, 0x02, 0xff, 0x00}, // 09
-	{ "ICON_MUTE"     , ICON_MUTE      , 0x38, 0x02, 0xff, 0x00}, // 10
-	{ "ICON_TUNER1"   , ICON_TUNER1    , 0x39, 0x02, 0xff, 0x00}, // 11
-	{ "ICON_TUNER2"   , ICON_TUNER2    , 0x3a, 0x02, 0xff, 0x00}, // 12
-	{ "ICON_MP3"      , ICON_MP3       , 0x3b, 0x02, 0xff, 0x00}, // 13
-	{ "ICON_REPEAT"   , ICON_REPEAT    , 0x3c, 0x02, 0xff, 0x00}, // 14
-	{ "ICON_PLAY"     , ICON_PLAY      , 0x20, 0x02, 0xff, 0x00}, // 15 play in circle
-	{ "ICON_Circ0"    , ICON_Circ0     , 0x24, 0x01, 0xff, 0x00}, // 16 inner circle
-	{ "ICON_Circ1"    , ICON_Circ1     , 0x20, 0x01, 0xff, 0x00}, // 17 circle, segment 1
-	{ "ICON_Circ2"    , ICON_Circ2     , 0x22, 0x01, 0xff, 0x00}, // 18 circle, segment 2
-	{ "ICON_Circ3"    , ICON_Circ3     , 0x21, 0x02, 0xff, 0x00}, // 19 circle, segment 3
-	{ "ICON_Circ4"    , ICON_Circ4     , 0x23, 0x02, 0xff, 0x00}, // 20 circle, segment 4
-	{ "ICON_Circ5"    , ICON_Circ5     , 0x24, 0x02, 0xff, 0x00}, // 21 circle, segment 5
-	{ "ICON_Circ6"    , ICON_Circ6     , 0x22, 0x02, 0xff, 0x00}, // 22 circle, segment 6
-	{ "ICON_Circ7"    , ICON_Circ7     , 0x23, 0x01, 0xff, 0x00}, // 23 circle, segment 7
-	{ "ICON_Circ8"    , ICON_Circ8     , 0x21, 0x01, 0xff, 0x00}, // 24 circle, segment 8
-	{ "ICON_FILE"     , ICON_FILE      , 0x22, 0x04, 0xff, 0x00}, // 25
-	{ "ICON_TER"      , ICON_TER       , 0x21, 0x04, 0xff, 0x00}, // 26
-	{ "ICON_480i"     , ICON_480i      , 0x24, 0x40, 0x23, 0x40}, // 27
-	{ "ICON_480p"     , ICON_480p      , 0x24, 0x40, 0x22, 0x40}, // 28
-	{ "ICON_576i"     , ICON_576i      , 0x21, 0x40, 0x20, 0x40}, // 29
-	{ "ICON_576p"     , ICON_576p      , 0x21, 0x40, 0x24, 0x20}, // 30
-	{ "ICON_720p"     , ICON_720p      , 0x23, 0x20, 0xff, 0x00}, // 31
-	{ "ICON_1080i"    , ICON_1080i     , 0x22, 0x20, 0xff, 0x00}, // 32
-	{ "ICON_1080p"    , ICON_1080p     , 0x21, 0x20, 0xff, 0x00}, // 33
-	{ "ICON_COLON1"   , ICON_COLON1    , 0x36, 0x01, 0xff, 0x00}, // 34 ":" left between text
-	{ "ICON_COLON2"   , ICON_COLON2    , 0x39, 0x01, 0xff, 0x00}, // 35 ":" middle between text
-	{ "ICON_COLON3"   , ICON_COLON3    , 0x3a, 0x01, 0xff, 0x00}, // 36 ":" right between text
-	{ "ICON_COLON4"   , ICON_COLON4    , 0x3b, 0x01, 0xff, 0x00}, // 37 ":" right between text (dimmer)
-	{ "ICON_TV"       , ICON_TV        , 0x23, 0x04, 0xff, 0x00}, // 38
+	/*- Name -------- icon -------- pos - mask1 mask2 mask3 -----*/
+	{ "ICON_DOLBY"  , ICON_DOLBY  , 0x00, 0x01, 0x00, 0x00},  // 01
+	{ "ICON_DTS"    , ICON_DTS    , 0x01, 0x01, 0x00, 0x00},  // 02
+	{ "ICON_VIDEO"  , ICON_VIDEO  , 0x02, 0x01, 0x00, 0x00},  // 03
+	{ "ICON_AUDIO"  , ICON_AUDIO  , 0x03, 0x01, 0x00, 0x00},  // 04
+	{ "ICON_LINK"   , ICON_LINK   , 0x04, 0x01, 0x00, 0x00},  // 05
+	{ "ICON_HDD"    , ICON_HDD    , 0x05, 0x01, 0x00, 0x00},  // 06
+	{ "ICON_DISC"   , ICON_DISC   , 0x06, 0x01, 0x00, 0x00},  // 07
+	{ "ICON_DVB"    , ICON_DVB    , 0x07, 0x01, 0x00, 0x00},  // 08
+	{ "ICON_DVD"    , ICON_DVD    , 0x08, 0x01, 0x00, 0x00},  // 09
+	{ "ICON_TIMER"  , ICON_TIMER  , 0x08, 0x00, 0x01, 0x00},  // 10
+	{ "ICON_TIME"   , ICON_TIME   , 0x08, 0x00, 0x02, 0x00},  // 11
+	{ "ICON_CARD"   , ICON_CARD   , 0x08, 0x00, 0x04, 0x00},  // 12
+	{ "ICON_1"      , ICON_1      , 0x08, 0x00, 0x08, 0x00},  // 13
+	{ "ICON_2"      , ICON_2      , 0x08, 0x00, 0x10, 0x00},  // 14
+	{ "ICON_KEY"    , ICON_KEY    , 0x08, 0x00, 0x20, 0x00},  // 15
+	{ "ICON_16_9"   , ICON_16_9   , 0x08, 0x00, 0x40, 0x00},  // 16
+	{ "ICON_USB"    , ICON_USB    , 0x08, 0x00, 0x80, 0x00},  // 17
+	{ "ICON_CRYPTED", ICON_CRYPTED, 0x08, 0x00, 0x00, 0x01},  // 18
+	{ "ICON_PLAY"   , ICON_PLAY   , 0x08, 0x00, 0x00, 0x02},  // 19
+	{ "ICON_REWIND" , ICON_REWIND , 0x08, 0x00, 0x00, 0x04},  // 20
+	{ "ICON_PAUSE"  , ICON_PAUSE  , 0x08, 0x00, 0x00, 0x08},  // 21
+	{ "ICON_FF"     , ICON_FF     , 0x08, 0x00, 0x00, 0x10},  // 22
+	{ "ICON_NONE"   , ICON_NONE   , 0x08, 0x00, 0x00, 0x20},  // 23
+	{ "ICON_REC"    , ICON_REC    , 0x08, 0x00, 0x00, 0x40},  // 24
+	{ "ICON_ARROW"  , ICON_ARROW  , 0x08, 0x00, 0x00, 0x80},  // 25
+	{ "ICON_COLON1" , ICON_COLON1 , 0x01, 0x00, 0x80, 0x00},  // 26
+	{ "ICON_COLON2" , ICON_COLON2 , 0x03, 0x00, 0x80, 0x00},  // 27
+	{ "ICON_COLON3" , ICON_COLON3 , 0x05, 0x00, 0x80, 0x00},  // 28
+};
+
+#elif defined(HS7420) || defined(HS7429)
+/***************************************************************************
+ *
+ * Icons for HS742X
+ *
+ */
+struct iconToInternal
+{
+	char *name;
+	u16 icon;
+	u8 pos;    // display position (0=rightmost)
+	u8 mask1;  // bitmask for on (byte 1)
+	u8 mask2;  // bitmask for on (byte 2)
+	u8 mask3;  // bitmask for on (byte 3)
+} nuvotonIcons[] =
+{
+	/*- Name ------- icon# ------ pos - mask1 mask2 mask3 -----*/
+	{ "ICON_DOT"   , ICON_DOT   , 0x07, 0x00, 0x80, 0x00},  // 01
+	{ "ICON_COLON1", ICON_COLON1, 0x06, 0x00, 0x80, 0x00},  // 02
+	{ "ICON_COLON2", ICON_COLON2, 0x04, 0x00, 0x80, 0x00},  // 03
+	{ "ICON_COLON3", ICON_COLON3, 0x02, 0x00, 0x80, 0x00},  // 04
+};
+
+#elif defined(FORTIS_HDBOX)
+/***************************************************************************
+ *
+ * Icons for FS9000/9200
+ *
+ * Icon structure on front panel display: bitmasks and register numbers
+ *          0x01    0x02     0x04    0x08    0x20    0x40  mask
+ * 20       Circ1   PLAY     SAT     STANDBY -       i(576)
+ * 21       Circ8   Circ3    TER     -       1080p   576
+ * 22       Circ2   Circ6    FILE    -       1080i   p(480)
+ * 23       Circ7   Circ4    TV      -       720p    i(480)
+ * 24       Circ0   Circ5    RADIO   -       p(576)  480
+ * 30       REC
+ * 31       -       TIME     -       -       -       -
+ * 32       -       SHIFT    -       -       -       -
+ * 33       -       TIMER    -       -       -       -
+ * 34       -       HD       -       -       -       -
+ * 35       -       USB      -       -       -       -
+ * 36       COLON1  SCRAMBLED-       -       -       -
+ * 37       -       DOLBY    -       -       -       -
+ * 38       -       MUTE     -       -       -       -
+ * 39       COLON2  TUNER1   -       -       -       -
+ * 3a       COLON3  TUNER2   -       -       -       -
+ * 3b       COLON4  MP3      -       -       -       -
+ * 3c       -       REPEAT   -       -       -       -
+ * register
+ * Note: the bits 4 and 7 are not used as a mask.
+ */
+struct iconToInternal
+{
+	char *name;
+	u16 icon;
+	u8 FP_reg1;   // FP register number
+	u8 bit_mask1;  // bitmask for on
+	u8 FP_reg2;   // FP register number #2 for double icons, 0xff=single icon
+	u8 bit_mask2;  // bitmask #2 for on for double icons
+} nuvotonIcons[] =
+{
+	/*- Name ---------- icon# ---------- code1 data1 code2 data2 -----*/
+	{ "ICON_STANDBY"  , ICON_STANDBY   , 0x20, 0x08, 0xff, 0x00},  // 01
+	{ "ICON_SAT"      , ICON_SAT       , 0x20, 0x04, 0xff, 0x00},  // 02
+	{ "ICON_REC"      , ICON_REC       , 0x30, 0x01, 0xff, 0x00},  // 03
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT , 0x31, 0x02, 0x32, 0x02},  // 04
+	{ "ICON_TIMER"    , ICON_TIMER     , 0x33, 0x02, 0xff, 0x00},  // 05
+	{ "ICON_HD"       , ICON_HD        , 0x34, 0x02, 0xff, 0x00},  // 06
+	{ "ICON_USB"      , ICON_USB       , 0x35, 0x02, 0xff, 0x00},  // 07
+	{ "ICON_SCRAMBLED", ICON_SCRAMBLED , 0x36, 0x02, 0xff, 0x00},  // 08
+	{ "ICON_DOLBY"    , ICON_DOLBY     , 0x37, 0x02, 0xff, 0x00},  // 09
+	{ "ICON_MUTE"     , ICON_MUTE      , 0x38, 0x02, 0xff, 0x00},  // 10
+	{ "ICON_TUNER1"   , ICON_TUNER1    , 0x39, 0x02, 0xff, 0x00},  // 11
+	{ "ICON_TUNER2"   , ICON_TUNER2    , 0x3a, 0x02, 0xff, 0x00},  // 12
+	{ "ICON_MP3"      , ICON_MP3       , 0x3b, 0x02, 0xff, 0x00},  // 13
+	{ "ICON_REPEAT"   , ICON_REPEAT    , 0x3c, 0x02, 0xff, 0x00},  // 14
+	{ "ICON_PLAY"     , ICON_PLAY      , 0x20, 0x02, 0xff, 0x00},  // 15 play in circle
+	{ "ICON_Circ0"    , ICON_Circ0     , 0x24, 0x01, 0xff, 0x00},  // 16 inner circle
+	{ "ICON_Circ1"    , ICON_Circ1     , 0x20, 0x01, 0xff, 0x00},  // 17 circle, segment 1
+	{ "ICON_Circ2"    , ICON_Circ2     , 0x22, 0x01, 0xff, 0x00},  // 18 circle, segment 2
+	{ "ICON_Circ3"    , ICON_Circ3     , 0x21, 0x02, 0xff, 0x00},  // 19 circle, segment 3
+	{ "ICON_Circ4"    , ICON_Circ4     , 0x23, 0x02, 0xff, 0x00},  // 20 circle, segment 4
+	{ "ICON_Circ5"    , ICON_Circ5     , 0x24, 0x02, 0xff, 0x00},  // 21 circle, segment 5
+	{ "ICON_Circ6"    , ICON_Circ6     , 0x22, 0x02, 0xff, 0x00},  // 22 circle, segment 6
+	{ "ICON_Circ7"    , ICON_Circ7     , 0x23, 0x01, 0xff, 0x00},  // 23 circle, segment 7
+	{ "ICON_Circ8"    , ICON_Circ8     , 0x21, 0x01, 0xff, 0x00},  // 24 circle, segment 8
+	{ "ICON_FILE"     , ICON_FILE      , 0x22, 0x04, 0xff, 0x00},  // 25
+	{ "ICON_TER"      , ICON_TER       , 0x21, 0x04, 0xff, 0x00},  // 26
+	{ "ICON_480i"     , ICON_480i      , 0x24, 0x40, 0x23, 0x40},  // 27
+	{ "ICON_480p"     , ICON_480p      , 0x24, 0x40, 0x22, 0x40},  // 28
+	{ "ICON_576i"     , ICON_576i      , 0x21, 0x40, 0x20, 0x40},  // 29
+	{ "ICON_576p"     , ICON_576p      , 0x21, 0x40, 0x24, 0x20},  // 30
+	{ "ICON_720p"     , ICON_720p      , 0x23, 0x20, 0xff, 0x00},  // 31
+	{ "ICON_1080i"    , ICON_1080i     , 0x22, 0x20, 0xff, 0x00},  // 32
+	{ "ICON_1080p"    , ICON_1080p     , 0x21, 0x20, 0xff, 0x00},  // 33
+	{ "ICON_COLON1"   , ICON_COLON1    , 0x36, 0x01, 0xff, 0x00},  // 34 ":" left between text
+	{ "ICON_COLON2"   , ICON_COLON2    , 0x39, 0x01, 0xff, 0x00},  // 35 ":" middle between text
+	{ "ICON_COLON3"   , ICON_COLON3    , 0x3a, 0x01, 0xff, 0x00},  // 36 ":" right between text
+	{ "ICON_COLON4"   , ICON_COLON4    , 0x3b, 0x01, 0xff, 0x00},  // 37 ":" right between text (dimmer)
+	{ "ICON_TV"       , ICON_TV        , 0x23, 0x04, 0xff, 0x00},  // 38
 	{ "ICON_RADIO"    , ICON_RADIO     , 0x24, 0x04, 0xff, 0x00}  // 39
 };
-#endif
 
-/*      command name             Opc     L  parms                             returns       */
-#define cCommandGetMJD           0x10 // 01 -                                 5 bytes: MJDh MJDl hrs mins secs
-#define cCommandSetTimeFormat    0x11 // 02 1:format byte                     nothing
-#define cCommandSetMJD           0x15 // 06 1:mjdH 2:mjdl 3:hrs 4:mins 5:secs nothing
+#elif defined(ATEVIO7500)
+/***************************************************************
+ *
+ * Icons for HS8200
+ *
+ * These are displayed in the leftmost character position.
+ * Basically only one icon can be displayed at a time; if more
+ * are on they are displayed successively in circular fashion in
+ * a thread.
+ *
+ * A character on the HS8200 display is simply a pixel matrix
+ * consisting of five columns of seven pixels high.
+ * Column 1 is the leftmost.
+ *
+ * Format of pixel data:
+ *
+ * pixeldata1: column 1
+ *  ...
+ * pixeldata5: column 5
+ *
+ * Each bit in the pixel data represents one pixel in the column, with the
+ * LSbit being the top pixel and bit 6 the bottom one. The pixel will be on
+ * when the corresponding bit is one. The resulting map is:
+ *
+ *  Register    0x27 0x28 0x29 0x2a 0x2b
+ *              ------------------------
+ *  Bitmask     0x01 0x01 0x01 0x01 0x01
+ *              0x02 0x02 0x02 0x02 0x02
+ *              0x04 0x04 0x04 0x04 0x04
+ *              0x08 0x08 0x08 0x08 0x08
+ *              0x10 0x10 0x10 0x10 0x10
+ *              0x20 0x20 0x20 0x20 0x20
+ *              0x40 0x40 0x40 0x40 0x40
+ */
+struct iconToInternal
+{
+	char *name;
+	u16 icon;
+	u8 pixeldata[5];
+} nuvotonIcons[] =
+{
+	/*- Name ---------- icon# ---------- data1 data2 data3 data4 data5-----*/
+	{ "ICON_STANDBY"  , ICON_STANDBY  , {0x38, 0x44, 0x5f, 0x44, 0x38}},  // 01
+	{ "ICON_REC"      , ICON_REC      , {0x1c, 0x3e, 0x3e, 0x3e, 0x1c}},  // 02
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT, {0x01, 0x3f, 0x01, 0x2c, 0x34}},  // 03
+	{ "ICON_TIMER"    , ICON_TIMER    , {0x3e, 0x49, 0x4f, 0x41, 0x3e}},  // 04
+	{ "ICON_HD"       , ICON_HD       , {0x3e, 0x08, 0x3e, 0x22, 0x1c}},  // 05
+	{ "ICON_USB"      , ICON_USB      , {0x08, 0x0c, 0x1a, 0x2a, 0x28}},  // 06
+	{ "ICON_SCRAMBLED", ICON_SCRAMBLED, {0x3c, 0x26, 0x25, 0x26, 0x3c}},  // 07
+	{ "ICON_DOLBY"    , ICON_DOLBY    , {0x3e, 0x22, 0x1c, 0x22, 0x3e}},  // 08
+	{ "ICON_MUTE"     , ICON_MUTE     , {0x1e, 0x12, 0x1e, 0x21, 0x3f}},  // 09
+	{ "ICON_TUNER1"   , ICON_TUNER1   , {0x01, 0x3f, 0x01, 0x04, 0x3e}},  // 10
+	{ "ICON_TUNER2"   , ICON_TUNER2   , {0x01, 0x3f, 0x01, 0x34, 0x2c}},  // 11
+	{ "ICON_MP3"      , ICON_MP3      , {0x77, 0x37, 0x00, 0x49, 0x77}},  // 12
+	{ "ICON_REPEAT"   , ICON_REPEAT   , {0x14, 0x34, 0x14, 0x16, 0x14}},  // 13
+	{ "ICON_PLAY"     , ICON_PLAY     , {0x00, 0x7f, 0x3e, 0x1c, 0x08}},  // 14
+	{ "ICON_STOP"     , ICON_STOP     , {0x3C, 0x3C, 0x3C, 0x3C, 0x3C}},  // 15
+	{ "ICON_PAUSE"    , ICON_PAUSE    , {0x3e, 0x3e, 0x00, 0x3e, 0x3e}},  // 16
+	{ "ICON_REWIND"   , ICON_REWIND   , {0x08, 0x1c, 0x08, 0x1c, 0x00}},  // 17
+	{ "ICON_FF"       , ICON_FF       , {0x00, 0x1c, 0x08, 0x1c, 0x08}},  // 18
+	{ "ICON_STEP_BACK", ICON_STEP_BACK, {0x08, 0x1c, 0x3e, 0x00, 0x3e}},  // 19
+	{ "ICON_STEP_FWD" , ICON_STEP_FWD , {0x3e, 0x00, 0x3e, 0x1c, 0x08}},  // 20 
+	{ "ICON_TV"       , ICON_TV       , {0x01, 0x3f, 0x1d, 0x20, 0x1c}},  // 21
+	{ "ICON_RADIO"    , ICON_RADIO    , {0x78, 0x4a, 0x4c, 0x4a, 0x79}}  // 22
+};
+#endif  //Icon definitions
+/* End of character and icon definitions */
 
-#define cCommandSetPowerOff      0x20 // not used in nuvoton
+/***************************************************************************************
+ *
+ * Driver code.
+ *
+ */
 
-#define cCommandPowerOffReplay   0x31 // 02 1:1=power off
-#define cCommandSetBootOn        0x40 // 01 -
-#define cCommandSetBootOnExt     0x41 // not used in nuvoton
-
-#define cCommandSetWakeupTime    0x72 // 03 1:hrs 2:mins                      nothing
-#define cCommandSetWakeupMJD     0x74 // 05 1:MJDh 2:MJDl 3:hrs 4:mins        nothing
-
-#define cCommandGetPowerOnSrc    0x80 // 01                                   1 byte: wake up reason (2= from deep sleep)
-//TODO: returns error on HS742X
-
-#define cCommandSetLed           0x93 // 04 1:LED# 2:level 3:08               nothing
-
-#define cCommandGetIrCode        0xa0
-#define cCommandGetIrCodeExt     0xa1
-#define cCommandSetIrCode        0xa5 // 06 (HS8200 only?)
-
-#define cCommandGetPort          0xb2
-#define cCommandSetPort          0xb3
-
-#if defined(OCTAGON1008)
-#define cCommandSetIcon          0xc4 // 05 1:position 2:data 3:data 4:data
-#else
-#define cCommandSetIconI         0xc2 // 03 1:registernumber 2:bitmask for on/off     /* 0xc2 0xc7 0xcb 0xcc */ /* display cgram */
-#define cCommandSetIconII        0xc7 // not used in nuvoton
-#endif
-
-#if defined(OCTAGON1008) || defined(HS7420) || defined(HS7429)
-#define cCommandSetVFD           0xc4 //same as cCommandSetIcon
-#elif defined(HS7110) || defined(HS7119) || defined(HS7810A) || defined(HS7819)
-#define cCommandSetVFD           0x24 // 05 1:data pos1 2:data pos2 3:data pos3 4:data pos4
-#else
-#define cCommandSetVFD           0xce // 14 1:0x11 2-13 characters /* 0xc0 */
-#endif
-
-#define cCommandSetVFDBrightness 0xd2 // 03 1:0 2:level
-
-#if defined(ATEVIO7500) || defined(HS7110) || defined(HS7119) || defined(HS7810A) || defined(HS7819) || defined(HS7420) || defined(HS7429)
-#define cCommandGetFrontInfo     0xd0 // not used in nuvoton
-#else
-#define cCommandGetFrontInfo     0xe0 // not used in nuvoton
-#endif
-
-static struct saved_data_s lastdata;
-
-/****************************************************************************************/
-
+/*******************************************************
+ *
+ * Code to communicate with the front processor.
+ *
+ */
 void write_sem_up(void)
 {
 	up(&write_sem);
@@ -627,7 +674,7 @@ int write_sem_down(void)
 
 void copyData(unsigned char *data, int len)
 {
-	printk("%s len %d\n", __func__, len);
+	dprintk(50, "%s len %d\n", __func__, len);
 	memcpy(ioctl_data, data, len);
 }
 
@@ -640,13 +687,12 @@ int nuvotonWriteCommand(char *buffer, int len, int needAck)
 	for (i = 0; i < len; i++)
 	{
 		udelay(1);
-#ifdef DIRECT_ASC
+#ifdef DIRECT_ASC  // not defined anywhere
 		serial_putc(buffer[i]);
 #else
 		nuvoton_putc(buffer[i]);
 #endif
 	}
-
 	if (needAck)
 	{
 		if (ack_sem_down())
@@ -658,7 +704,15 @@ int nuvotonWriteCommand(char *buffer, int len, int needAck)
 	return 0;
 }
 
-#if defined (OCTAGON1008)
+/*******************************************************
+ *
+ * nuvotonSetIcon: (re)sets an icon on the front panel
+ *                 display.
+ *
+ */
+#if defined (OCTAGON1008) \
+ || defined(HS7420) \
+ || defined(HS7429)
 int nuvotonSetIcon(int which, int on)
 {
 	char buffer[7];
@@ -668,20 +722,21 @@ int nuvotonSetIcon(int which, int on)
 
 	if (which < ICON_MIN + 1 || which > ICON_MAX - 1)
 	{
-		printk("[nuvoton] Icon number %d out of range (1..%d)\n", which, ICON_MAX - 1);
+		printk("[nuvoton] Icon number %d out of range (%d-%d)\n", which, ICON_MIN + 1, ICON_MAX - 1);
 		return -EINVAL;
 	}
 
-	dprintk(5, "Set icon %s (number %d) to %d\n", nuvotonIcons[which].name, which, on);
 	which--;
-	printk("VFD/Nuvoton icon number %d\n", which);
-	memset(buffer, 0, 7);
+	dprintk(10, "Set icon %s (number %d) to %d\n", nuvotonIcons[which].name, which + 1, on);
+
+
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = SOP;
-	buffer[1] = cCommandSetIcon;
+	buffer[1] = cCommandSetVFD;
 	buffer[2] = nuvotonIcons[which].pos;
 
-	//icons on positions 0 ..7 and ICON_DVD
+	// icons on positions 0..7 and ICON_DVD
 	if ((nuvotonIcons[which].mask2 == 0) && (nuvotonIcons[which].mask3 == 0))
 	{
 		if (on)
@@ -697,7 +752,7 @@ int nuvotonSetIcon(int which, int on)
 	}
 	else if (nuvotonIcons[which].mask1 == 0)
 	{
-		//icons on position 8, and colons
+		// icons on position 8, and colons
 		buffer[3] = vfdbuf[nuvotonIcons[which].pos].buf0;
 		if (on)
 		{
@@ -714,95 +769,279 @@ int nuvotonSetIcon(int which, int on)
 
 	res = nuvotonWriteCommand(buffer, 7, 0);
 
+	if (res == 0)
+	{
+		lastdata.icon_state[which + 1] = on;
+	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
 #elif defined(FORTIS_HDBOX)
-int nuvotonSetIcon(int which, int on)  //works for icons 1 - 16 only on later production models
+/* ****************************************************************************
+ *
+ * nuvotonSetIcon, using both cCommandSetIconI and cCommandSetIconII opcodes
+ *
+ * The icons on the FS9000/9200 can be divided into two classes:
+ * - Icons present on registernumbers 0x31 through 0x3c
+ *       > These are controlled by cCommandSetIconI (0xc2), which can set
+ *         only one icon in a single command. Note that the bit mask for the
+ *         icons on the top row always is 0x02 except ICON_REC. This one and
+ *         the colons have bit mask 0x01.
+ * - Icons present on register numbers 0x20, 0x21, 0x22, 0x23 and 0x24
+ *       > These are controlled by opcode cCommandSetIconII (0xc6), which
+ *         can set more than one icon in a single command. In addition, in
+ *         early production receivers the front processors can also control
+ *         these icons using opcode cCommandSetIconI (0xc2), but this does
+ *         not work on newer versions.
+ *
+ * In both classes so called double icons are present: these are in practice
+ * icons that are used in pairs, but require setting/resetting of two items
+ * in the display. In the cCommandSetIconI class the only icon of this type
+ * is ICON_TIME_SHIFT. The cCommandSetIconII class has four of these:
+ * ICON_480I, ICON_480P, ICON_576I and ICON_576P.
+ *
+ */
+int nuvotonSetIcon(int which, int on)
 {
-	char buffer[5];
-	u8 internalCode1, SymbolData1, internalCode2, SymbolData2;
-	int  vLoop, res = 0;
+	char buffer[9];  // buffer to construct front processor command in
+	u8 registernumber;
+	int res = 0;
 
 	dprintk(100, "%s > %d, %d\n", __func__, which, on);
 
 	if (which < ICON_MIN + 1 || which > ICON_MAX - 1)
 	{
-		printk("[nuvoton] Icon number %d out of range (1-%d)\n", which, ICON_MAX - 1);
+		printk("[nuvoton] Icon number %d out of range (%d-%d)\n", which, ICON_MIN + 1, ICON_MAX - 1);
 		return -EINVAL;
 	}
+	dprintk(10, "Set icon %s (number %d) to %d\n", nuvotonIcons[which - 1].name, which, on);
 
-	internalCode1 = 0xff;
-	internalCode2 = 0xff;
-	SymbolData1 = 0x00;
-	SymbolData2 = 0x00;
+	registernumber = nuvotonIcons[which - 1].FP_reg1;
 
-	for (vLoop = 0; vLoop < ARRAY_SIZE(nuvotonIcons); vLoop++)
+	switch (which)  // decide whether to use cCommandSetIconI or cCommandSetIconII
 	{
-		if ((which & 0xff) == nuvotonIcons[vLoop].icon) //look for icon number
+		case ICON_TIMESHIFT:
+		case ICON_TIMER:
+		case ICON_HD:
+		case ICON_USB:
+		case ICON_SCRAMBLED:
+		case ICON_DOLBY:
+		case ICON_MUTE:
+		case ICON_TUNER1:
+		case ICON_TUNER2:
+		case ICON_MP3:
+		case ICON_REPEAT:
 		{
-			internalCode1 = nuvotonIcons[vLoop].internalCode1; //if found
-			internalCode2 = nuvotonIcons[vLoop].internalCode2; //get data
-			SymbolData1 = nuvotonIcons[vLoop].SymbolData1;
-			SymbolData2 = nuvotonIcons[vLoop].SymbolData2;
-			if (internalCode1 == 0xff) // if code for unknown or not found
+			// bitmask is 0x02, opcode is cCommandSetIconI
+
+			regs[registernumber] = ((on) ? regs[registernumber] | 0x02 : regs[registernumber] & 0xfd);
+
+			memset(buffer, 0, sizeof(buffer));  // clear buffer
+			// construct front processor command
+			buffer[0] = SOP;
+			buffer[1] = cCommandSetIconI;
+			buffer[2] = registernumber;
+			buffer[3] = regs[registernumber];
+			buffer[4] = EOP;
+
+			if (lastdata.display_on)
 			{
-				printk("%s: Unknown or unsupported icon %d ->%s\n", __func__, which, nuvotonIcons[vLoop].name);
-				return -EINVAL;
-			}
-
-			memset(buffer, 0, 6);  //else clear buffer
-
-			buffer[0] = SOP;        //fill
-			buffer[1] = cCommandSetIconI;   //buffer
-			buffer[2] = internalCode1;  //with
-
-			if (on)
-			{
-				regs[internalCode1] = buffer[3] = regs[internalCode1] | SymbolData1;    //buffer3 is old register plus bitmask
-			}
-			else
-			{
-				regs[internalCode1] = buffer[3] = regs[internalCode1] & ~SymbolData1;   //buffer3 is old register minus bitmask
-			}
-			buffer[4] = EOP;    //data
-			dprintk(50, "[nuvoton] Set icon number %d to %d\n", which, on);
-			res = nuvotonWriteCommand(buffer, 5, 0);  //write to FP
-
-			/* e.g. timeshift is made up of two parts */
-			if (internalCode2 != 0xff)  // if multi part icon
-			{
-				memset(buffer, 0, 6);   //repeat process for 2nd part
-				buffer[0] = SOP;
-				buffer[1] = cCommandSetIconI;
-				buffer[2] = internalCode2;
-				if (on)
-				{
-					regs[internalCode2] = buffer[3] = regs[internalCode2] | SymbolData2;
-				}
-				else
-				{
-					regs[internalCode2] = buffer[3] = regs[internalCode2] & ~SymbolData2;
-				}
-				buffer[4] = EOP;
-
 				res = nuvotonWriteCommand(buffer, 5, 0);
 			}
+			if (which == ICON_TIMESHIFT)  // handle SHIFT icon
+			{
+				regs[0x32] = ((on) ? regs[0x32] | 0x02 : regs[0x32] & 0xfd);
+				buffer[0] = SOP;
+				buffer[1] = cCommandSetIconI;
+				buffer[2] = 0x32;
+				buffer[3] = regs[0x32];
+				buffer[4] = EOP;
+
+				if (lastdata.display_on)
+				{
+					res |= nuvotonWriteCommand(buffer, 5, 0);
+				}
+			}
+			break;
+		}
+		case ICON_REC:
+		case ICON_COLON1:
+		case ICON_COLON2:
+		case ICON_COLON3:
+		case ICON_COLON4:
+		{
+			// bitmask is 0x01, opcode is cCommandSetIconI
+
+			regs[registernumber] = ((on) ? regs[registernumber] | 0x01 : regs[registernumber] & 0xfe);
+
+			memset(buffer, 0, sizeof(buffer));  // clear buffer
+			// construct front processor command
+			buffer[0] = SOP;
+			buffer[1] = cCommandSetIconI;
+			buffer[2] = registernumber;
+			buffer[3] = regs[registernumber];
+			buffer[4] = EOP;
+
+			if (lastdata.display_on)
+			{
+				res = nuvotonWriteCommand(buffer, 5, 0);
+			}
+			msleep(1);
+			break;
+		}
+		default:
+		{
+			// opcode is cCommandSetIconII
+
+			which--;
+			regs[registernumber] = ((on) ? regs[registernumber] | nuvotonIcons[which].bit_mask1 : regs[registernumber] & ~nuvotonIcons[which].bit_mask1);
+
+			// handle double icons
+			if (nuvotonIcons[which].FP_reg2 != 0xff)
+			{
+				registernumber = nuvotonIcons[which].FP_reg2;
+				regs[registernumber] = ((on) ? regs[registernumber] | nuvotonIcons[which].bit_mask2 : regs[registernumber] & ~nuvotonIcons[which].bit_mask2);
+			}
+
+			memset(buffer, 0, sizeof(buffer));  //clear buffer
+			// construct front processor command
+			buffer[0] = SOP;
+			buffer[1] = cCommandSetIconII;
+			buffer[2] = 0x20;
+			buffer[3] = regs[0x20];
+			buffer[4] = regs[0x21];
+			buffer[5] = regs[0x22];
+			buffer[6] = regs[0x23];
+			buffer[7] = regs[0x24];
+			buffer[8] = EOP;
+
+			if (lastdata.display_on)
+			{
+				res = nuvotonWriteCommand(buffer, 9, 0);
+			}
+			which ++;
+			break;
 		}
 	}
-
+	// update lastdata state
+	if (res == 0)
+	{
+		lastdata.icon_state[which] = on;
+	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 #elif defined (ATEVIO7500)
 int nuvotonSetIcon(int which, int on)
 {
-	return 0;
+	char buffer[9];  // buffer to construct front processor command in
+	int res = 0, i;
+
+	dprintk(100, "%s > %d, %d\n", __func__, which, on);
+
+	if (which < ICON_MIN + 1 || which > ICON_MAX - 1)
+	{
+		printk("[nuvoton] Icon number %d out of range (%d-%d)\n", which, ICON_MIN + 1, ICON_MAX - 1);
+		return -EINVAL;
+	}
+	dprintk(10, "Set icon %s (number %d) to %d\n", nuvotonIcons[which - 1].name, which, on);
+
+	memset(buffer, 0, sizeof(buffer));  //clear buffer
+
+	for (i = 0; i < 5; i++)
+	{
+		regs[0x27 + i] = ((on) ? nuvotonIcons[which - 1].pixeldata[i] : 0);
+	}
+
+	if (lastdata.display_on)
+	{
+			buffer[0] = SOP;
+			buffer[1] = cCommandSetIconII;
+			buffer[2] = 0x27;
+			buffer[3] = regs[0x27];
+			buffer[4] = regs[0x28];
+			buffer[5] = regs[0x29];
+			buffer[6] = regs[0x2A];
+			buffer[7] = regs[0x2B];
+			buffer[8] = EOP;
+			res |= nuvotonWriteCommand(buffer, 9, 0);
+	}
+
+	regs[0x10] = 7;
+	buffer[0] = SOP;
+	buffer[1] = cCommandSetIconI;
+	buffer[2] = 0x10;
+	buffer[3] = regs[0x10];
+	buffer[4] = EOP;
+	res |= nuvotonWriteCommand(buffer, 5, 0);
+
+	if (res == 0)
+	{
+		lastdata.icon_state[which] = on;
+	}
+	dprintk(100, "%s <\n", __func__);
+	return res;
 }
-#else // HS7110, HS7119, HS7420, HS7429, HS7810A & HS7819
+#elif defined(HS7810A) \
+ || defined(HS7119) \
+ || defined(HS7819)  // LED models
 int nuvotonSetIcon(int which, int on)
 {
+	int res;
+	unsigned char cmd_buf[7];
+
+	dprintk(100, "%s > %d, %d\n", __func__, which, on);
+
+	if (which < ICON_MIN + 1 || which > ICON_MAX - 1)
+	{
+		printk("[nuvoton] Icon number %d out of range (%d-%d)\n", which, ICON_MIN + 1, ICON_MAX - 1);
+		return -EINVAL;
+	}
+	dprintk(10, "Set icon #%d to %d\n", which, on);
+
+#if defined(HS7119)
+	lastdata.buf[3] = ((on) ? lastdata.buf[3] | 0x80 : lastdata.buf[3] & 0x7f);
+#else  // HS7810A & HS7819
+	switch (which)
+	{
+		case ICON_COLON:
+		{
+			lastdata.buf[3] = ((on) ? lastdata.buf[3] | 0x80 : lastdata.buf[3] & 0x7f);
+			break;
+		}
+		case ICON_PERIOD1:
+		{
+			lastdata.buf[2] = ((on) ? lastdata.buf[2] | 0x80 : lastdata.buf[2] & 0x7f);
+			break;
+		}
+		case ICON_PERIOD2:
+		{
+			lastdata.buf[4] = ((on) ? lastdata.buf[4] | 0x80 : lastdata.buf[4] & 0x7f);
+			break;
+		}
+		case ICON_PERIOD3:
+		{
+			lastdata.buf[5] = ((on) ? lastdata.buf[5] | 0x80 : lastdata.buf[5] & 0x7f);
+			break;
+		}
+	}
+#endif
+	memcpy(&cmd_buf, lastdata.buf, 7);
+	res = nuvotonWriteCommand(cmd_buf, 7, 0);
+
+//	if (res == 0)
+//	{
+//		lastdata.icon_state[which] = on;
+//	}
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+#else  // HS7110 (no display)
+int nuvotonSetIcon(int which, int on)
+{
+	dprintk(100, "%s > %d, %d\n", __func__, which, on);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 #endif
@@ -810,6 +1049,11 @@ int nuvotonSetIcon(int which, int on)
 /* export for later use in e2_proc */
 EXPORT_SYMBOL(nuvotonSetIcon);
 
+/*******************************************************************
+ *
+ * nuvotonSetLED: sets brightness of an LED on front panel display.
+ *
+ */
 int nuvotonSetLED(int which, int level)
 {
 	char buffer[6];
@@ -817,39 +1061,34 @@ int nuvotonSetLED(int which, int level)
 
 	dprintk(100, "%s > %d, %d\n", __func__, which, level);
 
-#if defined(OCTAGON1008)
-#define MAX_LED 1
+#if defined(OCTAGON1008) \
+ || defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819)
+#define MAX_LED 3    // LED number is a bit mask:
+                     // bit 0 = standby (red),
+                     // bit 1 = logo (not on all models)
+                     // RC feedback (green, on HS78XX) seems to be not controllable
+
 #define MAX_BRIGHT 7
-#elif defined(FORTIS_HDBOX) || defined(ATEVIO7500) // New Nuvoton                    
-#define MAX_LED 256  // LED number is a bit mask: bit 0 (  1) = red power
-	//                           bit 1 (  2) = blue power
-	//                           bit 2 (  4) = -
-	//                           bit 3 (  8) = -
-	//                           bit 4 ( 16) = cross left
-	//                           bit 5 ( 32) = cross bottom
-	//                           bit 6 ( 64) = cross top
-	//                           bit 7 (128) = cross right
-	//                           (0xf2 = full cross plus blue)
-	// TODO: Buggy on ATEVIO7500, fp seems to have a life of its own
+#elif defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)                    
+#define MAX_LED 255  // LED number is a bit mask: bit 0 (  1) = red power
+                     //                           bit 1 (  2) = blue power
+                     //                           bit 2 (  4) = -
+                     //                           bit 3 (  8) = -
+                     //                           bit 4 ( 16) = cross left
+                     //                           bit 5 ( 32) = cross bottom
+                     //                           bit 6 ( 64) = cross top
+                     //                           bit 7 (128) = cross right
+                     //                           (0xf2 = full cross plus blue)
 #define MAX_BRIGHT 31
-#elif defined(HS7420) || defined(HS7429)
-	// LED number is a bit mask:
-	// bit 0 = standby (red),
-	// bit 1 = logo (not on all models),
-#define MAX_LED 2 // must be power of 2
-#define MAX_BRIGHT 7
-#elif defined(HS7810A) || defined(HS7819)
-	// LED number is a bit mask:
-	// bit 0 = standby (red),
-	// bit 1 = logo,
-	// bit 2(?) = RC feedback (green) seems to be not controllable (off when red is on)
-#define MAX_LED 4 // must be power of 2
-#define MAX_BRIGHT 7
 #elif defined(HS7110) || defined(HS7119)
-	// LED number is a bit mask:
-	// bit 0 = standby (red),
-	// bit 1(?) = RC feedback (green) seems to be not controllable (off when red is on)
-#define MAX_LED 2 // must be power of 2
+#define MAX_LED 1    // LED number is a bit mask:
+                     // bit 0 = standby (red),
+                     // RC feedback (green) seems to be not controllable (off when red is on)
+
 #define MAX_BRIGHT 7
 #endif
 
@@ -868,14 +1107,15 @@ int nuvotonSetLED(int which, int level)
 		printk("[nuvoton] LED brightness level %d out of range (0-%d)\n", level, MAX_BRIGHT);
 		return -EINVAL;
 	}
+	dprintk(10, "Set LED 0x%02x brightness level to %d\n", which, level);
 
-	memset(buffer, 0, 6);
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = SOP;
 	buffer[1] = cCommandSetLed;
 	buffer[2] = which;
 	buffer[3] = level;
-	buffer[4] = 0x08; //what is this?
+	buffer[4] = (which == 1 ? 8 : 0);  //handle deep standby brightness (red = 8, others = off)
 	buffer[5] = EOP;
 
 	res = nuvotonWriteCommand(buffer, 6, 0);
@@ -888,10 +1128,16 @@ int nuvotonSetLED(int which, int level)
 /* export for later use in e2_proc */
 EXPORT_SYMBOL(nuvotonSetLED);
 
-#if !defined(HS7110) \
- && !defined(HS7119) \
- && !defined(HS7810A) \
- && !defined(HS7819)
+/****************************************************************
+ *
+ * nuvotonSetBrightness: sets brightness of front panel display.
+ *
+ */
+#if defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008) \
+ || defined(ATEVIO7500) \
+ || defined(HS7420) \
+ || defined(HS7429)  // VFD models
 int nuvotonSetBrightness(int level)
 {
 	char buffer[5];
@@ -903,8 +1149,9 @@ int nuvotonSetBrightness(int level)
 		printk("[nuvoton] VFD brightness level %d out of range (0-%d)\n", level, 7);
 		return -EINVAL;
 	}
+	dprintk(10, "Set VFD brightness level to %d\n", level);
 
-	memset(buffer, 0, 6);
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = SOP;
 	buffer[1] = cCommandSetVFDBrightness;
@@ -914,41 +1161,117 @@ int nuvotonSetBrightness(int level)
 
 	res = nuvotonWriteCommand(buffer, 5, 0);
 
+	lastdata.brightness = level;
+
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-/* export for later use in e2_proc */
-EXPORT_SYMBOL(nuvotonSetBrightness);
+#elif defined(HS7119) \
+ || defined(HS7810A) \
+ || defined(HS7819)
+int nuvotonSetBrightness(int level)
+{
+	char buffer[6];
+	int res = -1;
+
+	dprintk(100, "%s > %d\n", __func__, level);
+	if (level < 0 || level > 7)
+	{
+		printk("[nuvoton] LED display brightness level %d out of range (0-%d)\n", level, 7);
+		return -EINVAL;
+	}
+	dprintk(10, "Set LED display brightness level to %d\n", level);
+
+	switch (level)  // adjust level 0..7 to 0..10
+	{
+		case 7:
+		{
+			level = 10;
+			break;
+		}
+		case 6:
+		{
+			level = 8;
+			break;
+		}
+		case 5:
+		{
+			level = 6;
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
+	memset(buffer, 0, sizeof(buffer));
+
+	buffer[0] = SOP;
+	buffer[1] = cCommandSetLEDBrightness;
+	buffer[2] = 0x03;
+	buffer[3] = level;
+	buffer[4] = 0x02;  // brightness in deep standby
+	buffer[5] = EOP;
+
+	res = nuvotonWriteCommand(buffer, 6, 0);
+
+	lastdata.brightness = level;
+
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+#else  // HS7110
+int nuvotonSetBrightness(int level)
+{
+	dprintk(100, "%s >\n", __func__);
+	dprintk(10, "Set LED brightness level not supported.\n");
+	dprintk(100, "%s <\n", __func__);
+	return -EFAULT;
+}
 #endif
 
-int nuvotonSetStandby(char *time)
+/* export for later use in e2_proc */
+EXPORT_SYMBOL(nuvotonSetBrightness);
+
+/****************************************************************
+ *
+ * nuvotonSetStandby: sets wake up time and then switches
+ *                    receiver to deep standby.
+ *
+ */
+int nuvotonSetStandby(char *wtime)
 {
-	char     buffer[8];
-	char     power_off[] = {SOP, cCommandPowerOffReplay, 0x01, EOP};
-	int      res = 0;
+	char buffer[8];
+	char power_off[] = {SOP, cCommandPowerOffReplay, 0x01, EOP};
+	int res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
 //	res = nuvotonWriteString("Bye bye ...", strlen("Bye bye ..."));
 
 	/* set wakeup time */
-	memset(buffer, 0, 8);
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = SOP;
 	buffer[1] = cCommandSetWakeupMJD;
 
-	memcpy(buffer + 2, time, 4); /* only 4 because we do not have seconds here */
+	memcpy(buffer + 2, wtime, 4); /* only 4 because we do not have seconds here */
 	buffer[6] = EOP;
 
 	res = nuvotonWriteCommand(buffer, 7, 0);
 
-	/* now power off */
+	/* now go to standby */
 	res = nuvotonWriteCommand(power_off, sizeof(power_off), 0);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/**************************************************
+ *
+ * nuvotonSetTime: sets front panel clock time.
+ *
+ */
 int nuvotonSetTime(char *time)
 {
 	char buffer[8];
@@ -956,7 +1279,7 @@ int nuvotonSetTime(char *time)
 
 	dprintk(100, "%s >\n", __func__);
 
-	memset(buffer, 0, 8);
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = SOP;
 	buffer[1] = cCommandSetMJD;
@@ -970,14 +1293,20 @@ int nuvotonSetTime(char *time)
 	return res;
 }
 
-int nuvotonGetTime(void)
+/*****************************************************
+ *
+ * nuvotonGetTime: read front panel clock time.
+ *
+ */
+int nuvotonGetTime(char *time)
 {
 	char buffer[3];
 	int res = 0;
+	int i;
 
 	dprintk(100, "%s >\n", __func__);
 
-	memset(buffer, 0, 3);
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = SOP;
 	buffer[1] = cCommandGetMJD;
@@ -989,30 +1318,88 @@ int nuvotonGetTime(void)
 	if (errorOccured == 1)
 	{
 		/* error */
-		memset(ioctl_data, 0, 8);
-		printk("error\n");
+		memset(ioctl_data, 0, sizeof(ioctl_data));
+		printk("[nuvoton] Error receiving time.\n");
 		res = -ETIMEDOUT;
 	}
 	else
 	{
-		/* time received ->noop here */
-		dprintk(1, "time received\n");
-		dprintk(20, "myTime= 0x%02x - 0x%02x - 0x%02x - 0x%02x - 0x%02x\n", ioctl_data[0], ioctl_data[1],
-			ioctl_data[2], ioctl_data[3], ioctl_data[4]);
+		/* time received */
+		printk("[nuvoton] Time received\n");
+		dprintk(20, "Time= 0x%04x (MJD) %02d:%02d:%02d (local)\n", ((ioctl_data[0] << 8) + ioctl_data[1]),
+				ioctl_data[2], ioctl_data[3], ioctl_data[4]);
+		for (i = 0; i < 5; i++)
+		{
+			time[i] = ioctl_data[i];
+		}
 	}
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+
+/****************************************************************
+ *
+ * nuvotonSetWakeUpTime: sets front panel clock wake up time.
+ *
+ */
+int nuvotonSetWakeUpTime(char *wtime)
+{
+	char buffer[7];
+	int  res = 0, i;
+
+	dprintk(100, "%s >\n", __func__);
+
+	/* set wakeup time */
+	memset(buffer, 0, sizeof(buffer));
+
+	buffer[0] = SOP;
+	buffer[1] = cCommandSetWakeupMJD;
+
+	memcpy(buffer + 2, wtime, 4); /* only 4 because we do not have seconds here */
+	buffer[6] = EOP;
+
+	res = nuvotonWriteCommand(buffer, 7, 0);
+
+	for (i = 0; i < 4; i++)
+	{
+		wakeup_time[i] = wtime[i];
+	}
+	wakeup_time[4] = 0;
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
-int nuvotonGetWakeUpMode(void)
+/**************************************************
+ *
+ * nuvotonGetWakeUpTime: read stored wakeup time.
+ *
+ */
+void nuvotonGetWakeUpTime(char *time)
+{
+	int i;
+
+	for (i = 0; i < 4; i++)
+	{
+		time[i] = wakeup_time[i];
+	}
+	time[4] = 0;
+}
+
+/*************************************************************
+ *
+ * nuvotonGetWakeUpMode: read wake up reason from front panel.
+ *
+ */
+int nuvotonGetWakeUpMode(int *wakeup_mode)
 {
 	char buffer[3];
 	int res = 0;
+	char *wakeupmode_name[4]= { "Unknown", "Power on", "From deep standby", "Timer" };
 
 	dprintk(100, "%s >\n", __func__);
 
-	memset(buffer, 0, 3);
+	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = SOP;
 	buffer[1] = cCommandGetPowerOnSrc;
@@ -1024,21 +1411,28 @@ int nuvotonGetWakeUpMode(void)
 	if (errorOccured == 1)
 	{
 		/* error */
-		memset(ioctl_data, 0, 8);
-		printk("error\n");
-
+		memset(ioctl_data, 0, sizeof(ioctl_data));
+		*wakeup_mode = -1;
+		printk("[nuvoton] Error receiving wake up mode.\n");
 		res = -ETIMEDOUT;
 	}
 	else
 	{
-		/* time received ->noop here */
-		dprintk(1, "time received\n");
+		/* mode received */
+//		printk("[nuvoton] Wake up mode received\n");
+		*wakeup_mode = ioctl_data[0] + 1;
+		printk("[nuvoton] Wakeup mode is: %1d (%s)\n", *wakeup_mode, wakeupmode_name[*wakeup_mode]);
 	}
-
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/*************************************************************
+ *
+ * nuvotonSetTimeFormat: set 12/24h display format for front
+ *                       panel clock in standby.
+ *
+ */
 int nuvotonSetTimeFormat(char format)
 {
 	char buffer[4];
@@ -1051,181 +1445,462 @@ int nuvotonSetTimeFormat(char format)
 	buffer[2] = format;
 	buffer[3] = EOP;
 
-//	dprintk(20, "Time mode command= 0x%02x (SOP) 0x%02x 0x%02x 0x%02x (EOP)\n", buffer[0], buffer[1], buffer[2], buffer[3]);
 	res = nuvotonWriteCommand(buffer, 4, 0);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/*************************************************************
+ *
+ * nuvotonSetDisplayOnOff: switch entire front panel display
+ *                         on or off, retaining display text,
+ *                         LED states and icon states
+ *
+ */
+#if defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008) \
+ || defined(ATEVIO7500) \
+ || defined(HS7420) \
+ || defined(HS7429)  // VFD models
 int nuvotonSetDisplayOnOff(char level)
 {
 	int  res = 0;
-#if defined(OCTAGON1008) //|| defined(HS7420) || defined(HS7429)
-	char buffer[5];
+	int  i;
+	char buf[128];
+	int  len;
+	int  ibuf[ICON_MAX];
 
-	dprintk(100, "%s >\n", __func__);
-	if (level != 0)
-	{
-		level = 7;
-	}
-
-	memset(buffer, 0, 5);
-	buffer[0] = SOP;
-	buffer[1] = cCommandSetVFDBrightness;
-	buffer[2] = 0x00;
-	buffer[3] = level;
-	buffer[4] = EOP;
-
-	res = nuvotonWriteCommand(buffer, 5, 0);
-#elif defined(FORTIS_HDBOX)
-	char buffer[5];
-
-	dprintk(100, "%s >\n", __func__);
-	if (level != 0)
-	{
-		level = 1;
-	}
-	memset(buffer, 0, 5);
-	buffer[0] = SOP;
-	buffer[1] = cCommandSetIconI;
-	buffer[2] = 0x70;
-	buffer[3] = level;
-	buffer[4] = EOP;
-
-	res = nuvotonWriteCommand(buffer, 5, 0);
-#elif defined(ATEVIO7500) \
- || defined(HS7420) \
- || defined(HS7810A) \
- || defined(HS7119) \
- || defined(HS7429) \
- || defined(HS7819)
 	dprintk(100, "%s >\n", __func__);
 
 	if (level == 0)
 	{
+		memcpy(&buf, lastdata.data, lastdata.length);
+		len = lastdata.length;
 		res |= nuvotonWriteString("            ", DISP_SIZE);
+		lastdata.length = len;
+		memcpy(&lastdata.data, buf, lastdata.length);
+		
+		for (i = ICON_MIN + 1; i < ICON_MAX; i++)
+		{
+				ibuf[i] = lastdata.icon_state[i];
+				res |= nuvotonSetIcon(i, 0);
+				lastdata.icon_state[i] = ibuf[i];
+		}
+#if defined(FORTIS_HDBOX)
+		if (spinner_state.state)
+		{
+			lastdata.icon_state[ICON_SPINNER] = 1;
+			spinner_state.state = 0;
+		}
+#elif defined(ATEVIO7500)
+		if (spinner_state.state)
+		{
+			lastdata.icon_state[ICON_SPINNER] = 1;
+			spinner_state.state = 0;
+		}
+#endif
+		lastdata.display_on = 0; 
 	}
 	else
 	{
+		lastdata.display_on = 1; 
 		res |= nuvotonWriteString(lastdata.data, lastdata.length);
-
-	}
+		for (i = ICON_MIN + 1; i < ICON_MAX; i++)
+		{
+			if (lastdata.icon_state[i] == 1)
+			{
+				res |= nuvotonSetIcon(i, 1);
+			}
+		}
+#if defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)
+		if (lastdata.icon_state[ICON_SPINNER] != 0)
+		{
+			spinner_state.state = 1;
+			up(&spinner_state.sem);
+		}
 #endif
+	}
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+#elif defined(HS7810A) \
+ || defined(HS7119) \
+ || defined(HS7819)
+int nuvotonSetDisplayOnOff(char level)
+{
+	int  res = 0;
+	char buffer[6];
+
+	dprintk(100, "%s >\n", __func__);
+	if (level != 0)
+	{
+		level = lastdata.brightness;
+	}
+
+	memset(buffer, 0, sizeof(buffer));
+	buffer[0] = SOP;
+	buffer[1] = cCommandSetLEDBrightness;
+	buffer[2] = 0x03;
+	buffer[3] = level;
+	buffer[4] = 0x02;
+	buffer[5] = EOP;
+
+	res = nuvotonWriteCommand(buffer, 6, 0);
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+#else  // HS7110
+int nuvotonSetDisplayOnOff(char level)
+{
+	dprintk(100, "%s >\n", __func__);
+	dprintk(10, "Set display on or off not supported.\n");
+	dprintk(100, "%s <\n", __func__);
+	return -EFAULT;
+}
+#endif
+
+/*********************************************************
+ *
+ * nuvotonGetVersion: read version info from front panel.
+ *
+ * NOTE: The front processor does not seem to have an
+ *       opcode to retrieve version information from it;
+ *       in stead this function returns the boot loader
+ *       version in the format (major * 100) + minor
+ *       and the resellerID.
+ */
+int nuvotonGetVersion(unsigned int *data)
+{
+	int res = 0;
+	int i = 0;
+	unsigned char buf[8];
+	struct mtd_info *mtd_info = NULL;
+
+	dprintk(100, "%s >\n", __func__);
+
+	mtd_info = get_mtd_device(NULL, 0);  // get mtd0 device data
+
+	if (IS_ERR(mtd_info))
+	{
+		printk("[nuvoton] No device for mtd0\n");
+		return -1;
+	}
+	if (mtd_info->type == MTD_ABSENT)
+	{
+		printk("[nuvoton] mtd0 is absent\n");
+		put_mtd_device(mtd_info);
+		return -1;
+	}
+#if 0
+	if (strcmp(mtd_info->name, "Boot_firmware"))
+	{
+		printk([nuvoton] "mtd0 is not the Boot_firmware\n");
+		put_mtd_device(mtd_info);
+		return -1;
+	}
+	dprintk(10, "MTD name       : %s\n", mtd_info->name);
+	dprintk(10, "MTD type       : %u\n", mtd_info->type);
+	dprintk(10, "MTD total size : %u bytes\n", (unsigned int)mtd_info->size);
+	dprintk(10, "MTD erase size : %u bytes\n", mtd_info->erasesize);
+#endif
+	res = mtd_info->read(mtd_info, RESELLER_OFFSET, 8, &i, buf);
+
+	if (i != 8)
+	{
+		printk("[nuvoton] Error reading boot loader info\n");
+		return -1;
+	}
+
+	// determine version as (100 * major) + minor
+	data[0] = 0;
+	for (i = 7; i > 4; i--)  // version number is stored big endian
+	{
+		data[0] *= 100;
+		data[0] += (((buf[i] & 0xf0) >> 4) * 10) + (buf[i] & 0x0f);
+	}
+
+	// get resellerID
+	data[1] = 0;
+	for (i = 0; i < 4; i++)
+	{
+		data[1] <<= 8;
+		data[1] += buf[i];
+	}
+
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
-//nuvotonWriteString
-#if defined(HS7810A) || defined(HS7819) // 4 character 7-segment LED with colon and periods
-int nuvotonWriteString(unsigned char *aBuf, int len)
+#if defined(VFDTEST)
+/*************************************************************
+ *
+ * nuvotonVfdTest: Send arbitrary bytes to front processor
+ *                 and read back status, dataflag and if
+ *                 applicable return bytes (for development
+ *                 purposes).
+ *
+ */
+int nuvotonVfdTest(char *data)
 {
-	int i, j, res;
-	int buflen, strlen;
-	int dot_count = 0;
-	int colon_count = 0;
-	unsigned char cmd_buf[7], bBuf[5];
+	char buffer[18];
+	int  res = 0xff;
+	int  i;
 
-	dprintk(100, "%s > %d\n", __func__, len);
+	dprintk(100, "%s >\n", __func__);
 
-	memset(cmd_buf, 0, 7);
-	buflen = len;
-	bBuf[0] = aBuf[0];
-	bBuf[1] = aBuf[1];
-	i = 2;
-	j = 2;
+	memset(buffer, 0, sizeof(buffer));
+	memset(ioctl_data, 0, sizeof(ioctl_data));
 
-	while ((j <= 4) && (i < buflen))
+	buffer[0] = SOP;
+	memcpy(buffer + 1, data + 1, data[0]);
+	buffer[data[0] + 1] = EOP;
+
+	if (paramDebug >= 50)
 	{
-		if (aBuf[i] == '.')
+		printk("[nuvoton] Send command: 0x%02x (SOP), ", buffer[0] & 0xff);
+		for (i = 1; i < (data[0] + 1); i++)
 		{
-			if (i == 2)
-			{
-				cmd_buf[i] = 0x80;
-			}
-			else
-			{
-				if (j >= 2)
-				{
-					cmd_buf[i + 1 - colon_count] = 0x80;
-				}
-			}
-			dot_count++;
+			printk("0x%02x ", buffer[i] & 0xff);
+		}
+		printk("0x%02x (EOP) (length = 0x%02x\n", buffer[data[0] + 1] & 0xff, data[0] & 0xff);
+	}
+
+	errorOccured = 0;
+	res = nuvotonWriteCommand(buffer, data[0] + 2, 1);
+
+	if (errorOccured == 1)
+	{
+		/* error */
+		memset(data + 1, 0, 9);
+		printk("[nuvoton] Error in function %s\n", __func__);
+		res = data[0] = -ETIMEDOUT;
+	}
+	else
+	{
+		if (dataflag == 0)
+		{
+			memset(data, 0, sizeof(data));
 		}
 		else
 		{
-			if ((aBuf[i] == ':') && (j == 2))
+			data[0] = 0;  //command went OK
+			data[1] = 1;  //data received
+			for (i = 0; i <= 8; i++)
 			{
-				cmd_buf[3] = 0x80;
-				colon_count++;
-			}
-			else
-			{
-				bBuf[j] = aBuf[i];
-				j++;
+				data[i + 2] = ioctl_data[i];  //copy return data
 			}
 		}
-		i++;
 	}
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+#endif
 
-	strlen = buflen - dot_count - colon_count;
+/*****************************************************************
+ *
+ * nuvotonWriteString: Display a text on the front panel display.
+ *
+ * Note: does not scroll; displays the first DISPLAY_WIDTH
+ *       characters. Scrolling is available by writing to
+ *       /dev/vfd: this scrolls a maximum of 64 characters once
+ *       if the text length exceeds DISPLAY_WIDTH.
+ *
+ */
+#if defined(HS7810A) || defined(HS7819)
+// 4 character 7-segment LED with colon and periods
+int nuvotonWriteString(unsigned char *aBuf, int len)
+{
+	int i, res;
+	int buflen;
+	unsigned char cmd_buf[7], bBuf[9];
 
-	if (strlen > 4)
+	dprintk(100, "%s > %d\n", __func__, len);
+
+	memset(cmd_buf, 0, sizeof(cmd_buf));
+	memset(bBuf, 0, sizeof(bBuf));
+
+	if (len > 8)
 	{
-		strlen = 4;
+		len = 8;
 	}
+	buflen = len;
 
-	j = 2;
+	/* save last string written to fp */
+	memcpy(&lastdata.data, aBuf, len);
+
+	/* Handle periods and colon in text in order to set
+       the corresponding LED segments in the display. */
+
+	// Copy input string to work buffer
+	for (i = 0; i < buflen; i++)
+	{
+		bBuf[i] = aBuf[i];
+	}
+	bBuf[buflen] = '\0';  // terminate string
+
+	// handle 3rd character
+	if (bBuf[2] == '.')  // if input character is period
+	{
+			cmd_buf[2] = 0x80;  // switch on period on position 2
+			for (i = 3; i <= buflen; i++)
+			{
+				bBuf[i - 1] = bBuf[i];
+			}
+			buflen--;
+//			dprintk(10, "String (step 3, period pos 2) [%s]\n", bBuf);
+	}
+	if (bBuf[2] == ':')  // if input character is colon
+	{
+			cmd_buf[3] = 0x80;  // switch on colon on position 2
+			for (i = 3; i <= buflen; i++)
+			{
+				bBuf[i - 1] = bBuf[i];
+			}
+			buflen--;
+//			dprintk(10, "String (step 3, colon pos 2) [%s]\n", bBuf);
+	}				
+
+	// decide if period is on at position 3
+	if (bBuf[2] == '.')  // if next input character is period
+	{
+		cmd_buf[4] = 0x80;  // switch on period on position 3
+		bBuf[2] = ' ';  // replace with a space
+
+//		if ((buflen == 3)
+//		{
+//			bBuf[2] = ' '; // replace with a space
+//		}
+//		else if (bBuf[3] == '.')
+//		{
+//			cmd_buf[5] = 0x80;  // switch on period on position 4
+//		}
+//		else if (buflen > 4)
+//		{
+//			for (i = 3; i <= buflen; i++)
+//			{
+//				bBuf[i - 1] = bBuf[i];
+//			}
+//			buflen--;
+//		}
+	}
+	else if (bBuf[3] == '.')
+	{
+		cmd_buf[4] = 0x80;  // switch on period on position 3
+
+		if (buflen > 4)
+		{
+			for (i = 4; i <= buflen; i++)
+			{
+				bBuf[i - 1] = bBuf[i];
+			}
+			buflen--;
+		}
+		else
+		{
+			bBuf[3] = ' ';
+		}
+	}
+//	dprintk(10, "String (step 4, period pos 3) [%s]\n", bBuf);
+
+	// decide if period is on at position 4
+	if (bBuf[3] == '.')
+	{
+		cmd_buf[5] = 0x80;  // switch on period on position 4
+		bBuf[3] = ' ';  // replace with a space
+		
+		if (buflen > 4)
+		{
+			for (i = 3; i <= buflen; i++)
+			{
+				bBuf[i - 1] = bBuf[i];
+			}
+			buflen--;
+		}
+	}
+	else
+	{
+		if (bBuf[4] == '.')
+		{
+			cmd_buf[5] = 0x80;  // switch on period on position 4
+//			dprintk(10, "String (step 5a period pos 4) [%s], l=%d\n", bBuf, buflen);
+			if (buflen > 4)
+			{
+				for (i = 5; i <= buflen; i++)
+				{
+//					dprintk(10, "loop=%d\n", i - buflen + 1);
+					bBuf[i - 1] = bBuf[i];
+				}
+				buflen--;
+//				dprintk(10, "String (step 5b period pos 4) [%s], l=%d\n", bBuf, buflen);
+			}
+//			dprintk(10, "String (step 5c period pos 4) [%s], l=%d\n", bBuf, buflen);
+		}
+	}
+//	dprintk(10, "String (step 5, period pos 4) [%s], l=%d\n", bBuf, buflen);
+
+	if (buflen > 4)
+	{
+		buflen = 4;
+	}
+			
+	// add character data
 	for (i = 0; i < 4; i++)
 	{
-		cmd_buf[j] |= _7seg_fonts[(bBuf[i] - 0x20)];
-		j++;
+		if (bBuf[i] < 0x20)
+		{
+			cmd_buf[i + 2] &= 0x80;
+		}
+		else
+		{
+			cmd_buf[i + 2] |= _7seg_fonts[(bBuf[i] - 0x20)];
+		}
 	}
 
-	if (strlen < 4)
+	if (buflen < 4)
 	{
-		for (i = strlen; i < 4; i++)
+		for (i = buflen; i < 4; i++)
 		{
 			cmd_buf[i + 2] &= 0x80;
 		}
 	}
 
 	cmd_buf[0] = SOP;
-	cmd_buf[1] = cCommandSetVFD;
+	cmd_buf[1] = cCommandSetLEDText;
 	cmd_buf[6] = EOP;
 	res = nuvotonWriteCommand(cmd_buf, 7, 0);
 
-	/* save last string written to fp */
-	memcpy(&lastdata.data, aBuf, 128);
+	memcpy(&lastdata.buf, cmd_buf, 7);
 	lastdata.length = len;
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(HS7119) // 4 character 7-segment LED with colon
+#elif defined(HS7119)
+// 4 character 7-segment LED with colon
 int nuvotonWriteString(unsigned char *aBuf, int len)
 {
 	int i, res;
 	int buflen;
 	unsigned char cmd_buf[7], bBuf[5];
 
-	dprintk(10, "%s > %d\n", __func__, len);
+	dprintk(100, "%s > %d\n", __func__, len);
 
-	memset(cmd_buf, 0, 7);
+	memset(cmd_buf, 0, sizeof(cmd_buf));
 	buflen = len;
-	bBuf[0] = aBuf[0];
-	bBuf[1] = aBuf[1];
-
-	if (aBuf[2] == ':') // if 3rd character is a colon
+	for (i = 0; i < buflen; i++)
 	{
-		cmd_buf[3] = 0x80; // switch colon on
-		bBuf[2] = aBuf[3]; // shift rest of buffer
-		bBuf[3] = aBuf[4]; // forward
+		bBuf[i] = aBuf[i];
 	}
-	else
+
+	if (aBuf[2] == ':')  // if 3rd character is a colon
 	{
-		bBuf[2] = aBuf[2];
-		bBuf[3] = aBuf[3];
+		cmd_buf[3] = 0x80;  // switch colon on
+		for (i = 2; i < buflen; i++)
+		{
+			bBuf[i] = bBuf[i + 1];  // add remove it from text
+		}
 	}
 
 	if (buflen > 4)
@@ -1239,18 +1914,22 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 	}
 
 	cmd_buf[0] = SOP;
-	cmd_buf[1] = cCommandSetVFD;
+	cmd_buf[1] = cCommandSetLEDText;
 	cmd_buf[6] = EOP;
 	res = nuvotonWriteCommand(cmd_buf, 7, 0);
 
 	/* save last string written to fp */
-	memcpy(&lastdata.data, aBuf, 128);
+	memcpy(&lastdata.data, aBuf, len);
+	memcpy(&lastdata.buf, cmd_buf, 7);
 	lastdata.length = len;
 
-	dprintk(10, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(OCTAGON1008) || defined(HS7420) || defined(HS7429) // 8 character 15-segment VFD (Octagon1008 with icons)
+#elif defined(OCTAGON1008) \
+ || defined(HS7420) \
+ || defined(HS7429)
+// 8 character 15-segment VFD with icons
 int nuvotonWriteString(unsigned char *aBuf, int len)
 {
 	unsigned char bBuf[7];
@@ -1258,26 +1937,26 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 	int j = 0;
 	int res = 0;
 
-	dprintk(100, "%s > %d\n", __func__, len);
+	dprintk(100, "%s > len = %d\n", __func__, len);
 	max = (len > 8) ? 8 : len;
 	for (i = max; i < 8; i++)
 	{
-		aBuf[i] = ' '; //pad string with spaces at end
+		aBuf[i] = ' ';  // pad string with spaces at end
 	}
-	// now display 8 characters
+	// now display 8 characters from left to right
 	for (i = 0; i < 8 ; i++)
 	{
 		bBuf[0] = SOP;
-		bBuf[1] = cCommandSetVFD;  //(equals cCommandSetIcon)
-		bBuf[2] = 7 - i; /* position: 0x00 = right */
+		bBuf[1] = cCommandSetVFD;
+		bBuf[2] = 7 - i;  // position 0x00 = right
 		bBuf[3] = vfdbuf[7 - i].buf0;
 		bBuf[6] = EOP;
 
 		for (j = 0; j < ARRAY_SIZE(octagon_chars); j++)
 		{
-			if (octagon_chars[j].c == aBuf[i]) //look up character
+			if (octagon_chars[j].character == aBuf[i])  // look up character
 			{
-				bBuf[4] = octagon_chars[j].s1 | (vfdbuf[7 - i].buf1 & 0x80); //preserve colon icon state
+				bBuf[4] = octagon_chars[j].s1 | (vfdbuf[7 - i].buf1 & 0x80);  // preserve colon icon state
 				vfdbuf[7 - i].buf1 = bBuf[4];
 				bBuf[5] = octagon_chars[j].s2;
 				vfdbuf[7 - i].buf2 = bBuf[5];
@@ -1293,42 +1972,11 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(FORTIS_HDBOX) // 12 character dot matrix VFD with colons and icons
-int nuvotonWriteString(unsigned char *aBuf, int len)
-{
-	unsigned char bBuf[12];
-	int i = 0;
-	int res = 0;
-
-	dprintk(100, "%s >\n", __func__);
-
-	memset(bBuf, ' ', 12);
-
-	if (len > 12) //if string is longer than display
-	{
-		len = 12; //display 1st 12 characters
-	}
-	else
-	{
-		for (i = len; i < 12; i++)
-		{
-			aBuf[i] = ' '; //pad string with spaces
-		}
-	}
-
-	for (i = 0; i < 12; i++)
-	{
-		bBuf[0] = SOP;
-		bBuf[1] = cCommandSetIconI;
-		bBuf[2] = 17 + i;
-		bBuf[3] = aBuf[i];
-		bBuf[4] = EOP;
-		res = nuvotonWriteCommand(bBuf, 5, 0);
-	}
-	dprintk(100, "%s <\n", __func__);
-	return res;
-}
-#elif defined(ATEVIO7500) // 13 character dot matrix VFD without colons or icons, leftmost character not used
+#elif defined(ATEVIO7500) \
+ || defined(FORTIS_HDBOX)
+// ATEVIO7500  : 13 character dot matrix VFD without colons or icons,
+//               leftmost character used as icon display
+// FORTIS_HDBOX: 12 character dot matrix VFD with colons and icons
 int nuvotonWriteString(unsigned char *aBuf, int len)
 {
 	unsigned char bBuf[128];
@@ -1338,26 +1986,26 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 
 	dprintk(100, "%s >\n", __func__);
 
-	memset(bBuf, ' ', 128);
+	memset(bBuf, ' ', sizeof(bBuf));
 
 	/* start of command write */
 	bBuf[0] = SOP;
-	bBuf[1] = cCommandSetVFD;
-	bBuf[2] = 0x11;
+	bBuf[1] = cCommandSetVFDIII;
+	bBuf[2] = 17;  // length of command
 
 	/* save last string written to fp */
-	memcpy(&lastdata.data, aBuf, 128);
+	memcpy(&lastdata.data, aBuf, len);
 	lastdata.length = len;
 
 	dprintk(70, "len %d\n", len);
 
 	while ((i < len) && (j < 12))
 	{
-		if (aBuf[i] < 0x80) //if normal ASCII
+		if (aBuf[i] < 0x80)  // if normal ASCII
 		{
-			bBuf[j + 3] = aBuf[i]; //stuff buffer from offset 3 on
+			bBuf[j + 3] = aBuf[i];  // stuff buffer from offset 3 on
 		}
-		else if (aBuf[i] < 0xE0)
+		else if (aBuf[i] < 0xe0)
 		{
 			switch (aBuf[i])
 			{
@@ -1426,21 +2074,23 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 			{
 				i += 5;
 			}
-			bBuf[j + 3] = 0x20; //else put a space
+			bBuf[j + 3] = 0x20;  // else put a space
 		}
 		i++;
 		j++;
 	}
 	/* end of command write, string must be padded with spaces */
-	bBuf[15] = 0x20;
+	bBuf[15] = 0x20;  // Audioniek: this character is not on the display!
 	bBuf[16] = EOP;
 
-	res = nuvotonWriteCommand(bBuf, 17, 0);
-
+	if (lastdata.display_on)
+	{
+		res = nuvotonWriteCommand(bBuf, 17, 0);
+	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#else // not HS7119, HS7420, HS7429, HS7810A, HS7819, OCTAGON1008, FORTIS_HDBOX or ATEVIO7500 -> HS7110
+#else  // not HS7119, HS7420, HS7429, HS7810A, HS7819, OCTAGON1008, FORTIS_HDBOX or ATEVIO7500 -> HS7110
 int nuvotonWriteString(unsigned char *aBuf, int len)
 {
 	dprintk(100, "%s >\n", __func__);
@@ -1449,31 +2099,209 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 }
 #endif
 
-#if !defined(ATEVIO7500)
+/****************************************************************
+ *
+ * nuvoton_init_func: Initialize the driver.
+ *
+ */
 int nuvoton_init_func(void)
 {
+	// Start of declarations, model dependent
+
+	// FP commands commands common to all models
+	char boot_on[] = {SOP, cCommandSetBootOn, EOP};
 	char standby_disable[] = {SOP, cCommandPowerOffReplay, 0x02, EOP};
-	char init1[] = {SOP, cCommandSetBootOn, EOP};
-	char init2[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};       //set 24h clock format ?
-	char init3[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP}; /* delete/invalidate wakeup time ? */
-	char init4[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};  //power LED (red) off
+
+	//FP commands per model
 #if defined(FORTIS_HDBOX)
-	char init5[] = {SOP, cCommandSetLed, 0xf2, 0x0a, 0x00, EOP};  //blue LED plus cross brightness 10
-#elif defined(HS7810A) || defined(HS7819) || defined(HS7420) || defined(HS7429)
-	char init5[] = {SOP, cCommandSetLed, 0x02, 0x03, 0x00, EOP};  //logo brightness 3
-#else //HS7110, HS7119, HS7420 & HS7429
-	char init5[] = {SOP, cCommandSetLed, 0xff, 0x00, 0x00, EOP};  //all LEDs off (=green on)
+/* Shortened essential factory sequence FS9000/9200
+ *
+ * SOP ce 10 20 20 20 20 20 20 20 20 20 20 20 20 20 EOP blank display
+ * SOP cd 30 20 20 20 20 20 20 20 20 20 20 20 20 EOP    blank display
+ * SOP f9 80 00 00 00 00 00 00 00 00 EOP                ?
+ * SOP f4 30 0f 00 00 EOP                               ?
+ * SOP e9 76 00 00 00 00 00 00 00 00 EOP                ?
+ * SOP f9 83 54 2f df 55 10 18 2b b7 EOP                ?
+ * SOP eb 83 25 d6 ca cc 6a de 7c ee 00 00 EOP          ?
+ * SOP 31 02 EOP                                        cCommandPowerOffReplay 2 (standby_disable)
+ * SOP d0 EOP                                           cCommandGetFrontInfo
+ * SOP 80 EOP                                           cCommandGetPowerOnSrc
+ * SOP c2 10 00 EOP                                     cCommandSetIconI 10 0 (enable cCommandSetIconII)
+ * SOP d2 00 07 EOP                                     cCommandSetVFDBrightness 7 ()
+ * SOP a5 01 02 f9 10 0b EOP                            cCommandSetIrCode
+ * SOP 15 dc d8 00 00 01 EOP                            cCommandSetMJD to 01-09-2013 00:00:01
+ * SOP 11 81 EOP                                        cCommandSetTimeFormat
+ * SOP 72 ff ff EOP                                     cCommandSetWakeupTime
+ */
+
+	char init1[] = {SOP, cCommandSetVFDIII, 0x10, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', EOP};  //blank display
+	char init2[] = {SOP, cCommandSetIconI, 0x10, 0x00, EOP};                     // enable cCommandSetIconII
+	char init3[] = {SOP, cCommandSetVFDBrightness, 0x00, 0x07, EOP};             // VFD brightness 7
+	char init4[] = {SOP, cCommandSetIrCode, 0x01, 0x02, 0xf9, 0x10, 0x0b, EOP};  // set IR code
+	char init5[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};                      // set 24h clock format
+	char init6[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP};                // delete/invalidate wakeup time
+	char init7[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};                 // power LED (red) off, deep standby brightness 8
+	char init8[] = {SOP, cCommandSetLed, 0xf2, 0x08, 0x00, EOP};                 // blue LED plus cross brightness 8, deep standby off
+
+#elif defined(OCTAGON1008)
+/* Shortened essential factory sequence HS9510
+ *
+ * SOP c4 00 00 00 00 03     cCommandSetVFD           -
+ * SOP c4 01 00 00 00 03     cCommandSetVFD            \
+ * SOP c4 02 00 00 00 03     cCommandSetVFD             |
+ * SOP c4 03 00 00 00 03     cCommandSetVFD             |
+ * SOP c4 04 00 00 00 03     cCommandSetVFD              > Clear display
+ * SOP c4 05 00 00 00 03     cCommandSetVFD             |
+ * SOP c4 06 00 00 00 03     cCommandSetVFD             |
+ * SOP c4 07 00 00 00 03     cCommandSetVFD            /
+ * SOP c4 08 00 00 00 03     cCommandSetVFD           -
+ * SOP d2 00 07 03           cCommandSetVFDBrightness 7
+ * SOP 31 02 EOP             cCommandPowerOffReplay 2 (standby_disable)
+ * SOP d0 EOP                cCommandGetFrontInfo
+ * SOP 80 EOP                cCommandGetPowerOnSrc
+ * SOP d2 00 07 EOP          cCommandSetVFDBrightness 7
+ * SOP a5 01 02 f9 10 0b EOP cCommandSetIrCode
+ * SOP 15 dc d8 00 00 01 EOP cCommandSetMJD to 01-09-2013 00:00:01
+ * SOP 11 81 EOP             cCommandSetTimeFormat
+ * SOP 72 ff ff EOP          cCommandSetWakeupTime
+ */
+
+	char init1[] = {SOP, cCommandSetVFD, 0x00, 0x00, 0x00, 0x00, EOP};           // blank display (pos 0)
+	char init2[] = {SOP, cCommandSetVFD, 0x01, 0x00, 0x00, 0x00, EOP};           // blank display (pos 1)
+	char init3[] = {SOP, cCommandSetVFD, 0x02, 0x00, 0x00, 0x00, EOP};           // blank display (pos 2)
+	char init4[] = {SOP, cCommandSetVFD, 0x03, 0x00, 0x00, 0x00, EOP};           // blank display (pos 3)
+	char init5[] = {SOP, cCommandSetVFD, 0x04, 0x00, 0x00, 0x00, EOP};           // blank display (pos 4)
+	char init6[] = {SOP, cCommandSetVFD, 0x05, 0x00, 0x00, 0x00, EOP};           // blank display (pos 5)
+	char init7[] = {SOP, cCommandSetVFD, 0x06, 0x00, 0x00, 0x00, EOP};           // blank display (pos 6)
+	char init8[] = {SOP, cCommandSetVFD, 0x07, 0x00, 0x00, 0x00, EOP};           // blank display (pos 7)
+	char init9[] = {SOP, cCommandSetVFD, 0x08, 0x00, 0x00, 0x00, EOP};           // blank display (pos 8)
+	char initA[] = {SOP, cCommandSetVFDBrightness, 0x00, 0x07, EOP};             // VFD brightness 7
+	char initB[] = {SOP, cCommandSetIrCode, 0x01, 0x02, 0xf9, 0x10, 0x0b, EOP};  // set IR code
+	char initC[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};                      // set 24h clock format
+	char initD[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP};                // delete/invalidate wakeup time
+	char initE[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};                 // red LED off, deep standby brightness 8
+
+#elif defined(HS7420) \
+ || defined(HS7429)
+/*
+ * Shortened essential factory power on sequence HS7429 (note: HS7420 assumed to be similar)
+ * SOP 11 81 EOP               cCommandSetTimeFormat 24h
+ * SOP 72 ff ff EOP            cCommandSetWakeupMJD to invalid
+ * SOP 93 01 00 08 EOP         cCommandSetLed  1 00 08 red LED off
+ * SOP 93 f2 08 08 EOP         cCommandSetLed f2 08 08 blue+cross 8 (!)
+ * SOP 41 88 EOP               cCommandSetBootOnExt
+ * SOP a5 01 00 01 00 01 EOP   cCommandSetIrCode   (note: other data and also uses:
+ * SOP a1 01 03                cCommandGetIrCodeExt this one)
+ */
+	char init1[] = {SOP, cCommandSetVFD, 0x00, 0x00, 0x00, 0x00, EOP};  // blank display (pos 0)
+	char init2[] = {SOP, cCommandSetVFD, 0x01, 0x00, 0x00, 0x00, EOP};  // blank display (pos 1)
+	char init3[] = {SOP, cCommandSetVFD, 0x02, 0x00, 0x00, 0x00, EOP};  // blank display (pos 2)
+	char init4[] = {SOP, cCommandSetVFD, 0x03, 0x00, 0x00, 0x00, EOP};  // blank display (pos 3)
+	char init5[] = {SOP, cCommandSetVFD, 0x04, 0x00, 0x00, 0x00, EOP};  // blank display (pos 4)
+	char init6[] = {SOP, cCommandSetVFD, 0x05, 0x00, 0x00, 0x00, EOP};  // blank display (pos 5)
+	char init7[] = {SOP, cCommandSetVFD, 0x06, 0x00, 0x00, 0x00, EOP};  // blank display (pos 6)
+	char init8[] = {SOP, cCommandSetVFD, 0x07, 0x00, 0x00, 0x00, EOP};  // blank display (pos 7)
+	char init9[] = {SOP, cCommandSetVFD, 0x08, 0x00, 0x00, 0x00, EOP};  // blank display (pos 8)
+	char initA[] = {SOP, cCommandSetVFDBrightness, 0x00, 0x07, EOP};    // VFD brightness 7
+	char initB[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};             // set 24h clock format
+	char initC[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP};       // delete/invalidate wakeup time
+	char initD[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};        // power LED (red) off, deep standby brightness 8
+	char initE[] = {SOP, cCommandSetLed, 0x02, 0x03, 0x00, EOP};        // logo brightness 3, deep standby off
+
+#elif defined(ATEVIO7500)  // sequence is identical to HDBOX
+/* Shortened essential factory sequence HS8200
+ *
+ * SOP ce 10 20 20 20 20 20 20 20 20 20 20 20 20 20 EOP blank display
+ * SOP cd 30 20 20 20 20 20 20 20 20 20 20 20 20 EOP    blank display
+ * SOP f9 80 00 00 00 00 00 00 00 00 EOP                ?
+ * SOP f4 30 0f 00 00 EOP                               ?
+ * SOP e9 76 00 00 00 00 00 00 00 00 EOP                ?
+ * SOP f9 83 54 2f df 55 10 18 2b b7 EOP                ?
+ * SOP eb 83 25 d6 ca cc 6a de 7c ee 00 00 EOP          ?
+ * SOP 31 02 EOP                                        cCommandPowerOffReplay 2 (standby_disable)
+ * SOP d0 EOP                                           cCommandGetFrontInfo
+ * SOP 80 EOP                                           cCommandGetPowerOnSrc
+ * SOP c2 10 00 EOP                                     cCommandSetIconI 10 0 (enable cCommandSetIconII/cgram off)
+ * SOP d2 00 07 EOP                                     cCommandSetVFDBrightness 7 ()
+ * SOP a5 01 02 f9 10 0b EOP                            cCommandSetIrCode
+ * SOP 15 dc d8 00 00 01 EOP                            cCommandSetMJD to 01-09-2013 00:00:01
+ * SOP 11 81 EOP                                        cCommandSetTimeFormat
+ * SOP 72 ff ff EOP                                     cCommandSetWakeupTime
+ */
+
+	char init1[] = {SOP, cCommandSetVFDIII, 0x10, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', EOP};  // blank display
+	char init2[] = {SOP, cCommandSetIconI, 0x10, 0x00, EOP};                     // enable cCommandSetIconII
+	char init3[] = {SOP, cCommandSetVFDBrightness, 0x00, 0x07, EOP};             // VFD brightness 7
+	char init4[] = {SOP, cCommandSetIrCode, 0x01, 0x02, 0xf9, 0x10, 0x0b, EOP};  // set IR code
+	char init5[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};                      // set 24h clock format
+	char init6[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP};                // delete/invalidate wakeup time
+	char init7[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};                 // power LED (red) off, deep standby brightness 8
+	char init8[] = {SOP, cCommandSetLed, 0xf2, 0x08, 0x00, EOP};                 // blue LED plus cross brightness 8, deep standby off
+
+#elif defined(HS7119) \
+ || defined(HS7810A) \
+ || defined(HS7819)
+/* Shortened essential factory sequence HS7810A (note: HS7819 assumed to be similar)
+ *
+ * SOP 23 03 0a 02 EOP         cCommandSetLEDBrightness
+ * SOP 24 20 20 20 20 EOP      cCommandSetLEDText "----"
+ * SOP d2 00 0a EOP            cCommandSetVFDBrightness 10 (?)
+ * SOP 24 6d 78 00 06 EOP      cCommandSetLEDText
+ * SOP a5 01 02 f9 10 0b EOP   cCommandSetIrCode
+ * SOP 15 dc 9a 00 00 02 EOP   cCommandSetMJD to 01-05-2013 00:00:02
+ * SOP 11 81 EOP               cCommandSetTimeFormat 24h
+ * SOP 72 ff ff EOP            cCommandSetWakeupTime invalid
+ * SOP 93 01 00 08 EOP         cCommandSetLed 1 0 red LED off
+ * SOP 93 f2 08 00 EOP         cCommandSetLed blue+cross 8 (!)
+ * SOP 10 EOP                  cCommandGetMJD
+ * SOP 15 e1 a9 14 18 00 03    cCommandSetMJD to today 18:00:03
+ */
+	char init1[] = {SOP, cCommandSetLEDBrightness, 0x03, 0x0a, 0x02, EOP};       // set display brightness
+	char init2[] = {SOP, cCommandSetIrCode, 0x01, 0x02, 0xf9, 0x10, 0x0b, EOP};  // set IR code
+	char init3[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};                      // set 24h clock format
+	char init4[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP};                // delete/invalidate wakeup time
+	char init5[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};                 // power LED (red) off, deep standby brightness 8
+	char init6[] = {SOP, cCommandSetLed, 0x02, 0x03, 0x00, EOP};                 // logo brightness 3, deep standby off
+#else  //HS7110
+/* Shortened essential factory sequence HS7110
+ *
+ * SOP d0 SOP                  cCommandGetFrontInfo
+ * SOP 80 SOP                  cCommandGetPowerOnSrc
+ * SOP 24 20 20 20 20 SOP      cCommandSetLEDText "----" (!)
+ * SOP d2 00 0a SOP            cCommandSetVFDBrightness 10 (!)
+ * SOP a5 01 02 f9 10 0b SOP   cCommandSetIrCode
+ * SOP 15 dc 5d 00 00 02 SOP   cCommandSetMJD to 01-05-2013 00:00:02
+ * SOP 11 81 SOP               cCommandSetTimeFormat 24h
+ * SOP 72 ff ff SOP            cCommandSetWakeupTime invalid
+ * SOP 93 01 00 08 SOP         cCommandSetLed 1 0 red LED off
+ * SOP 93 f2 08 00 SOP         cCommandSetLed f2 8 cross+blue 8 (!)
+ * SOP 24 76 5e 5e 7b SOP      cCommandSetLEDText (!)
+ * SOP 41 44 SOP               cCommandSetBootOnExt
+ * SOP 15 e1 a9 0b 11 31 03    cCommandSetMJD current date/time 
+ */
+	char init1[] = {SOP, cCommandSetLEDBrightness, 0x03, 0x0a, 0x02, EOP};       // set display brightness
+	char init2[] = {SOP, cCommandSetIrCode, 0x01, 0x02, 0xf9, 0x10, 0x0b, EOP};  // set IR code
+	char init3[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};                      // set 24h clock format
+	char init4[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP};                // delete/invalidate wakeup time
+	char init5[] = {SOP, cCommandSetLed, 0xff, 0x00, 0x00, EOP};                 // all LEDs off (=green on)
 #endif
+
 	int  vLoop;
 	int  res = 0;
+	// End of declarations
 
 	dprintk(100, "%s >\n", __func__);
 
+	lastdata.display_on = 1;
+	lastdata.brightness = 7;
 	sema_init(&write_sem, 1);
+
 #if defined(OCTAGON1008)
 	printk("Fortis HS9510");
 #elif defined(FORTIS_HDBOX)
 	printk("Fortis FS9000/9200");
+#elif defined(ATEVIO7500)
+	printk("Fortis HS8200");
 #elif defined(HS7110)
 	printk("Fortis HS7110");
 #elif defined(HS7119)
@@ -1489,84 +2317,106 @@ int nuvoton_init_func(void)
 #else
 	printk("Fortis");
 #endif
-	printk(" VFD/Nuvoton module initializing.\n");
+	printk(" Nuvoton front panel driver initializing.\n");
+
+	/* Initialise the front processor */
+
 	/* must be called before standby_disable */
-	res = nuvotonWriteCommand(init1, sizeof(init1), 0);  //SetBootOn
+	res = nuvotonWriteCommand(boot_on, sizeof(boot_on), 0);  // SetBootOn
 
 	/* setup: frontpanel should not power down the receiver if standby is selected */
 	res = nuvotonWriteCommand(standby_disable, sizeof(standby_disable), 0);
 
-	res |= nuvotonWriteCommand(init2, sizeof(init2), 0);  //SetTimeFormat
-	res |= nuvotonWriteCommand(init3, sizeof(init3), 0);  //Clear wakeuptime
-	res |= nuvotonWriteCommand(init4, sizeof(init4), 0);  //Standby LED off
-	res |= nuvotonWriteCommand(init5, sizeof(init5), 0);  //Set power LED brightness 10
+	res |= nuvotonWriteCommand(init1, sizeof(init1), 0);
+	msleep(1);
+	res |= nuvotonWriteCommand(init2, sizeof(init2), 0);
+	msleep(1);
+	res |= nuvotonWriteCommand(init3, sizeof(init3), 0);
+	msleep(1);
+	res |= nuvotonWriteCommand(init4, sizeof(init4), 0);
+ 	res |= nuvotonWriteCommand(init5, sizeof(init5), 0);
+#if defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008) \
+ || defined(ATEVIO7500) \
+ || defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7119) \
+ || defined(HS7810A) \
+ || defined(HS7819)
+	res |= nuvotonWriteCommand(init6, sizeof(init6), 0);
+#endif
+#if defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008) \
+ || defined(ATEVIO7500) \
+ || defined(HS7420) \
+ || defined(HS7429)
+	res |= nuvotonWriteCommand(init7, sizeof(init7), 0);
+	res |= nuvotonWriteCommand(init8, sizeof(init8), 0);
+#endif
+#if defined(OCTAGON1008) \
+ || defined(HS7420) \
+ || defined(HS7429)
+	res |= nuvotonWriteCommand(init9, sizeof(init9), 0);
+	res |= nuvotonWriteCommand(initA, sizeof(initA), 0);
+	res |= nuvotonWriteCommand(initB, sizeof(initB), 0);
+	res |= nuvotonWriteCommand(initC, sizeof(initC), 0);
+	res |= nuvotonWriteCommand(initD, sizeof(initD), 0);
+	res |= nuvotonWriteCommand(initE, sizeof(initE), 0);
+#endif
 
-	for (vLoop = 0x00; vLoop < 0xff; vLoop++)
+	for (vLoop = 0x00; vLoop <= 0xff; vLoop++)
 	{
-		regs[vLoop] = 0x00;  //initialize local shadow registers
+		regs[vLoop] = 0x00;  // initialize local shadow registers
 	}
-#if !defined(HS7810A) && !defined(HS7819) && !defined(HS7110) && !defined(HS7119) //VFD models
-	res |= nuvotonSetBrightness(7);
-	res |= nuvotonWriteString("SH4", strlen("SH4"));
-#elif defined(FORTIS_HDBOX) || defined(OCTAGON1008) //models with icons
+
+//	res |= nuvotonWriteString("SH4", strlen("SH4"));
+
+#if !defined(HS7110)
 	for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX; vLoop++)
 	{
-		res |= nuvotonSetIcon(vLoop, 0); //switch all icons off
+		res |= nuvotonSetIcon(vLoop, 0);  //switch all icons off
 	}
-#elif defined(HS7119) || defined(HS7810A) || defined(HS7819) //LED models
-	res |= nuvotonWriteString("----", 4); //HS7810A, HS7819 & HS7119: show 4 dashes
 #endif
+#if defined(ATEVIO7500)
+	lastdata.icon_count = 0;
+#endif
+
+#if defined(HS7119) \
+ || defined(HS7810A) \
+ || defined(HS7819)  //LED models
+	res |= nuvotonWriteString("----", 4);  // HS7810A, HS7819 & HS7119: show 4 dashes
+#endif
+	wakeup_time[0] = 40587 >> 8;  // set initial wakeup time to Linux epoch
+	wakeup_time[1] = 40587 & 0xff;
+	wakeup_time[2] = 0;
+	wakeup_time[3] = 0;
+	wakeup_time[4] = 0;
+
+	// Handle initial GMT offset (may be changed by writing to /proc/stb/fp/rtc_offset)
+	res = strict_strtol(gmt_offset, 10, (long *)&rtc_offset);
+	if (res && gmt_offset[0] == '+')
+	{
+		res = strict_strtol(gmt_offset + 1, 10, (long *)&rtc_offset);
+	}
 	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
-#else // Code for HS8200 (Atevio 7500)
-int nuvoton_init_func(void)
-{
-	char standby_disable[] = {SOP, cCommandPowerOffReplay, 0x02, EOP};
 
-	char init1[] = {SOP, cCommandSetIconI, 0x10, 0x00, EOP};      /* display cgram (what is this? does not work?) */
-	char init2[] = {SOP, cCommandSetIrCode, 0x01, 0x02, 0xf9, 0x10, 0x0b, EOP};
-
-	char init3[] = {SOP, cCommandSetTimeFormat, 0x81, EOP};       //set 24h mode?
-	char init4[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP}; /* delete/invalidate wakeup time ? */
-
-	int  res = 0;
-
-	dprintk(100, "%s >\n", __func__);
-
-	sema_init(&write_sem, 1);
-
-	printk("Fortis HS8200 VFD/Nuvoton module initializing\n");
-
-	/* must be called before standby_disable */
-	res = nuvotonWriteCommand(init1, sizeof(init1), 0);   //display cgram
-
-	res = nuvotonWriteCommand(init2, sizeof(init2), 0);   //set IR command set
-
-	/* setup: frontpanel should not power down the receiver if standby is selected */
-	res = nuvotonWriteCommand(standby_disable, sizeof(standby_disable), 0);
-
-	res |= nuvotonWriteCommand(init3, sizeof(init3), 0);  //set time format
-	res |= nuvotonWriteCommand(init4, sizeof(init4), 0);  //clear wakeup time
-	res |= nuvotonSetBrightness(7);
-
-	res |= nuvotonWriteString("SH4", strlen("SH4"));
-
-	dprintk(100, "%s <\n", __func__);
-	return 0;
-}
-#endif
-
-//code for writing to /dev/vfd
-static void clear_display(void)
+/****************************************
+ *
+ * Code for writing to /dev/vfd
+ *
+ */
+void clear_display(void)
 {
 	unsigned char bBuf[12];
 	int res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
-	memset(bBuf, ' ', 12);
+	memset(bBuf, ' ', sizeof(bBuf));
 	res = nuvotonWriteString(bBuf, DISP_SIZE);
+	dprintk(100, "%s <\n", __func__);
 }
 
 static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len, loff_t *off)
@@ -1577,8 +2427,10 @@ static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len,
 	int pos;
 	int offset = 0;
 	char buf[64];
+	char *b;
+	int corr;
 
-	dprintk(100, "%s > (len %d, offs %d)\n", __func__, len, (int) *off);
+	dprintk(100, "%s > (len %d, off %d)\n", __func__, len, (int) *off);
 
 	if ((len == 0) || (DISP_SIZE == 0))
 	{
@@ -1596,8 +2448,8 @@ static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len,
 
 	if (minor == -1)
 	{
-		printk("Error Bad Minor\n");
-		return -1; //FIXME
+		printk("[nuvoton] Error Bad Minor\n");
+		return -1;  //FIXME
 	}
 
 	dprintk(70, "minor = %d\n", minor);
@@ -1611,7 +2463,7 @@ static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len,
 
 	if (kernel_buf == NULL)
 	{
-		printk("%s return no mem<\n", __func__);
+		printk("[nuvoton] %s < No memory.\n", __func__);
 		return -ENOMEM;
 	}
 
@@ -1624,13 +2476,30 @@ static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len,
 
 	llen = len;
 
-#if defined(HS7119) || defined(HS7810A) || defined(HS7819)
+	corr = 0;
+#if defined(HS7119) \
+ || defined(HS7810A) \
+ || defined(HS7819)
 	if (kernel_buf[2] == ':')
 	{
-		llen--; // correct scroll when 2nd char is a colon
+		corr++;  // correct scroll when 3rd char is a colon
 	}
 #endif
-	if (llen >= 64) //do not display more than 64 characters
+#if defined(HS7810A) \
+ || defined(HS7819)
+	if ((kernel_buf[2] == '.') && (kernel_buf[3] == ':'))
+	{
+		corr += 2;  // correct scroll when 2nd char is a period 3rd char is a colon
+	}
+	for (pos = 2 + corr; pos < 6 + corr; pos++)
+	{
+		if (kernel_buf[pos] == '.')
+		{
+			corr++;  // correct scroll when 3rd, 4th or 5th char is a period
+		}
+	}
+#endif
+	if (llen >= 64)  //do not display more than 64 characters
 	{
 		llen = 64;
 	}
@@ -1642,43 +2511,31 @@ static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len,
 		llen--;
 	}
 
-	if (llen <= DISP_SIZE) //no scroll
+	if (llen <= DISP_SIZE + corr)  //no scroll
 	{
 		res = nuvotonWriteString(kernel_buf, llen);
 	}
-	else //scroll, display string is longer than display length
+	else  // scroll, display string is longer than display length
 	{
-		if (llen > DISP_SIZE)
-		{
-			memset(buf, ' ', sizeof(buf));
-			offset = DISP_SIZE - 1;
-			memcpy(buf + offset, kernel_buf, llen);
-			llen += offset;
-			buf[llen + DISP_SIZE] = 0;
-		}
-		else
-		{
-			memcpy(buf, kernel_buf, llen);
-			buf[llen] = 0;
-		}
+		// initial display starting at 3rd position to ease reading
+		memset(buf, ' ', sizeof(buf));
+		offset = 3;
+		memcpy(buf + offset, kernel_buf, llen);
+		llen += offset;
+		buf[llen + DISP_SIZE + corr] = '\0';  // terminate string
 
-		if (llen > DISP_SIZE)
+		// scroll text
+		b = buf;
+		for (pos = 0; pos < llen; pos++)
 		{
-			char *b = buf;
-			for (pos = 0; pos < llen; pos++)
-			{
-				res = nuvotonWriteString(b + pos, DISP_SIZE);
-				// sleep 300 ms
-				msleep(300);
-			}
+			res = nuvotonWriteString(b + pos, DISP_SIZE + corr);
+			// sleep 300 ms
+			msleep(300);
 		}
-
 		clear_display();
 
-		if (llen > 0)
-		{
-			res = nuvotonWriteString(buf + offset, DISP_SIZE);
-		}
+		// final display
+		res = nuvotonWriteString(buf + offset, DISP_SIZE + corr);
 	}
 	kfree(kernel_buf);
 
@@ -1696,7 +2553,11 @@ static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len,
 	}
 }
 
-//code for read from /dev/vfd
+/**********************************
+ *
+ * Code for reading from /dev/vfd
+ *
+ */
 static ssize_t NUVOTONdev_read(struct file *filp, char __user *buff, size_t len, loff_t *off)
 {
 	int minor, vLoop;
@@ -1719,7 +2580,7 @@ static ssize_t NUVOTONdev_read(struct file *filp, char __user *buff, size_t len,
 
 	if (minor == -1)
 	{
-		printk("Error Bad Minor\n");
+		printk("[nuvoton] Error Bad Minor\n");
 		return -EUSERS;
 	}
 
@@ -1729,7 +2590,7 @@ static ssize_t NUVOTONdev_read(struct file *filp, char __user *buff, size_t len,
 		int size = 0;
 		unsigned char data[20];
 
-		memset(data, 0, 20);
+		memset(data, 0, sizeof(data));
 
 		getRCData(data, &size);
 
@@ -1753,7 +2614,7 @@ static ssize_t NUVOTONdev_read(struct file *filp, char __user *buff, size_t len,
 	/* copy the current display string to the user */
 	if (down_interruptible(&FrontPanelOpen[minor].sem))
 	{
-		printk("%s return erestartsys<\n", __func__);
+		printk("[nuvoton] %s return erestartsys<\n", __func__);
 		return -ERESTARTSYS;
 	}
 
@@ -1761,7 +2622,7 @@ static ssize_t NUVOTONdev_read(struct file *filp, char __user *buff, size_t len,
 	{
 		FrontPanelOpen[minor].read = 0;
 		up(&FrontPanelOpen[minor].sem);
-		printk("%s return 0<\n", __func__);
+		printk("[nuvoton] %s < return 0\n", __func__);
 		return 0;
 	}
 
@@ -1801,7 +2662,7 @@ int NUVOTONdev_open(struct inode *inode, struct file *filp)
 
 	if (FrontPanelOpen[minor].fp != NULL)
 	{
-		printk("EUSER\n");
+		printk("[nuvoton] dev_open: EUSER opening minor\n");
 		up(&write_sem);
 		return -EUSERS;
 	}
@@ -1824,7 +2685,7 @@ int NUVOTONdev_close(struct inode *inode, struct file *filp)
 
 	if (FrontPanelOpen[minor].fp == NULL)
 	{
-		printk("EUSER\n");
+		printk("[nuvoton] dev_close: EUSER opening minor\n");
 		return -EUSERS;
 	}
 	FrontPanelOpen[minor].fp = NULL;
@@ -1833,15 +2694,22 @@ int NUVOTONdev_close(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+/****************************************
+ *
+ * IOCTL handling.
+ *
+ */
 static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int cmd, unsigned long arg)
 {
 	static int mode = 0;
-#if defined(FORTIS_HDBOX) || defined(OCTAGON1008)
-	int icon_nr, on, i;
-#endif
-	struct nuvoton_ioctl_data *nuvoton = (struct nuvoton_ioctl_data *) arg;
-	struct vfd_ioctl_data *data = (struct vfd_ioctl_data *) arg;
+	struct nuvoton_ioctl_data *nuvoton = (struct nuvoton_ioctl_data *)arg;
+	struct vfd_ioctl_data *data = (struct vfd_ioctl_data *)arg;
 	int res = 0;
+	int level;
+#if !defined(HS7110)
+	int icon_nr, on;
+	int i;
+#endif
 
 	dprintk(100, "%s > 0x%.8x\n", __func__, cmd);
 
@@ -1857,6 +2725,9 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 			mode = nuvoton->u.mode.compat;
 			break;
 		}
+#if 0
+		case VFDPWRLED:  // deprecated
+#endif
 		case VFDSETLED:
 		{
 			res = nuvotonSetLED(nuvoton->u.led.led_nr, nuvoton->u.led.level);
@@ -1864,28 +2735,27 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 		}
 		case VFDBRIGHTNESS:
 		{
-#if defined(FORTIS_HDBOX) \
-|| defined(OCTAGON1008) \
-|| defined(ATEVIO7500) \
-|| defined(HS7420) \
-|| defined(HS7429)
+#if !defined(HS7110)
 			if (mode == 0)
 			{
-				res = nuvotonSetBrightness(data->start_address);
+				level = data->start_address;
+				dprintk(10, "%s Set display brightness to %d (mode 0)\n", __func__, level);
 			}
 			else
 			{
-				if (nuvoton->u.brightness.level < 0)
-				{
-					nuvoton->u.brightness.level = 0;
-				}
-				else if (nuvoton->u.brightness.level > 7)
-				{
-					nuvoton->u.brightness.level = 7;
-				}
-				res = nuvotonSetBrightness(nuvoton->u.brightness.level);
+				level = nuvoton->u.brightness.level;
+				dprintk(10, "%s Set display brightness to %d (mode 1)\n", __func__, data->start_address);
 			}
-#endif //all other than Octagon1008, FORTIS_HDBOX, ATEVIO7500, HS7420 or HS7429
+			if (level < 0)
+			{
+				level = 0;
+			}
+			else if (level > 7)
+			{
+				level = 7;
+			}
+			res = nuvotonSetBrightness(level);
+#endif  //HS7110
 			mode = 0;
 			break;
 		}
@@ -1897,182 +2767,307 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 		}
 		case VFDICONDISPLAYONOFF:
 		{
-#if defined(FORTIS_HDBOX)
-			if (mode == 0) //vfd mode
-			{
-				icon_nr = data->data[0];
-				on = data->data[4];
-				dprintk(5, "%s Set icon %d to %d (mode 0)\n", __func__, icon_nr, on);
+#if !defined(HS7110)
+			icon_nr = mode == 0 ? data->data[0] : nuvoton->u.icon.icon_nr;
+			on = mode == 0 ? data->data[4] : nuvoton->u.icon.on;
+			dprintk(10, "%s Set icon %d to %d (mode %d)\n", __func__, icon_nr, on, mode);
+			on = on != 0 ? 1 : 0;
 
+			// Part one: translate E2 icon numbers to own icon numbers (vfd mode only)
+			if (mode == 0)  // vfd mode
+			{
 				switch (icon_nr)
 				{
-					case 0x13:  //crypted
+#if defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)
+					case 0x13:  // crypted
 					{
 						icon_nr = ICON_SCRAMBLED;
 						break;
 					}
-					case 0x17:  //dolby
+					case 0x17:  // dolby
 					{
 						icon_nr = ICON_DOLBY;
 						break;
 					}
-					case 0x15:  //MP3
+#if !defined(ATEVIO7500)
+					case 0x15:  // MP3
 					{
 						icon_nr = ICON_MP3;
 						break;
 					}
-					case 17:    //HD
+#endif
+					case 0x11:  // HD
 					{
 						icon_nr = ICON_HD;
 						break;
 					}
-					case 30:    //record
+					case 0x1e:  // record
 					{
 						icon_nr = ICON_REC;
 						break;
 					}
-					case 26:    //seekable (play)
+					case 0x1a:  // seekable (play)
 					{
 						icon_nr = ICON_PLAY;
 						break;
 					}
-					default:
-					{
-						break;
-					}
-				}
-				if (on != 0)
-				{
-					on = 1;
-				}
-				if (icon_nr != ICON_MAX)
-				{
-					res = nuvotonSetIcon(icon_nr, on);
-				}
-				else
-				{
-					for (i = ICON_MIN + 1; i < ICON_MAX; i++)
-					{
-						res = nuvotonSetIcon(i, on);
-					}
-				}
-			}
-			else
-			{
-				//compatible mode
-				dprintk(5, "%s Set icon %d to %d (mode 1)\n", __func__, nuvoton->u.icon.icon_nr, nuvoton->u.icon.on);
-				if (nuvoton->u.icon.icon_nr != ICON_MAX)
-				{
-					res = nuvotonSetIcon(nuvoton->u.icon.icon_nr, nuvoton->u.icon.on);
-				}
-				else
-				{
-					for (i = ICON_MIN + 1; i <  ICON_MAX; i++)
-					{
-						res = nuvotonSetIcon(i, nuvoton->u.icon.on);
-					}
-				}
-			}
 #elif defined(OCTAGON1008)
-			if (mode == 0) //vfd mode
-			{
-				icon_nr = data->data[0];
-				on = data->data[4];
-				dprintk(5, "%s Set icon %d to %d (mode 0)\n", __func__, icon_nr, on);
-
-				switch (icon_nr)
-				{
-					case 0x13:  //crypted
+					case 0x13:  // crypted
 					{
 						icon_nr = ICON_CRYPTED;
 						break;
 					}
-					case 0x17:  //dolby
+					case 0x17:  // dolby
 					{
 						icon_nr = ICON_DOLBY;
 						break;
 					}
-					case 26:    //seekable (play)
+					case 0x1a:  // seekable (play)
 					{
 						icon_nr = ICON_PLAY;
 						break;
 					}
-					case 30:    //record
+					case 0x1e:  // record
 					{
 						icon_nr = ICON_REC;
 						break;
 					}
+#elif defined(HS7420) \
+ || defined(HS7429)
+					case 0x1e:  // record
+					{
+						icon_nr = ICON_DOT;
+						break;
+					}
+#endif
 					default:
 					{
 						break;
 					}
 				}
-				if (on != 0)
-				{
-					on = 1;
-				}
-				if (icon_nr != ICON_MAX)
-				{
-					res = nuvotonSetIcon(icon_nr, on);
-				}
-				else
-				{
-					for (i = ICON_MIN + 1; i < ICON_MAX; i++)
-					{
-						res = nuvotonSetIcon(i, on);
-					}
-				}
 			}
-			else
+
+			// Part two: decide wether one icon, all or spinner
+			switch (icon_nr)
 			{
-				//compatible mode
-				dprintk(5, "%s Set icon %d to %d (mode 1)\n", __func__, nuvoton->u.icon.icon_nr, nuvoton->u.icon.on);
-				if (nuvoton->u.icon.icon_nr != ICON_MAX)
+#if defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)
+				case ICON_SPINNER:
 				{
-					res = nuvotonSetIcon(nuvoton->u.icon.icon_nr, nuvoton->u.icon.on);
+					if (mode == 0)  // vfd mode
+					{
+						on = data->data[4];
+					}
+					else
+					{
+						on = nuvoton->u.icon.on;
+					}
+					spinner_state.state = on;
+					lastdata.icon_state[ICON_SPINNER] = on;
+#if defined(FORTIS_HDBOX)
+					if (on)
+					{
+						if (on == 1)
+						{
+							on = 100;  // set default value: 1 change/sec
+						}
+						spinner_state.period = on * 10;
+						up(&spinner_state.sem);
+					}
+#elif defined(ATEVIO7500)
+					if (on)
+					{
+						if (icon_state.state == 1)
+						{
+							dprintk(50, "%s Stop icon thread\n", __func__);
+							icon_state.state = 0;
+							do
+							{
+								msleep(250);
+							}
+							while (icon_state.status != ICON_THREAD_STATUS_HALTED);
+							dprintk(50, "%s Icon thread stopped\n", __func__);
+						}
+						if (on == 1)  // handle default
+						{
+							on = 25;  // full cycle takes 16 * 250 ms = 4 sec
+						}
+						spinner_state.period = on * 10;
+						up(&spinner_state.sem);
+					}
+					else
+					{
+						if (spinner_state.state == 1)
+						{
+							dprintk(50, "%s Stop spinner\n", __func__);
+							spinner_state.state = 0;
+							do
+							{
+								msleep(250);
+							}
+							while (spinner_state.status != ICON_THREAD_STATUS_HALTED);
+							dprintk(50, "%s Spinner stopped\n", __func__);
+						}
+						dprintk(50, "%s Restart icon thread\n", __func__);
+						icon_state.state = 1;
+						up(&icon_state.sem);
+					}
+#endif
+					res = 0;
+					break;
 				}
-				else
+#endif  // ATEVIO7500 or FORTIS HD_BOX
+				case ICON_MAX:
 				{
+#if defined(ATEVIO7500)
+					if (spinner_state.state == 1)  // switch spinner off if on
+					{
+						dprintk(50, "%s Stop spinner\n", __func__);
+						spinner_state.state = 0;
+						do
+						{
+							msleep(250);
+						}
+						while (spinner_state.status != ICON_THREAD_STATUS_HALTED);
+						dprintk(50, "%s Spinner stopped\n", __func__);
+						dprintk(50, "%s Restart icon thread\n", __func__);
+						icon_state.state = 1;
+						up(&icon_state.sem);
+					}
+
 					for (i = ICON_MIN + 1; i < ICON_MAX; i++)
 					{
-						res = nuvotonSetIcon(i, nuvoton->u.icon.on);
+						if (on != lastdata.icon_state[i])
+						{
+							on ? lastdata.icon_count++ : lastdata.icon_count--;
+						}
+
+						if (lastdata.icon_state[i] == 1 && !on)							
+						{
+							res |= nuvotonSetIcon(i, 0);
+						}
+							lastdata.icon_state[i] = on;
 					}
+					break;
+#elif defined(FORTIS_HDBOX)
+					if (spinner_state.state == 1)  // switch spinner off if on
+					{
+						dprintk(50, "%s Stop spinner\n", __func__);
+						spinner_state.state = 0;
+						do
+						{
+							msleep(250);
+						}
+						while (spinner_state.status != ICON_THREAD_STATUS_HALTED);
+						dprintk(50, "%s Spinner stopped\n", __func__);
+					}
+					//fall through to:
+#endif
+					for (i = ICON_MIN + 1; i < ICON_MAX; i++)
+					{
+						res |= nuvotonSetIcon(i, on);
+					}
+					break;
+				}
+				default:  // (re)set a single icon
+				{
+#if defined(ATEVIO7500)
+					if (on != lastdata.icon_state[icon_nr])
+					{
+						on ? lastdata.icon_count++ : lastdata.icon_count--;
+					}
+					lastdata.icon_state[icon_nr] = on;
+
+					if (spinner_state.state == 0)  // if spinner off
+					{
+						if ((icon_state.state == !on) && on)  // and no icon thread yet but icon on
+						{
+							dprintk(50, "%s Start icon thread\n", __func__);
+							icon_state.state = 1;
+							up(&icon_state.sem);
+						}
+						if (!on)
+						{
+							res = nuvotonSetIcon(icon_nr, 0);
+						}
+					}
+#elif defined(FORTIS_HDBOX)
+					if (spinner_state.state == 1 && icon_nr >= ICON_Circ0 && icon_nr <= ICON_Circ8)
+					{
+						dprintk(50, "%s Stop spinner\n", __func__);
+						spinner_state.state = 0;
+						do
+						{
+							msleep(250);
+						}
+						while (spinner_state.status != ICON_THREAD_STATUS_HALTED);
+						dprintk(50, "%s Spinner stopped\n", __func__);
+						msleep(100);
+
+					}
+					res = nuvotonSetIcon(icon_nr, on);
+#else
+					dprintk(50, "%s Set single icon #%d to %d\n", __func__, icon_nr, on);
+					res = nuvotonSetIcon(icon_nr, on);
+#endif
+					break;
 				}
 			}
-#elif defined(ATEVIO7500)
-			printk("Set icon not supported on HS8200.\n");
-#endif //all other than Octagon1008, FORTIS_HDBOX and Atevio7500
+#endif  // HS7110 (no display)
 			mode = 0;
-			res = 0;
 			break;
 		}
 		case VFDSTANDBY:
 		{
 			clear_display();
-			dprintk(5, "Set standby mode, wake up time: (MJD= %d) - %02d:%02d:%02d (UTC)\n", (nuvoton->u.standby.time[0] & 0xFF) * 256 + (nuvoton->u.standby.time[1] & 0xFF), nuvoton->u.standby.time[2], nuvoton->u.standby.time[3], nuvoton->u.standby.time[4]);
+			dprintk(10, "Set deep standby mode, wake up time: (MJD= %d) - %02d:%02d:%02d (local)\n", (nuvoton->u.standby.time[0] & 0xff) * 256 + (nuvoton->u.standby.time[1] & 0xff),
+				nuvoton->u.standby.time[2], nuvoton->u.standby.time[3], nuvoton->u.standby.time[4]);
 			res = nuvotonSetStandby(nuvoton->u.standby.time);
+			break;
+		}
+		case VFDSETPOWERONTIME:
+		{
+			dprintk(10, "Set wake up time: (MJD= %d) - %02d:%02d:%02d (local)\n", (nuvoton->u.standby.time[0] & 0xff) * 256 + (nuvoton->u.standby.time[1] & 0xff),
+				nuvoton->u.standby.time[2], nuvoton->u.standby.time[3], nuvoton->u.standby.time[4]);
+			res = nuvotonSetWakeUpTime(nuvoton->u.standby.time);
+			break;
+		}
+		case VFDGETWAKEUPTIME:
+		{
+			dprintk(10, "Wake up time: (MJD= %d) - %02d:%02d:%02d (local)\n", (wakeup_time[0] & 0xff) * 256 + (wakeup_time[1] & 0xff),
+				wakeup_time[2], wakeup_time[3], wakeup_time[4]);
+			copy_to_user((void *)arg, &wakeup_time, 5);
+			res = 0;
 			break;
 		}
 		case VFDSETTIME:
 		{
 			if (nuvoton->u.time.time != 0)
 			{
-				dprintk(5, "Set frontpanel time to (MJD=) %d - %02d:%02d:%02d (UTC)\n", (nuvoton->u.time.time[0] & 0xFF) * 256 + (nuvoton->u.time.time[1] & 0xFF), nuvoton->u.time.time[2], nuvoton->u.time.time[3], nuvoton->u.time.time[4]);
+				dprintk(10, "Set frontpanel time to (MJD=) %d - %02d:%02d:%02d (local)\n", (nuvoton->u.time.time[0] & 0xff) * 256 + (nuvoton->u.time.time[1] & 0xff),
+					nuvoton->u.time.time[2], nuvoton->u.time.time[3], nuvoton->u.time.time[4]);
 				res = nuvotonSetTime(nuvoton->u.time.time);
 			}
 			break;
 		}
 		case VFDGETTIME:
 		{
-			res = nuvotonGetTime();
-			dprintk(5, "Get frontpanel time: (MJD=) %d - %02d:%02d:%02d (UTC)\n", (ioctl_data[0] & 0xFF) * 256 + (ioctl_data[1] & 0xFF), ioctl_data[2], ioctl_data[3], ioctl_data[4]);
+			char time[5];
+
+			res = nuvotonGetTime(time);
+			dprintk(10, "Get frontpanel time: (MJD=) %d - %02d:%02d:%02d (local)\n", (ioctl_data[0] & 0xff) * 256 + (ioctl_data[1] & 0xff),
+				ioctl_data[2], ioctl_data[3], ioctl_data[4]);
 			copy_to_user((void *)arg, &ioctl_data, 5);
 			break;
 		}
 		case VFDGETWAKEUPMODE:
 		{
-			res = nuvotonGetWakeUpMode();
-			copy_to_user((void *)arg, &ioctl_data, 1);
+			int wakeup_mode = -1;
+
+			res = nuvotonGetWakeUpMode(&wakeup_mode);
+			dprintk(10, "Wake up mode = %d\n", wakeup_mode);
+			res |= copy_to_user((void *)arg, &wakeup_mode, 1);
 			break;
 		}
 		case VFDDISPLAYCHARS:
@@ -2080,37 +3075,61 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 #if !defined (HS7110)
 			if (mode == 0)
 			{
-				dprintk(5, "Write string (mode 0): %s (length = %d)\n", data->data, data->length);
+				data->data[data->length]= 0;  // terminate string to show
+				dprintk(10, "Write string (mode 0): [%s] (length = %d)\n", data->data, data->length);
+
 				res = nuvotonWriteString(data->data, data->length);
 			}
 			else
 			{
-				dprintk(5, "Write string (mode 1): not supported!\n");
+				dprintk(10, "Write string (mode 1): not supported!\n");
+				mode = 0;  // go back to vfd mode
 			}
 #endif
-			mode = 0;
 			break;
 		}
 		case VFDDISPLAYWRITEONOFF:
 		{
 			res = nuvotonSetDisplayOnOff(nuvoton->u.light.onoff);
-			mode = 0;  //go back to vfd mode
+			mode = 0;  // go back to vfd mode
 			break;
 		}
 		case VFDSETTIMEFORMAT:
 		{
-//			if (nuvoton->u.timeformat.format != 0)
-//			{
-//				nuvoton->u.timeformat.format = 1;
-//			}
-			dprintk(5, "Set time format to: %d\n", nuvoton->u.timeformat.format);
+			const char *time_formatxt[2] = { "12h", "24h" };
+
+			if (nuvoton->u.timeformat.format != 0)
+			{
+				nuvoton->u.timeformat.format = 1;
+			}
+			dprintk(10, "Set time format to: %s\n", time_formatxt[(int)nuvoton->u.timeformat.format]);
+			nuvoton->u.timeformat.format |= 0x80;
 			res = nuvotonSetTimeFormat(nuvoton->u.timeformat.format);
-			mode = 0; //go back to vfd mode
+			mode = 0;  // go back to vfd mode
 			break;
 		}
+		case VFDGETVERSION:
+		{
+			unsigned int data[2];
+			res = nuvotonGetVersion(data);
+			dprintk(10, "Boot loader version is %d.%02d\n", data[0] / 100, data[0] % 100);
+			dprintk(10, "reseller ID is %08X\n", data[1]);
+			res |= copy_to_user((void *)arg, &(data), sizeof(data));
+			mode = 0;  // go back to vfd mode
+			break;
+		}
+#if defined(VFDTEST)
+		case VFDTEST:
+		{
+			res = nuvotonVfdTest(nuvoton->u.test.data);
+			res |= copy_to_user((void *)arg, &(nuvoton->u.test.data), ((dataflag == 1) ? 10 : 2));
+			mode = 0;	// go back to vfd mode
+			break;
+		}
+#endif
 		case 0x5305:
 		{
-			mode = 0; //go back to vfd mode
+			mode = 0;  // go back to vfd mode
 			break;
 		}
 		case 0x5401:
@@ -2119,14 +3138,11 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 		case VFDGETSTBYKEY:
 		case VFDSETSTBYKEY:
 		case VFDPOWEROFF:
-		case VFDSETPOWERONTIME:
-		case VFDGETVERSION:
 		case VFDGETSTARTUPSTATE:
 		case VFDSETTIME2:
 		case VFDDISPLAYCLR:
 		case VFDGETLOOPSTATE:
 		case VFDSETLOOPSTATE:
-		case VFDGETWAKEUPTIME:
 		{
 			printk("[nuvoton] Unsupported IOCTL 0x%x for this receiver.\n", cmd);
 			mode = 0;
@@ -2153,3 +3169,4 @@ struct file_operations vfd_fops =
 	.open    = NUVOTONdev_open,
 	.release = NUVOTONdev_close
 };
+// vim:ts=4
