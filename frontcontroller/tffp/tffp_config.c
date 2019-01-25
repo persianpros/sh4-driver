@@ -46,7 +46,6 @@ int readEepromByte(u8 offset, u8 *pData)
 	return 1;
 }
 
-
 int readEepromData(u8 offset, short length, u8 *pData)
 {
 	struct i2c_msg msg[] =
@@ -70,8 +69,9 @@ int writeEepromData(u8 offset, short length, u8 *pData)
 	int i;
 
 	if (length > 256)
+	{
 		length = 256;
-
+	}
 	memcpy(buf + 1, pData, length);
 
 	for (i = 0; i < length; i += EEPROM_BURST_SIZE)
@@ -84,13 +84,13 @@ int writeEepromData(u8 offset, short length, u8 *pData)
 		{
 			j++;
 			if (j > EEPROM_MAX_RETRIES)
+			{
 				return -1;
+			}
 		}
 	}
-
 	return length;
 }
-
 
 int readTffpConfig(tTffpConfig *pCfg)
 {
@@ -111,10 +111,10 @@ int readTffpConfig(tTffpConfig *pCfg)
 		printk("invalid TFFP config CRC\n");
 		rc = -1;
 	}
-
 	if (rc != 0)
+	{
 		*pCfg = defaultConfig;
-
+	}
 	return rc;
 }
 
@@ -130,6 +130,5 @@ int writeTffpConfig(tTffpConfig *pCfg)
 		printk("failed to write EEPROM\n");
 		rc = -1;
 	}
-
 	return rc;
 }
