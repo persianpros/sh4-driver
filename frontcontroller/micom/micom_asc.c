@@ -85,21 +85,19 @@ void serial_init(void)
 
 int serial_putc(char Data)
 {
-	char                  *ASC_3_TX_BUFF = (char *)(ASCXBaseAddress + ASC_TX_BUFF);
-	unsigned int          *ASC_3_INT_STA = (unsigned int *)(ASCXBaseAddress + ASC_INT_STA);
-	unsigned long         Counter = 200000;
+	char          *ASC_3_TX_BUFF = (char *)(ASCXBaseAddress + ASC_TX_BUFF);
+	unsigned int  *ASC_3_INT_STA = (unsigned int *)(ASCXBaseAddress + ASC_INT_STA);
+	unsigned long Counter = 200000;
 
 	while (((*ASC_3_INT_STA & ASC_INT_STA_THE) == 0) && --Counter)
 	{
-		// We are to fast, lets make a break
+		// We are too fast, lets make a break
 		udelay(0);
 	}
-
 	if (Counter == 0)
 	{
 		dprintk(1, "Error writing char (%c) \n", Data);
 	}
-
 	*ASC_3_TX_BUFF = Data;
 	return 1;
 }

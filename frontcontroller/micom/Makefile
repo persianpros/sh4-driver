@@ -4,6 +4,7 @@ ifeq ($(KERNELRELEASE),)
 else
     micom-objs += micom_file.o
     micom-objs += micom_asc.o
+    micom-objs += micom_procfs.o
     micom-objs += micom_main.o
 
     obj-m += micom.o
