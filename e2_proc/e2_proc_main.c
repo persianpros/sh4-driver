@@ -209,6 +209,10 @@
  *  |           |                     |
  *  |           --------- dst_height /
  *  |
+ *  ---------- lcd
+ *  |           |
+ *  |           --------- symbol_circle <- control for spinner (if spinner available)
+ *  |
  *  ---------- power
  *  |           |
  *  |           --------- standbyled
@@ -292,6 +296,8 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "spark7162\n");
 #elif defined(FORTIS_HDBOX)
 	int len = sprintf(page, "hdbox\n");
+#elif defined(HOMECAST5101)
+	int len = sprintf(page, "hs5101\n");
 #elif defined(OCTAGON1008)
 	int len = sprintf(page, "octagon1008\n");
 #elif defined(ATEVIO7500)
@@ -376,7 +382,7 @@ static int info_chipset_read(char *page, char **start, off_t off, int count, int
  || defined(VITAMIN_HD5000)
 	int len = sprintf(page, "STi7111\n");
 #elif defined(SPARK7162)
-	int len = sprintf(page, "STi7162\n");
+	int len = sprintf(page, "STi7162/7167\n");
 #else
 	int len = sprintf(page, "unknown\n");
 #endif
@@ -619,6 +625,10 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/info/model"                                                   , NULL, info_model_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/chipset"                                                 , NULL, info_chipset_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/boxtype"                                                 , NULL, info_model_read, NULL, NULL, ""},
+#if defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700)
+	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/lcd/symbol_circle"                                            , NULL, NULL, NULL, NULL, ""},
+#endif
 	{cProcDir  , "stb/video"                                                        , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/alpha"                                                  , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/aspect"                                                 , NULL, NULL, NULL, NULL, ""},
@@ -664,11 +674,13 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/fp/led0_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
 	{cProcEntry, "stb/fp/led1_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
 	{cProcEntry, "stb/fp/led_pattern_speed"                                         , NULL, NULL, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/oled_brightness"                                           , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/rtc"                                                       , NULL, zero_read, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/rtc_offset"                                                , NULL, zero_read, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/text"                                                      , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/version"                                                   , NULL, zero_read, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/wakeup_time"                                               , NULL, wakeup_time_read, wakeup_time_write, NULL, ""},
 	{cProcEntry, "stb/fp/was_timer_wakeup"                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/rtc"                                                       , NULL, zero_read, default_write_proc, NULL, ""},
-	{cProcEntry, "stb/fp/rtc_offset"                                                , NULL, zero_read, default_write_proc, NULL, ""},
 #if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7119) || defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
 	{cProcEntry, "stb/fp/resellerID"                                                , NULL, NULL, NULL, NULL, ""},
 #endif
