@@ -100,7 +100,7 @@ static char *type = "ak4705";
 static unsigned short normal_i2c[] = {
 #if defined(HOMECAST5101)
 	I2C_ADDRESS_CXA2161, /* cxa2161, 0x48 */
-#if defined(UFS922) \
+#elif defined(UFS922) \
  || defined(CUBEREVO) \
  || defined(VITAMIN_HD5000) \
  || defined(CUBEREVO_MINI) \
