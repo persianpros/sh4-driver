@@ -685,6 +685,8 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/fp/rtc_offset"                                                , NULL, zero_read, default_write_proc, NULL, ""},
 #if defined(SPARK) || defined(SPARK7162)
 	{cProcEntry, "stb/fp/aotom"                                                     , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/displaytype"                                               , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/timemode"                                                  , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/scroll_delay"                                             , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/show_symbols"                                             , NULL, NULL, NULL, NULL, ""},
