@@ -19,11 +19,9 @@ CCFLAGSY += -D__TDT__ -D__LINUX__ -D__SH4__ -D__KERNEL__ -DMODULE -DEXPORT_SYMTA
 ifdef OCTAGON1008
 CCFLAGSY += -DOCTAGON1008
 endif
-
 ifdef UFS910
 CCFLAGSY += -DUFS910
 endif
-
 ifdef CUBEREVO
 CCFLAGSY += -DCUBEREVO
 endif
@@ -48,27 +46,21 @@ endif
 ifdef CUBEREVO_3000HD
 CCFLAGSY += -DCUBEREVO_3000HD
 endif
-
 ifdef TF7700
 CCFLAGSY += -DTF7700
 endif
-
 ifdef HL101
 CCFLAGSY += -DHL101
 endif
-
 ifdef VIP1_V2
 CCFLAGSY += -DVIP1_V2
 endif
-
 ifdef VIP2_V1
 CCFLAGSY += -DVIP2_V1
 endif
-
 ifdef UFS922
 CCFLAGSY+=-DUFS922
 endif
-
 ifdef UFC960
 CCFLAGSY+=-DUFC960
 endif
@@ -78,14 +70,12 @@ endif
 ifdef UFS913
 CCFLAGSY+=-DUFS913
 endif
-
 ifdef SPARK
 CCFLAGSY+=-DSPARK
 endif
 ifdef SPARK7162
 CCFLAGSY+=-DSPARK7162
 endif
-
 ifdef FORTIS_HDBOX
 CCFLAGSY += -DFORTIS_HDBOX
 endif
@@ -122,7 +112,6 @@ endif
 ifdef ADB_BOX
 CCFLAGSY += -DADB_BOX
 endif
-
 ifdef IPBOX9900
 CCFLAGSY += -DIPBOX9900
 endif
@@ -132,19 +121,15 @@ endif
 ifdef IPBOX55
 CCFLAGSY += -DIPBOX55
 endif
-
 ifdef VITAMIN_HD5000
 CCFLAGSY += -DVITAMIN_HD5000
 endif
-
 ifdef SAGEMCOM88
 CCFLAGSY += -DSAGEMCOM88
 endif
-
 ifdef PACE7241
 CCFLAGSY += -DPACE7241
 endif
-
 ifdef ARIVALINK200
 CCFLAGSY += -DARIVALINK200
 endif
@@ -166,6 +151,7 @@ ifndef SAGEMCOM88 #Sagemcom88 has own boxtype
 obj-y += boxtype/
 endif
 endif
+obj-y += cpu_frequ/
 obj-y += simu_button/
 obj-y += e2_proc/
 obj-y += frontends/
@@ -173,7 +159,6 @@ obj-y += frontcontroller/
 ifdef WLANDRIVER
 obj-y += wireless/
 endif
-obj-y += cpu_frequ/
 
 ifeq (,$(wildcard $(DRIVER_TOPDIR)/pti_np ))
 obj-y += pti/
@@ -337,6 +322,10 @@ obj-y += smartcard/
 endif
 ifdef CUBEREVO_3000HD
 obj-y += smartcard/
+endif
+
+ifdef TF7700
+obj-y += tfswitch/
 endif
 
 ifdef VITAMIN_HD5000
