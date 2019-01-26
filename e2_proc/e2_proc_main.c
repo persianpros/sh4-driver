@@ -209,11 +209,6 @@
  *  |           |                     |
  *  |           --------- dst_height /
  *  |
- *  ---------- ir
- *  |           |
- *  |           --------- rc
- *  |                      |
- *  |                      --------- type <- Type number of remote control in use
  *  ---------- lcd
  *  |           |
  *  |           --------- symbol_circle <- control for spinner (if spinner available)
@@ -345,66 +340,6 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "unknown\n");
 #endif
 	return len;
-}
-
-static char *rc_type = NULL;
-
-static int info_rctype_read (char *page, char **start, off_t off, int count, int *eof, void *data)
-{
-	int len = 0;
-
-	if (rc_type == NULL)
-	{
-		len = sprintf(page, "0\n");
-	}
-	else
-	{
-		len = sprintf(page, rc_type);
-	}
-	return len;
-}
-
-int info_rctype_write(struct file *file, const char __user *buf, unsigned long count, void *data)
-{
-	char *page;
-	ssize_t ret = -ENOMEM;
-
-	char *myString = kmalloc(count + 1, GFP_KERNEL);
-#ifdef VERY_VERBOSE
-	printk("%s %ld - ", __FUNCTION__, count);
-#endif
-	page = (char *)__get_free_page(GFP_KERNEL);
-
-	if (page)
-	{
-		ret = -EFAULT;
-
-		if (copy_from_user(page, buf, count))
-		{
-			goto out;
-		}
-		strncpy(myString, page, count);
-		myString[count] = '\0';
-#ifdef VERY_VERBOSE
-		printk("%s\n", myString);
-#endif
-		if (rc_type != NULL)
-		{
-			kfree(rc_type);
-		}
-		rc_type = myString;
-
-		/* always return count to avoid endless loop */
-		ret = count;
-	}
-out:
-	free_page((unsigned long)page);
-
-	if (rc_type != myString)
-	{
-		kfree(myString);
-	}
-	return ret;
 }
 
 static int info_chipset_read(char *page, char **start, off_t off, int count, int *eof, void *data)
@@ -690,9 +625,6 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/info/model"                                                   , NULL, info_model_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/chipset"                                                 , NULL, info_chipset_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/boxtype"                                                 , NULL, info_model_read, NULL, NULL, ""},
-	{cProcDir  , "stb/ir"                                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/ir/rc"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/ir/rc/type"                                                   , NULL, info_rctype_read, info_rctype_write, NULL, ""},
 #if defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700)
 	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/symbol_circle"                                            , NULL, NULL, NULL, NULL, ""},
