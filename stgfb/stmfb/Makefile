@@ -195,7 +195,7 @@ obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif
 
-ifdef OCTAGON1080
+ifdef OCTAGON1008
 obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif
