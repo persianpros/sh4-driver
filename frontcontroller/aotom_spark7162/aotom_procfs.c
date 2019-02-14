@@ -717,6 +717,7 @@ struct fp_procs
   { "stb/fp/rtc_offset", aotom_read_rtc_offset, aotom_write_rtc_offset },
   { "stb/fp/aotom", NULL, aotom_write },
   { "stb/fp/led0_pattern", NULL, led0_pattern_write },
+  { "stb/fp/led1_pattern", NULL, led1_pattern_write },
   { "stb/fp/wakeup_time", wakeup_time_read, wakeup_time_write },
   { "stb/fp/was_timer_wakeup", was_timer_wakeup_read, null_write },
   { "stb/fp/version", fp_version_read, NULL },

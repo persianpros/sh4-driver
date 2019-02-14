@@ -153,7 +153,11 @@ endif
 endif
 obj-y += cpu_frequ/
 obj-y += simu_button/
+ifdef SPARK7162
+obj-y += e2_proc_spark7162/
+else
 obj-y += e2_proc/
+endif
 obj-y += frontends/
 obj-y += frontcontroller/
 ifdef WLANDRIVER
