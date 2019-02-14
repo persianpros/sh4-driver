@@ -382,7 +382,7 @@ static int info_chipset_read(char *page, char **start, off_t off, int count, int
  || defined(VITAMIN_HD5000)
 	int len = sprintf(page, "STi7111\n");
 #elif defined(SPARK7162)
-	int len = sprintf(page, "STi7162/7167\n");
+	int len = sprintf(page, "STi7162\n");
 #else
 	int len = sprintf(page, "unknown\n");
 #endif

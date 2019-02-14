@@ -65,7 +65,7 @@ obj-y += aotom_spark/
 endif
 
 ifdef SPARK7162
-obj-y += aotom_spark7162/
+obj-y += aotom_spark/
 endif
 
 ifdef OCTAGON1008

@@ -132,7 +132,6 @@ static void i2csoft_sendstop(YWGPIO_Handle_T SCL, YWGPIO_Handle_T SDA);
 S32 YWLIB_Strcmp(S8 *str1, S8 *str2)
 {
 	int iValue = 0;
-
 	if (str1 != NULL && str2 != NULL)
 	{
 		iValue = strcmp((char *)str1, (char *)str2);
@@ -224,7 +223,6 @@ YW_ErrorType_T YWGPIO_Read(YWGPIO_Handle_T GpioHandle, U8 *pPioValue)
 YW_ErrorType_T YWGPIO_SetIoMode(YWGPIO_Handle_T GpioHandle, YWGPIO_IOMode_T IoMode)
 {
 	struct stpio_pin *pPio = (struct stpio_pin *)GpioHandle;
-
 	switch (IoMode)
 	{
 		case YWGPIO_IO_MODE_INPUT:
@@ -309,7 +307,6 @@ static void i2csoft_unlock(U32 DeviceIndex)
 static void i2csoft_reset(YWGPIO_Handle_T SCL, YWGPIO_Handle_T SDA)
 {
 	int j;
-
 	YWGPIO_Write(SCL, 1); //I2C_SCL(1);
 	YWGPIO_Write(SDA, 1); //I2C_SDA(1);
 	//I2C_TRISTATE;
@@ -357,16 +354,10 @@ static void i2csoft_sendack(YWGPIO_Handle_T SCL, YWGPIO_Handle_T SDA, int ack)
 	YWGPIO_Write(SCL, 0); //I2C_SCL(0);
 	iic_delay(3);
 	YWGPIO_SetIoMode(SDA, YWGPIO_IO_MODE_OUTPUT);
-
 	if (ack)
-	{
 		YWGPIO_Write(SDA, 1); //I2C_SDA(1);
-	}
 	else
-	{
 		YWGPIO_Write(SDA, 0); //I2C_SDA(0);
-	}
-
 	iic_delay(3);
 	YWGPIO_Write(SCL, 1); //I2C_SCL(1);
 	iic_delay(5);
@@ -378,20 +369,15 @@ static int i2csoft_writebyte(YWGPIO_Handle_T SCL, YWGPIO_Handle_T SDA, U8 data)
 {
 	int j;
 	U8 nack;
-
 	YWGPIO_SetIoMode(SDA, YWGPIO_IO_MODE_OUTPUT);
 	for (j = 0; j < 8; j++)
 	{
 		YWGPIO_Write(SCL, 0); //I2C_SCL(0);
 		iic_delay(1);
 		if (data & 0x80)
-		{
 			YWGPIO_Write(SDA, 1); //I2C_SDA(1);
-		}
 		else
-		{
 			YWGPIO_Write(SDA, 0); //I2C_SDA(0);
-		}
 		iic_delay(1);
 		YWGPIO_Write(SCL, 1); //I2C_SCL(1);
 		iic_delay(5);
@@ -421,7 +407,6 @@ static U8 i2csoft_readbyte(YWGPIO_Handle_T SCL, YWGPIO_Handle_T SDA, int ack)
 	U8  data;
 	int  j;
 	U8  Value;
-
 	data = 0;
 	YWGPIO_SetIoMode(SDA, YWGPIO_IO_MODE_BIDIRECTIONAL);
 	YWGPIO_Write(SDA, 1); //I2C_SDA(1);
@@ -651,7 +636,6 @@ YW_ErrorType_T i2c_soft_term(char *DeviceName)
 {
 	int                     i;
 	YW_ErrorType_T          ErrorType = YW_NO_ERROR;
-
 	YWI2C_INTERFACE(("%s line:%d in\n", __FUNCTION__, __LINE__));
 	if (DeviceName == NULL)
 	{
@@ -683,8 +667,7 @@ YW_ErrorType_T i2c_soft_term(char *DeviceName)
 YW_ErrorType_T i2c_soft_open(char *DeviceName, YWI2CSoft_Handle_t *Handle, YWI2cSoft_OpenParams_t *OpenParam)
 {
 	int                     i, j;
-//	YW_ErrorType_T          ErrorType = YW_NO_ERROR;
-
+//    YW_ErrorType_T          ErrorType = YW_NO_ERROR;
 	YWI2C_INTERFACE(("%s line:%d in\n", __FUNCTION__, __LINE__));
 	if (DeviceName == NULL || OpenParam == NULL)
 	{
@@ -730,7 +713,6 @@ YW_ErrorType_T i2c_soft_close(YWI2CSoft_Handle_t Handle)
 	//YW_ErrorType_T          ErrorType = YW_NO_ERROR;
 	U32                     DeviceIndex, HandleIndex;
 	YWI2CSoft_OpenParam_t   *Param = (YWI2CSoft_OpenParam_t *)Handle;
-
 	YWI2C_INTERFACE(("%s line:%d in\n", __FUNCTION__, __LINE__));
 	if (!CheckI2cParam(Handle, &DeviceIndex, &HandleIndex))
 	{
@@ -786,7 +768,6 @@ YW_ErrorType_T i2c_soft_write(YWI2CSoft_Handle_t Handle,
 	//YW_ErrorType_T          ErrorType = YW_NO_ERROR;
 	U32                     DeviceIndex, HandleIndex;
 	YWI2CSoft_OpenParam_t   *Param = (YWI2CSoft_OpenParam_t *)Handle;
-
 	YWI2C_INTERFACE(("%s line:%d in\n", __FUNCTION__, __LINE__));
 	if (!CheckI2cParam(Handle, &DeviceIndex, &HandleIndex))
 	{
@@ -877,6 +858,7 @@ YW_ErrorType_T i2c_soft_writenostop(YWI2CSoft_Handle_t Handle,
 	*ActLen_p = ret;
 	YWI2C_INTERFACE(("%s line:%d OUT\n", __FUNCTION__, __LINE__));
 	return YW_NO_ERROR;
+	return YW_NO_ERROR;
 }
 
 I2CDeviceName_T         SoftI2c_DeviceName[YWI2C_NUM_SOFT_I2C] = {"SOFT_I2C0"};
@@ -923,7 +905,6 @@ int softi2c_init(void)
 	{
 		U32 ActLen = 0;
 		U8 aBuffer[2] = { 0xff, 0xff};
-
 		i2c_soft_write(g_SoftHandle, aBuffer, 2, 100, &ActLen);
 		printk("ActLen = %d\n", ActLen);
 	}
@@ -936,7 +917,6 @@ int isofti2c_write(U8 *Buffer_p, U32 MaxLen)
 {
 	U32 ActLen = 0;
 	YW_ErrorType_T  errType = YW_NO_ERROR;
-
 	i2c_soft_write(g_SoftHandle, Buffer_p, MaxLen, 100, &ActLen);
 	//printk("ActLen = %d\n", ActLen);
 	if (errType != YW_NO_ERROR)
@@ -953,7 +933,6 @@ int isofti2c_write(U8 *Buffer_p, U32 MaxLen)
 int isofti2c_read(U8 *Buffer_p, U32 MaxLen)
 {
 	U32 ActLen = 0;
-
 	i2c_soft_read(g_SoftHandle, Buffer_p, MaxLen, 100, &ActLen);
 	return TRUE;
 }
@@ -962,7 +941,6 @@ int softi2c_online(void)
 {
 	int bRet = FALSE;
 	U8 aBuffer[2] = { 0xff, 0xff};
-
 	bRet = isofti2c_write(aBuffer, 2);
 	return bRet;
 }
