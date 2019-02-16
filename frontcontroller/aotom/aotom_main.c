@@ -217,7 +217,7 @@ static void VFD_clr(void)
 static int draw_thread(void *arg)
 {
 	struct vfd_ioctl_data *data = (struct vfd_ioctl_data *) arg;
-	char buf[sizeof(data->data) + 2 * DISPLAYWIDTH_MAX];
+	char buf[sizeof(data->data) + 0 * 2 * DISPLAYWIDTH_MAX];
 	int len = data->length;
 	int off = 0;
 	int doton3 = 0;
@@ -225,7 +225,7 @@ static int draw_thread(void *arg)
 	if (YWPANEL_width == 4 && len == 5 && data->data[2] == '.')
 		doton3 = 1;
 
-	if (len > YWPANEL_width + doton3)
+	if (0 && len > YWPANEL_width + doton3) {
 	{
 		memset(buf, ' ', sizeof(buf));
 		off = YWPANEL_width - 1;
@@ -244,9 +244,18 @@ static int draw_thread(void *arg)
 	if (len > YWPANEL_width + doton3)
 	{
 		int pos;
-		for (pos = 0; pos < len; pos++)
-		{
-			int i;
+		int i;
+		YWPANEL_VFD_ShowString(buf);
+		// sleep ~500 ms before scrolling
+		for (i = 0; i < 12; i++) {
+			if(kthread_should_stop()) {
+				draw_thread_stop = 1;
+				return 0;
+			}
+			msleep(40);
+		}
+		for(pos = 1; pos <= len - YWPANEL_width; pos++) {
+
 			if (kthread_should_stop())
 			{
 				draw_thread_stop = 1;
@@ -264,11 +273,20 @@ static int draw_thread(void *arg)
 				msleep(40);
 			}
 		}
+		// sleep ~500 ms after scrolling
+		for (i = 0; i < 12; i++) {
+			if(kthread_should_stop()) {
+				draw_thread_stop = 1;
+				return 0;
+			}
+			msleep(40);
+		}
 	}
 
-	clear_display();
 	if (len > 0)
 		YWPANEL_VFD_ShowString(buf + off);
+	else
+		clear_display();
 
 	draw_thread_stop = 1;
 	return 0;
