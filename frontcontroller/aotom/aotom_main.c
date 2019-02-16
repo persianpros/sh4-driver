@@ -3,6 +3,7 @@
  *
  * (c) 2010 Spider-Team
  * (c) 2011 oSaoYa
+ * (c) 2012-2013 Stefan Seyfried
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
