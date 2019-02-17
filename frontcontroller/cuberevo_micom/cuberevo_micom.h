@@ -1,5 +1,5 @@
-#ifndef _cuberevo__micom_h
-#define _cuberevo__micom_h
+#ifndef _cuberevo_micom_h
+#define _cuberevo_micom_h
 /*
  */
 
@@ -19,6 +19,10 @@ extern void getRCData(unsigned char *data, int *len);
 void dumpValues(void);
 
 extern int errorOccured;
+extern char *gmt_offset;  // module param, string
+extern int rtc_offset;
+/* number of display characters */
+extern int front_seg_num;
 
 extern struct file_operations vfd_fops;
 
@@ -30,36 +34,38 @@ typedef struct
 
 } tFrontPanelOpen;
 
-#define FRONTPANEL_MINOR_RC 1
-#define LASTMINOR           2
+#define FRONTPANEL_MINOR_RC  1
+#define LASTMINOR            2
 
 extern tFrontPanelOpen FrontPanelOpen[LASTMINOR];
 
-#define VFD_MAJOR           147
+#define VFD_MAJOR            147
 
 /* ioctl numbers ->hacky */
-#define VFDBRIGHTNESS         0xc0425a03
-#define VFDPWRLED             0xc0425a04 /* obsolete, use VFDSETLED (0xc0425afe) */
-#define VFDDRIVERINIT         0xc0425a08
-#define VFDICONDISPLAYONOFF   0xc0425a0a
-#define VFDDISPLAYWRITEONOFF  0xc0425a05
-#define VFDDISPLAYCHARS       0xc0425a00
+#define VFDBRIGHTNESS        0xc0425a03
+#define VFDPWRLED            0xc0425a04 /* obsolete, use VFDSETLED (0xc0425afe) */
+#define VFDDRIVERINIT        0xc0425a08
+#define VFDICONDISPLAYONOFF  0xc0425a0a
+#define VFDDISPLAYWRITEONOFF 0xc0425a05
+#define VFDDISPLAYCHARS      0xc0425a00
 
-#define VFDCLEARICONS	      0xc0425af6
-#define VFDSETRF              0xc0425af7
-#define VFDSETFAN             0xc0425af8
-#define VFDGETWAKEUPMODE      0xc0425af9
-#define VFDGETTIME            0xc0425afa
-#define VFDSETTIME            0xc0425afb
-#define VFDSTANDBY            0xc0425afc
-#define VFDREBOOT             0xc0425afd
-#define VFDSETLED             0xc0425afe
-#define VFDSETMODE            0xc0425aff
+#define VFDCLEARICONS	     0xc0425af6
+#define VFDSETRF             0xc0425af7
+#define VFDSETFAN            0xc0425af8
+#define VFDGETWAKEUPMODE     0xc0425af9
+#define VFDGETTIME           0xc0425afa
+#define VFDSETTIME           0xc0425afb
+#define VFDSTANDBY           0xc0425afc
+#define VFDREBOOT            0xc0425afd
+#define VFDSETLED            0xc0425afe
+#define VFDSETMODE           0xc0425aff
 
-#define VFDGETWAKEUPTIME      0xc0425b00
-#define VFDGETVERSION         0xc0425b01
-#define VFDSETDISPLAYTIME     0xc0425b02
-#define VFDSETTIMEMODE        0xc0425b03
+#define VFDGETWAKEUPTIME     0xc0425b00
+#define VFDGETVERSION        0xc0425b01
+#define VFDSETDISPLAYTIME    0xc0425b02
+#define VFDSETTIMEMODE       0xc0425b03
+#define VFDSETWAKEUPTIME     0xc0425b04
+#define VFDLEDBRIGHTNESS     0xc0425b05 /* Cuberevo/micom specific */
 
 struct set_brightness_s
 {
@@ -111,18 +117,24 @@ struct get_time_s
 	char time[12];
 };
 
-struct get_wakeupstatus
+struct get_wakeupstatus_s
 {
 	char status;
 };
 
 /* YYMMDDhhmmss */
-struct get_wakeuptime
+struct get_wakeuptime_s
 {
 	char time[12];
 };
 
-/* this setups the mode temporarily (for one ioctl)
+/* YYMMDDhhmm */
+struct set_wakeuptime_s
+{
+	char time[10];
+};
+
+/* this sets the mode temporarily (for one ioctl)
  * to the desired mode. currently the "normal" mode
  * is the compatible vfd mode
  */
@@ -155,8 +167,9 @@ struct micom_ioctl_data
 		struct set_standby_s standby;
 		struct set_time_s time;
 		struct get_time_s get_time;
-		struct get_wakeupstatus status;
-		struct get_wakeuptime wakeup_time;
+		struct get_wakeupstatus_s status;
+		struct get_wakeuptime_s get_wakeup_time;
+		struct set_wakeuptime_s wakeup_time;
 		struct get_version_s version;
 		struct set_display_time_s display_time;
 		struct set_time_mode_s time_mode;
@@ -168,6 +181,14 @@ struct vfd_ioctl_data
 	unsigned char start;
 	unsigned char data[64];
 	unsigned char length;
+};
+
+#define LEAPYEAR(year) (!((year) % 4) && (((year) % 100) || !((year) % 400)))
+#define YEARSIZE(year) (LEAPYEAR(year) ? 366 : 365)
+static const int _ytab[2][12] =
+{
+	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+	{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 };
 
 #endif

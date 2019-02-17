@@ -20,11 +20,21 @@
  *
 ******************************************************************************
  *
+ * This driver covers the following models:
+ * 
+ * CubeRevo 250HD / AB IPbox 91HD/ Vizyon revolution 800HD: 4 character LED (7seg)
+ * CubeRevo Mini / AB IPbox 900HD / Vizyon revolution 810HD: 14 character dot matrix VFD (14seg)
+ * CubeRevo Mini II / AB IPbox 910HD / Vizyon revolution 820HD PVR: 14 character dot matrix VFD (14seg)
+ * CubeRevo / AB IPbox 9000HD / Vizyon revolution 8000HD PVR: 12 character dot matrix VFD (12grid)
+ * CubeRevo 9500HD: 13 character dot matrix VFD (13grid)
+ *
+******************************************************************************
+ *
  * Changes
  *
  * Date     By              Description
  * ----------------------------------------------------------------------------
- * 20190204 Audioniek       Added code for all icons on/off.
+ * 20190215 Audioniek       proc_FS added.      
  */
 
 #include <asm/io.h>
@@ -70,13 +80,13 @@ struct saved_data_s
 
 int currentDisplayTime = 0; //display text not time
 
-#ifdef CUBEREVO
+#if defined CUBEREVO
 /* animation timer for Play Symbol on 9000HD */
 static struct timer_list playTimer;
 #endif
 
 /* version date of fp */
-int micom_day, micom_month, micom_year;
+int micom_major, micom_minor, micom_year;
 
 /* commands to the fp */
 #define VFD_GETA0                0xA0
@@ -122,7 +132,7 @@ typedef struct _special_char
 
 static struct saved_data_s lastdata;
 
-/* number segments */
+/* number of display characters */
 int front_seg_num = 14;
 
 unsigned short *num2seg;
@@ -136,7 +146,8 @@ static int special2seg_size = 4;
  * Character definitions.
  *
  ***************************************************************************/
-// 12 character dot matrix
+#if defined CUBEREVO
+// 12 character dot matrix (CubeRevo)
 unsigned short num2seg_12dotmatrix[] =
 {
 	0x20,	// 0
@@ -180,8 +191,11 @@ unsigned short Char2seg_12dotmatrix[] =
 	0x49,	// Y
 	0x4a,	// Z
 };
-
-// 14 character dot matrix
+#elif defined CUBEREVO_MINI \
+ || defined CUBEREVO_MINI2 \
+ || defined CUBEREVO_2000HD \
+ || defined CUBEREVO_3000HD
+// 14 character dot matrix (900HD / 910HD / 2000HD / 3000HD)
 unsigned short num2seg_14dotmatrix[] =
 {
 	0x20,	// 0
@@ -255,7 +269,8 @@ unsigned short LowerChar2seg_14dotmatrix[] =
 	0x69,	// y
 	0x6a,	// z
 };
-
+#elif defined CUBEREVO_9500HD \
+ ||   defined CUBEREVO_MINI_FTA 
 // 13 grid
 unsigned short num2seg_13grid[] =
 {
@@ -300,8 +315,13 @@ unsigned short Char2seg_13grid[] =
 	0x04e2,	// Y
 	0x2805,	// Z
 };
+#endif
 
-// non-alfanumeric
+#if defined CUBEREVO_MINI \
+ || defined CUBEREVO_MINI2 \
+ || defined CUBEREVO_2000HD \
+ || defined CUBEREVO_3000HD
+// non-alphanumeric
 special_char_t special2seg_14dotmatrix[] =
 {
 	{':',	15},
@@ -332,19 +352,11 @@ special_char_t special2seg_14dotmatrix[] =
 	{'_',	79},
 	{'{',	107},
 	{'}',	109},
- /* eurosymbol  {'',	116},*/
+	{0x7f,	116}, /* eurosymbol */
 	{'#',	129},
 	{'\'',	144},
 };
-
-special_char_t special2seg_13grid[] =
-{
-	{'-',   0x00c0},
-	{'\'',  0x0004},
-	{'.',   0x4000},
-	{' ',   0x0000},
-};
-
+#elif defined CUBEREVO
 special_char_t special2seg_12dotmatrix[] =
 {
 	{'-',   0x1d},
@@ -352,8 +364,19 @@ special_char_t special2seg_12dotmatrix[] =
 	{'.',   0x1e},
 	{' ',   0x10},
 };
+#elif defined CUBEREVO_9500HD \
+ ||   defined CUBEREVO_MINI_FTA 
+special_char_t special2seg_13grid[] =
+{
+	{'-',   0x00c0},
+	{'\'',  0x0004},
+	{'.',   0x4000},
+	{' ',   0x0000},
+};
+#endif
 
-// 7 segment display
+#if defined CUBEREVO_250HD
+// 7 segment LED display (250HD)
 static unsigned short Char2seg_7seg[] =
 {
 	~0x01 & ~0x02 & ~0x04 & ~0x10 & ~0x20 & ~0x40,
@@ -405,12 +428,14 @@ special_char_t  special2seg_7seg[] =
 	{'.',	0x7f},
 	{' ',	0xff},
 };
+#endif
 
 /***************************************************************************
  *
  * Icon definitions.
  *
  ***************************************************************************/
+#if defined CUBEREVO
 enum
 {
 	ICON_MIN,       // 0x00
@@ -428,7 +453,7 @@ enum
 	ICON_TUNER2,
 	ICON_MP3,
 	ICON_REPEAT,
-	ICON_Play,      // 0x0f
+	ICON_PLAY,      // 0x0f
 	ICON_TER,
 	ICON_FILE,
 	ICON_480i,
@@ -438,12 +463,29 @@ enum
 	ICON_720p,
 	ICON_1080i,
 	ICON_1080p,
-	ICON_Play_1,    // 0x19
+	ICON_PLAY_1,    // 0x19
 	ICON_RADIO,
 	ICON_TV,
 	ICON_PAUSE,
 	ICON_MAX
 };
+#elif defined CUBEREVO_MINI \
+ || defined CUBEREVO_MINI2 \
+ || defined CUBEREVO_2000HD \
+ || defined CUBEREVO_3000HD
+enum
+{
+	ICON_MIN,       // 0
+	ICON_REC,
+	ICON_TIMER,     // 2
+	ICON_TIMESHIFT,
+	ICON_PLAY,      // 4
+	ICON_PAUSE,
+	ICON_HD,        // 6
+	ICON_DOLBY,
+	ICON_MAX        // 8
+};
+#endif
 
 struct iconToInternal
 {
@@ -452,7 +494,10 @@ struct iconToInternal
 	u8 codemsb;
 	u8 codelsb;
 	u8 segment;
-} micomIcons[] =
+};
+
+#if defined CUBEREVO
+struct iconToInternal micomIcons[] =
 {
 	/*----------------- SetIcon -------  msb   lsb   segment -----*/
 	{ "ICON_STANDBY"  , ICON_STANDBY   , 0x03, 0x00, 1},
@@ -470,8 +515,8 @@ struct iconToInternal
 	{ "ICON_TUNER2"   , ICON_TUNER2    , 0x01, 0x0a, 0},
 	{ "ICON_MP3"      , ICON_MP3       , 0x01, 0x0b, 0},
 	{ "ICON_REPEAT"   , ICON_REPEAT    , 0x01, 0x0c, 0},
-	{ "ICON_Play"     , ICON_Play      , 0x00, 0x00, 1},
-	{ "ICON_Play_1"   , ICON_Play_1    , 0x01, 0x04, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x00, 1},
+	{ "ICON_Play_1"   , ICON_PLAY_1    , 0x01, 0x04, 1},
 	{ "ICON_TER"      , ICON_TER       , 0x02, 0x01, 1},
 	{ "ICON_FILE"     , ICON_FILE      , 0x02, 0x02, 1},
 	{ "ICON_480i"     , ICON_480i      , 0x06, 0x04, 1},
@@ -488,7 +533,10 @@ struct iconToInternal
 	{ "ICON_RADIO"    , ICON_RADIO     , 0x02, 0x04, 1},
 	{ "ICON_TV"       , ICON_TV        , 0x02, 0x03, 1}
 };
-
+#elif defined CUBEREVO_MINI \
+ || defined CUBEREVO_MINI2 \
+ || defined CUBEREVO_2000HD \
+ || defined CUBEREVO_3000HD
 // 14 segment icons
 struct iconToInternal micom_14seg_Icons[] =
 {
@@ -496,16 +544,17 @@ struct iconToInternal micom_14seg_Icons[] =
 	{ "ICON_TIMER"     , ICON_TIMER     , 0x03, 0x00, 1},
 	{ "ICON_REC"       , ICON_REC       , 0x02, 0x00, 1},
 	{ "ICON_HD"        , ICON_HD        , 0x02, 0x04, 1},
-	{ "ICON_Play"      , ICON_Play      , 0x02, 0x01, 1},
+	{ "ICON_Play"      , ICON_PLAY      , 0x02, 0x01, 1},
 	{ "ICON_PAUSE"     , ICON_PAUSE     , 0x02, 0x02, 1},
 	{ "ICON_DOLBY"     , ICON_DOLBY     , 0x02, 0x03, 1},
 	{ "ICON_TIMESHIFT" , ICON_TIMESHIFT , 0x03, 0x01, 1},
 };
+#endif
 /* End of character and icon definitions */
 
 /***************************************************************************************
  *
- * Code for play display on 9000HD.
+ * Code for play display on IPbox9000HD / CubeRevo.
  *
  */
 #ifdef CUBEREVO
@@ -582,7 +631,7 @@ int write_sem_down(void)
 
 void copyData(unsigned char *data, int len)
 {
-	printk("%s len %d\n", __func__, len);
+	dprintk(150, "%s len %d\n", __func__, len);
 	memcpy(ioctl_data, data, len);
 }
 
@@ -613,8 +662,24 @@ int micomWriteCommand(char *buffer, int len, int needAck)
 
 /*******************************************************************
  *
- * micomSetLED: sets brightness of an LED on front panel display.
+ * Code for the functions of thedriver.
  *
+ */
+
+/*******************************************************************
+ *
+ * micomSetLED: sets the state of the LED(s) on front panel display.
+ *
+ * Parameter on is a bit mask:
+ * bit 0 = LED on (1) or off (0)
+ * bit 1 = slow blink on/off (1 = blink, 0 = steady)
+ * bit 2 = fast blink on/off (1 = blink, 0 = steady)
+ *
+ * Practical values are:
+ * 0: LED off
+ * 1: LED on;
+ * 3: LED blinks slowly
+ * 5: LED blinks fast
  */
 int micomSetLED(int on)
 {
@@ -625,47 +690,33 @@ int micomSetLED(int on)
 
 	memset(buffer, 0, sizeof(buffer));
 
-	/*
-	xxxxxxx0 ->off
-	xxxxxxx1 ->on
-	LED_ON 0x1
-	LED_OFF ~ 0x1
-
-	xxxxxx0x ->slow blink off
-	xxxxxx1x ->slow blink on
-
-	SLOW_ON 0x2
-	SLOW_OFF ~0x2
-
-	xxxxx0xx ->fast blink off
-	xxxxx1xx ->fast blink on
-
-	FAST_ON 0x4
-	FAST_OFF ~0x4
-	*/
+	// even = off, 1 = on, 3 = slow blink, 5 = fast blink, 7 = slow bink
 	if (on & 0x1)
 	{
 		buffer[0] = VFD_SETLED;
 		buffer[1] = 0x01;
-
 		res = micomWriteCommand(buffer, 5, 0);
 
 		if (on & 0x2)
 		{
 			buffer[0] = VFD_SETLEDSLOW;
-			buffer[1] = 0x81;           /* continues blink mode, last state will be on */
-
+			buffer[1] = 0x81;  /* continues blink mode, last state will be on */
 			res = micomWriteCommand(buffer, 5, 0);
 		}
-		if (on & 0x4)
+		else if (on & 0x4)
 		{
 			buffer[0] = VFD_SETLEDFAST;
-			buffer[1] = 0x81;           /* continues blink mode, last state will be on */
-
+			buffer[1] = 0x81;  /* continues blink mode, last state will be on */
+			res = micomWriteCommand(buffer, 5, 0);
+		}
+		else
+		{
+			buffer[0] = VFD_SETLEDFAST;
+			buffer[1] = 0x01;  /* stops blink mode, last state will be on */
 			res = micomWriteCommand(buffer, 5, 0);
 		}
 	}
-	else
+	else // off
 	{
 		buffer[0] = VFD_SETLED;
 		buffer[1] = 0x00;
@@ -685,7 +736,6 @@ int micomSetLED(int on)
 	dprintk(100, "%s (%d) <\n", __func__, res);
 	return res;
 }
-
 /* export for later use in e2_proc */
 EXPORT_SYMBOL(micomSetLED);
 
@@ -693,7 +743,9 @@ EXPORT_SYMBOL(micomSetLED);
  *
  * micomSetFan: switches fan on or off.
  *
- */int micomSetFan(int on)
+ */
+#if defined CUBEREVO
+int micomSetFan(int on)
 {
 	char buffer[5];
 	int res = 0;
@@ -719,11 +771,16 @@ EXPORT_SYMBOL(micomSetLED);
 	dprintk(100, "%s (%d) <\n", __func__, res);
 	return res;
 }
+#else
+int micomSetFan(int on)
+{
+	dprintk(1, "%s Only supported on CubeRevo, other models have their fan always on.\n", __func__);
+}
+#endif
 
 /*******************************************************************
  *
- * micomSetTimeMode: sets time mode (constant display of time) on
- *                   or off.
+ * micomSetTimeMode: sets 24h format on or off.
  *
  */
 int micomSetTimeMode(int twentyFour)
@@ -751,8 +808,9 @@ int micomSetTimeMode(int twentyFour)
 
 /*******************************************************************
  *
- * micomSetDisplayTime: sets time mode (constant display of time) on
- *                      or off.
+ * micomSetDisplayTime: sets constant display of time on or off.
+ *
+ * Note: does not restore previous display if turned off.
  *
  */
 int micomSetDisplayTime(int on)
@@ -816,6 +874,8 @@ int micomSetRF(int on)
  *
  * micomSetBrightness: sets brightness of front panel display.
  *
+ * Note: does not work on Mini, Mini2, 2000HD and 3000HD,
+ *       to be tested on others.
  */
 int micomSetBrightness(int level)
 {
@@ -826,7 +886,7 @@ int micomSetBrightness(int level)
 
 	if (level < 0 || level > 7)
 	{
-		printk("VFD/Micom brightness out of range %d\n", level);
+		printk("[micom] brightness out of range %d\n", level);
 		return -EINVAL;
 	}
 	memset(buffer, 0, sizeof(buffer));
@@ -851,97 +911,95 @@ int micomSetIcon(int which, int on)
 	char buffer[5];
 	int  vLoop, res = 0;
 
-#if !defined(CUBEREVO_250HD)
 	dprintk(100, "%s > %d, %d\n", __func__, which, on);
 
-	if (which < 1 || which >= ICON_MAX)
-	{
-		printk("VFD/Nuvoton icon number out of range %d\n", which);
-		return -EINVAL;
-	}
 	if (front_seg_num == 13) //no icons
 	{
 		return res;
 	}
+	if (which < 1 || which >= ICON_MAX)
+	{
+		printk("[micom] Icon number %d out of range (1-%d) \n", which, ICON_MAX - 1);
+		return -EINVAL;
+	}
 	memset(buffer, 0, sizeof(buffer));
 
-	if (front_seg_num == 14) //only six icons
+#if defined CUBEREVO_MINI \
+ || defined CUBEREVO_MINI2 \
+ || defined CUBEREVO_2000HD \
+ || defined CUBEREVO_3000HD
+	for (vLoop = 0; vLoop < ARRAY_SIZE(micom_14seg_Icons); vLoop++)
 	{
-		for (vLoop = 0; vLoop < ARRAY_SIZE(micom_14seg_Icons); vLoop++)
+		if ((which & 0xff) == micom_14seg_Icons[vLoop].icon)
 		{
-			if ((which & 0xff) == micom_14seg_Icons[vLoop].icon)
-			{
-				buffer[0] = VFD_SETSEGMENTI + micom_14seg_Icons[vLoop].segment;
-				buffer[1] = on;
-				buffer[2] = micom_14seg_Icons[vLoop].codelsb;
-				buffer[3] = micom_14seg_Icons[vLoop].codemsb;
-				res = micomWriteCommand(buffer, 5, 0);
-				break;
-			}
+			buffer[0] = VFD_SETSEGMENTI + micom_14seg_Icons[vLoop].segment;
+			buffer[1] = on;
+			buffer[2] = micom_14seg_Icons[vLoop].codelsb;
+			buffer[3] = micom_14seg_Icons[vLoop].codemsb;
+			res = micomWriteCommand(buffer, 5, 0);
+			break;
 		}
+	}
+#elif defined CUBEREVO // IPbox 9000HD, handle play icon
+	if ((which == ICON_Play) && (front_seg_num == 12) && (on))
+	{
+		/* display circle */
+		buffer[0] = VFD_SETSEGMENTII;
+		buffer[1] = 0x01;
+		buffer[2] = 0x04;
+		buffer[3] = 0x00;
+		micomWriteCommand(buffer, 5, 0);
+
+		/* display play symbol */
+		buffer[0] = VFD_SETSEGMENTII;
+		buffer[1] = 0x01;
+		buffer[2] = 0x00;
+		buffer[3] = 0x01;
+		micomWriteCommand(buffer, 5, 0);
+
+		current_symbol = 0;
+		animationDie = 0;
+		playTimer.expires = jiffies + ANIMATION_INTERVAL;
+		add_timer(&playTimer);
+	}
+	else if ((which == ICON_Play) && (front_seg_num == 12) && (!on))
+	{
+		/* clear circle */
+		buffer[0] = VFD_SETSEGMENTII;
+		buffer[1] = 0x00;
+		buffer[2] = 0x04;
+		buffer[3] = 0x00;
+		micomWriteCommand(buffer, 5, 0);
+
+		/* clear play symbol */
+		buffer[0] = VFD_SETSEGMENTII;
+		buffer[1] = 0x00;
+		buffer[2] = 0x00;
+		buffer[3] = 0x01;
+		micomWriteCommand(buffer, 5, 0);
+
+		animationDie = 1;
 	}
 	else
 	{
-#ifdef CUBEREVO //9000HD
-		if ((which == ICON_Play) && (front_seg_num == 12) && (on))
+		for (vLoop = 0; vLoop < ARRAY_SIZE(micomIcons); vLoop++)
 		{
-			/* display circle */
-			buffer[0] = VFD_SETSEGMENTII;
-			buffer[1] = 0x01;
-			buffer[2] = 0x04;
-			buffer[3] = 0x00;
-			micomWriteCommand(buffer, 5, 0);
-
-			/* display play symbol */
-			buffer[0] = VFD_SETSEGMENTII;
-			buffer[1] = 0x01;
-			buffer[2] = 0x00;
-			buffer[3] = 0x01;
-			micomWriteCommand(buffer, 5, 0);
-
-			current_symbol = 0;
-			animationDie = 0;
-			playTimer.expires = jiffies + ANIMATION_INTERVAL;
-			add_timer(&playTimer);
-		}
-		else if ((which == ICON_Play) && (front_seg_num == 12) && (!on))
-		{
-			/* undisplay circle */
-			buffer[0] = VFD_SETSEGMENTII;
-			buffer[1] = 0x00;
-			buffer[2] = 0x04;
-			buffer[3] = 0x00;
-			micomWriteCommand(buffer, 5, 0);
-
-			/* undisplay play symbol */
-			buffer[0] = VFD_SETSEGMENTII;
-			buffer[1] = 0x00;
-			buffer[2] = 0x00;
-			buffer[3] = 0x01;
-			micomWriteCommand(buffer, 5, 0);
-
-			animationDie = 1;
-		}
-		else
-#endif //9000HD
-		{
-			for (vLoop = 0; vLoop < ARRAY_SIZE(micomIcons); vLoop++)
+			if ((which & 0xff) == micomIcons[vLoop].icon)
 			{
-				if ((which & 0xff) == micomIcons[vLoop].icon)
-				{
-					buffer[0] = VFD_SETSEGMENTI + micomIcons[vLoop].segment;
-					buffer[1] = on;
-					buffer[2] = micomIcons[vLoop].codelsb;
-					buffer[3] = micomIcons[vLoop].codemsb;
-					res = micomWriteCommand(buffer, 5, 0);
-
-					/* do not break here because there may be multiple segments */
+				buffer[0] = VFD_SETSEGMENTI + micomIcons[vLoop].segment;
+				buffer[1] = on;
+				buffer[2] = micomIcons[vLoop].codelsb;
+				buffer[3] = micomIcons[vLoop].codemsb;
+				res = micomWriteCommand(buffer, 5, 0);
+				/* do not break here because there may be multiple segments */
 				}
 			}
 		}
 	}
 	dprintk(100, "%s <\n", __func__);
-#endif // !250HD
+#elif defined(CUBEREVO_250HD)
+	dprintk(1, "%s: This model has no icons.\n", __func__);
+#endif
 	return res;
 }
 
@@ -952,7 +1010,6 @@ int micomSetIcon(int which, int on)
  *
  */
 int micomSetStandby(char *time) //expected format: YYMMDDhhmm
-
 {
 	char     buffer[5];
 	int      res = 0;
@@ -971,7 +1028,6 @@ int micomSetStandby(char *time) //expected format: YYMMDDhhmm
 		buffer[1] = 0x00; //year
 		buffer[2] = 0x00; //month
 		buffer[3] = 0x00; //day
-
 		res = micomWriteCommand(buffer, 5, 0);
 
 		memset(buffer, 0, sizeof(buffer));
@@ -989,7 +1045,6 @@ int micomSetStandby(char *time) //expected format: YYMMDDhhmm
 		buffer[1] = ((time[0] - '0') << 4) | (time[1] - '0'); //year
 		buffer[2] = ((time[2] - '0') << 4) | (time[3] - '0'); //month
 		buffer[3] = ((time[4] - '0') << 4) | (time[5] - '0'); //day
-
 		res = micomWriteCommand(buffer, 5, 0);
 
 		memset(buffer, 0, sizeof(buffer));
@@ -1052,11 +1107,11 @@ int micomSetTime(char *time) // expected format: YYMMDDhhmmss
 
 	dprintk(100, "%s >\n", __func__);
 
-	/* set wakeup time */
+	/* set time */
 	memset(buffer, 0, sizeof(buffer));
 
-	dprintk(1, "date: %c %c %c %c %c %c\n", time[0], time[1], time[2], time[3], time[4], time[5]);
-	dprintk(1, "time: %c %c %c %c %c %c\n", time[6], time[7], time[8], time[9], time[10], time[11]);
+	dprintk(1, "date to set: %c%c-%c%c-20%c%c\n", time[4], time[5], time[2], time[3], time[0], time[1]);
+	dprintk(1, "time to set: %c%c:%c%c:%c%c\n", time[6], time[7], time[8], time[9], time[10], time[11]);
 
 	buffer[0] = VFD_SETDATETIME;
 	buffer[1] = ((time[0] - '0') << 4) | (time[1] - '0'); //year
@@ -1073,6 +1128,127 @@ int micomSetTime(char *time) // expected format: YYMMDDhhmmss
 	buffer[3] = ((time[10] - '0') << 4) | (time[11] - '0'); //second
 
 	res = micomWriteCommand(buffer, 5, 0);
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+
+/*****************************************************
+ *
+ * micomGetTime: read front panel clock time.
+ *
+ * Returns 6 bytes:
+ * char seconds
+ * char minutes
+ * char hours
+ * char day of the month
+ * char month
+ * char year (no century)
+ */
+int micomGetTime(char *time)
+{
+	char buffer[5];
+	int res = 0;
+
+	dprintk(100, "%s >\n", __func__);
+
+	memset(buffer, 0, sizeof(buffer));
+
+	buffer[0] = VFD_GETDATETIME;
+	errorOccured = 0;
+	res = micomWriteCommand(buffer, 5, 1);
+
+	if (errorOccured == 1)
+	{
+		/* error */
+		memset(ioctl_data, 0, 20);
+		printk("error\n");
+		res = -ETIMEDOUT;
+	}
+	else
+	{
+		/* time received */
+		dprintk(1, "Time received\n");
+		dprintk(10, "FP/RTC time: %02x:%02x:%02x %02x-%02x-%02x\n",
+			ioctl_data[2], ioctl_data[1], ioctl_data[0],
+			ioctl_data[3], ioctl_data[4], ioctl_data[5]);
+		memcpy(time, ioctl_data, 6);
+	}
+	dprintk(100, "%s <\n", __func__);
+	return res;
+}
+
+/****************************************************************
+ *
+ * micomSetWakeUpTime: sets front panel clock wake up time.
+ *
+ */
+int micomSetWakeUpTime(char *time) // expected format: YYMMDDhhmm
+{
+	char buffer[5];
+	int  res = -1;
+
+	/* set wakeup time */
+	memset(buffer, 0, sizeof(buffer));
+
+	buffer[0] = VFD_SETWAKEUPDATE;
+	buffer[1] = ((time[0] - '0') << 4) | (time[1] - '0'); //year
+	buffer[2] = ((time[2] - '0') << 4) | (time[3] - '0'); //month
+	buffer[3] = ((time[4] - '0') << 4) | (time[5] - '0'); //day
+	dprintk(1, "set wakeup date to %02x-%02x-%02x\n", buffer[3], buffer[2], buffer[1]);
+	res = micomWriteCommand(buffer, 5, 0);
+
+	memset(buffer, 0, sizeof(buffer));
+
+	buffer[0] = VFD_SETWAKEUPTIME;
+	buffer[1] = ((time[6] - '0') << 4) | (time[7] - '0'); //hour
+	buffer[2] = ((time[8] - '0') << 4) | (time[9] - '0'); //minute
+	buffer[3] = 1; /* on/off */
+	dprintk(1, "set wakeup time to %02x:%02x; action is switch %s\n", buffer[1], buffer[2], ((buffer[3] == 1) ? "on" : "off" ));
+	res |= micomWriteCommand(buffer, 5, 0);
+	return res;
+}
+
+/****************************************************************
+ *
+ * micomGetWakeUpTime: read stored wakeup time.
+ *
+ * Returns 6 bytes:
+ * char seconds (not stored)
+ * char minutes
+ * char hours
+ * char day of the month
+ * char month
+ * char year (no century)
+ */
+int micomGetWakeUpTime(char *time)
+{
+	char     buffer[5];
+	int      res = 0;
+
+	dprintk(100, "%s >\n", __func__);
+
+	memset(buffer, 0, sizeof(buffer));
+
+	buffer[0] = VFD_GETWAKEUP;
+
+	errorOccured = 0;
+	res = micomWriteCommand(buffer, 5, 1);
+
+	if (errorOccured == 1)
+	{
+		/* error */
+		memset(ioctl_data, 0, 20);
+		printk("error\n");
+		res = -ETIMEDOUT;
+	}
+	else
+	{
+		dprintk(1, "Wake up time received\n");
+		dprintk(10, "Wake up time: %02x:%02x:%02x %02x-%02x-20%02x\n",
+			ioctl_data[2], ioctl_data[1], ioctl_data[0],
+			ioctl_data[3], ioctl_data[4], ioctl_data[5]);
+		memcpy(time, ioctl_data, 6);
+	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
@@ -1097,86 +1273,17 @@ int micomClearIcons(void)
 	return res;
 }
 
-/*****************************************************
- *
- * micomGetTime: read front panel clock time.
- *
- */
-int micomGetTime(char *time)
-{
-	char     buffer[5];
-	int      res = 0;
-
-	dprintk(100, "%s >\n", __func__);
-
-	memset(buffer, 0, sizeof(buffer));
-
-	buffer[0] = VFD_GETDATETIME;
-	errorOccured = 0;
-	res = micomWriteCommand(buffer, 5, 1);
-
-	if (errorOccured == 1)
-	{
-		/* error */
-		memset(ioctl_data, 0, 20);
-		printk("error\n");
-		res = -ETIMEDOUT;
-	}
-	else
-	{
-		dprintk(100, "0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x \n", ioctl_data[0], ioctl_data[1], ioctl_data[2], ioctl_data[2], ioctl_data[4], ioctl_data[5]);
-		memcpy(time, ioctl_data, 12);
-		dprintk(1, "time received\n");
-	}
-	dprintk(100, "%s <\n", __func__);
-	return res;
-}
-
 /****************************************************************
  *
- * micomGetWakeUpTime: gets front panel clock wake up time.
+ * micomGetVersion: get version/release date of front processor.
  *
+ * Note: only returns a code representing the display type
+ * TODO: return actual version string through procfs
  */
-int micomGetWakeupTime(char *time)
+int micomGetVersion(void)
 {
 	char     buffer[5];
-	int      res = 0;
-
-	dprintk(100, "%s >\n", __func__);
-
-	memset(buffer, 0, sizeof(buffer));
-
-	buffer[0] = VFD_GETWAKEUP;
-
-	errorOccured = 0;
-	res = micomWriteCommand(buffer, 5, 1);
-
-	if (errorOccured == 1)
-	{
-		/* error */
-		memset(ioctl_data, 0, 20);
-		printk("error\n");
-		res = -ETIMEDOUT;
-	}
-	else
-	{
-		dprintk(100, "0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x \n", ioctl_data[0], ioctl_data[1], ioctl_data[2], ioctl_data[2], ioctl_data[4], ioctl_data[5]);
-		memcpy(time, ioctl_data, 12);
-		dprintk(1, "time received\n");
-	}
-	dprintk(100, "%s <\n", __func__);
-	return res;
-}
-
-/****************************************************************
- *
- * micomGetMicom: get version/release date of front processor.
- *
- */
-int micomGetMicom(void)
-{
-	char     buffer[5];
-	int      res = 0;
+	int      res = -1;
 
 	dprintk(100, "%s >\n", __func__);
 
@@ -1184,9 +1291,10 @@ int micomGetMicom(void)
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_3000HD) \
  || defined(CUBEREVO_2000HD) \
- || defined(CUBEREVO_250HD) /* fixme: not sure if true for MINI2 & CUBEREVO250HD!!! */
+ || defined(CUBEREVO_250HD) /* fixme: not sure if true for CUBEREVO250HD!!! */
 	micom_year  = 2008;
-	micom_month = 4;
+	micom_minor = 4;
+	res = 0;
 #else
 	memset(buffer, 0, sizeof(buffer));
 
@@ -1198,62 +1306,61 @@ int micomGetMicom(void)
 	if (errorOccured == 1)
 	{
 		/* error */
-		memset(ioctl_data, 0, 20);
+		memset(ioctl_data, 0, sizeof(ioctl_data));
 		printk("error\n");
 		res = -ETIMEDOUT;
 	}
 	else
 	{
-		char  convertDate[128];
+		char convertDate[128];
 		
 		dprintk(100, "0x%02x 0x%02x 0x%02x\n", ioctl_data[0], ioctl_data[1], ioctl_data[2]);
 		sprintf(convertDate, "%02x %02x %02x\n", ioctl_data[0],ioctl_data[1], ioctl_data[2]);
-		sscanf(convertDate, "%d %d %d", &micom_year, &micom_month, &micom_day);
+		sscanf(convertDate, "%d %d %d", &micom_year, &micom_minor, &micom_major);
 		micom_year  += 2000;
 	}
 #endif
 
-	dprintk(1, "myTime= %02d.%02d.%04d\n", micom_day, micom_month, micom_year);
+	dprintk(1, "Frontpanel version: %02d.%02d.%04d\n", micom_major, micom_minor, micom_year);
 
-#ifdef CUBEREVO_250HD
+#if defined CUBEREVO_250HD
 	front_seg_num    = 4;
 	num2seg          = num2seg_7seg;
 	Char2seg         = Char2seg_7seg;
 	LowerChar2seg    = NULL;
 	special2seg      = special2seg_7seg;
 	special2seg_size = ARRAY_SIZE(special2seg_7seg);
-#else
-
-#if defined(CUBEREVO)
-	if ((micom_year == 2008) && (micom_month == 3))
-#elif defined(CUBEREVO_MINI) \
- ||   defined(CUBEREVO_MINI2) \
- ||   defined(CUBEREVO_3000HD) \
- ||   defined(CUBEREVO_2000HD) /* FIXME: not sure if true for MINI2 !!! */
-	if ((micom_year == 2008) && (micom_month == 4))
 #endif
-	{
-#if defined(CUBEREVO)
+
+#if defined CUBEREVO
+	if ((micom_year == 2008) && (micom_minor == 3))
+	{	
 		front_seg_num = 12;
 		num2seg = num2seg_12dotmatrix;
 		Char2seg = Char2seg_12dotmatrix;
 		LowerChar2seg = LowerChar2seg_14dotmatrix;
 		special2seg = special2seg_14dotmatrix;
 		special2seg_size = ARRAY_SIZE(special2seg_14dotmatrix);
-#elif defined(CUBEREVO_MINI) \
- ||   defined(CUBEREVO_MINI2) \
- ||   defined(CUBEREVO_3000HD) \
- ||   defined(CUBEREVO_2000HD) /* FIXME: not sure if true for MINI2 */
+	}
+	else
+	{
+#elif defined CUBEREVO_MINI \
+ ||   defined CUBEREVO_MINI2 \
+ ||   defined CUBEREVO_3000HD \
+ ||   defined CUBEREVO_2000HD
+	if ((micom_year == 2008) && (micom_minor == 4))
+	{
 		front_seg_num = 14;
 		num2seg = num2seg_14dotmatrix;
 		Char2seg = Char2seg_14dotmatrix;
 		LowerChar2seg = LowerChar2seg_14dotmatrix;
 		special2seg = special2seg_14dotmatrix;
 		special2seg_size = ARRAY_SIZE(special2seg_14dotmatrix);
-#endif
 	}
 	else
-	{
+#elif defined CUBEREVO_9500HD \
+ ||   defined CUBEREVO_MINI_FTA 
+	{ //default
 		/* 13 grid */
 		front_seg_num = 13;
 
@@ -1263,7 +1370,7 @@ int micomGetMicom(void)
 		special2seg = special2seg_13grid;
 		special2seg_size = ARRAY_SIZE(special2seg_13grid);
 	}
-#endif /* 250HD */
+#endif
 	dprintk(1, "%s front_seg_num %d \n", __func__, front_seg_num);
 	dprintk(100, "%s < \n", __func__);
 	return res;
@@ -1273,7 +1380,9 @@ int micomGetMicom(void)
  *
  * micomGetWakeUpMode: read wake up reason from front panel.
  *
- */int micomGetWakeUpMode(char *mode)
+ * Note: always returns 2 except on power on.
+ */
+int micomGetWakeUpMode(char *mode)
 {
 	char     buffer[5];
 	int      res = 0;
@@ -1290,16 +1399,15 @@ int micomGetMicom(void)
 	if (errorOccured == 1)
 	{
 		/* error */
-		memset(ioctl_data, 0, 20);
-		printk("error\n");
+		memset(ioctl_data, 0, sizeof(ioctl_data));
+		printk("%s Error\n", __func__);
 		res = -ETIMEDOUT;
 	}
 	else
 	{
-		dprintk(100, "0x%02x\n", ioctl_data[0]);
+		dprintk(10, "Wake up reason = 0x%02x\n", ioctl_data[0]);
 		*mode = ioctl_data[0] & 0xff;
 	}
-
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
@@ -1313,7 +1421,8 @@ int micomGetMicom(void)
  *       /dev/vfd: this scrolls a maximum of 64 characters once
  *       if the text length exceeds DISPLAY_WIDTH.
  *
- */inline char toupper(const char c)
+ */
+inline char toupper(const char c)
 {
 	if ((c >= 'a') && (c <= 'z'))
 	{
@@ -1468,35 +1577,40 @@ int micomWriteString(unsigned char *aBuf, int len)
  */
 int micom_init_func(void)
 {
-	int  res = 0;
 	int  vLoop;
+	int  res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
 	sema_init(&write_sem, 1);
 
 #if defined(CUBEREVO_MINI)
-	printk("Cuberevo MINI VFD initializing (V%s)\n", driver_version);
+	printk("Cuberevo Mini");
 #elif defined(CUBEREVO_MINI2)
-	printk("Cuberevo MINI2 VFD initializing (V%s)\n", driver_version);
+	printk("Cuberevo Mini II");
 #elif defined(CUBEREVO_250HD)
-	printk("Cuberevo 250 HD VFD initializing (V%s)\n", driver_version);
-#elif defined(CUBEREVO)
-	printk("Cuberevo 9000 HD VFD initializing (V%s)\n", driver_version);
+	printk("Cuberevo 250HD");
+//#elif defined(CUBEREVO)
+//	printk("Cuberevo");
 #elif defined(CUBEREVO_2000HD)
-	printk("Cuberevo 2000 HD VFD initializing (V%s)\n", driver_version);
+	printk("Cuberevo 2000HD");
 #elif defined(CUBEREVO_3000HD)
-	printk("Cuberevo 3000 HD VFD initializing (V%s)\n", driver_version);
+	printk("Cuberevo 3000HD");
+#elif defined(CUBEREVO_9500HD)
+	printk("Cuberevo 9500HD");
 #else
-	printk("Cuberevo UNKNOWN VFD initializing (V%s)\n", driver_version);
+	printk("Cuberevo");
 #endif
+	printk(" Micom front panel driver version V%s initializing\n", driver_version);
 
-	micomGetMicom();
+	micomGetVersion();
+#if defined CUBEREVO
 	res |= micomSetFan(0);
-	res |= micomSetLED(3); // on and slow blink mode
+#endif
+	res |= micomSetLED(3);         // on and slow blink mode
 	res |= micomSetBrightness(7);
-	res |= micomSetTimeMode(1); //24h mode
-	res |= micomSetDisplayTime(0); //mode = display text
+	res |= micomSetTimeMode(1);    // 24h mode
+	res |= micomSetDisplayTime(0); // mode = display text
 //	res |= micomWriteString("T.Ducktales", strlen("T.Ducktales"));
 
 	/* disable all icons at startup */
@@ -1518,6 +1632,12 @@ int micom_init_func(void)
 		playTimer.data = 0;
 	}
 #endif
+	// Handle initial GMT offset (may be changed by writing to /proc/stb/fp/rtc_offset)
+	res = strict_strtol(gmt_offset, 10, (long *)&rtc_offset);
+	if (res && gmt_offset[0] == '+')
+	{
+		res = strict_strtol(gmt_offset + 1, 10, (long *)&rtc_offset);
+	}
 	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
@@ -1600,7 +1720,6 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 		return len;
 	}
 }
-
 #elif defined(TEST_CHARSET)
 /**************************************************
  *
@@ -1985,6 +2104,10 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			mode = 0;
 			break;
 		}
+		case VFDLEDBRIGHTNESS:
+		{
+			break;			
+		}
 		case VFDDRIVERINIT:
 		{
 			res = micom_init_func();
@@ -2068,7 +2191,15 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDGETWAKEUPTIME:
 		{
-			res = micomGetWakeupTime(micom->u.wakeup_time.time);
+			res = micomGetWakeUpTime(micom->u.get_wakeup_time.time);
+			break;
+		}
+		case VFDSETWAKEUPTIME:
+		{
+			if (micom->u.time.time != 0)
+			{
+				res = micomSetWakeUpTime(micom->u.wakeup_time.time);
+			}
 			break;
 		}
 		case VFDGETWAKEUPMODE:
@@ -2121,7 +2252,7 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDGETVERSION:
 		{
-			printk("[VFD/Micom] VFDGETVERSION: front_seg_num %d\n", front_seg_num);
+//			printk("[micom] VFDGETVERSION: front_seg_num %d\n", front_seg_num);
 			if (front_seg_num == 12)
 			{
 				micom->u.version.version = 0;
@@ -2138,16 +2269,26 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			{
 				micom->u.version.version = 3;
 			}
-			printk("[VFD/Micom] VFDGETVERSION: version %d\n", micom->u.version.version);
+			printk("[micom] VFDGETVERSION: version %d\n", micom->u.version.version);
 			break;
 		}
+#if 0 //#if defined(VFDTEST)
+		case VFDTEST:
+		{
+			res = micomVfdTest(micom->u.test.data);
+			res |= copy_to_user((void *)arg, &(micom->u.test.data), ((dataflag == 1) ? 10 : 2));
+			mode = 0;	// go back to vfd mode
+			break;
+		}
+#endif
 		case 0x5305:
 		{
+			mode = 0;  // go back to vfd mode
 			break;
 		}
 		default:
 		{
-			printk("[VFD/Micom] unknown IOCTL 0x%x\n", cmd);
+			dprintk(1, "Unknown IOCTL 0x%x.\n", cmd);
 			mode = 0;
 			break;
 		}
@@ -2159,12 +2300,12 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 struct file_operations vfd_fops =
 {
-	.owner = THIS_MODULE,
-	.ioctl = MICOMdev_ioctl,
-	.write = MICOMdev_write,
-	.read  = MICOMdev_read,
-	.open  = MICOMdev_open,
-	.release  = MICOMdev_close
+	.owner   = THIS_MODULE,
+	.ioctl   = MICOMdev_ioctl,
+	.write   = MICOMdev_write,
+	.read    = MICOMdev_read,
+	.open    = MICOMdev_open,
+	.release = MICOMdev_close
 };
 // vim:ts=4
 
