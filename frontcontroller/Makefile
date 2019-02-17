@@ -23,19 +23,19 @@ obj-y += vfd_hs5101/
 endif
 
 ifdef UFS912
-obj-y += micom/
+obj-y += kathrein_micom/
 endif
 
 ifdef UFS913
-obj-y += micom/
+obj-y += kathrein_micom/
 endif
 
 ifdef UFS922
-obj-y += micom/
+obj-y += kathrein_micom/
 endif
 
 ifdef UFC960
-obj-y += micom/
+obj-y += kathrein_micom/
 endif
 
 ifdef TF7700
