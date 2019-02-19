@@ -47,11 +47,11 @@ obj-y += proton/
 endif
 
 ifdef VIP1_V2
-obj-y += aotom/
+obj-y += aotom_vip/
 endif
 
 ifdef VIP2_V1
-obj-y += aotom/
+obj-y += aotom_vip/
 endif
 
 ifdef ADB_BOX
