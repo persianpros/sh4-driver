@@ -235,7 +235,7 @@ static int draw_thread(void *arg)
 	if (YWPANEL_width == 4 && len == 5 && data->data[2] == '.')
 		doton3 = 1;
 
-	if (0 && len > YWPANEL_width + doton3) {
+	if (0 && len > YWPANEL_width + doton3)
 	{
 		memset(buf, ' ', sizeof(buf));
 		off = YWPANEL_width - 1;
