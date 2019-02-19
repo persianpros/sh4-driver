@@ -61,11 +61,11 @@ obj-y += adb_box_vfd/front_bsla/
 endif
 
 ifdef SPARK
-obj-y += aotom/
+obj-y += aotom_spark/
 endif
 
 ifdef SPARK7162
-obj-y += aotom/
+obj-y += aotom_spark/
 endif
 
 ifdef OCTAGON1008
