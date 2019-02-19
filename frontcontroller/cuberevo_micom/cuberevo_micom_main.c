@@ -58,8 +58,10 @@
 #include <linux/time.h>
 #include <linux/poll.h>
 // For RTC
+#if defined CONFIG_RTC_CLASS
 #include <linux/rtc.h>
 #include <linux/platform_device.h>
+#endif
 
 #include "cuberevo_micom.h"
 #include "cuberevo_micom_asc.h"
@@ -583,7 +585,7 @@ int micomTask(void *dummy)
 }
 
 //- RTC driver -----------------------------------
-
+#if defined CONFIG_RTC_CLASS
 /* struct rtc_time
 {
 	int tm_sec;
@@ -754,6 +756,7 @@ static struct platform_driver micom_rtc_driver =
 		.owner	= THIS_MODULE
 	},
 };
+#endif // CONFIG_RTC_CLASS
 
 //-- module functions -------------------------------------------
 
@@ -810,6 +813,7 @@ static int __init micom_init_module(void)
 		dprintk(1, "Unable to get major %d for VFD/MICOM\n", VFD_MAJOR);
 	}
 
+#if defined CONFIG_RTC_CLASS
 	i = platform_driver_register(&micom_rtc_driver);
 	if (i)
 	{
@@ -824,6 +828,7 @@ static int __init micom_init_module(void)
 	{
 		dprintk(5, "%s platform_device_register_simple for RTC failed: %ld\n", __func__, PTR_ERR(rtc_pdev));
 	}
+#endif
 	create_proc_fp();
 
 	dprintk(100, "%s <\n", __func__);
@@ -835,10 +840,11 @@ static void __exit micom_cleanup_module(void)
 	printk("[micom] MICOM front processor module unloading\n");
 	remove_proc_fp();
 
+#if defined CONFIG_RTC_CLASS
 	platform_driver_unregister(&micom_rtc_driver);
 	platform_set_drvdata(rtc_pdev, NULL);
 	platform_device_unregister(rtc_pdev);
-
+#endif
 	unregister_chrdev(VFD_MAJOR, "VFD");
 	free_irq(InterruptLine, NULL);
 }
@@ -864,7 +870,7 @@ MODULE_DESCRIPTION("MICOM frontcontroller module (CubeRevo 3000HD)");
 MODULE_DESCRIPTION("MICOM frontcontroller module (Unknown)");
 #endif
 
-MODULE_AUTHOR("Konfetti");
+MODULE_AUTHOR("Konfetti, Audioniek");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
