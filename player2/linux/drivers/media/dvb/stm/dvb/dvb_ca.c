@@ -251,7 +251,7 @@ static int CaIoctl(struct inode *Inode,
 				return -EINVAL;
 			if (descr->parity > 1)
 				return -EINVAL;
-#if 0
+
 			dprintk("index = %d\n", descr->index);
 			dprintk("parity = %d\n", descr->parity);
 			dprintk("cw[0] = %d\n", descr->cw[0]);
@@ -262,7 +262,7 @@ static int CaIoctl(struct inode *Inode,
 			dprintk("cw[5] = %d\n", descr->cw[5]);
 			dprintk("cw[6] = %d\n", descr->cw[6]);
 			dprintk("cw[7] = %d\n", descr->cw[7]);
-#endif
+
 			dprintk("Descrambler Index: %d, cw(%d) = %02x %02x %02x %02x %02x %02x %02x %02x\n", descr->index, descr->parity,
 					descr->cw[0], descr->cw[1], descr->cw[2], descr->cw[3], descr->cw[4], descr->cw[5], descr->cw[6], descr->cw[7]);
 			if (descr->index < 0 || descr->index >= NUMBER_OF_DESCRAMBLERS)
@@ -279,13 +279,10 @@ static int CaIoctl(struct inode *Inode,
 			return 0;
 			break;
 		}
-#if 0
 		case CA_SET_DESCR_DATA:
 		{
 			int altDescr = 40000, sess = 10000;
-#if 0
 			int i;
-#endif
 			bool useAlt = false;
 			ca_descr_data_t *descr = (ca_descr_data_t *) Parameter;
 			dprintk("CA_SET_DESCR_DATA\n");
@@ -300,7 +297,6 @@ static int CaIoctl(struct inode *Inode,
 				return -EINVAL;
 			if (descr->parity > 1)
 				return -EINVAL;
-#if 0
 			if (debug)
 			{
 				printk("Descrambler Index: %d Parity: %d Type: %d\n", descr->index, descr->parity, descr->data_type);
@@ -308,7 +304,6 @@ static int CaIoctl(struct inode *Inode,
 					printk("%02x ", descr->data[i]);
 				printk("\n");
 			}
-#endif
 			if (descr->index < 0 || descr->index >= NUMBER_OF_DESCRAMBLERS)
 			{
 				printk("Error descrambler %d not supported! needs to be in range 0 - %d\n", descr->index, NUMBER_OF_DESCRAMBLERS - 1);
@@ -331,7 +326,6 @@ static int CaIoctl(struct inode *Inode,
 			return 0;
 			break;
 		}
-#endif
 		default:
 			printk("%s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
 	}
