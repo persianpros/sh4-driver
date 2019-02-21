@@ -272,7 +272,7 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 #elif defined(CUBEREVO_250HD)
 	int len = sprintf(page, "cuberevo_250hd\n");
 #elif defined(CUBEREVO_MINI_FTA)
-	int len = sprintf(page, "cuberevo_mini-fta\n");
+	int len = sprintf(page, "cuberevo_mini_fta\n");
 #elif defined(CUBEREVO_2000HD)
 	int len = sprintf(page, "cuberevo_2000hd\n");
 #elif defined(CUBEREVO_9500HD)
@@ -280,13 +280,13 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 #elif defined(CUBEREVO_3000HD)
 	int len = sprintf(page, "cuberevo_3000hd\n");
 #elif defined(TF7700)
-	int len = sprintf(page, "tf7700hdpvr\n");
+	int len = sprintf(page, "tf7700\n");
 #elif defined(HL101)
 	int len = sprintf(page, "hl101\n");
 #elif defined(VIP1_V2)
-	int len = sprintf(page, "vip1-v2\n");
+	int len = sprintf(page, "vip1_v2\n");
 #elif defined(VIP2_V1)
-	int len = sprintf(page, "vip2-v1\n");
+	int len = sprintf(page, "vip2_v1\n");
 #elif defined(UFS922)
 	int len = sprintf(page, "ufs922\n");
 #elif defined(UFC960)
@@ -300,7 +300,7 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 #elif defined(SPARK7162)
 	int len = sprintf(page, "spark7162\n");
 #elif defined(FORTIS_HDBOX)
-	int len = sprintf(page, "hdbox\n");
+	int len = sprintf(page, "fortis_hdbox\n");
 #elif defined(HOMECAST5101)
 	int len = sprintf(page, "hs5101\n");
 #elif defined(OCTAGON1008)
