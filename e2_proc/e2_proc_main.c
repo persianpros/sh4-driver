@@ -266,19 +266,19 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 #if defined(CUBEREVO)
 	int len = sprintf(page, "cuberevo\n");
 #elif defined(CUBEREVO_MINI)
-	int len = sprintf(page, "cuberevo-mini\n");
+	int len = sprintf(page, "cuberevo_mini\n");
 #elif defined(CUBEREVO_MINI2)
-	int len = sprintf(page, "cuberevo-mini2\n");
+	int len = sprintf(page, "cuberevo_mini2\n");
 #elif defined(CUBEREVO_250HD)
-	int len = sprintf(page, "cuberevo-250hd\n");
+	int len = sprintf(page, "cuberevo_250hd\n");
 #elif defined(CUBEREVO_MINI_FTA)
-	int len = sprintf(page, "cuberevo-mini-fta\n");
+	int len = sprintf(page, "cuberevo_mini-fta\n");
 #elif defined(CUBEREVO_2000HD)
-	int len = sprintf(page, "cuberevo-2000hd\n");
+	int len = sprintf(page, "cuberevo_2000hd\n");
 #elif defined(CUBEREVO_9500HD)
-	int len = sprintf(page, "cuberevo-9500hd\n");
+	int len = sprintf(page, "cuberevo_9500hd\n");
 #elif defined(CUBEREVO_3000HD)
-	int len = sprintf(page, "cuberevo-3000hd\n");
+	int len = sprintf(page, "cuberevo_3000hd\n");
 #elif defined(TF7700)
 	int len = sprintf(page, "tf7700hdpvr\n");
 #elif defined(HL101)
