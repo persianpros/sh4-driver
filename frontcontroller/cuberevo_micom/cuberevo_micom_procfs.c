@@ -180,7 +180,7 @@ int date2days(int year, int mon, int day, int *yday)
 		days += _ytab[LEAPYEAR(year)][mon - 1];
 		mon--;
 	}
-	yday = days;
+	*yday = days;
 	// process the remaining years
 	year--; // do not count current year, as it is done already
 	while (year >= 0)

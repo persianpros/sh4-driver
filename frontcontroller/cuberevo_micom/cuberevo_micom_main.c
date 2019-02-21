@@ -584,7 +584,7 @@ int micomTask(void *dummy)
 	return 0;
 }
 
-//- RTC driver -----------------------------------
+//-- RTC driver -----------------------------------
 #if defined CONFIG_RTC_CLASS
 /* struct rtc_time
 {
@@ -600,27 +600,30 @@ int micomTask(void *dummy)
 }
 */
 
-static int rtc_time2tm(char *uTime, struct rtc_time *tm)
+static int rtc_time2tm(char *time, struct rtc_time *tm)
 { // 6 byte string YMDhms -> struct rtc_time
-	int year, mon, day, days, *yday = 0;
+	int year, mon, day, days, yday;
 	int hour, min, sec;
 
-// calculate the number of days since 01-01-1970 (Linux epoch)
-// the RTC starts at 01-01-2000 as it has no century
-	year        = ((uTime[5] >> 4) * 10) + (uTime[5] & 0x0f);
+	dprintk(100, "%s >\n", __func__);
+	// calculate the number of days since 01-01-1970 (Linux epoch)
+	// the RTC starts at 01-01-2000 as it has no century
+	year        = ((time[5] >> 4) * 10) + (time[5] & 0x0f);
 	tm->tm_year = year + 100; // RTC starts at 01-01-2000
-	mon         = ((uTime[4] >> 4) * 10) + (uTime[4] & 0x0f);
+	mon         = ((time[4] >> 4) * 10) + (time[4] & 0x0f);
 	tm->tm_mon  = mon - 1;
-	tm->tm_mday = ((uTime[3] >> 4) * 10) + (uTime[3] & 0x0f);
-	tm->tm_hour = ((uTime[2] >> 4) * 10) + (uTime[2] & 0x0f);
-	tm->tm_min  = ((uTime[1] >> 4) * 10) + (uTime[1] & 0x0f);
-	tm->tm_sec  = ((uTime[0] >> 4) * 10) + (uTime[0] & 0x0f);
+	tm->tm_mday = ((time[3] >> 4) * 10) + (time[3] & 0x0f);
+	tm->tm_hour = ((time[2] >> 4) * 10) + (time[2] & 0x0f);
+	tm->tm_min  = ((time[1] >> 4) * 10) + (time[1] & 0x0f);
+	tm->tm_sec  = ((time[0] >> 4) * 10) + (time[0] & 0x0f);
 
 	// calculate the number of days since linux epoch
-	days = date2days(year, mon, tm->tm_mday, yday);
-	tm->tm_wday = (days + 6) % 7; // 01-01-2000 was a Saturday
-	tm->tm_yday = *yday;
+	days = date2days(tm->tm_year, mon, tm->tm_mday, &yday);
+	tm->tm_wday = (days + 4) % 7; // 01-01-1970 was a Thursday
+	tm->tm_yday = yday;
 	tm->tm_isdst = -1;
+//	dprintk(5, "%s weekday = %1d, yearday = %3d\n", __func__, tm->tm_wday, tm->tm_yday);
+	dprintk(100, "%s <\n", __func__);
 	return 0;	
 }
 
@@ -629,70 +632,64 @@ static int tm2rtc_time(char *uTime, struct rtc_time *tm)
 	uTime[11] = (tm->tm_sec % 10) + '0'; // secs, units
 	uTime[10] = (tm->tm_sec / 10) + '0'; // secs, tens
 	uTime[9]  = (tm->tm_min % 10) + '0';
-	uTime[8]  = (tm->tm_min % 10) + '0';;
+	uTime[8]  = (tm->tm_min / 10) + '0';;
 	uTime[7]  = (tm->tm_hour % 10) + '0';;
 	uTime[6]  = (tm->tm_hour / 10) + '0';;
 	uTime[5]  = (tm->tm_mday % 10) + '0';;
 	uTime[4]  = (tm->tm_mday / 10) + '0';;
 	uTime[3]  = ((tm->tm_mon + 1) % 10) + '0';
 	uTime[2]  = ((tm->tm_mon + 1) / 10) + '0';
-	uTime[1]  = ((tm->tm_year - 100) % 100) + '0'; // RTC has no century
-	uTime[0]  = ((tm->tm_year - 100) / 100) + '0'; // year, tens
+	uTime[1]  = ((tm->tm_year - 100) % 10) + '0'; // RTC has no century
+	uTime[0]  = ((tm->tm_year - 100) / 10) + '0'; // year, tens
 	return 0;
 }
 
 static int micom_rtc_read_time(struct device *dev, struct rtc_time *tm)
 {
-	char uTime[6];
 	int res = -1;
+	char fptime[6];
 
 	dprintk(100, "%s >\n", __func__);
-	memset(uTime, 0, sizeof(uTime));
-	res = micomGetTime(uTime);
-	dprintk(5, "%s RTC time is %02d:%02d:%02d %02d-%02d-20%02d\n", __func__,
-		uTime[3], uTime[4], uTime[5], uTime[2], uTime[1], uTime[0]);
-	res |= rtc_time2tm(uTime, tm);
-	dprintk(5, "%s Calculated: %02d:%02d:%02d %02d-%02d-%04d\n", __func__,
-		tm->tm_hour, tm->tm_min, tm->tm_sec, tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900);
+	memset(fptime, 0, sizeof(fptime));
+	res = micomGetTime(fptime);  // get front panel clock time (local)
+	res |= rtc_time2tm(fptime, tm);
 	dprintk(100, "%s < res: %d\n", __func__, res);
 	return res;
 }
 
 static int micom_rtc_set_time(struct device *dev, struct rtc_time *tm)
 {
-	char uTime[12];
+	char fptime[12];
 	int res = -1;
 
 	dprintk(100, "%s >\n", __func__);
-	dprintk(5, "%s RTC time to set: %02d:%02d:%02d %02d-%02d-%04d\n", __func__,
-		tm->tm_hour, tm->tm_min, tm->tm_sec, tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900);
-	tm2rtc_time(uTime, tm);
-	res = micomSetTime(uTime);
+	tm2rtc_time(fptime, tm);
+	res = micomSetTime(fptime);
 	dprintk(100, "%s < res: %d\n", __func__, res);
 	return res;
 }
 
 static int micom_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *al)
 {
-	char uTime[6];
+	char fptime[6];
 	int res = -1;
 
 	dprintk(100, "%s >\n", __func__);
-	memset(uTime, 0, sizeof(uTime));
-	res = micomGetWakeUpTime(uTime);
+	memset(fptime, 0, sizeof(fptime));
+	res = micomGetWakeUpTime(fptime);
 	if (al->enabled)
 	{
-		rtc_time2tm(uTime, &al->time);
+		rtc_time2tm(fptime, &al->time);
 	}
-	dprintk(5, "%s Enabled: %s RTC alarm time: %02d:%02d:%02d %02d-%02d-20%02d\n", __func__,
-		al->enabled ? "yes" : "no", uTime[3], uTime[4], uTime[5], uTime[2], uTime[1], uTime[0]);
+	dprintk(5, "%s Enabled: %s RTC alarm time: %02x:%02x:%02x %02x-%02x-20%02x\n", __func__,
+		al->enabled ? "yes" : "no", fptime[2], fptime[1], fptime[0], fptime[3], fptime[4], fptime[5]);
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
 static int micom_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *al)
 {
-	char uTime[12];
+	char fptime[12];
 	int res = -1;
 
 	dprintk(100, "%s >\n", __func__);
@@ -702,9 +699,9 @@ static int micom_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *al)
 		al->enabled ? "yes" : "no");
 	if (al->enabled)
 	{
-		res = tm2rtc_time(uTime, &al->time);
+		res = tm2rtc_time(fptime, &al->time);
 	}
-	res = micomSetWakeUpTime(uTime); // to be tested
+	res = micomSetWakeUpTime(fptime); // to be tested
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
@@ -880,5 +877,5 @@ module_param(waitTime, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(waitTime, "Wait before init in ms (default=1000)");
 
 module_param(gmt_offset, charp, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-MODULE_PARM_DESC(gmt_offset, "GMT offset (default 3600");
+MODULE_PARM_DESC(gmt_offset, "GMT offset (default=3600");
 // vim:ts=4

@@ -111,10 +111,10 @@ struct set_time_s
 	char time[12];
 };
 
-/* YYMMDDhhmmss */
+/* YMDhms */
 struct get_time_s
 {
-	char time[12];
+	char time[6];
 };
 
 struct get_wakeupstatus_s
@@ -122,10 +122,10 @@ struct get_wakeupstatus_s
 	char status;
 };
 
-/* YYMMDDhhmmss */
+/* YMDhms */
 struct get_wakeuptime_s
 {
-	char time[12];
+	char time[6];
 };
 
 /* YYMMDDhhmm */

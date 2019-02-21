@@ -1260,8 +1260,8 @@ int micomGetWakeUpTime(char *time)
  */
 int micomClearIcons(void)
 {
-	char     buffer[5];
-	int      res = 0;
+	char buffer[5];
+	int  res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
