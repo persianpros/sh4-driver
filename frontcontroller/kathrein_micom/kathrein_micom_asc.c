@@ -38,8 +38,8 @@
 #include <linux/time.h>
 #include <linux/poll.h>
 
-#include "micom.h"
-#include "micom_asc.h"
+#include "kathrein_micom.h"
+#include "kathrein_micom_asc.h"
 
 //-------------------------------------
 #if defined(UFS922) || defined(UFC960)

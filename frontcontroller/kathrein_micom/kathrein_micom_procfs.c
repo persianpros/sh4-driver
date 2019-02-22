@@ -36,7 +36,7 @@
 #include <asm/uaccess.h>        /* copy_from_user */
 #include <linux/time.h>
 #include <linux/kernel.h>
-#include "micom.h"
+#include "kathrein_micom.h"
 
 /*
  *  /proc/stb/fp
