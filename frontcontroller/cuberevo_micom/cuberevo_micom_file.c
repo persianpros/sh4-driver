@@ -1,4 +1,4 @@
-﻿/*
+/*
  * cuberevo_micom_file.c
  *
  * (c) 2011 konfetti
@@ -22,7 +22,9 @@
  *
  * This driver covers the following models:
  * 
- * CubeRevo 250HD / AB IPbox 91HD/ Vizyon revolution 800HD: 4 character LED (7seg)
+ * CubeRevo 200HD: 4 character LED (7seg)
+ * CubeRevo 250HD / AB IPbox 91HD / Vizyon revolution 800HD: 4 character LED (7seg)
+ * CubeRevo Mini FTA
  * CubeRevo Mini / AB IPbox 900HD / Vizyon revolution 810HD: 14 character dot matrix VFD (14seg)
  * CubeRevo Mini II / AB IPbox 910HD / Vizyon revolution 820HD PVR: 14 character dot matrix VFD (14seg)
  * CubeRevo / AB IPbox 9000HD / Vizyon revolution 8000HD PVR: 12 character dot matrix VFD (12grid)
@@ -34,7 +36,9 @@
  *
  * Date     By              Description
  * ----------------------------------------------------------------------------
- * 20190215 Audioniek       proc_FS added.      
+ * 20190215 Audioniek       proc_FS added.
+ * 20190219 Audioniek       RTC driver added.
+ * 20190222 Audioniek       Fix build problems with CubeRevo, 200HD, 9500HD.
  */
 
 #include <asm/io.h>
@@ -80,7 +84,7 @@ struct saved_data_s
 
 int currentDisplayTime = 0; //display text not time
 
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 /* animation timer for Play Symbol on 9000HD */
 static struct timer_list playTimer;
 #endif
@@ -146,7 +150,7 @@ static int special2seg_size = 4;
  * Character definitions.
  *
  ***************************************************************************/
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 // 12 character dot matrix (CubeRevo)
 unsigned short num2seg_12dotmatrix[] =
 {
@@ -191,10 +195,11 @@ unsigned short Char2seg_12dotmatrix[] =
 	0x49,	// Y
 	0x4a,	// Z
 };
-#elif defined CUBEREVO_MINI \
- || defined CUBEREVO_MINI2 \
- || defined CUBEREVO_2000HD \
- || defined CUBEREVO_3000HD
+#endif
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD)
 // 14 character dot matrix (900HD / 910HD / 2000HD / 3000HD)
 unsigned short num2seg_14dotmatrix[] =
 {
@@ -209,7 +214,7 @@ unsigned short num2seg_14dotmatrix[] =
 	0x28,	// 8
 	0x29,	// 9
 };
-
+#endif
 unsigned short Char2seg_14dotmatrix[] =
 {
 	0x31,	// A
@@ -269,8 +274,7 @@ unsigned short LowerChar2seg_14dotmatrix[] =
 	0x69,	// y
 	0x6a,	// z
 };
-#elif defined CUBEREVO_9500HD \
- ||   defined CUBEREVO_MINI_FTA 
+#if defined(CUBEREVO_9500HD)
 // 13 grid
 unsigned short num2seg_13grid[] =
 {
@@ -317,10 +321,11 @@ unsigned short Char2seg_13grid[] =
 };
 #endif
 
-#if defined CUBEREVO_MINI \
- || defined CUBEREVO_MINI2 \
- || defined CUBEREVO_2000HD \
- || defined CUBEREVO_3000HD
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO)
 // non-alphanumeric
 special_char_t special2seg_14dotmatrix[] =
 {
@@ -356,7 +361,7 @@ special_char_t special2seg_14dotmatrix[] =
 	{'#',	129},
 	{'\'',	144},
 };
-#elif defined CUBEREVO
+#elif defined(CUBEREVO)
 special_char_t special2seg_12dotmatrix[] =
 {
 	{'-',   0x1d},
@@ -364,8 +369,7 @@ special_char_t special2seg_12dotmatrix[] =
 	{'.',   0x1e},
 	{' ',   0x10},
 };
-#elif defined CUBEREVO_9500HD \
- ||   defined CUBEREVO_MINI_FTA 
+#elif defined(CUBEREVO_9500HD)
 special_char_t special2seg_13grid[] =
 {
 	{'-',   0x00c0},
@@ -375,8 +379,9 @@ special_char_t special2seg_13grid[] =
 };
 #endif
 
-#if defined CUBEREVO_250HD
-// 7 segment LED display (250HD)
+#if defined(CUBEREVO_250HD) \
+ || defined(CUBEREVO_MINI_FTA)
+// 7 segment LED display (200HD/250HD)
 static unsigned short Char2seg_7seg[] =
 {
 	~0x01 & ~0x02 & ~0x04 & ~0x10 & ~0x20 & ~0x40,
@@ -435,7 +440,7 @@ special_char_t  special2seg_7seg[] =
  * Icon definitions.
  *
  ***************************************************************************/
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 enum
 {
 	ICON_MIN,       // 0x00
@@ -469,10 +474,10 @@ enum
 	ICON_PAUSE,
 	ICON_MAX
 };
-#elif defined CUBEREVO_MINI \
- || defined CUBEREVO_MINI2 \
- || defined CUBEREVO_2000HD \
- || defined CUBEREVO_3000HD
+#elif defined(CUBEREVO_MINI) \
+ ||   defined(CUBEREVO_MINI2) \
+ ||   defined(CUBEREVO_2000HD) \
+ ||   defined(CUBEREVO_3000HD)
 enum
 {
 	ICON_MIN,       // 0
@@ -496,7 +501,7 @@ struct iconToInternal
 	u8 segment;
 };
 
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 struct iconToInternal micomIcons[] =
 {
 	/*----------------- SetIcon -------  msb   lsb   segment -----*/
@@ -533,10 +538,10 @@ struct iconToInternal micomIcons[] =
 	{ "ICON_RADIO"    , ICON_RADIO     , 0x02, 0x04, 1},
 	{ "ICON_TV"       , ICON_TV        , 0x02, 0x03, 1}
 };
-#elif defined CUBEREVO_MINI \
- || defined CUBEREVO_MINI2 \
- || defined CUBEREVO_2000HD \
- || defined CUBEREVO_3000HD
+#elif defined(CUBEREVO_MINI) \
+ ||   defined(CUBEREVO_MINI2) \
+ ||   defined(CUBEREVO_2000HD) \
+ ||   defined(CUBEREVO_3000HD)
 // 14 segment icons
 struct iconToInternal micom_14seg_Icons[] =
 {
@@ -557,7 +562,7 @@ struct iconToInternal micom_14seg_Icons[] =
  * Code for play display on IPbox9000HD / CubeRevo.
  *
  */
-#ifdef CUBEREVO
+#if defined(CUBEREVO)
 int micomWriteCommand(char *buffer, int len, int needAck);
 
 #define cNumberSymbols      8
@@ -568,14 +573,14 @@ static int animationDie = 0;
 
 struct iconToInternal playIcons[cNumberSymbols] =
 {
-	{ "ICON_Play"     , ICON_Play      , 0x00, 0x00, 1},
-	{ "ICON_Play"     , ICON_Play      , 0x00, 0x02, 1},
-	{ "ICON_Play"     , ICON_Play      , 0x01, 0x01, 1},
-	{ "ICON_Play"     , ICON_Play      , 0x01, 0x03, 1},
-	{ "ICON_Play"     , ICON_Play      , 0x01, 0x04, 1},
-	{ "ICON_Play"     , ICON_Play      , 0x01, 0x02, 1},
-	{ "ICON_Play"     , ICON_Play      , 0x00, 0x03, 1},
-	{ "ICON_Play"     , ICON_Play      , 0x00, 0x01, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x00, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x02, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x01, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x03, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x04, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x02, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x03, 1},
+	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x01, 1},
 };
 
 static void animated_play(unsigned long data)
@@ -744,7 +749,7 @@ EXPORT_SYMBOL(micomSetLED);
  * micomSetFan: switches fan on or off.
  *
  */
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 int micomSetFan(int on)
 {
 	char buffer[5];
@@ -917,17 +922,22 @@ int micomSetIcon(int which, int on)
 	{
 		return res;
 	}
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO)
 	if (which < 1 || which >= ICON_MAX)
 	{
 		printk("[micom] Icon number %d out of range (1-%d) \n", which, ICON_MAX - 1);
 		return -EINVAL;
 	}
 	memset(buffer, 0, sizeof(buffer));
-
-#if defined CUBEREVO_MINI \
- || defined CUBEREVO_MINI2 \
- || defined CUBEREVO_2000HD \
- || defined CUBEREVO_3000HD
+#endif
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD)
 	for (vLoop = 0; vLoop < ARRAY_SIZE(micom_14seg_Icons); vLoop++)
 	{
 		if ((which & 0xff) == micom_14seg_Icons[vLoop].icon)
@@ -940,8 +950,8 @@ int micomSetIcon(int which, int on)
 			break;
 		}
 	}
-#elif defined CUBEREVO // IPbox 9000HD, handle play icon
-	if ((which == ICON_Play) && (front_seg_num == 12) && (on))
+#elif defined(CUBEREVO) // IPbox 9000HD, handle play icon
+	if ((which == ICON_PLAY) && (front_seg_num == 12) && (on))
 	{
 		/* display circle */
 		buffer[0] = VFD_SETSEGMENTII;
@@ -962,7 +972,7 @@ int micomSetIcon(int which, int on)
 		playTimer.expires = jiffies + ANIMATION_INTERVAL;
 		add_timer(&playTimer);
 	}
-	else if ((which == ICON_Play) && (front_seg_num == 12) && (!on))
+	else if ((which == ICON_PLAY) && (front_seg_num == 12) && (!on))
 	{
 		/* clear circle */
 		buffer[0] = VFD_SETSEGMENTII;
@@ -992,12 +1002,12 @@ int micomSetIcon(int which, int on)
 				buffer[3] = micomIcons[vLoop].codemsb;
 				res = micomWriteCommand(buffer, 5, 0);
 				/* do not break here because there may be multiple segments */
-				}
 			}
 		}
 	}
 	dprintk(100, "%s <\n", __func__);
-#elif defined(CUBEREVO_250HD)
+#elif defined(CUBEREVO_250HD) \
+ ||   defined(CUBEREVO_MINI_FTA)
 	dprintk(1, "%s: This model has no icons.\n", __func__);
 #endif
 	return res;
@@ -1291,7 +1301,8 @@ int micomGetVersion(void)
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_3000HD) \
  || defined(CUBEREVO_2000HD) \
- || defined(CUBEREVO_250HD) /* fixme: not sure if true for CUBEREVO250HD!!! */
+ || defined(CUBEREVO_250HD) \
+ || defined(CUBEREVO_MINI_FTA)  /* fixme: not sure if true for CUBEREVO250HD/MINI_FTA!!! */
 	micom_year  = 2008;
 	micom_minor = 4;
 	res = 0;
@@ -1323,7 +1334,9 @@ int micomGetVersion(void)
 
 	dprintk(1, "Frontpanel version: %02d.%02d.%04d\n", micom_major, micom_minor, micom_year);
 
-#if defined CUBEREVO_250HD
+#if defined(CUBEREVO_250HD) \
+ || defined(CUBEREVO_MINI_FTA)
+
 	front_seg_num    = 4;
 	num2seg          = num2seg_7seg;
 	Char2seg         = Char2seg_7seg;
@@ -1332,7 +1345,7 @@ int micomGetVersion(void)
 	special2seg_size = ARRAY_SIZE(special2seg_7seg);
 #endif
 
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 	if ((micom_year == 2008) && (micom_minor == 3))
 	{	
 		front_seg_num = 12;
@@ -1343,11 +1356,10 @@ int micomGetVersion(void)
 		special2seg_size = ARRAY_SIZE(special2seg_14dotmatrix);
 	}
 	else
-	{
-#elif defined CUBEREVO_MINI \
- ||   defined CUBEREVO_MINI2 \
- ||   defined CUBEREVO_3000HD \
- ||   defined CUBEREVO_2000HD
+#elif defined(CUBEREVO_MINI) \
+ ||   defined(CUBEREVO_MINI2) \
+ ||   defined(CUBEREVO_3000HD) \
+ ||   defined(CUBEREVO_2000HD)
 	if ((micom_year == 2008) && (micom_minor == 4))
 	{
 		front_seg_num = 14;
@@ -1358,8 +1370,8 @@ int micomGetVersion(void)
 		special2seg_size = ARRAY_SIZE(special2seg_14dotmatrix);
 	}
 	else
-#elif defined CUBEREVO_9500HD \
- ||   defined CUBEREVO_MINI_FTA 
+#elif defined(CUBEREVO_9500HD) \
+ ||   defined(CUBEREVO_MINI_FTA)
 	{ //default
 		/* 13 grid */
 		front_seg_num = 13;
@@ -1588,6 +1600,8 @@ int micom_init_func(void)
 	printk("Cuberevo Mini");
 #elif defined(CUBEREVO_MINI2)
 	printk("Cuberevo Mini II");
+#elif defined(CUBEREVO_MINI_FTA)
+	printk("Cuberevo 200HD");
 #elif defined(CUBEREVO_250HD)
 	printk("Cuberevo 250HD");
 //#elif defined(CUBEREVO)
@@ -1604,7 +1618,7 @@ int micom_init_func(void)
 	printk(" Micom front panel driver version V%s initializing\n", driver_version);
 
 	micomGetVersion();
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 	res |= micomSetFan(0);
 #endif
 	res |= micomSetLED(3);         // on and slow blink mode
@@ -1614,7 +1628,9 @@ int micom_init_func(void)
 //	res |= micomWriteString("T.Ducktales", strlen("T.Ducktales"));
 
 	/* disable all icons at startup */
-#if !defined(CUBEREVO_250HD)
+#if !defined(CUBEREVO_250HD) \
+ && !defined(CUBEREVO_MINI_FTA) \
+ && !defined(CUBEREVO_9500HD)
 	if (front_seg_num != 13)
 	{
 		for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX; vLoop++)
@@ -1624,7 +1640,7 @@ int micom_init_func(void)
 	}
 #endif
 
-#if defined CUBEREVO
+#if defined(CUBEREVO)
 	if (front_seg_num == 12)
 	{
 		init_timer(&playTimer);
@@ -1883,7 +1899,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 	}
 	
 //#define bimmel
-#if defined bimmel
+#if defined(bimmel)
 	for (i = 0; i <= 255; i++)
 	{
 		printk("0x%x ->0x%x\n", value, i);
