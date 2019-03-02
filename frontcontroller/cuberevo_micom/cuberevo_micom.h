@@ -41,14 +41,15 @@ extern tFrontPanelOpen FrontPanelOpen[LASTMINOR];
 
 #define VFD_MAJOR            147
 
-/* ioctl numbers ->hacky */
+/* IOCTL numbers -> hacky! */
+#define VFDDISPLAYCHARS      0xc0425a00
 #define VFDBRIGHTNESS        0xc0425a03
 #define VFDPWRLED            0xc0425a04 /* obsolete, use VFDSETLED (0xc0425afe) */
+#define VFDDISPLAYWRITEONOFF 0xc0425a05
 #define VFDDRIVERINIT        0xc0425a08
 #define VFDICONDISPLAYONOFF  0xc0425a0a
-#define VFDDISPLAYWRITEONOFF 0xc0425a05
-#define VFDDISPLAYCHARS      0xc0425a00
-
+// comment next line to leave VFDTEST capabilities out
+#define VFDTEST              0xc0425af0 // added by audioniek
 #define VFDCLEARICONS	     0xc0425af6
 #define VFDSETRF             0xc0425af7
 #define VFDSETFAN            0xc0425af8
@@ -67,6 +68,14 @@ extern tFrontPanelOpen FrontPanelOpen[LASTMINOR];
 #define VFDSETWAKEUPTIME     0xc0425b04
 #define VFDLEDBRIGHTNESS     0xc0425b05 /* Cuberevo/micom specific */
 
+// comment next line if you want left aligned text display
+#define CENTERED_DISPLAY
+
+struct set_test_s
+{
+	unsigned char data[14];
+};
+
 struct set_brightness_s
 {
 	int level;
@@ -78,17 +87,7 @@ struct set_led_s
 	int on;
 };
 
-struct set_fan_s
-{
-	int on;
-};
-
-struct set_rf_s
-{
-	int on;
-};
-
-struct set_display_time_s
+struct set_on_off_s
 {
 	int on;
 };
@@ -97,6 +96,12 @@ struct set_icon_s
 {
 	int icon_nr;
 	int on;
+};
+
+/* YMDhms */
+struct get_time_s
+{
+	char time[6];
 };
 
 /* YYMMDDhhmm */
@@ -111,30 +116,12 @@ struct set_time_s
 	char time[12];
 };
 
-/* YMDhms */
-struct get_time_s
-{
-	char time[6];
-};
-
 struct get_wakeupstatus_s
 {
 	char status;
 };
 
-/* YMDhms */
-struct get_wakeuptime_s
-{
-	char time[6];
-};
-
-/* YYMMDDhhmm */
-struct set_wakeuptime_s
-{
-	char time[10];
-};
-
-/* this sets the mode temporarily (for one ioctl)
+/* this sets the mode temporarily (for one IOCTL)
  * to the desired mode. currently the "normal" mode
  * is the compatible vfd mode
  */
@@ -158,20 +145,21 @@ struct micom_ioctl_data
 {
 	union
 	{
+		struct set_test_s test;
 		struct set_icon_s icon;
 		struct set_led_s led;
-		struct set_fan_s fan;
-		struct set_rf_s rf;
+		struct set_on_off_s fan;
+		struct set_on_off_s rf;
 		struct set_brightness_s brightness;
 		struct set_mode_s mode;
 		struct set_standby_s standby;
 		struct set_time_s time;
 		struct get_time_s get_time;
 		struct get_wakeupstatus_s status;
-		struct get_wakeuptime_s get_wakeup_time;
-		struct set_wakeuptime_s wakeup_time;
+		struct get_time_s get_wakeup_time;
+		struct set_standby_s wakeup_time;
 		struct get_version_s version;
-		struct set_display_time_s display_time;
+		struct set_on_off_s display_time;
 		struct set_time_mode_s time_mode;
 	} u;
 };

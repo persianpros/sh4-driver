@@ -92,11 +92,12 @@
 
 // Globals
 const char *driver_version = "1.08Audioniek";
-short paramDebug = 0;
+short paramDebug = 10;
 int waitTime = 1000;
 static unsigned char expectEventData = 0;
 static unsigned char expectEventId   = 1;
 char *gmt_offset = "3600";  // GMT offset is plus one hour as default
+#if defined CONFIG_RTC_CLASS
 int rtc_offset;
 #define RTC_NAME "micom-rtc"
 static struct platform_device *rtc_pdev;
@@ -106,6 +107,7 @@ extern int micomSetTime(char *time);
 extern int micomGetWakeUpTime(char *time);
 extern int micomSetWakeUpTime(char *time);
 int date2days(int year, int mon, int day, int *yday);
+#endif
 
 //----------------------------------------------
 
