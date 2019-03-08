@@ -21,7 +21,7 @@
 ******************************************************************************
  *
  * This driver covers the following models:
- * 
+ *
  * CubeRevo 200HD: 4 character LED (7seg)
  * CubeRevo 250HD / AB IPbox 91HD / Vizyon revolution 800HD: 4 character LED (7seg)
  * CubeRevo Mini / AB IPbox 900HD / Vizyon revolution 810HD: 14 character dot matrix VFD (14seg)
@@ -44,6 +44,8 @@
  *                          selectable through #define CENTERED_DISPLAY.
  * 20190227 Audioniek       VFDTEST added.
  * 20190304 Audioniek       UTF8 support on Mini/Mini II/2000HD/3000HD added.
+ * 20190306 Audioniek       Fix scrolling problem.
+ * 20190308 Audioniek       Fix scrolling problem.
  */
 
 #include <asm/io.h>
@@ -82,7 +84,7 @@ extern void micom_putc(unsigned char data);
 struct semaphore write_sem;
 
 int errorOccured = 0;
-int scrolling = 0; // flag: /dev/vfd is in scroll display
+//int scrolling = 0; // flag: /dev/vfd is in scroll display
 static char ioctl_data[20];
 
 tFrontPanelOpen FrontPanelOpen [LASTMINOR];
@@ -405,7 +407,7 @@ special_char_t special2seg_14dotmatrix[] =
 //	{'?',	0x89}, // power of 3 -> c2 b3
 //	{'?',	0x8a}, // power of x
 //	{'?',	0x8b}, // 1/2 -> c2 bd
-//	{'?',	0x8c}, // 1/ 
+//	{'?',	0x8c}, // 1/
 //	{'?',	0x8d}, // square root
 //	{'?',	0x8e}, // +/- -> c2 b1
 //	{'?',	0x8f}, // paragraph
@@ -790,7 +792,7 @@ int micomWriteCommand(char *buffer, int len, int needAck)
  */
 int micomSetLED(int on)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int res = 0;
 
 	dprintk(100, "%s > %d\n", __func__, on);
@@ -855,7 +857,7 @@ EXPORT_SYMBOL(micomSetLED);
 #if defined(CUBEREVO)
 int micomSetFan(int on)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int res = 0;
 
 	dprintk(100, "%s > %d\n", __func__, on);
@@ -893,7 +895,7 @@ int micomSetFan(int on)
  */
 int micomSetTimeMode(int twentyFour)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int res = 0;
 
 	dprintk(100, "%s > %d\n", __func__, twentyFour);
@@ -923,7 +925,7 @@ int micomSetTimeMode(int twentyFour)
  */
 int micomSetDisplayTime(int on)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int res = 0;
 
 	dprintk(100, "%s > %d\n", __func__, on);
@@ -953,7 +955,7 @@ int micomSetDisplayTime(int on)
  */
 int micomSetRF(int on)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int res = 0;
 
 	dprintk(100, "%s > %d\n", __func__, on);
@@ -984,7 +986,7 @@ int micomSetRF(int on)
  */
 int micomSetBrightness(int level)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int res = 0;
 
 	dprintk(100, "%s > %d\n", __func__, level);
@@ -1012,7 +1014,7 @@ EXPORT_SYMBOL(micomSetBrightness);
  *
  * Note on icon TIMER: Front panel sets this
  * automatically after power on or reboot when a wake
- * up time other than 00:00:00 00-00-00 is found.
+ * up time other than 00:00:00 00-00-80 is found.
  * Initialization of this driver switches all icons
  * off. You may occasionally see the iconTIMER on
  * during startup as a consequence.
@@ -1020,7 +1022,7 @@ EXPORT_SYMBOL(micomSetBrightness);
  */
 int micomSetIcon(int which, int on)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int  vLoop, res = 0;
 
 	if (front_seg_num == 13 || front_seg_num == 4) //no icons
@@ -1126,7 +1128,7 @@ int micomSetIcon(int which, int on)
  */
 int micomClearIcons(void)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int  res = 0;
 
 	dprintk(100, "%s >\n", __func__);
@@ -1142,56 +1144,74 @@ int micomClearIcons(void)
 
 /****************************************************************
  *
- * micomSetStandby: sets wake up time and then switches
- *                  receiver to deep standby.
+ * micomSetWakeUpTime: sets front panel clock wake up time.
  *
+ * Note: the missing seconds could have been used to convey the
+ * action (on or off).
  */
-int micomSetStandby(char *time) //expected format: YYMMDDhhmm
+int micomSetWakeUpTime(unsigned char *time) // expected format: YYMMDDhhmm
 {
-	char     buffer[5];
-	int      res = 0;
-
-	dprintk(100, "%s >\n", __func__);
-
-//	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
+	unsigned char buffer[5];
+	int res = -1;
 
 	/* set wakeup time */
 	memset(buffer, 0, sizeof(buffer));
 
 	if (time[0] == '\0')
 	{
-		dprintk(1, "clear wakeup time\n");
-		buffer[0] = VFD_SETWAKEUPDATE;
-		buffer[1] = 0x00; // year
-		buffer[2] = 0x00; // month
-		buffer[3] = 0x00; // day
-		res = micomWriteCommand(buffer, 5, 0);
-
-		memset(buffer, 0, sizeof(buffer));
-
-		buffer[0] = VFD_SETWAKEUPTIME;
-		buffer[1] = 0x00; // hour
-		buffer[2] = 0x00; // minute
-		buffer[3] = 0; // off
-		res = micomWriteCommand(buffer, 5, 0);
+		dprintk(1, "clear wakeup date\n");
+		buffer[1] = 0; // year
+		buffer[2] = 0; // month
+		buffer[3] = 0; // day
 	}
 	else
 	{
-		dprintk(1, "set wakeup time\n");
-		buffer[0] = VFD_SETWAKEUPDATE;
 		buffer[1] = ((time[0] - '0') << 4) | (time[1] - '0'); // year
 		buffer[2] = ((time[2] - '0') << 4) | (time[3] - '0'); // month
 		buffer[3] = ((time[4] - '0') << 4) | (time[5] - '0'); // day
-		res = micomWriteCommand(buffer, 5, 0);
+	}
+	buffer[0] = VFD_SETWAKEUPDATE;
+	res = micomWriteCommand(buffer, 5, 0);
+	dprintk(10, "set wakeup date to %02x-%02x-20%02x\n", buffer[3], buffer[2], buffer[1]);
 
-		memset(buffer, 0, sizeof(buffer));
-
-		buffer[0] = VFD_SETWAKEUPTIME;
+	memset(buffer, 0, sizeof(buffer));
+	if (time[0] == '\0')
+	{
+		dprintk(1, "clear wakeup date\n");
+		buffer[1] = 0; // hour
+		buffer[2] = 0; // minute
+		buffer[3] = 0; // switch off
+	}
+	else
+	{
 		buffer[1] = ((time[6] - '0') << 4) | (time[7] - '0'); // hour
 		buffer[2] = ((time[8] - '0') << 4) | (time[9] - '0'); // minute
-		buffer[3] = 1; // on
-		res = micomWriteCommand(buffer, 5, 0);
+		buffer[3] = 1; // switch on
 	}
+	buffer[0] = VFD_SETWAKEUPTIME;
+	res |= micomWriteCommand(buffer, 5, 0);
+	dprintk(10, "set wakeup time to %02x:%02x; action is switch %s\n", buffer[1], buffer[2], ((buffer[3] == 1) ? "on" : "off" ));
+	return res;
+}
+
+/****************************************************************
+ *
+ * micomSetStandby: sets wake up time and then switches
+ *                  receiver to deep standby.
+ *
+ */
+int micomSetStandby(char *time) //expected format: YYMMDDhhmm
+{
+	unsigned char buffer[5];
+	int res = -1;
+
+	dprintk(100, "%s >\n", __func__);
+
+//	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
+
+	/* set wakeup time */
+	res = micomSetWakeUpTime(time);
+
 	/* now power off */
 	memset(buffer, 0, sizeof(buffer));
 
@@ -1210,8 +1230,8 @@ int micomSetStandby(char *time) //expected format: YYMMDDhhmm
 
 int micomReboot(void)
 {
-	char     buffer[5];
-	int      res = 0;
+	unsigned char buffer[5];
+	int res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
@@ -1239,8 +1259,8 @@ int micomReboot(void)
  */
 int micomSetTime(char *time) // expected format: YYMMDDhhmmss
 {
-	char       buffer[5];
-	int        res = 0;
+	unsigned char buffer[5];
+	int res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
@@ -1280,9 +1300,9 @@ int micomSetTime(char *time) // expected format: YYMMDDhhmmss
  * char month
  * char year (no century)
  */
-int micomGetTime(char *time)
+int micomGetTime(unsigned char *time)
 {
-	char buffer[5];
+	unsigned char buffer[5];
 	int  res = 0;
 
 	dprintk(100, "%s >\n", __func__);
@@ -1314,59 +1334,6 @@ int micomGetTime(char *time)
 
 /****************************************************************
  *
- * micomSetWakeUpTime: sets front panel clock wake up time.
- *
- */
-int micomSetWakeUpTime(char *time) // expected format: YYMMDDhhmm
-{
-	char buffer[5];
-	int  res = -1;
-
-	/* set wakeup time */
-	memset(buffer, 0, sizeof(buffer));
-
-	buffer[0] = VFD_SETWAKEUPDATE;
-	if (time[4] =='0' && time[5] == '1' && time[2] =='0' && time[3] == '1' && time[0] =='0' && time[1] == '0'
-	&&  time[6] =='0' && time[7] == '0' && time[8] =='0' && time[9] == '0')
-	{ // if Jan 1st 2000, midnight
-		dprintk(1, "clear wakeup date\n");
-		buffer[1] = 0; // year
-		buffer[2] = 0; // month
-		buffer[3] = 0; // day
-	}
-	else
-	{
-		buffer[1] = ((time[0] - '0') << 4) | (time[1] - '0'); // year
-		buffer[2] = ((time[2] - '0') << 4) | (time[3] - '0'); // month
-		buffer[3] = ((time[4] - '0') << 4) | (time[5] - '0'); // day
-	}
-	dprintk(10, "set wakeup date to %02x-%02x-20%02x\n", buffer[3], buffer[2], buffer[1]);
-	res = micomWriteCommand(buffer, 5, 0);
-
-	memset(buffer, 0, sizeof(buffer));
-
-	buffer[0] = VFD_SETWAKEUPTIME;
-	if (time[4] =='0' && time[5] == '1' && time[2] =='0' && time[3] == '1' && time[0] =='0' && time[1] == '0'
-	&&  time[6] =='0' && time[7] == '0' && time[8] =='0' && time[9] == '0')
-	{ // if Jan 1st 2000, midnight
-		dprintk(1, "clear wakeup time\n");
-		buffer[1] = 0; // hour
-		buffer[2] = 0; // minute
-		buffer[3] = 0; // switch off
-	}
-	else
-	{
-		buffer[1] = ((time[6] - '0') << 4) | (time[7] - '0'); // hour
-		buffer[2] = ((time[8] - '0') << 4) | (time[9] - '0'); // minute
-		buffer[3] = 1; // switch on
-	}
-	dprintk(10, "set wakeup time to %02x:%02x; action is switch %s\n", buffer[1], buffer[2], ((buffer[3] == 1) ? "on" : "off" ));
-	res |= micomWriteCommand(buffer, 5, 0);
-	return res;
-}
-
-/****************************************************************
- *
  * micomGetWakeUpTime: read stored wakeup time.
  *
  * Returns 6 bytes:
@@ -1377,10 +1344,10 @@ int micomSetWakeUpTime(char *time) // expected format: YYMMDDhhmm
  * char month
  * char year (no century)
  */
-int micomGetWakeUpTime(char *time)
+int micomGetWakeUpTime(unsigned char *time)
 {
-	char     buffer[5];
-	int      res = 0;
+	unsigned char buffer[5];
+	int res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
@@ -1402,8 +1369,8 @@ int micomGetWakeUpTime(char *time)
 	{
 		dprintk(1, "Wake up time received\n");
 		dprintk(10, "Wake up time: %02x:%02x:%02x %02x-%02x-20%02x\n",
-			ioctl_data[2], ioctl_data[1], ioctl_data[0],
-			ioctl_data[3], ioctl_data[4], ioctl_data[5]);
+			(int)ioctl_data[2], (int)ioctl_data[1], (int)ioctl_data[0],
+			(int)ioctl_data[3], (int)ioctl_data[4], (int)ioctl_data[5]);
 		memcpy(time, ioctl_data, 6);
 	}
 	dprintk(100, "%s < %d\n", __func__, res);
@@ -1419,8 +1386,8 @@ int micomGetWakeUpTime(char *time)
  */
 int micomGetVersion(void)
 {
-	char     buffer[5];
-	int      res = -1;
+	unsigned char buffer[5];
+	int res = -1;
 
 	dprintk(100, "%s >\n", __func__);
 
@@ -1452,9 +1419,9 @@ int micomGetVersion(void)
 	else
 	{
 		char convertDate[128];
-		
+
 		dprintk(100, "0x%02x 0x%02x 0x%02x\n", ioctl_data[0], ioctl_data[1], ioctl_data[2]);
-		sprintf(convertDate, "%02x %02x %02x\n", ioctl_data[0],ioctl_data[1], ioctl_data[2]);
+		sprintf(convertDate, "%02x %02x %02x\n", ioctl_data[0], ioctl_data[1], ioctl_data[2]);
 		sscanf(convertDate, "%d %d %d", &micom_year, &micom_minor, &micom_major);
 		micom_year  += 2000;
 	}
@@ -1487,7 +1454,7 @@ int micomGetVersion(void)
 	else
 #elif defined(CUBEREVO)
 	if ((micom_year == 2008) && (micom_minor == 3))
-	{	
+	{
 		front_seg_num    = 12;
 		num2seg          = num2seg_12dotmatrix;
 		Char2seg         = Char2seg_12dotmatrix;
@@ -1516,10 +1483,10 @@ int micomGetVersion(void)
  *
  * Note: always returns 2 except on power on.
  */
-int micomGetWakeUpMode(char *mode)
+int micomGetWakeUpMode(unsigned char *mode)
 {
-	char     buffer[5];
-	int      res = 0;
+	unsigned char buffer[5];
+	int res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
@@ -1540,7 +1507,7 @@ int micomGetWakeUpMode(char *mode)
 	else
 	{
 		dprintk(10, "Wake up reason = 0x%02x\n", ioctl_data[0]);
-		*mode = ioctl_data[0] & 0xff;
+		*mode = ioctl_data[0];
 	}
 	dprintk(100, "%s < %d\n", __func__, res);
 	return res;
@@ -1557,8 +1524,8 @@ int micomGetWakeUpMode(char *mode)
 int micomVfdTest(unsigned char *data)
 {
 	unsigned char buffer[5];
-	int  res = 0xff;
-	int  i;
+	int res = 0xff;
+	int i;
 
 	dprintk(100, "%s > len = %d\n", __func__, data[0]);
 	for (i = 1; i <= data[0]; i++)
@@ -1649,7 +1616,7 @@ inline int trimTrailingBlanks(char *txt, int len)
 
 int micomWriteString(unsigned char *aBuf, int len)
 {
-	char          buffer[5];
+	unsigned char buffer[5];
 	unsigned char bBuf[128];
 	int           res = 0, i, j;
 	int           pos = 0;
@@ -1765,7 +1732,7 @@ int micomWriteString(unsigned char *aBuf, int len)
 			bBuf[j] = 0x20;  // else put a space
 			j++;
 		}
-	}		
+	}
 	len = j;
 	bBuf[len] = '\0'; // terminate string
 	memcpy(aBuf, bBuf, len);
@@ -1775,13 +1742,13 @@ int micomWriteString(unsigned char *aBuf, int len)
 	buffer[0] = VFD_SETCLEARTEXT;
 	res = micomWriteCommand(buffer, 5, 0);
 
-	if (scrolling == 0)
-	{
+//	if (scrolling == 0)
+//	{
 		len = trimTrailingBlanks(aBuf, len);
-	}
+//	}
 
 	pos = front_seg_num - len; // get # of empty characters / trailing spaces
-#if defined(CENTERED_DISPLAY) 
+#if defined(CENTERED_DISPLAY)
 	// centered display
 	pos /= 2;
 
@@ -1999,8 +1966,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 	char *kernel_buf;
 	int minor, vLoop, res = 0;
 	int pos, offset, llen;
-	char buf[80]; // 64 plus maximum length plus two
-	char *b;
+	unsigned char buf[80]; // 64 plus maximum length plus two
 
 	dprintk(100, "%s > (len %d, off %d)\n", __func__, len, (int)*off);
 
@@ -2062,7 +2028,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 	}
 	else // scroll, display string is longer than display length
 	{
-		scrolling = 1; // flag in scroll
+//		scrolling = 1; // flag in scroll
 		memset(buf, ' ', sizeof(buf));
 		// initial display starting at 3rd position to ease reading
 		offset = 3;
@@ -2070,17 +2036,16 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 		llen += offset;
 		buf[llen + front_seg_num - 1] = '\0'; // terminate string
 
-		b = buf;
-		for (pos = 0; pos < llen; pos++)
+		for (pos = 1; pos < llen; pos++)
 		{
-			res |= micomWriteString(b + pos, front_seg_num);
+			res |= micomWriteString(buf + pos, llen + front_seg_num);
 			// sleep 300 ms
 			msleep(300);
 		}
 		// final display
 		clear_display();
-		res |= micomWriteString(buf + offset, front_seg_num);
-		scrolling = 0;
+		res |= micomWriteString(kernel_buf, front_seg_num);
+//		scrolling = 0;
 	}
 	kfree(kernel_buf);
 	write_sem_up();
@@ -2481,7 +2446,7 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDLEDBRIGHTNESS:
 		{
-			break;			
+			break;
 		}
 		case VFDDRIVERINIT:
 		{
@@ -2682,4 +2647,3 @@ struct file_operations vfd_fops =
 	.release = MICOMdev_close
 };
 // vim:ts=4
-
