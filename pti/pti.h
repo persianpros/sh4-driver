@@ -50,11 +50,14 @@ struct tBuffer;
 #define TC_DMA_THRESHOLD_LOW 1
 #define TC_DMA_THRESHOLD_HIGH 128
 
-#if defined(UFS912) || defined(UFS913) || defined(SPARK) || defined(SPARK7162) || defined(ATEVIO7500) || defined(HS7810A) || defined(HS7110)
+#if defined(UFS912) || defined(UFS913) || defined(SPARK) || defined(SPARK7162) || defined(ATEVIO7500) || defined(HS7810A) || defined(HS7110) || defined(HS7110) || defined(HS7810A) || defined(HS7420) || defined(HS7429) || defined(HS7119) || defined(HS7819) || defined(ATEMIO520) || defined(ATEMIO530) || defined(VITAMIN_HD5000) || defined(SAGEMCOM88)
 #define PTI_BASE_ADDRESS 0xfe230000
+#elif defined(CONFIG_CPU_SUBTYPE_STB5301)
+#define PTI_BASE_ADDRESS 0x20E00000
 #else
 #define PTI_BASE_ADDRESS 0x19230000
 #endif
+
 #define PTI_BASE_SIZE    0x10000
 #define PTI_DMAEMPTY_EN  (0x0038)
 #define STPTI_MAXCHANNEL 32
