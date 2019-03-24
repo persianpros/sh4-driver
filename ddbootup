@@ -1,10 +1,5 @@
 #!/bin/sh
 
-if [ ! -e /etc/lircd.conf ] ; then
-	echo "lircd.conf missing!"
-	touch /etc/lircd.conf
-fi
-
 # Create display device if not present
 if [ -e /dev/dbox/oled0 ] ; then
 	ln -s /dev/dbox/oled0 /dev/vfd
