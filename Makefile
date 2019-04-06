@@ -175,7 +175,7 @@ obj-y += dvbt/as102/
 endif
 
 ifdef ADB_BOX
-obj-y += smartcard/
+obj-y += smartcard_nbox/
 obj-y += adb_box_fan/
 obj-y += cec_adb_box/
 obj-y += dvbt/as102/
