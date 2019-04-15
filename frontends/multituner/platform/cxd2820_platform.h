@@ -1,7 +1,10 @@
+#ifndef cxd2820_platform_123
+#define cxd2820_platform_123
+
 /*
- * @brief platform.h
+ * @brief cxd2820_platform.h
  *
- * @author konfetti
+ * @author
  *
  * 	Copyright (C) 2011 duckbox
  *
@@ -19,21 +22,25 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+  
+struct cxd2820_private_data_s
+{
+    u32 ts_out;	
+    u32 si;
+};
 
-#ifndef _platform_123
-#define _platform_123
+struct tda18272_private_data_s  
+{ 
+    int    lt;       //1 = lt ->really ??
+    u8     stdby;    //3 = d3
+    u8     iic_mode; //0 = iic_0
+    u8     xtout;    //0 = off
+};
 
-struct platform_frontend_config_s {
-    char*    name;
-
-    /*
-     *  - i2c address
-     */
-    int demod_i2c;
-    int tuner_i2c;
-
-    /* specific stuff can be passed here */
-    void* private;
+struct cxd2820_s
+{
+      struct tda18272_private_data_s* tda18272;
+      struct cxd2820_private_data_s*  cxd2820;
 };
 
 #endif

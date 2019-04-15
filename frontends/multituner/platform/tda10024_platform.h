@@ -1,5 +1,8 @@
+#ifndef tda_platform_123
+#define tda_platform_123
+
 /*
- * @brief platform.h
+ * @brief tda_platform.h
  *
  * @author konfetti
  *
@@ -19,21 +22,32 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+  
+struct tda10024_private_data_s
+{
+    u32 ts_out;	
+    u32 si;
+    u32 power;
+    u32 agc_th;
+};
 
-#ifndef _platform_123
-#define _platform_123
+struct mxl201_private_data_s  
+{ 
+    u32 if_freq; 
+    u32 xtal; 
+    u8  xtal_cap; 
+    u8  clk_out; 
+    u8  clk_amp; 
+    u8  si; 
+    u8  mode; 
+    u8  power;
+    u8  lt; 
+};
 
-struct platform_frontend_config_s {
-    char*    name;
-
-    /*
-     *  - i2c address
-     */
-    int demod_i2c;
-    int tuner_i2c;
-
-    /* specific stuff can be passed here */
-    void* private;
+struct tda10024_s
+{
+      struct mxl201_private_data_s*   mxl201;
+      struct tda10024_private_data_s* tda10024;
 };
 
 #endif
