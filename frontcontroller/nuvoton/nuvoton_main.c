@@ -39,6 +39,7 @@
  * 20170128 Audioniek       Spinner thread for HS8200 added.
  * 20170202 Audioniek       Icon thread for HS8200 added.
  * 20170417 Audioniek       GMT offset parameter added, default plus one hour.
+ * 20190406 Audioniek       HDbox: spinner had inner circle missing.
  *
  ****************************************************************************************/
 
@@ -672,7 +673,7 @@ static int spinner_thread(void *arg)
 			while (!down_trylock(&spinner_state.sem));
 			{
 				dprintk(10, "Start spinner, period = %d ms\n", spinner_state.period);
-				regs[0x20] |= 0x01; // Circ0 on
+				regs[0x24] |= 0x01; // Circ0 on
 
 				while ((spinner_state.state) && !kthread_should_stop())
 				{
