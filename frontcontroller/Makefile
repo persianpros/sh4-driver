@@ -43,7 +43,7 @@ obj-y += tffp/
 endif
 
 ifdef HL101
-obj-y += proton/
+obj-y += aotom_hl101/
 endif
 
 ifdef VIP1_V2

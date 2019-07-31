@@ -675,7 +675,7 @@ static int default_write_proc(struct file *file, const char __user *buf, unsigne
 struct ProcStructure_s e2Proc[] =
 {
 	{cProcEntry, "progress"                                                         , NULL, NULL, NULL, NULL, ""},
-#if defined(SPARK) || defined(SPARK7162)
+#if defined(HL101) || defined(SPARK) || defined(SPARK7162)
 	{cProcEntry, "vfd"                                                              , NULL, NULL, NULL, NULL, ""},
 #endif
 	{cProcEntry, "bus/nim_sockets"                                                  , NULL, NULL, NULL, NULL, ""},
@@ -693,7 +693,7 @@ struct ProcStructure_s e2Proc[] =
 	{cProcDir  , "stb/ir"                                                           , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/ir/rc"                                                        , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/ir/rc/type"                                                   , NULL, info_rctype_read, info_rctype_write, NULL, ""},
-#if defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700)
+#if defined(HL101) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700)
 	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/symbol_circle"                                            , NULL, NULL, NULL, NULL, ""},
 #endif
@@ -754,7 +754,7 @@ struct ProcStructure_s e2Proc[] =
 #if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7119) || defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
 	{cProcEntry, "stb/fp/resellerID"                                                , NULL, NULL, NULL, NULL, ""},
 #endif
-#if defined(SPARK) || defined(SPARK7162)
+#if defined(HL101) || defined(SPARK) || defined(SPARK7162)
 	{cProcEntry, "stb/fp/aotom"                                                     , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/scroll_delay"                                             , NULL, NULL, NULL, NULL, ""},
