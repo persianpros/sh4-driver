@@ -1,0 +1,2846 @@
+/****************************************************************************************
+ *
+ * adb_5800_fp_file.c
+ *
+ * (c) 20?? Freebox
+ * (c) 2019 Audioniek
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ *
+ * Front panel driver for ADB ITI-5800S(X), BSKA, BSLA, BXZB and BZZB models;
+ * Button, LEDs, LED display and VFD driver, file part
+ *
+ * Devices:
+ *  - /dev/vfd (vfd ioctls and read/write function)
+ *
+ ****************************************************************************************
+ *
+ * Changes
+ *
+ * Date     By              Description
+ * --------------------------------------------------------------------------------------
+ * 20?????? freebox         Initial version       
+ * 20190730 Audioniek       Beginning of rewrite.
+ * 20190803 Audioniek       Add PT6302-001 UTF-8 support.
+ * 20190804 Audioniek       Add VFDSETLED and VFDLEDBRIGHTNESS.
+ * 20190804 Audioniek       Add IOCTL compatibility mode (handy for fp_control).
+ * 20190805 Audioniek       procfs added.
+ * 20190806 Audioniek       Scrolling on /dev/vfd added.
+ * 20190807 Audioniek       Procfs adb_variant added; replaces boxtype.
+ * 20190807 Audioniek       Automatic selection of key lay out & display type
+ *                          when no module parameters are specified -> one driver for
+ *                          all variants.
+ * 20190809 Audioniek       Split in nuvoton style between main, file and procfs parts.
+ * 20190810 Audioniek       Write PT6302 DCRAM and write VFD text split up as separate
+ *                          routines; needed for icon display.
+ * 20190812 Audioniek       Icon support on VFD added. Icons are displayed in character
+ *                          position 16 (rightmost). If one icon is on, the display is
+ *                          steady, not involving any extra processing until the icon is
+ *                          switched off. If more than one icon is on, they are displayed
+ *                          in a thread, displaying up to eight icons in circular fashion.
+ *                          The maximum of eight is a limitation of the PT6302 display
+ *                          IC. The thread is stopped as soon as one one icon is
+ *                          again for performance reasons.
+ *                          As a consequence, text display is now limited to 15
+ *                          characters maximum.
+ * 20190813 Audioniek       Spinner added.
+ * 20190813 Audioniek       VFDSETFAN IOCTL added.
+ * 20190814 Audioniek       Display all icons on/off added.
+ *
+ ****************************************************************************************/
+#include <asm/io.h>
+#include <asm/uaccess.h>
+#include <linux/module.h>
+#include <linux/delay.h>
+#include <linux/fs.h>
+#include <linux/kernel.h>
+#include <linux/mm.h>
+#include <linux/input.h>
+#include <linux/version.h>
+#include <linux/workqueue.h>
+#include <linux/stm/pio.h>
+#include <linux/timer.h>
+#include <linux/irq.h>
+#include <linux/interrupt.h>
+#include <linux/reboot.h>
+#include <linux/i2c.h>
+
+#include "pt6958_utf.h"
+#include "pt6302_utf.h"
+#include "adb_5800_fp.h"
+
+// Global variables
+int box_variant = 0;     // 1=BSKA, 2=BSLA, 3=BXZB, 4=BZZB, 5=cable, 0=unknown
+int display_type;        // active display: 0=LED, 1=VFD, 2=both
+int led_brightness = 5;  // default LED brightness
+// LED states
+char ICON1 = 0;  // power LED
+char ICON2 = 0;  // timer / record
+char ICON3 = 0;  // at
+char ICON4 = 0;  // alert
+
+spinlock_t mr_lock = SPIN_LOCK_UNLOCKED;
+
+static struct fp_driver fp;
+
+struct saved_data_s lastdata;
+
+struct stpio_pin *pt6xxx_din;  // note: PT6302 & PT6958 Din and PT6958 Dout pins are parallel connected
+struct stpio_pin *pt6xxx_clk;  // note: PT6302 & PT6958 CLK pins are parallel connected
+struct stpio_pin *pt6958_stb;  // note: PT6958 only, acts a chip select
+struct stpio_pin *pt6302_cs;   // note: PT6302 only
+
+typedef union
+{
+	struct
+	{
+		uint8_t addr: 4, cmd: 4;  // bits 0-3 = addr, bits 4-7 = cmd
+	} dcram;  // PT6302_COMMAND_DCRAM_WRITE command
+
+	struct
+	{
+		uint8_t addr: 3, reserved: 1, cmd: 4;  // bits 0-2 = addr, bit 3 = *, bits 4-7 = cmd
+	} cgram;  // PT6302_COMMAND_CGRAM_WRITE command
+
+	struct
+	{
+		uint8_t addr: 4, cmd: 4;  // bits 0-3 = addr, bits 4-7 = cmd
+	} adram;  // PT6302_COMMAND_ADRAM_WRITE command
+
+	struct
+	{
+		uint8_t port1: 1, port2: 1, reserved: 2, cmd: 4;  // bits 0 = port 1, bit 1 = port 2, bit 2-3 = *, bits 4-7 = cmd
+	} port;  // PT6302_COMMAND_SET_PORTS command
+
+	struct
+	{
+		uint8_t duty: 3, reserved: 1, cmd: 4;
+	} duty;  // PT6302_COMMAND_SET_DUTY command
+
+	struct
+	{
+		uint8_t digits: 3, reserved: 1, cmd: 4;
+	} digits;  // PT6302_COMMAND_SET_DIGITS command
+
+	struct
+	{
+		uint8_t onoff: 2, reserved: 2, cmd: 4;
+	} light;  // PT6302_COMMAND_SET_LIGHT command
+
+	uint8_t all;
+} pt6302_command_t;
+
+extern int display_led;  // module parameter
+extern int display_vfd;  // module parameter
+extern int rec_key;      // module parameter: front panel keyboard layout
+extern int key_layout;   // active front panel key layout: 0=MENU/EPG/RES, 1=EPG/REC/RES
+extern unsigned char key_group1, key_group2;
+extern unsigned long fan_registers;
+extern struct stpio_pin* fan_pin;
+extern tIconState spinner_state;
+extern tIconState icon_state;
+
+/***************************************************************************
+ *
+ * Character & icon definitions.
+ *
+ ***************************************************************************/
+
+/*********************************************
+ *
+ * Character table for PT6958 7 segment
+ * LED display
+ *
+ * (Note the PT6302 VFD driver has a
+ * character generator built in, so there is
+ * no corresponding table for the VFD).
+ *
+ * ----a----
+ * |       |
+ * f       b
+ * |       |
+ * ----g----
+ * |       |
+ * e       c
+ * |       |
+ * ----d---- h
+ *
+ * segment a is bit 0 -> 00000001 (0x01)
+ * segment b is bit 0 -> 00000010 (0x02)
+ * segment c is bit 0 -> 00000100 (0x04)
+ * segment d is bit 0 -> 00001000 (0x08)
+ * segment e is bit 0 -> 00010000 (0x10)
+ * segment f is bit 0 -> 00100000 (0x20)
+ * segment g is bit 0 -> 01000000 (0x40)
+ * segment h is bit 7 -> 10000000 (0x80)
+ */
+static const unsigned char seven_seg[256] =
+{
+	0x2e,  //0x00, icon play
+	0x8f,  //0x01, icon stop
+	0xe4,  //0x02, icon pause
+	0xdd,  //0x03, icon ff
+	0xdc,  //0x04, icon rewind
+	0x10,  //0x05,
+	0x10,  //0x06,
+	0x10,  //0x07,
+	0x10,  //0x08,
+	0x10,  //0x09,
+	0x10,  //0x0a,
+	0x10,  //0x0b,
+	0x10,  //0x0c,
+	0x10,  //0x0d,
+	0x10,  //0x0e,
+	0x10,  //0x0f,
+
+	0x10,  //0x10,
+	0x10,  //0x11,
+	0x10,  //0x12,
+	0x10,  //0x13,
+	0x10,  //0x14,
+	0x10,  //0x15,
+	0x10,  //0x16,
+	0x10,  //0x17,
+	0x10,  //0x18,
+	0x10,  //0x19,
+	0x10,  //0x1a,
+	0x10,  //0x1b,
+	0x10,  //0x1c,
+	0x10,  //0x1d,
+	0x10,  //0x1e,
+	0x10,  //0x1f,
+
+	0x00,  //0x20, <space>
+	0x86,  //0x21, !
+	0x22,  //0x22, "
+	0x76,  //0x23, #
+	0x6d,  //0x24, $
+	0x52,  //0x25, %
+	0x7d,  //0x26, &
+	0x02,  //0x27, '
+	0x39,  //0x28, (
+	0x0f,  //0x29, )
+	0x76,  //0x2a, *
+	0x46,  //0x2b, +
+	0x84,  //0x2c, ,
+	0x40,  //0x2d, -
+	0x80,  //0x2e, .
+	0x52,  //0x2f, /
+
+	0x3f,  //0x30, 0
+	0x06,  //0x31, 1
+	0x5b,  //0x32, 2
+	0x4f,  //0x33, 3
+	0x66,  //0x34, 4
+	0x6d,  //0x35, 5
+	0x7d,  //0x36, 6
+	0x07,  //0x37, 7
+	0x7f,  //0x38, 8
+	0x6f,  //0x39, 9
+	0x06,  //0x3a, :
+	0x86,  //0x3b, ;
+	0x58,  //0x3c, <
+	0x48,  //0x3d, =
+	0x4c,  //0x3e, >
+	0xd3,  //0x3f, ?
+
+	0x7b,  //0x40, @
+	0x77,  //0x41, A
+	0x7c,  //0x42, B
+	0x39,  //0x43, C
+	0x5e,  //0x44, D
+	0x79,  //0x45, E
+	0x71,  //0x46, F
+	0x3d,  //0x47, G
+	0x76,  //0x48, H
+	0x06,  //0x49, I
+	0x0e,  //0x4a, J
+	0x74,  //0x4b, K
+	0x38,  //0x4c, L
+	0x37,  //0x4d, M
+	0x37,  //0x4e, N
+	0x3f,  //0x4f, O
+
+	0x73,  //0x50, P
+	0xbf,  //0x51, Q
+	0x50,  //0x52, R
+	0x6d,  //0x53, S
+	0x78,  //0x54, T
+	0x3e,  //0x55, U
+	0x3e,  //0x56, V
+	0x3e,  //0x57, W
+	0x76,  //0x58, X
+	0x6e,  //0x59, Y
+	0x5b,  //0x5a, Z
+	0x39,  //0x5b  [
+	0x30,  //0x5c, |
+	0x0f,  //0x5d, ]
+	0x23,  //0x5e, ^
+	0x08,  //0x5f, _
+
+	0x20,  //0x60, `
+	0x5f,  //0x61, a
+	0x7c,  //0x62, b
+	0x58,  //0x63, c
+	0x5e,  //0x64, d
+	0x7b,  //0x65, e
+	0x71,  //0x66, f
+	0x6f,  //0x67, g
+	0x74,  //0x68, h
+	0x04,  //0x69, i
+	0x0e,  //0x6a, j
+	0x74,  //0x6b, k
+	0x06,  //0x6c, l
+	0x54,  //0x6d, m
+	0x54,  //0x6e, n
+	0x5c,  //0x6f, o
+
+	0x73,  //0x70, p
+	0x67,  //0x71, q
+	0x50,  //0x72, r
+	0x6d,  //0x73, s
+	0x78,  //0x74, t
+	0x1c,  //0x75, u
+	0x1c,  //0x76, v
+	0x1c,  //0x77, w
+	0x76,  //0x78, x
+	0x6e,  //0x79, y
+	0x5b,  //0x7a, z
+	0x39,  //0x7b, {
+	0x64,  //0x7c, backslash
+	0x0f,  //0x7d, }
+	0x40,  //0x7e, ~
+	0x7f,  //0x7f, <DEL>--> all segments on
+
+	// 0x80 onwards not used
+#if 0
+	0x84,  //0x80, a -umulaut
+	0x94,  //0x81, o -umulaut
+	0x81,  //0x82, u -umulaut
+	0x8e,  //0x83, A -umulaut
+	0x99,  //0x84, O -umulaut
+	0x9a,  //0x85, U -umulaut
+	0xb1,  //0x86, ��- estset
+	0x10,  //0x87, reserved
+	0x10,  //0x88, reserved
+	0x10,  //0x89, reserved
+	0x10,  //0x8a, reserved
+	0x10,  //0x8b, reserved
+	0x10,  //0x8c, reserved
+	0x10,  //0x8d, reserved
+	0x10,  //0x8e, reserved
+	0x10,  //0x8f, reserved
+
+	0x10,  //0x90, reserved
+	0x10,  //0x91, reserved
+	0x10,  //0x92, reserved
+	0x10,  //0x93, reserved
+	0x10,  //0x94, reserved
+	0x10,  //0x95, reserved
+	0x10,  //0x96, reserved
+	0x10,  //0x97, reserved
+	0x10,  //0x98, reserved
+	0x10,  //0x99, reserved
+	0x10,  //0x9a, reserved
+	0x10,  //0x9b, reserved
+	0x10,  //0x9c, reserved
+	0x10,  //0x9d, reserved
+	0x10,  //0x9e, reserved
+	0x10,  //0x9f, reserved
+
+	0x10,  //0xa0, reserved
+	0x10,  //0xa1, reserved
+	0x10,  //0xa2, reserved
+	0x10,  //0xa3, reserved
+	0x10,  //0xa4, reserved
+	0x10,  //0xa5, reserved
+	0x10,  //0xa6, reserved
+	0x10,  //0xa7, reserved
+	0x10,  //0xa8, reserved
+	0x10,  //0xa9, reserved
+	0x10,  //0xaa, reserved
+	0x10,  //0xab, reserved
+	0x10,  //0xac, reserved
+	0x10,  //0xad, reserved
+	0x10,  //0xae, reserved
+	0x10,  //0xaf, reserved
+
+	0x10,  //0xb0, reserved
+	0x10,  //0xb1, reserved
+	0x10,  //0xb2, reserved
+	0x10,  //0xb3, reserved
+	0x10,  //0xb4, reserved
+	0x10,  //0xb5, reserved
+	0x10,  //0xb6, reserved
+	0x10,  //0xb7, reserved
+	0x10,  //0xb8, reserved
+	0x10,  //0xb9, reserved
+	0x10,  //0xba, reserved
+	0x10,  //0xbb, reserved
+	0x10,  //0xbc, reserved
+	0x10,  //0xbd, reserved
+	0x10,  //0xbe, reserved
+	0x10,  //0xbf, reserved
+
+	0x10,  //0xc0, reserved
+	0x10,  //0xc1, reserved
+	0x10,  //0xc2, reserved
+	0x10,  //0xc3, reserved
+	0x10,  //0xc4, reserved
+	0x10,  //0xc5, reserved
+	0x10,  //0xc6, reserved
+	0x10,  //0xc7, reserved
+	0x10,  //0xc8, reserved
+	0x10,  //0xc9, reserved
+	0x10,  //0xca, reserved
+	0x10,  //0xcb, reserved
+	0x10,  //0xcc, reserved
+	0x10,  //0xcd, reserved
+	0x10,  //0xce, reserved
+	0x10,  //0xcf, reserved
+
+	0x10,  //0xd0, reserved
+	0x10,  //0xd1, reserved
+	0x10,  //0xd2, reserved
+	0x10,  //0xd3, reserved
+	0x10,  //0xd4, reserved
+	0x10,  //0xd5, reserved
+	0x10,  //0xd6, reserved
+	0x10,  //0xd7, reserved
+	0x10,  //0xd8, reserved
+	0x10,  //0xd9, reserved
+	0x10,  //0xda, reserved
+	0x10,  //0xdb, reserved
+	0x10,  //0xdc, reserved
+	0x10,  //0xdd, reserved
+	0x10,  //0xde, reserved
+	0x10,  //0xdf, reserved
+
+	0x10,  //0xe0, reserved
+	0x10,  //0xe1, reserved
+	0x10,  //0xe2, reserved
+	0x10,  //0xe3, reserved
+	0x10,  //0xe4, reserved
+	0x10,  //0xe5, reserved
+	0x10,  //0xe6, reserved
+	0x10,  //0xe7, reserved
+	0x10,  //0xe8, reserved
+	0x10,  //0xe9, reserved
+	0x10,  //0xea, reserved
+	0x10,  //0xeb, reserved
+	0x10,  //0xec, reserved
+	0x10,  //0xed, reserved
+	0x10,  //0xee, reserved
+	0x10,  //0xef, reserved
+
+	//individual segments of the display
+	0x01,  //0xf0, reserved
+	0x02,  //0xf1, reserved
+	0x04,  //0xf2, reserved
+	0x08,  //0xf3, reserved
+	0x10,  //0xf4, reserved
+	0x20,  //0xf5, reserved
+	0x40,  //0xf6, reserved
+	0x80,  //0xf7, reserved
+
+	0x10,  //0xf8, reserved
+	0x10,  //0xf9, reserved
+	0x10,  //0xfa, reserved
+	0x10,  //0xfb, reserved
+	0x10,  //0xfc, reserved
+	0x10,  //0xfd, reserved
+	0x10,  //0xfe, reserved
+	0x10,  //0xff, reserved
+#endif
+};
+
+/***************************************************************
+ *
+ * Icons for PT6302 VFD
+ *
+ * These are displayed in the rightmost character position.
+ * Basically only one icon can be displayed at a time; if more
+ * are on they are displayed successively in circular fashion in
+ * a thread.
+ *
+ * A character on the VFD display is simply a pixel matrix
+ * consisting of five columns of seven pixels high.
+ * Column 1 is the leftmost.
+ *
+ * Format of pixel data:
+ *
+ * pixeldata1: column 1
+ *  ...
+ * pixeldata5: column 5
+ *
+ * Each bit in the pixel data represents one pixel in the column,
+ * with the LSbit being the top pixel and bit 6 the bottom one.
+ * The pixel will be on when the corresponding bit is one.
+ * The resulting map is:
+ *
+ *  Register    byte0 byte1 byte2 byte3 byte4
+ *              -----------------------------
+ *  Bitmask     0x01  0x01  0x01  0x01  0x01
+ *              0x02  0x02  0x02  0x02  0x02
+ *              0x04  0x04  0x04  0x04  0x04
+ *              0x08  0x08  0x08  0x08  0x08
+ *              0x10  0x10  0x10  0x10  0x10
+ *              0x20  0x20  0x20  0x20  0x20
+ *              0x40  0x40  0x40  0x40  0x40
+ *
+ * To display an icon, its bit pattern is written in the first
+ * free location in CGRAM. Then the corresponding character at
+ * that position is set to the number of the bit pattern
+ * position in CGRAM. The icon will then show on the character
+ * position.
+ * Switching an icon off can be achieved in two ways:
+ * - rewriting its bit pattern in CGRAM to all zeroes;
+ * - setting the character in DCRAM on the display poistion to
+ *   a space.
+ * The code in this driver employs both methods, to minimize
+ * the chance of unwanted artifacts appearing in the display.
+ *
+ */
+struct iconToInternal vfdIcons[] =
+{
+	/*- Name ---------- icon# ---------- data0 data1 data2 data3 data4-----*/
+	{ "ICON_MIN"      , ICON_MIN      , {0x00, 0x00, 0x00, 0x00, 0x00}},  // 00 (also used for clearing)
+	{ "ICON_REC"      , ICON_REC      , {0x1c, 0x3e, 0x3e, 0x3e, 0x1c}},  // 01
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT, {0x01, 0x3f, 0x01, 0x2c, 0x34}},  // 02
+	{ "ICON_TIMER"    , ICON_TIMER    , {0x3e, 0x49, 0x4f, 0x41, 0x3e}},  // 03
+	{ "ICON_HD"       , ICON_HD       , {0x3e, 0x08, 0x3e, 0x22, 0x1c}},  // 04
+	{ "ICON_USB"      , ICON_USB      , {0x08, 0x0c, 0x1a, 0x2a, 0x28}},  // 05
+	{ "ICON_SCRAMBLED", ICON_SCRAMBLED, {0x3c, 0x26, 0x25, 0x26, 0x3c}},  // 06
+	{ "ICON_DOLBY"    , ICON_DOLBY    , {0x3e, 0x22, 0x1c, 0x22, 0x3e}},  // 07
+	{ "ICON_MUTE"     , ICON_MUTE     , {0x1e, 0x12, 0x1e, 0x21, 0x3f}},  // 08
+	{ "ICON_TUNER1"   , ICON_TUNER1   , {0x01, 0x3f, 0x01, 0x04, 0x3e}},  // 09
+	{ "ICON_TUNER2"   , ICON_TUNER2   , {0x01, 0x3f, 0x01, 0x34, 0x2c}},  // 10
+	{ "ICON_MP3"      , ICON_MP3      , {0x77, 0x37, 0x00, 0x49, 0x77}},  // 11
+	{ "ICON_REPEAT"   , ICON_REPEAT   , {0x14, 0x34, 0x14, 0x16, 0x14}},  // 12
+	{ "ICON_PLAY"     , ICON_PLAY     , {0x00, 0x7f, 0x3e, 0x1c, 0x08}},  // 13
+	{ "ICON_STOP"     , ICON_STOP     , {0x3C, 0x3C, 0x3C, 0x3C, 0x3C}},  // 14
+	{ "ICON_PAUSE"    , ICON_PAUSE    , {0x3e, 0x3e, 0x00, 0x3e, 0x3e}},  // 15
+	{ "ICON_REWIND"   , ICON_REWIND   , {0x08, 0x1c, 0x08, 0x1c, 0x00}},  // 16
+	{ "ICON_FF"       , ICON_FF       , {0x00, 0x1c, 0x08, 0x1c, 0x08}},  // 17
+	{ "ICON_STEP_BACK", ICON_STEP_BACK, {0x08, 0x1c, 0x3e, 0x00, 0x3e}},  // 18
+	{ "ICON_STEP_FWD" , ICON_STEP_FWD , {0x3e, 0x00, 0x3e, 0x1c, 0x08}},  // 19 
+	{ "ICON_TV"       , ICON_TV       , {0x01, 0x3f, 0x1d, 0x20, 0x1c}},  // 20
+	{ "ICON_RADIO"    , ICON_RADIO    , {0x78, 0x4a, 0x4c, 0x4a, 0x79}}   // 21
+};
+// End of character and icon definitions
+
+
+/******************************************************
+ *
+ * Routines to communicate with the PT6958 and PT6302
+ *
+ */
+
+/******************************************************
+ *
+ * Free the PT6958 and PT6302 PIO pins
+ *
+ */
+void pt6xxx_free_pio_pins(void)
+{
+	dprintk(150, "%s >\n", __func__);
+	if (pt6302_cs)
+	{
+		stpio_set_pin(pt6302_cs, 1);  // deselect PT6302
+	}
+	if (pt6958_stb)
+	{
+		stpio_set_pin(pt6958_stb, 1);  // deselect PT6958
+	}
+	if (pt6xxx_din)
+	{
+		stpio_free_pin(pt6xxx_din);
+	}
+	if (pt6xxx_clk)
+	{
+		stpio_free_pin(pt6xxx_clk);
+	}
+	if (pt6958_stb)
+	{
+		stpio_free_pin(pt6958_stb);
+	}
+	if (pt6302_cs)
+	{
+		stpio_free_pin(pt6302_cs);
+	}
+	dprintk(150, "%s < PT6958 & PT6302 PIO pins freed\n", __func__);
+};
+
+/******************************************************
+ *
+ * Initialize the PT6958 and PT6302 PIO pins
+ *
+ */
+static unsigned char pt6xxx_init_pio_pins(void)
+{
+	dprintk(150, "Initialize PT6302 & PT6958 PIO pins\n");
+
+// PT6302 Chip select
+	dprintk(100, "Request STPIO %d,%d for PT6302 CS\n", PORT_CS, PIN_CS);
+	pt6302_cs = stpio_request_pin(PORT_CS, PIN_CS, "PT6302_CS", STPIO_OUT);
+	if (pt6302_cs == NULL)
+	{
+		dprintk(1, "Request for STPIO cs failed; abort\n");
+		goto pt_init_fail;
+	}
+// PT6958 Strobe
+	dprintk(100, "Request STPIO %d,%d for PT6958 STB\n", PORT_STB, PIN_STB);
+	pt6958_stb = stpio_request_pin(PORT_STB, PIN_STB, "PT6958_STB", STPIO_OUT);
+	if (pt6958_stb == NULL)
+	{
+		dprintk(1, "Request for STB STPIO failed; abort\n");
+		goto pt_init_fail;
+	}
+// PT6302 & PT6958 Clock
+	dprintk(100, "Request STPIO %d,%d for PT6302/PT6958 CLK\n", PORT_CLK, PIN_CLK);
+	pt6xxx_clk = stpio_request_pin(PORT_CLK, PIN_CLK, "PT6958_CLK", STPIO_OUT);
+	if (pt6xxx_clk == NULL)
+	{
+		dprintk(1, "Request for CLK STPIO failed; abort\n");
+		goto pt_init_fail;
+	}
+// PT6302 & PT6958 Data in
+	dprintk(100, "Request STPIO %d,%d for PT6302/PT6958 Din\n", PORT_DIN, PIN_DIN);
+	pt6xxx_din = stpio_request_pin(PORT_DIN, PIN_DIN, "PT6958_DIN", STPIO_BIDIR);
+	if (pt6xxx_din == NULL)
+	{
+		dprintk(1, "Request for DIN STPIO failed; abort\n");
+		goto pt_init_fail;
+	}
+	stpio_set_pin(pt6302_cs, 1);  // set all involved PIO pins high
+	stpio_set_pin(pt6958_stb, 1);
+	stpio_set_pin(pt6xxx_clk, 1);
+	stpio_set_pin(pt6xxx_din, 1);
+	dprintk(150, "%s <\n", __func__);
+	return 1;
+
+pt_init_fail:
+	pt6xxx_free_pio_pins();
+	dprintk(1, "%s < Error initializing PT6302 & PT6958 PIO pins\n", __func__);
+	return 0;
+};
+
+/****************************************************
+ *
+ * Routines for the PT6958 (LED display & buttons)
+ *
+ */
+
+/****************************************************
+ *
+ * Read one byte from the PT6958 (button data)
+ *
+ */
+static unsigned char pt6958_ReadByte(void)
+{
+	unsigned char i;
+	unsigned char data_in = 0;
+
+	dprintk(150, "%s >\n", __func__);
+	for (i = 0; i < 8; i++)  // 8 bits in a byte, LSB first
+	{
+		stpio_set_pin(pt6xxx_din, 1);  // data = 1 (key will pull down the pin if pressed)
+		stpio_set_pin(pt6xxx_clk, 0);  // toggle
+		udelay(LED_Delay);
+		stpio_set_pin(pt6xxx_clk, 1);  // clock pin
+		udelay(LED_Delay);
+		data_in = (data_in >> 1) | (stpio_get_pin(pt6xxx_din) > 0 ? 0x80 : 0);
+	}
+	dprintk(150, "%s <\n", __func__);
+	return data_in;
+}
+
+/****************************************************
+ *
+ * Write one command byte to the PT6958
+ *
+ */
+static void pt6xxx_WriteCmd(unsigned char Value)
+{
+	unsigned char i;
+
+	dprintk(150, "%s >\n", __func__);
+	for (i = 0; i < 8; i++)  // 8 bits in a byte, LSB first
+	{
+		stpio_set_pin(pt6xxx_din, Value & 0x01);  // write bit
+		stpio_set_pin(pt6xxx_clk, 0);  // toggle
+		udelay(LED_Delay);
+		stpio_set_pin(pt6xxx_clk, 1);  // clock pin
+		udelay(VFD_Delay);
+		Value >>= 1;  // get next bit
+	dprintk(150, "%s >\n", __func__);
+	}
+}
+
+/****************************************************
+ *
+ * Write one byte to the PT6302
+ *
+ */
+static void pt6302_WriteByte(unsigned char Value)
+{
+	stpio_set_pin(pt6302_cs, 0);  // set chip select
+	pt6xxx_WriteCmd(Value);
+	stpio_set_pin(pt6302_cs, 1);  // deselect
+	udelay(VFD_Delay);
+}
+
+/****************************************************
+ *
+ * Write one data byte to the PT6958
+ *
+ */
+static void pt6958_WriteByte(unsigned char byte)
+{
+	stpio_set_pin(pt6958_stb, 0);  // set strobe low
+	pt6xxx_WriteCmd(byte);  // send byte
+	stpio_set_pin(pt6958_stb, 1);  // and raise strobe
+	udelay(LED_Delay);
+}
+
+/****************************************************
+ *
+ * Write len data bytes to the PT6958
+ *
+ */
+static void pt6958_WriteData(unsigned char *data, unsigned int len)
+{
+	unsigned char i;
+
+	dprintk(150, "%s >\n", __func__);
+	stpio_set_pin(pt6958_stb, 0);  // set strobe low
+	for (i = 0; i < len; i++)
+	{
+		pt6xxx_WriteCmd(data[i]);
+	}
+	stpio_set_pin(pt6958_stb, 1);  // set strobe high
+	udelay(LED_Delay);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/****************************************************
+ *
+ * Write len bytes to the PT6302
+ *
+ */
+static void pt6302_WriteData(unsigned char *data, unsigned int len)
+{
+	unsigned char i;
+
+	dprintk(150, "%s >\n", __func__);
+	stpio_set_pin(pt6302_cs, 0);  // set chip select low
+
+	for (i = 0; i < len; i++)
+	{
+		pt6xxx_WriteCmd(data[i]);
+	}
+	stpio_set_pin(pt6302_cs, 1);  // set chip select high
+	udelay(VFD_Delay);
+	dprintk(150, "%s <\n", __func__);
+}
+
+
+/******************************************************
+ *
+ * PT6958 LED display functions
+ *
+ */
+
+/****************************************************
+ *
+ * Read front panel button data from the PT6958
+ *
+ */
+void ReadKey(void)
+{
+	dprintk(150, "%s >\n", __func__);
+	spin_lock(&mr_lock);
+
+	stpio_set_pin(pt6958_stb, 0);  // set strobe low (selects PT6958)
+	pt6xxx_WriteCmd(DATA_SETCMD + READ_KEYD);  // send command 01000010b -> Read key data
+	key_group1 = pt6958_ReadByte();  // Get SG1/KS1 (b0..3), SG2/KS2 (b4..7)
+	key_group2 = pt6958_ReadByte();  // Get SG3/KS3 (b0..3), SG4/KS4 (b4..7)
+//	key_group3 = pt6958_ReadByte();  // Get SG5/KS5, SG6/KS6  // not needed
+	stpio_set_pin(pt6958_stb, 1);  // set strobe high
+	udelay(LED_Delay);
+
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Set text and dots on LED display
+ *
+ * Directly sets display segments and LEDs: DIG1 - DIG4
+ * are segment data, not display characters.
+ * 
+ * Note: also updates the LEDs (ICON1 through ICON4)
+ *
+ */
+static void PT6958_Show(unsigned char DIG1, unsigned char DIG2, unsigned char DIG3, unsigned char DIG4,
+                        unsigned char DOT1, unsigned char DOT2, unsigned char DOT3, unsigned char DOT4)
+{
+	dprintk(150, "%s >\n", __func__);
+	spin_lock(&mr_lock);
+
+	pt6958_WriteByte(DATA_SETCMD + 0); // Set test mode off, increment address and write data display mode (CMD = 01xx0000b)
+	udelay(LED_Delay);
+
+	stpio_set_pin(pt6958_stb, 0);  // drop strobe (latches command)
+
+	pt6xxx_WriteCmd(ADDR_SETCMD + 0); // Command 2 address set, (start from 0)   11xx0000b
+	// handle decimal point
+	DIG1 += (DOT1 == 1 ? 0x80 : 0);  // add to digit data
+	pt6xxx_WriteCmd(DIG1);
+	pt6xxx_WriteCmd(ICON1);
+
+	DIG2 += (DOT2 == 1 ? 0x80 : 0);  // handle decimal point
+	pt6xxx_WriteCmd(DIG2);
+	pt6xxx_WriteCmd(ICON2);
+
+	DIG3 += (DOT3 == 1 ? 0x80 : 0);  // handle decimal point
+	pt6xxx_WriteCmd(DIG3);
+	pt6xxx_WriteCmd(ICON3);
+
+	DIG4 += (DOT4 == 1 ? 0x80 : 0);  // handle decimal point
+	pt6xxx_WriteCmd(DIG4);
+	pt6xxx_WriteCmd(ICON4);
+
+	stpio_set_pin(pt6958_stb, 1);
+	udelay(LED_Delay);
+
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Set text string on LED display
+ *
+// * Accepts ASCII string lengths of 1, 2, 3, 4 & 8 and
+// * displays text right aligned.
+// *
+// * First four bytes are text characters,
+// * in case of length 8, last four are the states for
+// * the corresponding decimal points (1=on,
+// * off otherwise)
+// *
+ */
+int pt6958_ShowBuf(unsigned char *data, unsigned char len)
+{
+	unsigned char z1, z2, z3, z4, k1, k2, k3, k4;
+	unsigned char text[9];
+	unsigned char kbuf[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	int i;
+	int wlen;
+
+	dprintk(150, "%s >\n", __func__);
+	len = (len > 8 ? 8 : len);
+
+	if (len == 0)
+	{
+		return 0;
+	}
+	memset(text, 0x20, sizeof(text));
+	text[8] = 0x00;
+	memcpy(text, data, len);
+
+	/* Strip possible trailing LF */
+	if (text[len - 1] == '\n')
+	{
+		len--;
+	}
+	text[len] = 0x00;  // terminate string
+
+	/* handle UTF-8 characters */
+	i = 0;
+	wlen = 0;
+	while ((i < len) && (wlen < 8))
+	{
+		if (text[i] == 0)
+		{
+			break;  // stop processing
+		}
+		else if (text[i] < 0x20)
+		{
+//			dprintk(100, "[%s] Non-printable character: '0x%02x'\n", __func__, text[i]);
+			i++;  // skip
+		}
+		else if (text[i] < 0x80)
+		{
+			kbuf[wlen] = text[i];
+			dprintk(100, "[%s] ASCII character: '0x%02x'\n", __func__, text[i]);
+			wlen++;
+		}
+		else if (text[i] < 0xE0)
+		{
+			dprintk(100, "UTF_Char_Table = 0x%02x", text[i]);
+			switch (text[i])
+			{
+				case 0xc2:
+				{
+					if (text[i + 1] < 0xa0)  // if character is not printable
+					{
+						i++;  // skip character
+					}
+					else
+					{
+						UTF_Char_Table = PT6958_UTF_C2;  // select table
+					}
+					break;
+				}
+				case 0xc3:
+				{
+					UTF_Char_Table = PT6958_UTF_C3;
+					break;
+				}
+				case 0xc4:
+				{
+					UTF_Char_Table = PT6958_UTF_C4;
+					break;
+				}
+				case 0xc5:
+				{
+					UTF_Char_Table = PT6958_UTF_C5;
+					break;
+				}
+				case 0xd0:
+				{
+					UTF_Char_Table = PT6958_UTF_D0;  // cyrillic, currently not supported
+					break;
+				}
+				case 0xd1:
+				{
+					UTF_Char_Table = PT6958_UTF_D1;  // cyrillic, currently not supported
+					break;
+				}
+				default:
+				{
+					UTF_Char_Table = NULL;
+				}
+			}
+			i++;  // skip UTF lead in
+			if (UTF_Char_Table)
+			{
+				dprintk(100, "UTF-8 0x%02x -> display 0x%02x\n", i, UTF_Char_Table[text[i] & 0x3f]);
+				kbuf[wlen] = UTF_Char_Table[text[i] & 0x3f];
+				wlen++;
+			}
+		}
+		else
+		{
+			if (text[i] < 0xF0)
+			{
+				i += 2;
+			}
+			else if (text[i] < 0xF8)
+			{
+				i += 3;
+			}
+			else if (text[i] < 0xFC)
+			{
+				i += 4;
+			}
+			else
+			{
+				i += 5;
+			}
+		}
+		i++;
+	}
+	/* end */
+
+	if (wlen > 8)
+	{
+		wlen = 8;
+	}
+	k1 = k2 = k3 = k4 = 0;  // clear decimal point flags
+
+	/* save last string written to fp */
+	memcpy(&lastdata.leddata, text, wlen);
+	lastdata.length = wlen;
+
+//#define ALIGN_RIGHT 1
+#if defined ALIGN_RIGHT
+	// right align display
+	z1 = z2 = z3 = z4 = 0x20;  // set non used positions to space (blank)
+	switch (len)
+	{
+		case 1:
+		{
+			z4 = kbuf[0];
+			break;
+		}
+		case 2:
+		{
+			z3 = kbuf[0];
+			z4 = kbuf[1];
+			break;
+		}
+		case 3:
+		{
+			z2 = kbuf[0];
+			z3 = kbuf[1];
+			z4 = kbuf[2];
+			break;
+		}
+		case 4:
+		{
+			z1 = kbuf[0];
+			z2 = kbuf[1];
+			z3 = kbuf[2];
+			z4 = kbuf[3];
+		}
+//		case 8:  // characters five through handle the decimal points
+//		{
+//			z1 = kbuf[0];
+//			z2 = kbuf[1];
+//			z3 = kbuf[2];
+//			z4 = kbuf[3];
+//			if (kbuf[4] == '1')
+//			{
+//				k1 = 1;
+//			}
+//			if (kbuf[5] == '1')
+//			{
+//				k2 = 1;
+//			}
+//			if (kbuf[6] == '1')
+//			{
+//				k3 = 1;
+//			}
+//			if (kbuf[7] == '1')
+//			{
+//				k4 = 1;
+//			}	
+//			break;
+//		}
+//	}
+	PT6958_Show(seven_seg[z1], seven_seg[z2], seven_seg[z3], seven_seg[z4], k1, k2, k3, k4); // display text & decimal points
+#else
+	z1 = z2 = z3 = z4 = 0x00;  // set non used positions to space (blank)
+// determine the decimal points: if character is period, single quote or colon, replace it by a decimal point
+	if ((wlen >= 2) && (kbuf[1] == '.' || kbuf[1] == 0x27 || kbuf[1] == ':'))
+	{
+		k1 = 1;  // flag period at position 1
+	}
+	if ((wlen >= 3) && (kbuf[2] == '.' || kbuf[2] == 0x27 || kbuf[2] == ':'))
+	{
+		k2 = 1;  // flag period at position 2
+	}
+	if ((wlen >= 4) && (kbuf[3] == '.' || kbuf[3] == 0x27 || kbuf[3] == ':'))
+	{
+		k3 = 1;  // flag period at position 3
+	}
+	if ((wlen >= 5) && (kbuf[4] == '.' || kbuf[4] == 0x27 || kbuf[4] == ':'))
+	{
+		k4 = 1;  // flag period at position 4
+	}
+// assigning segment data
+	if (wlen >= 1)
+	{
+		z1 = seven_seg[kbuf[0]];
+	}
+	if (wlen >= 2)
+	{
+		z2 = seven_seg[kbuf[1 + k1]];
+	}
+	if (wlen >= 3)
+	{
+		z3 = seven_seg[kbuf[2 + k1 + k2]];
+	}
+	if (wlen >= 4)
+	{
+		z4 = seven_seg[kbuf[3 + k1 + k2 + k3]];
+	}
+	PT6958_Show(z1, z2, z3, z4, k1, k2, k3, k4); // display text & decimal points
+#endif
+	dprintk(150, "%s <\n", __func__);
+	return 0;
+}
+
+/******************************************************
+ *
+ * Set LEDs through a string of length 5 (deprecated)
+ *
+ */
+static void pt6958_set_icon(unsigned char *kbuf, unsigned char len)
+{
+	unsigned char pos = 0, ico = 0;
+
+	dprintk(150, "%s >\n", __func__);
+	spin_lock(&mr_lock);
+
+	if (len == 5)
+	{
+		pos = kbuf[0];  // 1st character is position 1 = power LED, 
+		ico = kbuf[4];  // last character is state
+
+#if 0
+		if (pos == 1)  // do power LED
+		{
+			ICON1 = ico;  // state
+			pos = ADDR_SETCMD + 1;  // get command
+		}
+		if (pos == 2)
+		{
+			if (ico == 1)
+			{
+				ICON1 = 2;
+				ico = 2;
+			}
+			else
+			{
+				ICON1 = 0;
+				ico = 0;
+			}
+			pos = ADDR_SETCMD + 1;
+		}  // led power, 01-red 02-green 03-orange
+		if (pos == 3)  // handle timer/rec LED
+		{
+			ICON2 = ico;
+			pos = ADDR_SETCMD + 3;
+		}
+		if (pos == 4)  // handle @ LED
+		{
+			ICON3 = ico;
+			pos = ADDR_SETCMD + 5;
+		}
+		if (pos == 5)  // handle alert LED
+		{
+			ICON4 = ico;
+			pos = ADDR_SETCMD + 7;
+		}
+		pt6958_WriteByte(DATA_SETCMD + ADDR_FIX);  // Set command, normal mode, fixed address, write date to display mode 01xx0100b
+#else
+		switch (pos)
+		{
+			case 1:
+			{
+				ICON1 = ico;  // led power, red
+				pos = ADDR_SETCMD + 1;
+				break;
+			}
+			case 2:  // led power, green
+			{
+				if (ico == 1)
+				{
+					ICON1 = 2;  // select green
+					ico = 2;
+				}
+				else
+				{
+					ICON1 = 0;
+					ico = 0;
+				}
+				pos = ADDR_SETCMD + 1;
+				break;
+			}
+			case 3:  // timer LED
+			{
+				ICON2 = ico;
+				pos = ADDR_SETCMD + 3;
+				break;
+			}
+			case 4:  // @ LED
+			{
+				ICON3 = ico;
+				pos = ADDR_SETCMD + 5;
+				break;
+			}
+			case 5:  // alert LED
+			{
+				ICON4 = ico;  // save state
+				pos = ADDR_SETCMD + 7;  // get address command
+				break;
+			}
+		}
+#endif
+		udelay(VFD_Delay);
+
+		stpio_set_pin(pt6958_stb, 0);  // set strobe low
+		pt6xxx_WriteCmd(pos);  // set position (command 11xx????b)
+		pt6xxx_WriteCmd(ico);  // set state (on or off)
+		stpio_set_pin(pt6958_stb, 1);  // set strobe high
+		udelay(LED_Delay);
+	}
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Set LED
+ *
+ */
+void pt6958_set_led(int led_nr, int level)
+{
+
+	dprintk(150, "%s >\n", __func__);
+
+	switch (led_nr)
+	{
+		case 1:  // power LED, accepts values 0 (off), 1 (red), 2 (green) and 3 (orange)
+		{
+				if (level < 0 || level > 3)
+				{
+					dprintk(1, "Illegal LED state value; must be 0..3, default to off\n");
+					level = 0;
+				}
+				ICON1 = level;
+				break;
+		}
+		case 2:  // timer/rec LED
+		case 3:  // at LED
+		case 4:  // alert LED
+		{
+			level = (level == 0 ? 0 : 1);
+			switch (led_nr)  // update icon states
+			{
+				case 2:  // timer/rec LED
+				{
+					ICON2 = level;
+					break;
+				}
+				case 3:  // at LED
+				{
+					ICON3 = level;
+					break;
+				}
+				case 4:  // alert LED
+				{
+					ICON4 = level;
+					break;
+				}
+			}
+			break;
+		}
+	}
+//	dprintk(10,	"Set LED %d to %s\n", led_nr, (level == 0 ? "off" : "on"));
+	udelay(LED_Delay);
+	stpio_set_pin(pt6958_stb, 0);  // set strobe low
+	pt6xxx_WriteCmd(ADDR_SETCMD + (led_nr * 2) - 1);  // set position (command 11xx????b)
+	pt6xxx_WriteCmd(level);  // set state
+	stpio_set_pin(pt6958_stb, 1);  // set strobe high
+	udelay(LED_Delay);
+		
+	dprintk(150, "%s <\n", __func__);
+}
+
+/****************************************************
+ *
+ * Initialize the PT6958
+ *
+ */
+static void pt6958_setup(void)
+{
+	unsigned char i;
+
+	dprintk(150, "%s >\n", __func__);
+	pt6958_WriteByte(DATA_SETCMD);  // Command 1, increment address, normal mode
+	udelay(LED_Delay);
+
+	stpio_set_pin(pt6958_stb, 0);  // set strobe low
+	pt6xxx_WriteCmd(ADDR_SETCMD);  // Command 2, RAM address = 0
+	for (i = 0; i < 10; i++)  // 10 bytes
+	{
+		pt6xxx_WriteCmd(0);  // clear display RAM (all segments off)
+	}
+	stpio_set_pin(pt6958_stb, 1);  // set strobe high
+	udelay(LED_Delay);
+	dprintk(10, "Switch LED display on\n");
+	pt6958_WriteByte(DISP_CTLCMD + DISPLAY_ON + led_brightness);  // Command 3, display control, (Display ON), brightness: 10xx1BBBb
+
+	ICON1 = 2;  // power LED green
+	ICON2 = 0;  // timer/rec LED off
+	ICON3 = 0;  // @ LED off
+	ICON4 = 0;  // alert LED off
+	PT6958_Show(0x40, 0x40, 0x40, 0x40, 0, 0, 0, 0);  // display ----, periods off, power LED green
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Set brightness of LED display and LEDs
+ *
+ */
+void pt6958_set_brightness(int level)
+{
+	dprintk(150, "%s >\n", __func__);
+	spin_lock(&mr_lock);
+
+	if (level < 0)
+	{
+		level = 0;
+	}
+	if (level > 7)
+	{
+		level = 7;
+	}
+//	dprintk(10, "Set LED brightness to %d\n", level);
+	pt6958_WriteByte(DISP_CTLCMD + DISPLAY_ON + level);  // Command 3, display control, Display ON, brightness level; 10xx1???b
+	led_brightness = level;
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Switch LED display on or off
+ *
+ */
+static void pt6958_set_light(int onoff)
+{
+	dprintk(150, "%s >\n", __func__);
+	spin_lock(&mr_lock);
+
+	dprintk(10, "Switch LED display %s\n", onoff == 0 ? "off" : "on");
+	pt6958_WriteByte(DISP_CTLCMD + (onoff ? DISPLAY_ON + led_brightness : 0));
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * PT6302 VFD functions
+ *
+ */
+
+/******************************************************
+ *
+ * Write PT6302 DCRAM (display text)
+ *
+ * The rightmost character on the VFD display is
+ * digit position or PT6302 character address zero.
+ *
+ * addr is used as the direct PT6302 character address;
+ * data[0] is written at address addr.
+ *
+ */
+int pt6302_write_dcram(unsigned char addr, unsigned char *data, unsigned char len)
+{
+	int              i;
+	uint8_t          wdata[17];
+	pt6302_command_t cmd;
+
+	dprintk(150, "%s >\n", __func__);
+	if (len == 0)  // if length is zero,
+	{
+		dprintk(1, "%s < (len =  0)\n", __func__);
+		return 0; // do nothing
+	}
+	if (addr > 15)
+	{
+		dprintk(1, "%s Error: addr too large (max. 15)\n", __func__);
+		return 0; // do nothing
+	}
+	if (len + addr > VFD_DISP_SIZE + ICON_WIDTH)
+	{
+		dprintk(1, "%s len (%d) too large, adjusting to %d\n", len, VFD_DISP_SIZE + ICON_WIDTH - addr);
+		len = VFD_DISP_SIZE + ICON_WIDTH - addr;
+	}
+	spin_lock(&mr_lock);
+
+	// assemble command
+	cmd.dcram.cmd  = PT6302_COMMAND_DCRAM_WRITE;
+	cmd.dcram.addr = (addr & 0x0f);  // get address (= character position, 0 = rightmost!)
+	wdata[0] = cmd.all;
+
+	for (i = 0; i < len; i++)
+	{
+		wdata[i + 1] = data[i];
+	}
+	pt6302_WriteData(wdata, 1 + len);
+	
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+	return 0;
+}
+
+/****************************************************
+ *
+ * Write PT6302 ADRAM (set underline data)
+ *
+ * In the display, AD2 (bit 1) is connected to the
+ * underline segments.
+ * addr = starting digit number (0 = rightmost)
+ *
+ * NOTE: Display tube does have underline segments,
+ * but they do not seem to be connected to
+ * the PT6302.
+ *
+ */
+int pt6302_write_adram(unsigned char addr, unsigned char *data, unsigned char len)
+{
+	pt6302_command_t cmd;
+	uint8_t          wdata[20] = {0x0};
+	int              i = 0;
+
+	dprintk(150, "%s >\n", __func__);
+
+	spin_lock(&mr_lock);
+
+	cmd.adram.cmd  = PT6302_COMMAND_ADRAM_WRITE;
+	cmd.adram.addr = (addr & 0xf);
+
+	wdata[0] = cmd.all;
+	if (len > 16 - addr)
+	{
+		len = 16 - addr;
+	}
+	for (i = 0; i < len; i++)
+	{
+		wdata[i + 1] = data[i] & 0x03;
+	}
+	pt6302_WriteData(wdata, len + 1);
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+	return 0;
+}
+
+/****************************************************
+ *
+ * Write PT6302 CGRAM (set symbol pixel data)
+ *
+ * addr = symbol number (0..7)
+ * data = symbol data (5 bytes for each column, column 0 (leftmost) first, MSbit ignored)
+ * len  = number of symbols to define pixels of (max 8 - addr)
+ *
+ */
+int pt6302_write_cgram(unsigned char addr, unsigned char *data, unsigned char len)
+{
+	pt6302_command_t cmd;
+	uint8_t          wdata[41];
+	uint8_t          i = 0, j = 0;
+
+	dprintk(150, "%s >\n", __func__);
+
+	if (len == 0)
+	{
+		return 0;
+	}
+	spin_lock(&mr_lock);
+
+	cmd.cgram.cmd  = PT6302_COMMAND_CGRAM_WRITE;
+	cmd.cgram.addr = (addr & 0x7);
+	wdata[0] = cmd.all;
+
+	if (len > 8 - addr)
+	{
+		len = 8 - addr;
+	}
+	for (i = 0; i < len; i++)
+	{
+		for (j = 0; j < 5; j++)
+		{
+			wdata[i * 5 + j + 1] = data[i * 5 + j];
+		}
+	}
+	pt6302_WriteData(wdata, len * 5 + 1);
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+	return 0;
+}
+
+/******************************************************
+ *
+ * Write text on VFD display
+ *
+ * NOTE: in order not to inadvertently display icons,
+ * the full display width of 15 is always written,
+ * padded with spaces if needed.
+ */
+int pt6302_write_text(unsigned char offset, unsigned char *text, unsigned char len)
+{
+	int ret = -1;
+	int i;
+	int wlen;
+	unsigned char kbuf[16];
+	unsigned char wdata[17];
+
+	dprintk(150, "%s >\n", __func__);
+	if (len == 0)  // if length is zero,
+	{
+		dprintk(1, "%s < (len =  0)\n", __func__);
+		return 0; // do nothing
+	}
+
+	// remove possible trailing LF
+	if (text[len -1 ] == 0x0a)
+	{
+		len--;
+	}
+	text[len] = 0x00;  // terminate text
+
+#if 1
+	/* handle UTF-8 chars */
+	wlen = 0;  // input index
+	i = 0;  // output index
+	memset(kbuf, 0x20, sizeof(kbuf));  // fill output buffer with spaces
+
+	while ((i < len) && (wlen < VFD_DISP_SIZE))
+	{
+		if (text[i] == 0x00)
+		{
+			break;  // stop processing
+		}
+		else if (text[i] >= 0x20 || text[i] < 0x80)  // if normal ASCII, but not a control character
+		{
+			kbuf[wlen] = text[i];
+			wlen++;
+		}
+		else if (text[i] < 0xE0)
+		{
+			dprintk(100, "[%s] UTF_Char_Table= 0x%02x", __func__, text[i]);
+			switch (text[i])
+			{
+				case 0xc2:
+				{
+					if (text[i + 1] < 0xa0)
+					{
+						i++; // skip non-printing character
+					}
+					else
+					{
+						UTF_Char_Table = PT6302_UTF_C2;
+					}
+					break;
+				}
+				case 0xc3:
+				{
+					UTF_Char_Table = PT6302_UTF_C3;
+					break;
+				}
+				case 0xc4:
+				{
+					UTF_Char_Table = PT6302_UTF_C4;
+					break;
+				}
+				case 0xc5:
+				{
+					UTF_Char_Table = PT6302_UTF_C5;
+					break;
+				}
+				case 0xd0:
+				{
+					UTF_Char_Table = PT6302_UTF_D0;
+					break;
+				}
+				case 0xd1:
+				{
+					UTF_Char_Table = PT6302_UTF_D1;
+					break;
+				}
+				default:
+				{
+					UTF_Char_Table = NULL;
+				}
+			}
+			i++; // skip UTF-8 lead in
+			if (UTF_Char_Table)
+			{
+				dprintk(10, "Convert 0x%02x -> UTF 0x%02x (index = 0x%02x)\n", text[i], UTF_Char_Table[text[i] & 0x3f], i & 0x3f);
+				kbuf[wlen] = UTF_Char_Table[text[i] & 0x3f];
+				wlen++;
+			}
+		}
+		else
+		{
+			if (text[i] < 0xF0)
+			{
+				i += 2;  // skip 2 bytes
+			}
+			else if (text[i] < 0xF8)
+			{
+				i += 3;  // skip 3 bytes
+			}
+			else if (text[i] < 0xFC)
+			{
+				i += 4;  // skip 4 bytes
+			}
+			else
+			{
+				i += 5;  // skip 5 bytes
+			}
+		}
+		i++;
+	}
+	wlen = (wlen > VFD_DISP_SIZE ? VFD_DISP_SIZE : wlen);
+#else
+	memset(kbuf, 0x20, sizeof(kbuf));  // fill output buffer with spaces
+	wlen = (len > VFD_DISP_SIZE ? VFD_DISP_SIZE : len);
+	memcpy(kbuf, text, wlen); // copy text
+
+#endif
+	/* save last string written to fp */
+	memcpy(&lastdata.vfddata, kbuf, wlen);
+	lastdata.length = wlen;
+
+#if 0  // set to 1 if you want the display text centered (carried over, not tested yet)
+	dprintk(10, "%s Center text\n", __func__);
+	/* Center text */
+	j = 0;
+
+	if (wlen < VFD_DISP_SIZE - 1)  // handle leading spaces
+	{
+		dprintk(10, "%s Handle leading spaces\n", __func__);
+		for (i = 0; i < ((VFD_DISP_SIZE - wlen) / 2); i++)
+		{
+			wdata[i + 1] = 0x20;
+			j++;
+		}
+	}
+	for (i = 0; i < wlen; i++)  // handle text
+	{
+		dprintk(10, "%s Handle text\n", __func__);
+		wdata[i + 1 + j] = kbuf[(wlen - 1) - i];
+	}
+
+	if (wlen < VFD_DISP_SIZE)  // handle trailing spaces
+	{
+		dprintk(10, "%s Handle trailing spaces\n", __func__);
+		for (i = j + wlen; i < VFD_DISP_SIZE; i++)
+		{
+			wdata[i + 1] = 0x20;
+		}
+	}
+#else
+	for (i = 0; i < VFD_DISP_SIZE; i++)
+	{
+		wdata[i] = kbuf[VFD_DISP_SIZE - 1 - i];
+	}
+#endif
+	ret = pt6302_write_dcram(ICON_WIDTH, wdata, VFD_DISP_SIZE);
+
+	dprintk(150, "%s <\n", __func__);
+	return ret;
+}
+
+/******************************************************
+ *
+ * Set brightness of VFD display
+ *
+ */
+void pt6302_set_brightness(int level)
+{
+	pt6302_command_t cmd;
+
+	dprintk(150, "%s >\n", __func__);
+
+	spin_lock(&mr_lock);
+
+	if (level < PT6302_DUTY_MIN)
+	{
+		level = PT6302_DUTY_MIN;
+	}
+	if (level > PT6302_DUTY_MAX)
+	{
+		level = PT6302_DUTY_MAX;
+	}
+//	dprintk(10, "Set VFD brightness to %d\n", level);
+	cmd.duty.cmd  = PT6302_COMMAND_SET_DUTY;
+	cmd.duty.duty = level;
+
+	pt6302_WriteByte(cmd.all);
+	spin_unlock(&mr_lock);
+	dprintk(150,"%s <\n", __func__);
+}
+
+/*********************************************************
+ *
+ * Set number of characters on VFD display
+ *
+ * Note: sets num + 8 as width, but num = 0 sets width 16
+ * 
+ */
+static void pt6302_set_digits(int num)
+{
+	pt6302_command_t cmd;
+
+	dprintk(150, "%s >\n", __func__);
+
+	spin_lock(&mr_lock);
+
+	if (num < PT6302_DIGITS_MIN)
+	{
+		num = PT6302_DIGITS_MIN;
+	}
+	if (num > PT6302_DIGITS_MAX)
+	{
+		num = PT6302_DIGITS_MAX;
+	}
+	num = (num == PT6302_DIGITS_MAX) ? 0 : (num - PT6302_DIGITS_OFFSET);
+
+	cmd.digits.cmd    = PT6302_COMMAND_SET_DIGITS;
+	cmd.digits.digits = num;
+
+	pt6302_WriteByte(cmd.all);
+	spin_unlock(&mr_lock);
+	dprintk(150,"%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Set VFD display on, off or all segments lit
+ *
+ */
+static void pt6302_set_light(int onoff)
+{
+	pt6302_command_t cmd;
+
+	dprintk(150, "%s >\n", __func__);
+
+	spin_lock(&mr_lock);
+
+	if (onoff < PT6302_LIGHT_NORMAL || onoff > PT6302_LIGHT_ON)
+	{
+		onoff = PT6302_LIGHT_NORMAL;
+	}
+	dprintk(10, "Switch VFD display %s\n", onoff == PT6302_LIGHT_NORMAL ? "on" : "off");
+	cmd.light.cmd   = PT6302_COMMAND_SET_LIGHT;
+	cmd.light.onoff = onoff;
+	pt6302_WriteByte(cmd.all);
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Set binary output pins of PT6302
+ *
+ */
+static void pt6302_set_port(int port1, int port2)
+{
+	pt6302_command_t cmd;
+
+	dprintk(150, "%s >\n", __func__);
+
+	spin_lock(&mr_lock);
+
+	cmd.port.cmd   = PT6302_COMMAND_SET_PORTS;
+	cmd.port.port1 = (port1) ? 1 : 0;
+	cmd.port.port2 = (port2) ? 1 : 0;
+
+	pt6302_WriteByte(cmd.all);
+	spin_unlock(&mr_lock);
+	dprintk(150, "%s <\n", __func__);
+}
+
+/******************************************************
+ *
+ * Setup VFD display
+ * 16 characters, normal display, maximum brightness
+ *
+ */
+void pt6302_setup(void)
+{
+	unsigned char buf[40] = {0x0};  // init for ADRAM & CGRAM
+	int ret;
+
+	dprintk(150, "%s >\n", __func__);
+
+	pt6302_set_port(1, 0);
+	pt6302_set_digits(PT6302_DIGITS_MAX);
+	pt6302_set_brightness(PT6302_DUTY_MAX);
+	pt6302_set_light(PT6302_LIGHT_NORMAL);
+	ret = pt6302_write_dcram(0x01, "               ", VFD_DISP_SIZE);  // clear display (1st 15 characters)
+	ret = pt6302_write_dcram(0x00, buf, 1);  // initialize icon position
+	pt6302_write_adram(0x00, buf, 16);  // clear ADRAM
+	dprintk(10, "Clearing VFD icons\n");
+	ret = pt6302_write_cgram(0x00, buf, 8);  // clear CGRAM
+	dprintk(150, "%s <\n", __func__);
+}
+
+/****************************************
+ *
+ * Icon handling (VFD only)
+ *
+ */
+
+/****************************************
+ *
+ * Check if icon icon_nr is displayed
+ *
+ * Returns 0 if not, else number of
+ * displayed icons.
+ *
+ */
+int icon_in_list(int icon_nr)
+{
+	int i;
+
+//	if (lastdata.icon_count == 1 && lastdata.icon_list[0] == icon_nr)
+//	{
+//		return 1;
+//	}
+	i = 0;
+	while (lastdata.icon_list[i] != icon_nr && i < lastdata.icon_count)
+	{
+		i++;
+	}
+	return (i != lastdata.icon_count ? i : 0);
+}
+
+/****************************************
+ *
+ * (Re)set one icon on VFD
+ *
+ *
+ */
+int pt6302_set_icon(int icon_nr, int on)
+{
+	int i, j;
+	int ret = 0;
+	unsigned char char_zero[1] = {0x00};
+
+	dprintk(10, "%s >\n", __func__);
+	if (icon_nr < ICON_MIN + 1 || icon_nr > ICON_MAX)
+	{
+		dprintk(1, "Illegal icon number %d (valid %d..%d)\n", icon_nr, ICON_MIN + 1, ICON_MAX - 1);
+		ret = -EINVAL;
+		goto exit_set_icon;
+	}
+	if (on)
+	{
+		if (lastdata.icon_count)
+		{
+			// check if icon to set is already displayed
+			i = icon_in_list(icon_nr);
+			if (i)
+			{
+//				dprintk(50, "Icon %d already displayed; do nothing\n", icon_nr);
+				goto exit_set_icon;
+			}
+		}
+		if (lastdata.icon_count == 8)
+		{
+			// 8 icons already displayed, remove oldest icon set in list
+//			dprintk(50, "%s Set icon %d to off\n", __func__, lastdata.icon_list[0]);
+			lastdata.icon_state[lastdata.icon_list[0]] = 0;
+			
+			for (i = 1; i < 8; i++)
+			{
+				lastdata.icon_list[i - 1] = lastdata.icon_list[i];
+			}
+			lastdata.icon_list[7] = icon_nr;
+		}
+		else
+		{
+			lastdata.icon_list[lastdata.icon_count] = icon_nr;
+			lastdata.icon_count++;
+//			lastdata.icon_state[icon_nr] = 1;
+			if (lastdata.icon_count == 1 && lastdata.icon_state[ICON_SPINNER] == 0)
+			{
+				ret |= pt6302_write_dcram(0, char_zero, 1);  // set icon position to zero
+			}
+		}
+	}
+	else  // switch icon to off
+	{
+		if (lastdata.icon_count == 0)
+		{
+			// no icons displayed
+			goto exit_set_icon;
+		}
+		// find icon_nr in icon_list and remove it
+		i = icon_in_list(icon_nr);
+		if (i)
+		{
+			// icon is in list, remove it
+			for (j = i; j < lastdata.icon_count - 1; j++)
+			{
+				lastdata.icon_list[j] = lastdata.icon_list[j + 1];
+			}
+			lastdata.icon_list[lastdata.icon_count] = 0;
+			lastdata.icon_count--;
+			if (lastdata.icon_count == 0)  // if last icon off
+			{
+				i = 0;
+				lastdata.icon_list[0] = 0;
+				ret |= pt6302_write_dcram(0, " ", 1);  // set icon position to space
+				
+			}
+			// clear remaining icon bit patterns in PT6302
+			if (lastdata.icon_state[ICON_SPINNER] == 0)
+			{
+				for (j = i; j < 8; j++)
+				{
+//					dprintk(100, "Clear bit pattern for icon character %02x\n", j);
+					ret |= pt6302_write_cgram(j, vfdIcons[ICON_MIN].pixeldata, 1);
+				}
+			}
+		}
+		else
+		{
+			dprintk(1, "Icon %d not displayed, do nothing\n", icon_nr);
+			goto exit_set_icon;
+		}
+	}
+	// reload PT6302 icon patterns
+	if (lastdata.icon_state[ICON_SPINNER] == 0)
+	{
+		for (i = 0; i < lastdata.icon_count; i++)
+		{
+//			dprintk(100, "%s Reloading pixel data for icon %d\n", __func__, lastdata.icon_list[i]);
+			ret |= pt6302_write_cgram(i, vfdIcons[lastdata.icon_list[i]].pixeldata, 1);
+		}
+	}
+	lastdata.icon_state[icon_nr] = on;
+
+exit_set_icon:
+ 	dprintk(150, "%s < (%d)\n", __func__, ret);
+	return ret;
+}
+
+/****************************************
+ *
+ * Determine box variant
+ *
+ * Code largely taken from boxtype.c
+ *
+ */
+int stv6412_box_variant(void)
+{
+	int ret;
+	unsigned char buf;
+	struct i2c_msg msg = { .addr = 0x4b, I2C_M_RD, .buf = &buf, .len = 1 };
+	struct i2c_adapter *i2c_adap = i2c_get_adapter(I2C_BUS);
+
+	ret = i2c_transfer(i2c_adap, &msg, 1);
+	return ret;
+}
+
+int _read_reg_box_variant(unsigned int reg, unsigned char nr)
+{
+	int ret;
+	u8 b0[] = { reg >> 8, reg & 0xff };
+	u8 buf;
+
+	struct i2c_msg msg[] =
+	{
+		{ .addr  = nr, .flags = 0,        .buf   = b0,   .len   = 2 },
+		{ .addr  = nr, .flags = I2C_M_RD, .buf   = &buf, .len   = 1 }
+	};
+
+	struct i2c_adapter *i2c_adap = i2c_get_adapter(I2C_BUS);
+
+	ret = i2c_transfer(i2c_adap, msg, 2);
+	if (ret != 2)
+	{
+		return -1;
+	}
+	return (int)buf;
+}
+
+int stb0899_read_reg_box_variant(unsigned int reg, unsigned char nr)
+{
+	int result;
+
+	result = _read_reg_box_variant(reg, nr);
+	/*
+	 * Bug ID 9:
+	 * access to 0xf2xx/0xf6xx
+	 * must be followed by read from 0xf2ff/0xf6ff.
+	 */
+	if ((reg != 0xf2ff) 
+	&&  (reg != 0xf6ff)
+	&&  (((reg & 0xff00) == 0xf200) || ((reg & 0xff00) == 0xf600)))
+	{
+		_read_reg_box_variant((reg | 0x00ff), nr);
+	}
+	return result;
+}
+
+void get_box_variant(void)
+{
+	int ret;
+
+	dprintk(150, "%s >\n", __func__);
+
+//	first, check AVS for a STV6412, if not -> BXZB model
+	ret = stv6412_box_variant();
+	if (ret != 1)
+	{
+		box_variant = 3;	// no STV6412 --> BXZB model
+		dprintk(50, "BXZB model detected\n");
+	}
+	else
+	{	// if STV6412 found, check for 2nd demodulator (two tuners)
+		// if the register from the second demodulator can be read, then this is a BSLA
+		ret = stb0899_read_reg_box_variant(STB0899_NCOARSE, I2C_ADDR_STB0899_2);  // read DIV from demodulator2
+		if (ret != -1)  // if read OK --> 2nd STV0899 demod present --> must be a BSLA
+		{
+			box_variant = 2;  // BSLA model
+			dprintk(50, "BSLA model detected\n");
+		}
+		else  // check demodulator type
+		{
+			// check if demodulator is stb0899 or stv0900
+			// read chip ID and revision
+			ret = stb0899_read_reg_box_variant(STB0899_DEV_ID, I2C_ADDR_STB0899_1);
+			if (ret > 0x30)  // if response greater than 0x30 --> STB0899 demodulator
+			{
+				box_variant = 1; // STB0899 demodulator --> BSKA model
+				dprintk(50, "BSKA model detected\n");
+			}
+			else if (ret > 0)
+			{
+				box_variant = 4;  // STV0900 demodulator --> BZZB model
+				dprintk(50, "BZZB model detected\n");
+			}
+			else
+			{
+//				ret = read cable_demod
+//				if (ret...)
+//				{
+//					boxvariant = 5;  //
+//					dprintk(50, "Cable model detected\n");
+//				}
+//				else
+//				{
+					box_variant = 0;
+					dprintk(1, "CAUTION: ADB model variant cannot be determined; is tuner inserted?\n");
+//				}
+			}
+		}
+	}
+	dprintk(150, "%s >\n", __func__);
+	return;	
+}
+
+/***************************************************
+ *
+ * Initialize the driver
+ *
+ */
+int adb_5800_fp_init_func(void)
+{
+	int i;
+	unsigned char *dsp_string;
+
+	dprintk(150, "%s >\n", __func__);
+	dprintk(50, "ADB ITI-5800S(X) front panel driver initializing\n");
+
+	dprintk(60, "Probe PT6958 + PT6302\n");
+	if (pt6xxx_init_pio_pins() == 0)
+	{
+		dprintk(1, "Unable to initialize PIO pins; abort\n");
+		goto fp_init_fail;
+	}
+	pt6958_setup();
+	pt6302_setup();
+
+	sema_init(&(fp.sem), 1);
+	fp.opencount = 0;
+
+	get_box_variant();  // determine box variant
+
+	// normalize module parameter values
+	display_vfd = (display_vfd > 0 ? 1 : (display_vfd < 0 ? -1 : 0));
+	display_led = (display_led > 0 ? 1 : (display_led < 0 ? -1 : 0));
+	rec_key = (rec_key > 0 ? 1 : (rec_key < 0 ? -1 : 0));
+
+	// process module parameters and apply defaults
+	switch (box_variant)
+	{
+		case 1:  // BSKA
+		case 3:  // BXZB
+		{
+			switch (display_led)
+			{
+				case -1: // led not specified (LED default on)
+				{
+					if (display_vfd == 1)
+					{
+						display_type = 2;  // both
+					}
+					else
+					{
+						display_type = 0;  // LED only
+					}
+					break;
+				}
+				case 0: // led specifically off
+				{
+					if (display_vfd == 1)
+					{
+						display_type = 1;  // VFD only
+					}
+					else
+					{
+						dprintk(1, "Defaulting to LED only\n");
+						display_type = 0;
+					}
+					break;
+				}
+				default: // LED specifically on
+				{
+					if (display_vfd == 1)
+					{
+						display_type = 2;  // Both
+					}
+					else
+					{
+						display_type = 0;  // LED only
+					}
+					break;
+				}
+			}
+			if (rec_key == 1)
+			{
+				dprintk(1, "CAUTION: non-standard key lay out: EPG/REC/RES!\n");
+				key_layout = 1;  // set EPG/REC/RES
+			}
+			else
+			{
+				key_layout = 0;  // default to MENU/EPG/RES
+			}
+			break;
+		}
+		case 2:  // BSLA
+		case 4:  // BZZB
+		{
+			switch (display_vfd)
+			{
+				case -1: // vfd not specified (VFD default on)
+				{
+					if (display_led == 1)
+					{
+						display_type = 2;  // both
+					}
+					else
+					{
+						display_type = 1;  // VFD only
+					}
+					break;
+				}
+				case 0: // vfd specifically off
+				{
+					if (display_led == 1)
+					{
+						display_type = 0;  // LED only
+					}
+					else
+					{
+						dprintk(1, "Defaulting to VFD only\n");
+						display_type = 1;
+					}
+					break;
+				}
+				default: // vfd specifically on
+				{
+					if (display_led == 1)
+					{
+						display_type = 2;  // Both
+					}
+					else
+					{
+						display_type = 1;  // VFD only
+					}
+					break;
+				}
+			}
+			if (rec_key == 0)
+			{
+				dprintk(1, "CAUTION: non-standard key lay out: MENU/EPG/RES!\n");
+				key_layout = 0;  // set MENU/EPG/RES
+			}
+			else
+			{
+				key_layout = 1;  // default to EPG/REC/RES
+			}
+			break;
+		}
+		default:
+		{
+			// Receiver variant unknown, enable both displays & EPG/REC/RES key layout
+			display_type = 2;
+			key_layout = 1;
+			break;
+		}
+	}
+
+	switch (display_type)
+	{
+		case 0:
+		{
+			dsp_string = "LED";
+			break;
+		}
+		case 1:
+		{
+			dsp_string = "VFD";
+			break;
+		}
+		case 2:
+		{
+			dsp_string = "Both";
+			break;
+		}
+	}
+	dprintk(50, "Text display is %s\n", dsp_string);
+	dprintk(50, "Front panel key layout: %s\n", (key_layout == 0 ? "MENU/EPG/RES" : "EPG/REC/RES"));
+
+	// clear displayed icon list
+	if (display_type > 0)
+	{
+		for (i = 0; i < 8; i++)
+		{
+			lastdata.icon_list[i] = 0;
+		}
+	}
+	lastdata.icon_count = 0;
+
+	dprintk(50, "ADB ITI-5800S(X) front panel driver initialization successful\n");
+	dprintk(150, "%s <\n", __func__);
+	return 0;
+
+fp_init_fail:
+	pt6xxx_free_pio_pins();
+	dprintk(1, "ADB ITI-5800S(X) front panel driver initialization failed\n");
+	dprintk(150, "%s <\n", __func__);
+	return -1;
+}
+
+/***************************************************
+ *
+ * Code for writing to /dev/vfd
+ *
+ * If text to display is longer than the display
+ * width, it is scolled once. Maximum text length
+ * is 64 characters.
+ *
+ */
+void clear_display(void)
+{
+	char bBuf[16];
+	int ret = 0;
+
+	dprintk(100, "%s >\n", __func__);
+
+	memset(bBuf, ' ', sizeof(bBuf));
+	if (display_type > 0)
+	{
+		ret |= pt6302_write_text(0, bBuf, VFD_DISP_SIZE);
+	}
+	if (display_type != 1)
+	{
+		ret |= pt6958_ShowBuf(bBuf, LED_DISP_SIZE);
+	}
+	dprintk(100, "%s <\n", __func__);
+}
+
+static ssize_t vfd_write(struct file *filp, const char *buf, size_t len, loff_t *off)
+{
+	int ret = 0;
+	int i;
+	int llen;
+	int offset = 0;
+	char sbuf[64];
+	char *b;
+
+	dprintk(150, "%s >\n", __func__);
+
+	if ((len == 0) || (VFD_DISP_SIZE == 0) || (LED_DISP_SIZE == 0))
+	{
+		dprintk(1, "%s < (len = 0)\n", __func__);
+		return len;
+	}
+
+	if (len >= 64)  //do not display more than 64 characters
+	{
+		len = 64;
+	}
+
+	llen = len;
+	if (buf[llen - 1] == '\n')
+	{
+		llen--;
+	}
+
+	if (display_type > 0)
+	{
+		if (llen <= VFD_DISP_SIZE)  //no scroll
+		{
+			ret |= pt6302_write_text(0, (char *)buf, len);
+		}	
+		else
+		{  // scroll, display string is longer than display length
+			// initial display starting at 3rd position to ease reading
+			memset(sbuf, ' ', sizeof(sbuf));
+			offset = 3;
+			memcpy(sbuf + offset, buf, llen);
+			llen += offset;
+			sbuf[llen + VFD_DISP_SIZE] = '\0';  // terminate string
+
+			// scroll text
+			b = sbuf;
+			for (i = 0; i < llen; i++)
+			{
+				ret |= pt6302_write_text(0, b + i, VFD_DISP_SIZE);
+				// sleep 300 ms
+				msleep(300);
+			}
+			clear_display();
+
+			// final display
+			ret |= pt6302_write_text(0, sbuf + offset, VFD_DISP_SIZE);
+		}
+	}
+	llen = len;
+	if (buf[llen - 1] == '\n')
+	{
+		llen--;
+	}
+	if (display_type != 1)
+	{
+		if (llen <= LED_DISP_SIZE || offset != 0)  // no scroll or VFD scrolled
+		{
+			ret |= pt6958_ShowBuf((unsigned char *)buf, len);
+		}	
+		else
+		{  // scroll, display string is longer than display length
+			// initial display starting at 2nd position to ease reading
+			memset(sbuf, ' ', sizeof(sbuf));
+			offset = 2;
+			memcpy(sbuf + offset, buf, llen);
+			llen += offset;
+			sbuf[llen + LED_DISP_SIZE] = '\0';  // terminate string
+
+			// scroll text
+			b = sbuf;
+			for (i = 0; i < llen; i++)
+			{
+				ret |= pt6958_ShowBuf(b + i, LED_DISP_SIZE);
+				// sleep 500 ms
+				msleep(500);
+			}
+			clear_display();
+
+			// final display
+			ret |= pt6958_ShowBuf((unsigned char *)buf, LED_DISP_SIZE);
+		}
+	}
+	if (ret < 0)
+	{
+		dprintk(1, "%s < (ret = %d\n", __func__, ret);
+		return ret;
+	}
+	dprintk(150, "%s <\n", __func__);
+	return len;
+}
+
+/*******************************************
+ *
+ * Code for reading from /dev/vfd
+ *
+ */
+static ssize_t vfd_read(struct file *filp, char *buf, size_t len, loff_t *off)
+{
+	dprintk(150, "%s >\n", __func__);
+	// TODO: return current display string
+
+	if (len > lastdata.length)
+	{
+		len = lastdata.length;
+	}
+
+	/* fixme: needs revision because of utf8! */
+	if (display_type = 0)
+	{
+		if (len > 8)
+		{
+			len = 8;
+		}
+		copy_to_user(buf, lastdata.leddata, len);
+	}
+	else
+	{
+		if (len > 16)
+		{
+			len = 16;
+		}
+		copy_to_user(buf, lastdata.vfddata, len);
+	}
+	dprintk(150, "%s <\n", __func__);
+	return len;
+}
+
+static int vfd_open(struct inode *inode, struct file *file)
+{
+	dprintk(150,"%s >\n", __func__);
+
+	if (down_interruptible(&(fp.sem)))
+	{
+		dprintk(1, "Interrupted while waiting for semaphore\n");
+		return -ERESTARTSYS;
+	}
+	if (fp.opencount > 0)
+	{
+		dprintk(1, "Device already opened\n");
+		up(&(fp.sem));
+		return -EUSERS;
+	}
+	fp.opencount++;
+	up(&(fp.sem));
+	dprintk(150,"%s <\n", __func__);
+	return 0;
+}
+
+static int vfd_close(struct inode *inode, struct file *file)
+{
+	dprintk(150, "%s >\n", __func__);
+	fp.opencount = 0;
+	dprintk(150, "%s <\n", __func__);
+	return 0;
+}
+
+/****************************************
+ *
+ * IOCTL handling.
+ *
+ */
+static int vfd_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+{
+	static int mode = 0;
+	struct adb_box_fp_ioctl_data *adb_box_fp = (struct adb_box_fp_ioctl_data *)arg;
+	struct vfd_ioctl_data vfddata;
+	int i;
+	int level;
+	int ret = 0;
+	int icon_nr;
+	int on;
+	unsigned char clear[1] = {0x00};
+
+	dprintk(150, "%s >\n", __func__);
+	switch (cmd)
+	{
+		case VFDDISPLAYCHARS:
+		case VFDBRIGHTNESS:
+		case VFDDISPLAYWRITEONOFF:
+		case VFDICONDISPLAYONOFF:
+		case VFDSETLED:
+		case VFDLEDBRIGHTNESS:
+		case VFDSETFAN:
+		{
+			copy_from_user(&vfddata, (void *)arg, sizeof(struct vfd_ioctl_data));
+		}
+	}
+	switch (cmd)
+	{
+		case VFDSETMODE:
+		{
+			mode = adb_box_fp->u.mode.compat;
+			break;
+		}
+		case VFDSETLED:
+		{
+//			dprintk(100, "Set LED: num = %d, value = %d\n", adb_box_fp->u.led.led_nr, adb_box_fp->u.led.level);
+			pt6958_set_led(adb_box_fp->u.led.led_nr, adb_box_fp->u.led.level);
+			break;
+		}
+		case VFDBRIGHTNESS:
+		{
+			if (mode == 0)
+			{
+				level = vfddata.address;
+			}
+			else
+			{
+				level = adb_box_fp->u.brightness.level;
+			}
+			if (level < 0)
+			{
+				level = 0;
+			}
+			else if (level > 7)
+			{
+				level = 7;
+			}
+			if (display_type > 0)  // set VFD brightness
+			{
+				pt6302_set_brightness(level);
+			}
+			if (display_type == 0)  // set LED brightness only if LED text display only
+			{
+				pt6958_set_brightness(level);
+			}
+			mode = 0;
+			break;
+		}
+		case VFDLEDBRIGHTNESS:
+		{
+			if (mode == 0)
+			{
+				level = vfddata.address;
+			}
+			else
+			{
+				level = adb_box_fp->u.brightness.level;
+			}
+			if (level < 0)
+			{
+				level = 0;
+			}
+			else if (level > 7)
+			{
+				level = 7;
+			}
+			if (display_type > 0)
+			{
+				pt6958_set_brightness(level); // do not set VFD text display
+			}
+			else
+			{
+				dprintk(1, "Display is set to LED; use VFDBRIGHTNESS IOCTL\n");
+			}
+			break;
+		}
+		case VFDDRIVERINIT:
+		{
+			ret = adb_5800_fp_init_func();
+			mode = 0;
+			break;
+		}
+		case VFDICONDISPLAYONOFF:
+		{
+			icon_nr = (mode == 0 ? vfddata.address : adb_box_fp->u.icon.icon_nr);
+			on = (mode == 0 ? vfddata.length : adb_box_fp->u.icon.on);
+			on = (on != 0 ? 1 : 0);
+			dprintk(10, "%s Set icon %d to %d (mode %d)\n", __func__, icon_nr, on, mode);
+
+			// Part one: translate E2 icon numbers to own icon numbers (vfd mode only)
+			if (mode == 0)  // vfd mode
+			{
+				switch (icon_nr)
+				{
+					case 0x13:  // crypted
+					{
+						icon_nr = ICON_SCRAMBLED;
+						break;
+					}
+					case 0x17:  // dolby
+					{
+						icon_nr = ICON_DOLBY;
+						break;
+					}
+					case 0x15:  // MP3
+					{
+						icon_nr = ICON_MP3;
+						break;
+					}
+					case 0x11:  // HD
+					{
+						icon_nr = ICON_HD;
+						break;
+					}
+					case 0x1e:  // record
+					{
+						icon_nr = ICON_REC;
+						break;
+					}
+					case 0x1a:  // seekable (play)
+					{
+						icon_nr = ICON_PLAY;
+						break;
+					}
+					default:
+					{
+						break;
+					}
+				}
+			}
+			// Part two: decide wether one icon, all or spinner
+			switch (icon_nr)
+			{
+				case ICON_SPINNER:
+				{
+					if (on)
+					{
+						lastdata.icon_state[ICON_SPINNER] = 1;
+						spinner_state.state = 1;
+						if (icon_state.state == 1)
+						{
+							dprintk(50, "%s Stop icon thread\n", __func__);
+							icon_state.state = 0;
+							i = 0;
+							do
+							{
+								msleep(250);
+								i++;
+							}
+							while (icon_state.status != ICON_THREAD_STATUS_HALTED && i < 5);
+							if (i == 5)
+							{
+								dprintk(1, "%s Time out stopping icon thread!\n", __func__);
+							}
+							dprintk(1, "%s Icon thread stopped\n", __func__);
+						}
+						if (on == 1)  // handle default
+						{
+							on = 25;  // full cycle takes 16 * 250 ms = 4 sec
+						}
+						spinner_state.period = on * 10;
+						up(&spinner_state.sem);
+					}
+					else
+					{
+						if (spinner_state.state == 1)
+						{
+							spinner_state.state = 0;
+							dprintk(50, "%s Stop spinner\n", __func__);
+							spinner_state.state = 0;
+							i = 0;
+							do
+							{
+								msleep(250);
+								i++;
+							}
+							while (spinner_state.status != ICON_THREAD_STATUS_HALTED && i < 20);
+							if (i == 20)
+							{
+								dprintk(1, "%s Time out stopping spinner thread!\n", __func__);
+							}
+							dprintk(50, "%s Spinner stopped (%d icons to recover)\n", __func__, lastdata.icon_count);
+						}
+						lastdata.icon_state[ICON_SPINNER] = 0;  // flag spinner off
+						if (lastdata.icon_count > 1)
+						{
+							// reload PT6302 icon patterns
+							for (i = 0; i < lastdata.icon_count; i++)
+							{
+								dprintk(50, "%s Reload pixel data for icon %d\n", __func__, lastdata.icon_list[i]);
+								ret |= pt6302_write_cgram(i, vfdIcons[lastdata.icon_list[i]].pixeldata, 1);
+							}
+							dprintk(50, "%s Restart icon thread\n", __func__);
+							icon_state.state = 1;
+							up(&icon_state.sem);
+						}
+						else if (lastdata.icon_count == 1)
+						{
+							// get icon number and set icon back on
+							i = 0;
+							while (lastdata.icon_state[i] == 0 && i < ICON_MAX)
+							{
+								i++;
+							}
+							lastdata.icon_count--;  // pt6302_set_icon will increment it back to 1
+							dprintk(50, "%s Restore icon %d\n", __func__, i);
+							ret |= pt6302_set_icon(i, 1);
+						}
+					}
+					ret = 0;
+					break;
+				}
+				case ICON_MAX:
+				{
+					if (on)
+					{
+						lastdata.icon_state[ICON_MAX] = 1;
+						if (spinner_state.state == 1)  // switch spinner off if on
+						{
+							dprintk(50, "%s Stop spinner\n", __func__);
+							spinner_state.state = 0;
+							do
+							{
+								msleep(250);
+							}
+							while (spinner_state.status != ICON_THREAD_STATUS_HALTED);
+							dprintk(50, "%s Spinner stopped\n", __func__);
+						}
+						if (icon_state.state != 1)
+						{
+							dprintk(50, "%s Start icon thread\n", __func__);
+							icon_state.state = 1;
+							up(&icon_state.sem);
+						}
+
+					}
+					else
+					{
+#if 0  // restore previous icon set
+						if (lastdata.icon_count < 2)
+						{
+							dprintk(50, "%s Stop icon thread\n", __func__);
+							icon_state.state = 0;
+							i = 0;
+							do
+							{
+								msleep(250);
+								i++;
+							}
+							while (icon_state.status != ICON_THREAD_STATUS_HALTED && i < 128);
+							if (i == 128)
+							{
+								dprintk(1, "%s Time out stopping icon thread!\n", __func__);
+							}
+							dprintk(50, "%s Icon thread stopped\n", __func__);
+						}
+						lastdata.icon_state[ICON_MAX] = 0;
+
+						if (lastdata.icon_count = 1)
+						{
+							// get icon number and set icon back on
+							i = 0;
+							while (lastdata.icon_state[i] == 0 && i < ICON_MAX)
+							{
+								i++;
+							}
+							lastdata.icon_count--;  // pt6302_set_icon will increment it back to 1
+							dprintk(50, "%s Restore icon %d\n", __func__, i);
+							ret |= pt6302_set_icon(i, 1);
+						}
+#else  // all icons off
+						{  // stop thread and clear all icons
+							dprintk(50, "%s Stop icon thread\n", __func__);
+							icon_state.state = 0;
+							i = 0;
+							do
+							{
+								msleep(250);
+								i++;
+							}
+							while (icon_state.status != ICON_THREAD_STATUS_HALTED && i < 128);
+							if (i == 128)
+							{
+								dprintk(1, "%s Time out stopping icon thread!\n", __func__);
+							}
+							dprintk(50, "%s Icon thread stopped\n", __func__);
+							
+							lastdata.icon_count = 0;
+							for (i = ICON_MIN + 1; i < ICON_MAX + 2; i++) // include spinner
+							{
+								lastdata.icon_state[i] = 0;
+							}
+							// clear PT6302 CGRAM
+							for (i = 0; i < 8; i++)
+							{
+								ret |= pt6302_write_cgram(i, vfdIcons[ICON_MIN].pixeldata, 1);
+							}
+						}
+#endif
+					}
+					break;
+				}
+				default:  // (re)set a single icon
+				{
+					if (((icon_state.state == 0) && on) && lastdata.icon_count == 1)  // if no icon thread yet but > 1 icons on
+					{
+						dprintk(1, "%s Start icon thread\n", __func__);
+						icon_state.state = 1;
+						up(&icon_state.sem);
+					}
+					ret |= pt6302_set_icon(icon_nr, on);
+					if (lastdata.icon_count < 2 && icon_state.state == 1)
+					{
+						icon_state.state = 0;  // stop icon thread
+						dprintk(50, "%s Stopping icon thread\n", __func__);
+						i = 0;
+						do
+						{
+							msleep(250);
+							i++;
+						}
+						while (icon_state.status != ICON_THREAD_STATUS_HALTED && i < 120);
+						if (i == 120)
+						{
+							dprintk(1, "%s Time out stopping icon thread!\n", __func__);
+						}
+						dprintk(50, "%s Icon thread stopped\n", __func__);
+					}
+					break;
+				}
+			}
+			break;
+		}
+#if 0
+		case VFDSTANDBY:
+		{
+			clear_display();
+			dprintk(10, "Set deep standby mode, wake up time: (MJD= %d) - %02d:%02d:%02d (local)\n", (adb_box_fp->u.standby.time[0] & 0xff) * 256 + (adb_box_fp->u.standby.time[1] & 0xff),
+				adb_box_fp->u.standby.time[2], adb_box_fp->u.standby.time[3], adb_box_fp->u.standby.time[4]);
+			res = adb_box_fp_SetStandby(adb_box_fp->u.standby.time);
+			break;
+		}
+#endif
+		case VFDDISPLAYCHARS:
+		{
+			if (mode == 0)
+			{
+				vfddata.data[vfddata.length]= 0;  // terminate string to show
+				if (display_type > 0)
+				{
+					ret |= pt6302_write_dcram(vfddata.address, vfddata.data, vfddata.length);
+				}
+				if (display_type != 1)
+				{
+					ret |= pt6958_ShowBuf(vfddata.data, vfddata.length);
+				}
+			}
+			else
+			{
+				mode = 0;
+			}
+			break;
+		}
+		case VFDDISPLAYWRITEONOFF:
+		{
+			if (display_type > 0)
+			{
+				pt6302_set_light(adb_box_fp->u.light.onoff == 0 ? PT6302_LIGHT_OFF : PT6302_LIGHT_NORMAL);
+			}
+			pt6958_set_light(adb_box_fp->u.light.onoff);
+			mode = 0;
+			break;
+		}
+		case VFDSETFAN:
+		{
+			if (adb_box_fp->u.fan.speed > 255)
+			{
+				adb_box_fp->u.fan.speed = 255;
+			}
+			dprintk(1, "Set fan speed to: %d\n", adb_box_fp->u.fan.speed);
+			ctrl_outl(adb_box_fp->u.fan.speed, fan_registers + 0x04);
+			mode = 0;
+			break;
+		}
+		default:
+		{
+			dprintk(1, "Unknown IOCTL %08x\n", cmd);
+			mode = 0;
+			break;
+		}
+	}
+	dprintk(150, "%s <\n", __func__);
+	return ret;
+}
+
+struct file_operations vfd_fops =
+{
+	.owner   = THIS_MODULE,
+	.ioctl   = vfd_ioctl,
+	.write   = vfd_write,
+	.read    = vfd_read,
+	.open    = vfd_open,
+	.release = vfd_close
+};
+// vim:ts=4
