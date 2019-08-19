@@ -690,10 +690,13 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/info/model"                                                   , NULL, info_model_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/chipset"                                                 , NULL, info_chipset_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/boxtype"                                                 , NULL, info_model_read, NULL, NULL, ""},
+#if defined(ADB_BOX)
+	{cProcEntry, "stb/info/adb_variant"                                             , NULL, NULL, NULL, NULL, ""},
+#endif
 	{cProcDir  , "stb/ir"                                                           , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/ir/rc"                                                        , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/ir/rc/type"                                                   , NULL, info_rctype_read, info_rctype_write, NULL, ""},
-#if defined(HL101) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700)
+#if defined(ADB_BOX) || defined(HL101) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700)
 	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/symbol_circle"                                            , NULL, NULL, NULL, NULL, ""},
 #endif
@@ -741,6 +744,10 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/fp/lnb_sense2"                                                , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/led0_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
 	{cProcEntry, "stb/fp/led1_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
+#if defined(ADB_BOX)
+	{cProcEntry, "stb/fp/led2_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/led3_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
+#endif
 	{cProcEntry, "stb/fp/led_pattern_speed"                                         , NULL, NULL, default_write_proc, NULL, ""},
 #if !defined(SPARK) && !defined(SPARK7162)
 	{cProcEntry, "stb/fp/oled_brightness"                                           , NULL, NULL, NULL, NULL, ""},
