@@ -1,0 +1,18 @@
+TEST_CFLAGS = -O2 -Wall
+TEST_TARGET = stv6414_test
+APP_TARGET = stv6414_app
+SLIM_APP_TARGET = stv6414_slimapp
+
+
+obj-m      += stv6414.o
+
+test:
+	$(CROSS_COMPILE)gcc $(TEST_CFLAGS) $(TEST_TARGET).c -o $(TEST_TARGET)
+
+app:
+	$(CROSS_COMPILE)gcc $(TEST_CFLAGS) $(APP_TARGET).c -o $(APP_TARGET)
+
+slimapp:
+	$(CROSS_COMPILE)gcc $(TEST_CFLAGS) $(SLIM_APP_TARGET).c -o $(SLIM_APP_TARGET)
+
+
