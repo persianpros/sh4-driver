@@ -104,6 +104,34 @@ ifdef HS7819
 obj-y += nuvoton/
 endif
 
+ifdef FOREVER_NANOSMART
+obj-y += fortis_4g/
+endif
+
+ifdef FOREVER_9898HD
+obj-y += nuvoton/
+endif
+
+ifdef DP7001
+obj-y += fortis_4g/
+endif
+
+ifdef FOREVER_2424HD
+obj-y += fortis_4g/
+endif
+
+ifdef GPV8000
+obj-y += fortis_4g/
+endif
+
+ifdef EP8000
+obj-y += fortis_4g/
+endif
+
+ifdef EPP8000
+obj-y += fortis_4g/
+endif
+
 ifdef ATEMIO520
 obj-y += cn_micom/
 endif

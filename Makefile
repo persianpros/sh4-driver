@@ -100,6 +100,27 @@ endif
 ifdef HS7819
 CCFLAGSY += -DHS7819
 endif
+ifdef FOREVER_NANOSMART
+CCFLAGSY += -DFOREVER_NANOSMART
+endif
+ifdef FOREVER_9898HD
+CCFLAGSY += -DFOREVER_9898HD
+endif
+ifdef DP7001
+CCFLAGSY += -DDP7001
+endif
+ifdef FOREVER_2424HD
+CCFLAGSY += -DFOREVER_2424HD
+endif
+ifdef GPV8000
+CCFLAGSY += -DGPV8000
+endif
+ifdef EP8000
+CCFLAGSY += -DEP8000
+endif
+ifdef EPP8000
+CCFLAGSY += -DEPP8000
+endif
 ifdef ATEMIO520
 CCFLAGSY += -DATEMIO520
 endif
@@ -249,6 +270,41 @@ obj-y += smartcard/
 endif
 
 ifdef HS7819
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef FOREVER_NANOSMART
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef FOREVER_9898HD
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef DP7001
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef FOREVER_2424HD
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef GPV8000
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef EP8000
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef EPP8000
 obj-y += cec/
 obj-y += smartcard/
 endif
