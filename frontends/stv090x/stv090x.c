@@ -1903,7 +1903,7 @@ static int stv090x_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	}
 	else
 	{
-		if (state->device != STX7111)
+		if ((state->device != STX7111) && (state->device != STXH205))
 		{
 			dprintk(250, "Disable Gate\n");
 			STV090x_SETFIELD_Px(reg, I2CT_ON_FIELD, 0);
@@ -2176,7 +2176,7 @@ static int stv090x_set_viterbi(struct stv090x_state *state)
 	{
 		case STV090x_SEARCH_AUTO:
 		{
-			if (state->device != STX7111)
+			if ((state->device != STX7111) && (state->device != STXH205))
 			{
 				if (STV090x_WRITE_DEMOD(state, FECM, 0x00) < 0) /* DVB-S and DVB-S2 */
 					goto err;
@@ -2327,7 +2327,7 @@ err:
 static int stv090x_activate_modcod(struct stv090x_state *state)
 {
 	dprintk(10, "%s >\n", __func__);
-	if (state->device == STX7111)
+	if ((state->device == STX7111) || (state->device == STXH205))
 	{
 		if (STV090x_WRITE_DEMOD(state, MODCODLST0, 0xff) < 0)
 			goto err;
@@ -2517,7 +2517,7 @@ static int stv090x_dvbs_track_crl(struct stv090x_state *state)
 	else
 	{
 		/* Cut 2.0 */
-		if (state->device == STX7111)
+		if ((state->device == STX7111) || (state->device == STXH205))
 		{
 			if (STV090x_WRITE_DEMOD(state, ACLC, 0x2b) < 0)
 				goto err;
@@ -2585,7 +2585,7 @@ static int stv090x_delivery_search(struct stv090x_state *state)
 				goto err;
 			if (STV090x_WRITE_DEMOD(state, BCLC, 0x09) < 0)
 				goto err;
-			if ((state->dev_ver <= 0x20) || (state->device == STX7111))
+			if ((state->dev_ver <= 0x20) || (state->device == STX7111) || (state->device == STXH205))
 			{
 				/* enable S2 carrier loop */
 				if (STV090x_WRITE_DEMOD(state, CAR2CFG, 0x26) < 0)
@@ -2597,7 +2597,7 @@ static int stv090x_delivery_search(struct stv090x_state *state)
 				if (STV090x_WRITE_DEMOD(state, CAR2CFG, 0x66) < 0)
 					goto err;
 			}
-			if (state->device == STX7111)
+			if ((state->device == STX7111) || (state->device == STXH205))
 			{
 				if (stv090x_write_reg(state, STV090x_GENCFG, 0x16) < 0)
 					goto err;
@@ -2657,7 +2657,7 @@ static int stv090x_delivery_search(struct stv090x_state *state)
 #endif
 			if (stv090x_dvbs_track_crl(state) < 0)
 				goto err;
-			if ((state->dev_ver <= 0x20) || (state->device == STX7111))
+			if ((state->dev_ver <= 0x20) || (state->device == STX7111) || (state->device == STXH205))
 			{
 				/* enable S2 carrier loop */
 				if (STV090x_WRITE_DEMOD(state, CAR2CFG, 0x26) < 0)
@@ -2669,7 +2669,7 @@ static int stv090x_delivery_search(struct stv090x_state *state)
 				if (STV090x_WRITE_DEMOD(state, CAR2CFG, 0x66) < 0)
 					goto err;
 			}
-			if (state->device != STX7111)
+			if ((state->device != STX7111) && (state->device != STXH205))
 			{
 				if (state->demod_mode != STV090x_SINGLE)
 				{
@@ -2737,7 +2737,7 @@ static int stv090x_start_search(struct stv090x_state *state)
 	{
 		if (state->srate <= 5000000)
 		{
-			if (state->device == STX7111)
+			if ((state->device == STX7111) || (state->device == STXH205))
 			{
 				if (STV090x_WRITE_DEMOD(state, CARCFG, 0x46) < 0)
 					goto err;
@@ -2761,7 +2761,7 @@ static int stv090x_start_search(struct stv090x_state *state)
 		}
 		else
 		{
-			if (state->device == STX7111)
+			if ((state->device == STX7111) ||(state->device == STXH205))
 			{
 				/* If the symbol rate is >5 Msps
 				 Set The carrier search up and low to auto mode */
@@ -2849,7 +2849,7 @@ static int stv090x_start_search(struct stv090x_state *state)
 	}
 	if (STV090x_WRITE_DEMOD(state, SFRSTEP, 0x00) < 0)
 		goto err;
-	if (state->device != STX7111)
+	if ((state->device != STX7111) && (state->device != STXH205))
 	{
 		if (STV090x_WRITE_DEMOD(state, TMGTHRISE, 0xe0) < 0)
 			goto err;
@@ -2865,7 +2865,7 @@ static int stv090x_start_search(struct stv090x_state *state)
 	STV090x_SETFIELD_Px(reg, S1S2_SEQUENTIAL_FIELD, 0x0);
 	if (STV090x_WRITE_DEMOD(state, DMDCFG2, reg) < 0)
 		goto err;
-	if (state->device == STX7111)
+	if ((state->device == STX7111) || (state->device == STXH205))
 	{
 		if (STV090x_WRITE_DEMOD(state, RTC, 0x88) < 0)
 			goto err;
@@ -2897,7 +2897,7 @@ static int stv090x_start_search(struct stv090x_state *state)
 		{
 			if (STV090x_WRITE_DEMOD(state, CARFREQ, 0x4c) < 0)
 				goto err;
-			if (state->device != STX7111)
+			if ((state->device != STX7111) && (state->device != STXH205))
 			{
 				if (STV090x_WRITE_DEMOD(state, CARHDR, 0x20) < 0)
 					goto err;
@@ -2907,7 +2907,7 @@ static int stv090x_start_search(struct stv090x_state *state)
 		{
 			if (STV090x_WRITE_DEMOD(state, CARFREQ, 0x4b) < 0)
 				goto err;
-			if (state->device != STX7111)
+			if ((state->device != STX7111) && (state->device != STXH205))
 			{
 				if (STV090x_WRITE_DEMOD(state, CARHDR, 0x20) < 0)
 					goto err;
@@ -4170,7 +4170,7 @@ static u8 stv090x_optimize_carloop(struct stv090x_state *state, enum stv090x_mod
 	/* FIXME: we should warn in other cut cases if device is stx7111 because values
 	 * are unknown
 	 */
-	if ((state->dev_ver == 0x20) && (state->device == STX7111))
+	if ((state->dev_ver == 0x20) && ((state->device == STX7111) || (state->device == STXH205)))
 	{
 		printk("%s STX7111 cut 0x20 handling (modcod %d, pilots %d)\n", __func__, modcod, pilots);
 		car_loop = stx7111_s2_crl_cut20;
@@ -4379,14 +4379,14 @@ static int stv090x_optimize_track(struct stv090x_state *state)
 			if (STV090x_WRITE_DEMOD(state, DEMOD, reg) < 0)
 				goto err;
 #ifndef FORTIS_HDBOX
-			if (state->device == STX7111)
+			if ((state->device == STX7111) || (state->device == STXH205))
 			{
 				if (STV090x_WRITE_DEMOD(state, ERRCTRL1, 0x73) < 0)
 					goto err;
 				if (STV090x_WRITE_DEMOD(state, U1, 0x73) < 0)
 					goto err;
 			}
-			if ((state->dev_ver >= 0x30) && (state->device != STX7111))
+			if ((state->dev_ver >= 0x30) && (state->device != STX7111) && (state->device != STXH205))
 			{
 				if (stv090x_get_viterbi(state) < 0)
 					goto err;
@@ -4441,7 +4441,7 @@ static int stv090x_optimize_track(struct stv090x_state *state)
 				}
 			}
 #endif
-			if (state->device != STX7111)
+			if ((state->device != STX7111) && (state->device != STXH205))
 			{
 				if (STV090x_WRITE_DEMOD(state, ERRCTRL1, 0x75) < 0)
 					goto err;
@@ -4527,7 +4527,7 @@ static int stv090x_optimize_track(struct stv090x_state *state)
 						goto err;
 				}
 			}
-			if (state->device == STX7111)
+			if ((state->device == STX7111) || (state->device == STXH205))
 			{
 				if (state->search_mode == STV090x_SEARCH_AUTO)
 				{
@@ -4693,8 +4693,9 @@ static int stv090x_optimize_track(struct stv090x_state *state)
 			goto err;
 	}
 	if ((state->delsys == STV090x_DVBS1)
-			|| (state->delsys == STV090x_DSS)
-			|| state->device == STX7111)
+	|| (state->delsys == STV090x_DSS)
+	|| (state->device == STX7111)
+	|| (state->device == STXH205))
 	{
 		stv090x_set_vit_thtracq(state);
 	}
@@ -4881,7 +4882,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 	s32 agc1_power, power_iq = 0, i;
 	int lock = 0, low_sr = 0, no_signal = 0;
 	dprintk(10, "%s >\n", __func__);
-	if (state->device != STX7111)
+	if ((state->device != STX7111) && (state->device != STXH205))
 	{
 		reg = STV090x_READ_DEMOD(state, TSCFGH);
 		STV090x_SETFIELD_Px(reg, RST_HWARE_FIELD, 1); /* Stop path 1 stream merger */
@@ -4890,7 +4891,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 	}
 	if (STV090x_WRITE_DEMOD(state, DMDISTATE, 0x5c) < 0) /* Demod stop */
 		goto err;
-	if (state->device == STX7111)
+	if ((state->device == STX7111) || (state->device == STXH205))
 	{
 		reg = STV090x_READ_DEMOD(state, PDELCTRL1);
 		STV090x_SETFIELD_Px(reg, ALGOSWRST_FIELD, 1);
@@ -4910,7 +4911,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 				goto err;
 		}
 	}
-	if (state->device == STX7111)
+	if ((state->device != STX7111) && (state->device != STXH205))
 	{
 		reg = STV090x_READ_DEMOD(state, TSCFGH);
 		STV090x_SETFIELD_Px(reg, RST_HWARE_FIELD, 1); /* Stop path 1 stream merger */
@@ -4936,7 +4937,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 		if (STV090x_WRITE_DEMOD(state, TMGCFG, 0xd2) < 0)
 			goto err;
 #ifndef FORTIS_HDBOX
-		if (state->device != STX7111)
+		if ((state->device != STX7111) && (state->device != STXH205))
 		{
 			if (state->srate < 2000000)
 			{
@@ -4960,7 +4961,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 				goto err;
 			if (state->algo == STV090x_COLD_SEARCH)
 			{
-				if (state->device != STX7111)
+				if ((state->device != STX7111) && (state->device != STXH205))
 				{
 					state->tuner_bw = (15 * (stv090x_car_width(state->srate, state->rolloff) + 10000000)) / 10;
 				}
@@ -4969,7 +4970,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 					state->tuner_bw = (15 * (stv090x_car_width(state->srate, state->rolloff))) / 10;
 				}
 			}
-			else if ((state->algo == STV090x_WARM_SEARCH) && (state->device != STX7111))
+			else if ((state->algo == STV090x_WARM_SEARCH) && (state->device != STX7111) && (state->device != STXH205))
 			{
 				state->tuner_bw = stv090x_car_width(state->srate, state->rolloff) + 10000000;
 			}
@@ -5079,7 +5080,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 			if (stv090x_start_search(state) < 0)
 				goto err;
 		}
-		if (state->device == STX7111)
+		if ((state->device == STX7111) || (state->device == STXH205))
 		{
 			reg = STV090x_READ_DEMOD(state, PDELCTRL1);
 			STV090x_SETFIELD_Px(reg, ALGOSWRST_FIELD, 0);
@@ -5096,7 +5097,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 	{
 		return signal_state;
 	}
-	if (state->device == STX7111)
+	if ((state->device == STX7111) || (state->device == STXH205))
 	{
 		/* release merger reset */
 		reg = STV090x_READ_DEMOD(state, TSCFGH);
@@ -5189,7 +5190,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 		{
 			if (state->delsys == STV090x_DVBS2)
 			{
-				if (state->device != STX7111)
+				if ((state->device != STX7111) && (state->device != STXH205))
 				{
 					stv090x_set_s2rolloff(state);
 				}
@@ -5207,7 +5208,7 @@ static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 			}
 			else
 			{
-				if (state->device != STX7111)
+				if ((state->device != STX7111) && (state->device != STXH205))
 				{
 					if (STV090x_WRITE_DEMOD(state, ERRCTRL1, 0x75) < 0)
 						goto err;
@@ -5920,7 +5921,7 @@ err:
 static u32 stv090x_get_mclk(struct stv090x_state *state)
 {
 	const struct stv090x_config *config = state->config;
-	if (state->device == STX7111)
+	if ((state->device == STX7111) || (state->device == STXH205))
 	{
 		u32 n_div = 0;
 		u32 m_div = 0;
@@ -5962,7 +5963,7 @@ static int stv090x_set_mclk(struct stv090x_state *state, u32 mclk, u32 clk)
 	const struct stv090x_config *config = state->config;
 	u32 reg, div, clk_sel;
 	dprintk(10, "%s >\n", __func__);
-	if (state->device == STX7111)
+	if ((state->device == STX7111) || (state->device == STXH205))
 	{
 		reg = stv090x_read_reg(state, STV090x_NCOARSE);
 		STV090x_SETFIELD(reg, M_DIV_FIELD, 0x06);
@@ -6409,6 +6410,13 @@ static int stv090x_setup(struct dvb_frontend *fe)
 	else if (state->device == STX7111)
 	{
 		dprintk(10, "Initializing STX7111\n");
+		stv090x_initval = stx7111_initval;
+		t1_size = ARRAY_SIZE(stx7111_initval);
+		t2_size = 0;
+	}
+	else if (state->device == STXH205)
+	{
+		dprintk(10, "Initializing STXH205\n");
 		stv090x_initval = stx7111_initval;
 		t1_size = ARRAY_SIZE(stx7111_initval);
 		t2_size = 0;

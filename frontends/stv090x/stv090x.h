@@ -40,7 +40,8 @@ enum stv090x_device
 {
 	STV0903 = 0,
 	STV0900,
-	STX7111
+	STX7111,
+	STXH205
 };
 
 enum stv090x_mode

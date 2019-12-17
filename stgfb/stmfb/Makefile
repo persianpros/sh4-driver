@@ -394,6 +394,34 @@ stmcore-display-sti7108-objs := $(sti7108-display-objs) $(SRC_TOPDIR)/linux/kern
 
 endif
 
+#
+# !! For the time being: treat the H205 as a 7111
+#
+ifeq ($(CONFIG_CPU_SUBTYPE_STXH205),y)
+
+STIH205SRCS = $(STM_HDF_TVOUT) $(STM_HDMI_COMMON) $(STM_HDMI_DMA_IFRAME) $(STM_BDISP) $(STM_DEI_IQI)
+
+STIH205SRCS += $(addprefix $(SRC_TOPDIR)/Gamma/, GDPBDispOutput.cpp)
+
+STIH205SRCS += $(addprefix $(SRC_TOPDIR)/soc/stih205/, \
+			stih205gdp.cpp                    \
+			stih205bdisp.cpp                  \
+			stih205mixer.cpp                  \
+			stih205dvo.cpp                   \
+			stih205mainoutput.cpp             \
+			stih205auxoutput.cpp              \
+			stih205hdmi.cpp                   \
+			stih205device.cpp                 \
+			stih205devicecreate.cpp)
+
+stih205-display-objs := $(patsubst %.cpp,%.o,$(ALLSRCS) $(STIH205SRCS))
+stih205-display-objs := $(patsubst %.c,%.o,$(stih205-display-objs))
+
+obj-m += stmcore-display-stih205.o
+stmcore-display-stih205-objs := $(stih205-display-objs) $(SRC_TOPDIR)/linux/drivers/stm/coredisplay/stih205/stih205.o
+
+endif
+
 #ifdef __TDT__
 EXTRA_CFLAGS    := -I$(DRIVER_TOPDIR)/stgfb/stmfb -I$(DRIVER_TOPDIR)/include/stmfb -I$(DRIVER_TOPDIR)/stgfb/stmfb/linux/kernel/include -I$(DRIVER_TOPDIR)/stgfb/stmfb/kernel/include
 EXTRA_CXXFLAGS := -fno-rtti -fno-exceptions

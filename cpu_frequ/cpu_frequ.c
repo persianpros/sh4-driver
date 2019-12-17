@@ -51,8 +51,12 @@
 
 #define STX7105
 
+#elif defined (CONFIG_CPU_SUBTYPE_STXH205)
+
+#define STXH205
+
 #else
-#error unknown arch
+#error unknown archictecture!
 #endif
 
 #ifdef STB7100
@@ -153,7 +157,7 @@ static struct proc_dir_entry
 *slim_ratio, 
 *sysaclkout, 
 #endif
-*m_hz; 
+*m_hz;
 
 unsigned long get_pll0_frequ(void)
 {
@@ -166,7 +170,7 @@ unsigned long get_pll0_frequ(void)
   pdiv = (value >> 16) & 0x7;
   freq_pll0 = (((2 * (_CONFIG_SH_EXTERNAL_CLOCK / 1000) * ndiv) / mdiv) / (1 << pdiv)) * 1000;
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   value = ctrl_inl(CKGA_PLL0_CFG);
   mdiv = (value >> 0) & 0x07;
   ndiv = (value >> 8) & 0xff;
@@ -297,7 +301,7 @@ int update_tmu(unsigned long parent_rate)
 
   frequ = frequ / module_div / 4;
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   //TODO: tmu0 frequ berechnen
 #endif
   dev = bus_find_device_by_name(&platform_bus_type, NULL, "sh_tmu.0");
@@ -469,7 +473,7 @@ static int read_ratio(char *page, char **start,
     case 7: slim_div=6;break;
   }
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   mdiv = (value >>  0) & 0x07;
   ndiv = (value >>  8) & 0xff;
   freq_pll0 = (((2 * (_CONFIG_SH_EXTERNAL_CLOCK / 1000) * ndiv) / mdiv)) * 1000;
@@ -524,7 +528,7 @@ static int read_ratio(char *page, char **start,
   }
   len+=sprintf(page+len, "SYSACLKOUT (standard 266MHz) = %ldMHz\n", val_sysaclkout);
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   mdiv = (value >>  0) & 0x07;
   ndiv = (value >>  8) & 0xff;
   freq_pll1 = (((2 * (_CONFIG_SH_EXTERNAL_CLOCK / 1000) * ndiv) / mdiv)) * 1000;
@@ -543,7 +547,7 @@ static int read_ratio(char *page, char **start,
   value = ctrl_inl(_TMU1_TCNT);
   len+=sprintf(page+len, "TMU1_TCNT = %lx\n", value);
 
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   value = ctrl_inl(_TMU2_TCOR);
   len+=sprintf(page+len, "TMU2_TCOR = %lx\n", value);
 
@@ -593,7 +597,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   unsigned long regdata, sta;
   int ndiv=0, mdiv=0;
   int ndiv_mdiv=simple_strtoul(buffer, NULL, 10);
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   unsigned long regdata1;
 #endif
 
@@ -601,7 +605,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   mdiv = (ndiv_mdiv >> 0) & 0xff;
   ndiv = (ndiv_mdiv >> 8) & 0xff;
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   mdiv = (ndiv_mdiv >> 0) & 0x07;
   ndiv = (ndiv_mdiv >> 8) & 0xff;
 #endif
@@ -626,7 +630,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
 #ifdef STB7100
   //ctrl_outl(0x00000002, CKGA_PLL1_BYPASS);  // set to SYSACLKIN
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   regdata = regdata | 1 << 20;  // set to SYSACLKIN
   ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
@@ -635,7 +639,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   //regdata = regdata & ~(1 << 19);  // disable PLL1
   //ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   regdata1 = ctrl_inl(CKGA_POWER_CFG);  // get data from register
   regdata1 = regdata1 | 0x2;
   ctrl_outl(regdata1, CKGA_POWER_CFG);  //power down PLL1
@@ -650,7 +654,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   regdata = regdata | ndiv << 8;  // set NDIV
   regdata = regdata | (0x1 & 0x7)  << 16;  // set PDIV
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   regdata = regdata & ~(0x07);  // clear MDIV
   regdata = regdata & ~(0xff) << 8;   // clear NDIV
 
@@ -663,7 +667,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   //regdata = regdata | 1 << 19;  // aktivate PLL1
   ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   regdata1 = regdata1 & ~(0x2);
   ctrl_outl(regdata1, CKGA_POWER_CFG);  //power up PLL1
 #endif
@@ -678,7 +682,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   }
 */
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   sta = ctrl_inl(CKGA_PLL1_CFG);
   while((sta & 0x80000000) == 0x00)
   {
@@ -689,7 +693,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
 #ifdef STB7100
   //ctrl_outl(0x00000000, CKGA_PLL1_BYPASS);  // set to PLL1_CLK
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   regdata = regdata & ~(1 << 20);  // set to PLL1 CLK
   ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
@@ -705,7 +709,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
     clk_enable(clk);
   }
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   // set /proc
   clk=set_clock("CLKA_PLL1", 0);
   //FIXME: fuer stx7105 setze alle pll1 abhaengigen clocks
@@ -726,7 +730,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   unsigned long regdata, frequ;
   int ndiv=0, mdiv=0;
   int ndiv_mdiv=simple_strtoul(buffer, NULL, 10);
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
 //  unsigned long regdata1;
 #endif
 
@@ -734,19 +738,19 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   mdiv = (ndiv_mdiv >> 0) & 0xff;
   ndiv = (ndiv_mdiv >> 8) & 0xff;
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   mdiv = (ndiv_mdiv >> 0) & 0x07;
   ndiv = (ndiv_mdiv >> 8) & 0xff;
 #endif
 
   if(mdiv<0 || mdiv>255)
   {
-    dprintk("[CPU_FREQU] mdiv not correct, use another PLL0 Frequenze (%d)\n", mdiv);
+    dprintk("[CPU_FREQU] mdiv not correct, use another PLL0 frequenze (%d)\n", mdiv);
     return count;
   }
   if(ndiv<3 || ndiv>255)
   {
-    dprintk("[CPU_FREQU] ndiv not correct, use another PLL0 Frequenze (%d)\n", ndiv);
+    dprintk("[CPU_FREQU] ndiv not correct, use another PLL0 frequenze (%d)\n", ndiv);
     return count;
   }
 
@@ -762,7 +766,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   regdata = regdata & ~(1 << 19);  // disable PLL0
   ctrl_outl(regdata, CKGA_PLL0_CFG);
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
 //  regdata1 = ctrl_inl(CKGA_POWER_CFG);  // get data from register
 //  regdata1 = regdata1 | 0x1;
 //  ctrl_outl(regdata1, CKGA_POWER_CFG);  //power down PLL0
@@ -777,7 +781,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   regdata = regdata | ndiv << 8;  // set NDIV
   regdata = regdata | (0x0 & 0x7)  << 16;  // set PDIV
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   regdata = regdata & ~(0x07);  // clear MDIV
   regdata = regdata & ~(0xff) << 8;   // clear NDIV
 
@@ -790,7 +794,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   regdata = regdata | 1 << 19;  // aktivate PLL0
   ctrl_outl(regdata, CKGA_PLL0_CFG);
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
 //  regdata1 = regdata1 & ~(0x1);
 //  ctrl_outl(regdata1, CKGA_POWER_CFG);  //power up PLL0
 #endif
@@ -803,7 +807,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
     sta = ctrl_inl(CKGA_PLL0_LCK_STA);
   }
 #endif
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
 //  sta = ctrl_inl(CKGA_PLL0_CFG);
 //  while((sta & 0x80000000) == 0x00)
 //  {
@@ -833,7 +837,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   }
 #endif
 
-#if defined(STX7105) || defined(STX7111)
+#if defined(STX7105) || defined(STX7111) || defined(STXH205)
   // set /proc does not work in stm23
   frequ = get_pll0_frequ();
   //set_clock("CLKA_PLL0HS", frequ);

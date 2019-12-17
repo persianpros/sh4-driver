@@ -654,6 +654,7 @@ enum stm_blitter_device {
     /* for compatibility with old code */
     STM_BLITTER_VERSION_7108 = STM_BLITTER_VERSION_7106_7108,
   STM_BLITTER_VERSION_5206,
+  STM_BLITTER_VERSION_H205,
 };
 
 /* Note that this must always match the private declaration for

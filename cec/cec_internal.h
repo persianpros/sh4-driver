@@ -32,7 +32,7 @@
 #define CEC_IRQ                143
 #endif
 #ifdef STxH205
-#define CEC_IRQ               207
+#define CEC_IRQ                207
 #endif
 
 #define CEC_STATUS_RECV_BTF 128

@@ -143,6 +143,11 @@ static void determine_dma_req_lines(void)
       dma_req_lines[SDTP_DENC1_TELETEXT] = 41;
       dma_req_lines[SDTP_DENC2_TELETEXT] = 42;
       break;
+    case CPU_STXH205: //TODO:get correct values (these are from STX7111)
+      dma_req_lines[SDTP_HDMI1_IFRAME]   = 2;
+      dma_req_lines[SDTP_DENC1_TELETEXT] = 34;
+      dma_req_lines[SDTP_DENC2_TELETEXT] = -1;
+      break;
 #if 0
     case CPU_STX5206:
       dma_req_lines[SDTP_HDMI1_IFRAME]   = -1;

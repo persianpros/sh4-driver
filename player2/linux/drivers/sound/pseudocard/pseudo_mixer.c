@@ -277,6 +277,20 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 	},
 };
 
+#elif defined CONFIG_CPU_SUBTYPE_STXH205 && !defined CONFIG_DUAL_DISPLAY
+
+#warning "H205 values haven't been tested"
+static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
+{
+	{
+		{
+			CARD_SPDIF("SPDIF", 0, 2, 48000, 2),
+			CARD("Analog", 0, 1, 48000, 2),
+			CARD("HDMI", 0, 0, 48000, 2),
+		},
+	},
+};
+
 #elif defined CONFIG_CPU_SUBTYPE_STX7141
 
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
@@ -326,6 +340,25 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 	{
 		{
 			CARD("Analog0", 0, 1, 48000, 2),
+		},
+	},
+};
+
+#elif defined CONFIG_CPU_SUBTYPE_STXH205
+
+#warning "H205 values haven't been tested"
+static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
+{
+	{
+		{
+			CARD_SPDIF("SPDIF", 0, 2, 48000, 2),
+			CARD("HDMI", 0, 1, 48000, 2),
+		},
+	},
+	{
+		{
+			CARD("Analog0", 0, 0, 48000, 2),
+			CARD("Analog1", 0, 1, 48000, 2),
 		},
 	},
 };

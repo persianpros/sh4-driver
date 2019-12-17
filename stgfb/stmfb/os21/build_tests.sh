@@ -17,7 +17,10 @@ make ARCH=sh CONFIG_STI7111_MB618=y CONFIG_STG_DEBUG=y
 # 7141 shares the core code with 7111 so no need to test a debug build
 make ARCH=sh CONFIG_STI7141_MB628=y clean
 make ARCH=sh CONFIG_STI7141_MB628=y
-make ARCH=sh CONFIG_STI7200_MB671=y clean
+# H205 shares the core code with 7111 so no need to test a debug build
+make ARCH=sh CONFIG_STIH205_B2067=y clean
+make ARCH=sh CONFIG_STIH205_B2067=y
+make ARCH=sh CONFIG_STI200_MB671=y clean
 make ARCH=sh CONFIG_STI7200_MB671=y
 make ARCH=sh CONFIG_STI7200_MB671=y clean
 make ARCH=sh CONFIG_STI7200_MB671=y CONFIG_STG_DEBUG=y

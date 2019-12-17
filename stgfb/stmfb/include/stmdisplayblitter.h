@@ -78,6 +78,7 @@ enum stm_blitter_device_priv {
   _STM_BLITTER_VERSION_5197,
   _STM_BLITTER_VERSION_7106_7108,
   _STM_BLITTER_VERSION_5206,
+  _STM_BLITTER_VERSION_H205,
 };
 
 /* Note that this must always match the public declaration for struct

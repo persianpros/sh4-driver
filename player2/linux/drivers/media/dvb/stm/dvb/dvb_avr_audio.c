@@ -110,6 +110,9 @@ static int ll_audio_enable = false;
 # warning Need to check this value
 # elif defined(CONFIG_CPU_SUBTYPE_STB7100)
 # define AUDIO_CAPTURE_PCM 3
+# elif defined(CONFIG_CPU_SUBTYPE_STXH205)
+# define AUDIO_CAPTURE_PCM 3
+# warning Need to check this value
 # else
 # error Unsupported platform!
 # endif

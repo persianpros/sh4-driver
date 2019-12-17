@@ -18,6 +18,13 @@ sh4strip -o board_tests/mb628/interlaced_display.out tests/interlaced_display/in
 sh4strip -o board_tests/mb628/progressive_display.out tests/progressive_display/progressive_display.out
 cp $FIRMWARE_HOME/component_7141_mb628.fw board_tests/mb628/component.fw
 
+mkdir -p board_tests/b2067
+make ARCH=sh CONFIG_STIH205_B2067=y clean
+make ARCH=sh CONFIG_STIH205_B2067=y
+sh4strip -o board_tests/b2067/interlaced_display.out tests/interlaced_display/interlaced_display.out
+sh4strip -o board_tests/b2067/progressive_display.out tests/progressive_display/progressive_display.out
+cp $FIRMWARE_HOME/component_h205_b2067.fw board_tests/b2067/component.fw
+
 mkdir -p board_tests/mb671
 make ARCH=sh CONFIG_STI7200_MB671=y clean
 make ARCH=sh CONFIG_STI7200_MB671=y
