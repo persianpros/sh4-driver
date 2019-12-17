@@ -56,7 +56,13 @@ static int extmoduldetect = 0;
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
 struct stpio_pin*	cic_enable_pin = NULL;
 struct stpio_pin*	module_A_pin = NULL;
 struct stpio_pin*	module_B_pin = NULL;
@@ -153,6 +159,20 @@ unsigned char default_values[33] =
   0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
   0x00, 0x00, 0x00, 0x03, 0x06, 0x00, 0x03, 0x01
 };
+#elif defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) //TODO: check/change values
+unsigned char default_values[33] =
+{
+  0x00,
+  0x00, 0x00, 0x02, 0x00, 0x00, 0x44, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x02, 0x00, 0x02, 0x44, 0x00,
+  0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+  0x00, 0x00, 0x00, 0x03, 0x06, 0x00, 0x03, 0x01
+};
 #elif defined (HOMECAST5101)
 unsigned char default_values[33] =
 {
@@ -174,7 +194,13 @@ unsigned long reg_buffer = 0;
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
 unsigned long reg_sysconfig = 0;
 #endif
 
@@ -185,7 +211,13 @@ unsigned long reg_sysconfig = 0;
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
 static unsigned char *slot_membase[2];
 #else
 /* for whatever reason the access has to be done though a short pointer */
@@ -227,7 +259,13 @@ static unsigned short *slot_membase[2];
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
 #define EMIConfigBaseAddress 0xfe700000
 #define SysConfigBaseAddress 0xFE001000
 #else
@@ -389,7 +427,13 @@ void getCiSource(int slot, int* source)
  && !defined(HS7429) \
  && !defined(HS7810A) \
  && !defined(HS7119) \
- && !defined(HS7819)
+ && !defined(HS7819) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000)
   int val;
   val = starci_readreg(&ca_state, TWIN_MODE_CTRL_REG);
   val &= 0x20;
@@ -636,7 +680,13 @@ static int starci_slot_reset(struct dvb_ca_en50221 *ca, int slot)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
     msleep(200);
 #else
     msleep(60);
@@ -809,7 +859,13 @@ static int starci_slot_ts_enable(struct dvb_ca_en50221 *ca, int slot)
  && !defined(HS7429) \
  && !defined(HS7810A) \
  && !defined(HS7819) \
- && !defined(CUBEBOX) 
+ && !defined(CUBEBOX) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000)
   starci_writereg(state, reg[slot], 0x23);
 #else
   starci_writereg(state, reg[slot], 0x21);
@@ -847,7 +903,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
   state->i2c = i2c_get_adapter(1);
   state->i2c_addr = 0x43;
 #else
@@ -882,7 +944,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(HS7420) \
  && !defined(HS7429) \
  && !defined(HS7810A) \
- && !defined(HS7819)
+ && !defined(HS7819) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000)
   reg_buffer = (unsigned long)ioremap(EMIBufferBaseAddress, 0x40);
 #endif
 
@@ -892,7 +960,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
   reg_sysconfig = (unsigned long)ioremap(SysConfigBaseAddress, 0x200);
 #endif
 
@@ -904,7 +978,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(HS7420) \
  && !defined(HS7429) \
  && !defined(HS7810A) \
- && !defined(HS7819)
+ && !defined(HS7819) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000)
   dprintk (KERN_ERR "ioremap 0x%.8x -> 0x%.8lx\n", EMIBufferBaseAddress, reg_buffer);
 #endif
 
@@ -946,7 +1026,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
   /* the magic potion - some clkb settings */
   ctrl_outl(0x0000c0de, 0xfe000010);
   ctrl_outl(0x00000008, 0xfe0000b4);
@@ -978,7 +1064,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(HS7119) \
  || defined(HS7810A) \
  || defined(HS7819) \
- || defined(CUBEBOX)
+ || defined(CUBEBOX) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
   starci_writereg(state, 0x18, 0x21);
 #else
   starci_writereg(state, 0x18, 0x01);
@@ -991,7 +1083,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(HS7420) \
  && !defined(HS7429) \
  && !defined(HS7810A) \
- && !defined(HS7819)
+ && !defined(HS7819) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000)
   ctrl_outl(0x0, reg_config + EMI_LCK);
   ctrl_outl(0x0, reg_config + EMI_GEN_CFG);
 #endif
@@ -1011,7 +1109,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
   ctrl_outl(0x8486d9, reg_config + EMIBank3 + EMI_CFG_DATA0);
   ctrl_outl(0x9d220000,reg_config + EMIBank3 + EMI_CFG_DATA2);
   ctrl_outl(0x8,reg_config + EMIBank3 + EMI_CFG_DATA3);
@@ -1060,7 +1164,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 
 #endif
 
-#if !defined(ATEVIO7500) && !defined(FORTIS_HDBOX) && !defined(HS7110) && !defined(HS7119) && !defined(HS7810A) && !defined(HS7819)
+#if !defined(ATEVIO7500) && !defined(FORTIS_HDBOX) && !defined(HS7110) && !defined(HS7119) && !defined(HS7810A) && !defined(HS7819) && !defined(FOREVER_NANOSMART) && !defined(FOREVER_9898HD) && !defined(DP7001) && !defined(FOREVER_2424HD) && !defined(GPV8000) && !defined(EP8000)
   ctrl_outl(0x1, reg_config + EMI_CLK_EN);
 #endif
 
@@ -1076,7 +1180,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
   slot_membase[0] = ioremap( 0x06000000, 0x1000 );
 #elif defined(CUBEBOX)
   slot_membase[0] = ioremap( 0x3000000, 0x1000 );
@@ -1103,7 +1213,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
   slot_membase[1] = ioremap( 0x06010000, 0x1000 );
 #elif defined(CUBEBOX)
   slot_membase[1] = ioremap( 0x3010000, 0x1000 );
@@ -1125,7 +1241,13 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(HS7420) \
  && !defined(HS7429) \
  && !defined(HS7810A) \
- && !defined(HS7819)
+ && !defined(HS7819) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000)
   ctrl_outl(0x1F,reg_config + EMI_LCK);
 #endif
 

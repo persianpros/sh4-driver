@@ -89,7 +89,11 @@ extern void fe_core_register_frontend(struct dvb_adapter *dvb_adap);
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
  || defined(SAGEMCOM88) \
- || defined(PACE7241)
+ || defined(PACE7241) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 extern void stv090x_register_frontend(struct dvb_adapter *dvb_adap);
 #elif defined(HL101) \
  || defined(VIP1_V2) \
@@ -537,7 +541,11 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
- || defined(PACE7241)
+ || defined(PACE7241) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 	unsigned long start = 0xfe230000;
 #else
 	unsigned long start = 0x19230000;
@@ -628,7 +636,11 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
  || defined(SAGEMCOM88) \
- || defined(PACE7241)
+ || defined(PACE7241) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		stv090x_register_frontend(&pContext->DvbContext->DvbAdapter);
 #elif defined(HL101) \
  || defined(VIP1_V2) \

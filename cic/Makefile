@@ -141,6 +141,41 @@ obj-m += starci.o
 starci-objs:= starci2win/starci2win.o
 endif
 
+ifdef FOREVER_NANOSMART
+obj-m += starci.o
+starci-objs:= starci2win/starci2win.o
+endif
+
+ifdef FOREVER_9898HD
+obj-m += starci.o
+starci-objs:= starci2win/starci2win.o
+endif
+
+ifdef DP7001
+obj-m += starci.o
+starci-objs:= starci2win/starci2win.o
+endif
+
+ifdef FOREVER_2424HD
+obj-m += starci.o
+starci-objs:= starci2win/starci2win.o
+endif
+
+ifdef GPV8000
+obj-m += starci.o
+starci-objs:= starci2win/starci2win.o
+endif
+
+ifdef EP8000
+obj-m += starci.o
+starci-objs:= starci2win/starci2win.o
+endif
+
+#ifdef EPP8000
+#obj-m += starci.o
+#starci-objs:= starci2win/starci2win.o
+#endif
+
 ifdef ATEMIO520
 obj-m += cnbox_cic.o
 cnbox_cic-objs:= cnbox_cic/cnbox_cic.o

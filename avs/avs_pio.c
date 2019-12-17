@@ -74,7 +74,7 @@ inline int avs_pio_standby(int type)
 	{
 		if (ft_stnby == 0)
 		{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
+#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
 			stpio_set_pin(avs_format, 0);
 			stpio_set_pin(avs_standby, 1);
 			stpio_set_pin(avs_mode, 0);
@@ -90,7 +90,7 @@ inline int avs_pio_standby(int type)
 	{
 		if (ft_stnby == 1)
 		{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
+#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
 			stpio_set_pin(avs_format, 0);
 			stpio_set_pin(avs_standby, 0);
 			stpio_set_pin(avs_mode, 0);
@@ -197,21 +197,21 @@ int avs_pio_set_wss(int val)
 
 	if (val == SAA_WSS_43F)
 	{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
+#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
 		stpio_set_pin(avs_standby, 0);
 #endif
 		stpio_set_pin(avs_format, 0);
 	}
 	else if (val == SAA_WSS_169F)
 	{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
+#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
 		stpio_set_pin(avs_standby, 0);
 #endif
 		stpio_set_pin(avs_format, 1);
 	}
 	else if (val == SAA_WSS_OFF)
 	{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
+#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
 		stpio_set_pin(avs_format, 1);
 #endif
 	}
@@ -379,6 +379,12 @@ int avs_pio_init(void)
 	avs_mode	= stpio_request_pin (6, 4, "avs2", STPIO_OUT);
 	avs_mute	= NULL;
 //	avs_src		= NULL;
+#elif defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) //TODO: get correct pin numbers
+	avs_format	= stpio_request_pin (6, 5, "avs0", STPIO_OUT);
+	avs_standby	= stpio_request_pin (6, 6, "avs1", STPIO_OUT);
+	avs_mode	= stpio_request_pin (6, 4, "avs2", STPIO_OUT);
+	avs_mute	= NULL;
+	avs_src		= NULL;
 #else
 	return 0;
 #endif

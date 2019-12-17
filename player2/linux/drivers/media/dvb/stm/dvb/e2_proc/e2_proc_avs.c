@@ -125,7 +125,11 @@ static int current_input = ENCODER;
  || defined(IPBOX99) \
  || defined(IPBOX55) \
  || defined(ADB_BOX) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 static int current_volume = 0;
 #else
 static int current_volume = 31;
@@ -201,7 +205,9 @@ int proc_avs_0_volume_write(struct file *file, const char __user *buf,
  || defined(IPBOX99) \
  || defined(IPBOX55) \
  || defined(ADB_BOX) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001)
 		current_volume = volume;
 #else
 		/* Dagobert: 04.10.2009: e2 delivers values from 0 to 63 db. the ak4705

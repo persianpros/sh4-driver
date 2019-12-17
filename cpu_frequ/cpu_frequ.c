@@ -110,6 +110,31 @@
 #define _CONFIG_SH_EXTERNAL_CLOCK 30000000
 #endif
 
+#if defined(STXH205) //TODO: replace with correct values for FOREVER_9898HD/DP7001
+#define CKGA_BASE_ADDR          0xFE213000
+#define CKGA_PLL0_CFG           (CKGA_BASE_ADDR + 0x00) 
+#define CKGA_PLL1_CFG           (CKGA_BASE_ADDR + 0x04) 
+#define CKGA_POWER_CFG          (CKGA_BASE_ADDR + 0x10) 
+
+//TODO: richtige TMU Werte ermitteln
+#define _TMU_TSTR               0xffd80004
+#define _TMU0_TCOR              0xffd80008
+#define _TMU0_TCNT              0xffd8000c
+#define _TMU0_TCR               0xffd80010
+
+#define _TMU1_TCOR              0xffd80014
+#define _TMU1_TCNT              0xffd80018
+#define _TMU1_TCR               0xffd8001c
+
+#define _TMU2_TCOR              0xffd80020
+#define _TMU2_TCNT              0xffd80024
+#define _TMU2_TCR               0xffd80028
+//TODO: ende
+#define _TMU_TSTR_INIT          0x7   /* enable TMU0/1/2 */
+
+#define _CONFIG_SH_EXTERNAL_CLOCK 30000000
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 18)
   void set_actual_latch(unsigned long val_actual_latch);
 #endif

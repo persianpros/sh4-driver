@@ -60,7 +60,11 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
  || defined(SAGEMCOM88) \
- || defined(PACE7241)
+ || defined(PACE7241) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 #define TSMergerBaseAddress 0xFE242000
 #define SWTS_BASE_ADDRESS 0xFE900000 //STi7105 STi7111
 #else
@@ -145,7 +149,11 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
  || defined(SAGEMCOM88) \
- || defined(PACE7241)
+ || defined(PACE7241) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 #define SysConfigBaseAddress 0xFE001000
 #else
 #define SysConfigBaseAddress 0x19001000
@@ -618,7 +626,11 @@ void stm_tsm_init(int use_cimax)
  && !defined(CUBEREVO_9500HD) \
  && !defined(CUBEREVO_MINI_FTA) \
  && !defined(CUBEREVO_3000HD) \
- && !defined(VITAMIN_HD5000)
+ && !defined(VITAMIN_HD5000) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(EPP8000)
 	unsigned int stream_sync = 0xbc4733;
 #else
 	unsigned int stream_sync = 0xbc4722;
@@ -664,7 +676,11 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		if (!reinit)
 		{
 			struct stpio *stream1_pin = stpio_request_pin(5, 0, "TSinterface1", STPIO_IN);
@@ -802,7 +818,11 @@ void stm_tsm_init(int use_cimax)
  && !defined(HS7819) \
  && !defined(ATEMIO520) \
  && !defined(ATEMIO530) \
- && !defined(VITAMIN_HD5000)
+ && !defined(VITAMIN_HD5000) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(EPP8000)
 		ctrl_outl(0x0, reg_sys_config + SYS_CFG1);
 #endif
 		if (reinit)
@@ -876,7 +896,11 @@ void stm_tsm_init(int use_cimax)
  || defined(ATEMIO530) \
  || defined(IPBOX9900) \
  || defined(ARIVALINK200) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		ctrl_outl(0x0, tsm_io + SWTS_CFG(1));
 		ctrl_outl(0x0, tsm_io + SWTS_CFG(2));
 #endif
@@ -899,7 +923,11 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		/* RAM partitioning of streams */
 		ctrl_outl(0x0, tsm_io + TSM_STREAM0_CFG); //448kb (8*64)
 		ctrl_outl(0x500, tsm_io + TSM_STREAM1_CFG); //448kb (6*64)
@@ -1039,7 +1067,11 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7819) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		ret = ctrl_inl(tsm_io + TSM_STREAM2_CFG);
 		ctrl_outl(ret | (0x20020), tsm_io + TSM_STREAM2_CFG);
 #elif !defined(UFS913)
@@ -1060,7 +1092,11 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7429) \
  || defined(HS7810A) \
  || defined(HS7819) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		ret = ctrl_inl(tsm_io + TSM_STREAM3_CFG);
 		ctrl_outl(ret | (0x20020), tsm_io + TSM_STREAM3_CFG);
 		ret = ctrl_inl(tsm_io + TSM_STREAM4_CFG);
@@ -1109,7 +1145,11 @@ void stm_tsm_init(int use_cimax)
  && !defined(ATEMIO530) \
  && !defined(IPBOX9900) \
  && !defined(ARIVALINK200) \
- && !defined(VITAMIN_HD5000)
+ && !defined(VITAMIN_HD5000) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(EPP8000)
 		/* swts_req_trigger + pace cycles (1101) */
 		ctrl_outl(0x800000d, tsm_io + SWTS_CFG(0));
 #elif defined (UFS912) \
@@ -1122,7 +1162,11 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		ctrl_outl(0x8f0000e, tsm_io + SWTS_CFG(0));
 		ctrl_outl(0x8000000, tsm_io + SWTS_CFG(1));
 		ctrl_outl(0x8000000, tsm_io + SWTS_CFG(2));
@@ -1166,7 +1210,11 @@ void stm_tsm_init(int use_cimax)
  && !defined(ATEMIO530) \
  && !defined(IPBOX9900) \
  && !defined(ARIVALINK200) \
- && !defined(VITAMIN_HD5000)
+ && !defined(VITAMIN_HD5000) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(EPP8000)
 		/* UFS910 stream configuration */
 		/* route stream 2 to PTI */
 		ret = ctrl_inl(tsm_io + TSM_PTI_SEL);
@@ -1203,7 +1251,11 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		ctrl_outl(0x15, tsm_io + TSM_PTI_SEL);
 		/* set stream 2 on */
 		ret = ctrl_inl(tsm_io + TSM_STREAM2_CFG);
@@ -1439,7 +1491,11 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		tsm_handle.fdma_reqline = 31;
 #elif defined(UFS910)
 		//ufs910 use dma request id 30 for swts, do'nt know what other boxes use

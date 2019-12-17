@@ -131,7 +131,14 @@ static unsigned short normal_i2c[] = {
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(ARIVALINK200)
+ || defined(ARIVALINK200) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	/* CUBEREVO_MINI_FTA does not register */
 	/* CUBEREVO_250HD seems to use fake_avs, but does not register */
 	0,
@@ -258,6 +265,14 @@ static int avs_command_ioctl(struct i2c_client *client, unsigned int cmd, void *
  && !defined(HS7429) \
  && !defined(HS7810A) \
  && !defined(HS7819) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000) \
+ && !defined(EPP8000) \
  && !defined(ATEMIO520) \
  && !defined(ATEMIO530) // none i2c avs !!!
 	if (!client)
@@ -299,6 +314,13 @@ int avs_command_kernel(unsigned int cmd, void *arg)
  && !defined(HS7429) \
  && !defined(HS7810A) \
  && !defined(HS7819) \
+ && !defined(FOREVER_NANOSMART) \
+ && !defined(FOREVER_9898HD) \
+ && !defined(DP7001) \
+ && !defined(FOREVER_2424HD) \
+ && !defined(GPV8000) \
+ && !defined(EP8000) \
+ && !defined(EPP8000) \
  && !defined(ATEMIO520) \
  && !defined(ATEMIO530) // i2c avs !!!
 	struct i2c_client *client = avs_client;
@@ -320,6 +342,13 @@ int avs_command_kernel(unsigned int cmd, void *arg)
  || defined(HS7429) \
  || defined(HS7810A) \
  || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) // none i2c avs !!!
 	case AVS_PIO: 		err = avs_pio_command_kernel(cmd, arg); 	break;

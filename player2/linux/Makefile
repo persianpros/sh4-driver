@@ -109,6 +109,27 @@ endif
 ifdef HS7819
  PART2=1
 endif
+ifdef FOREVER_NANOSMART
+ PART2=1
+endif
+ifdef FOREVER_9898HD
+ PART2=1
+endif
+ifdef DP7001
+ PART2=1
+endif
+ifdef FOREVER_2424HD
+ PART2=1
+endif
+ifdef GPV8000
+ PART2=1
+endif
+ifdef EP8000
+ PART2=1
+endif
+ifdef EPP8000
+ PART2=1
+endif
 ifdef ATEMIO520
  PART2=1
 endif
