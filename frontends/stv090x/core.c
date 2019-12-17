@@ -43,6 +43,25 @@ static struct stv090x_config tt1600_stv090x_config =
 	.ts1_mode = STV090x_TSMODE_DVBCI,
 	.ts2_mode = STV090x_TSMODE_SERIAL_CONTINUOUS,
 	.repeater_level = STV090x_RPTLEVEL_64,
+#elif defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
+	.device			= STXH205,
+	.demod_mode		= STV090x_SINGLE,
+	.xtal			= 30000000,
+	.ts1_mode		= STV090x_TSMODE_DVBCI,
+	.ts2_mode		= STV090x_TSMODE_SERIAL_CONTINUOUS,
+	.repeater_level		= STV090x_RPTLEVEL_64,
+#elif defined(EPP8000)
+	.device			= STXH205,
+	.demod_mode		= STV090x_DUAL,
+	.xtal			= 30000000,
+	.ts1_mode		= STV090x_TSMODE_DVBCI,
+	.ts2_mode		= STV090x_TSMODE_SERIAL_CONTINUOUS,
+	.repeater_level		= STV090x_RPTLEVEL_64,
 #else
 #warning Architecture not supported
 #endif
@@ -99,7 +118,11 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int i)
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(SPARK)
+ || defined(SPARK) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD)
 	frontend = stv090x_attach(&tt1600_stv090x_config, cfg->i2c_adap, STV090x_DEMODULATOR_0, STV090x_TUNER1);
 #else
 	if (i == 0)
@@ -209,7 +232,11 @@ static struct dvb_frontend *init_stv090x_device(struct dvb_adapter *adapter, str
  || defined(HS7119) \
  || defined(HS7819) \
  || defined(ATEMIO520) \
- || defined(ATEMIO530)
+ || defined(ATEMIO530) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD)
 		/* give the tuner some time to power up. trial fix for tuner
 		 * not available after boot on some boxes.
 		 *
@@ -273,12 +300,31 @@ struct plat_tuner_config tuner_resources[] =
  || defined(HS7119) \
  || defined(HS7819) \
  || defined(ATEMIO520) \
- || defined(ATEMIO530)
+ || defined(ATEMIO530) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000)
 	[0] = {
 		.adapter = 0,
 		.i2c_bus = 3,
 		.i2c_addr = 0x68,
 		.tuner_enable = {3, 3, 1},
+	},
+#elif defined(EPP8000)
+	[0] = {
+		.adapter = 0,
+		.i2c_bus = 3, //TODO: get correct number
+		.i2c_addr = 0x68,
+		.tuner_enable = {3, 3, 1}, //TODO: get correct number
+	},
+	[1] = {
+		.adapter = 0,
+		.i2c_bus = 3, //TODO: get correct number
+		.i2c_addr = 0x68,
+		.tuner_enable = {3, 3, 1}, //TODO: get correct number
 	},
 #elif defined(SPARK)
 	[0] = {

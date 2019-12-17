@@ -319,6 +319,20 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "hs7810a\n");
 #elif defined(HS7819)
 	int len = sprintf(page, "hs7819\n");
+#elif defined(FOREVER_NANOSMART)
+	int len = sprintf(page, "forever_nanosmart\n");
+#elif defined(FOREVER_9898HD)
+	int len = sprintf(page, "forever_9898hd\n");
+#elif defined(DP7001)
+	int len = sprintf(page, "dp7001\n");
+#elif defined(FOREVER_2424HD)
+	int len = sprintf(page, "forever_2424hd\n");
+#elif defined(GPV8000)
+	int len = sprintf(page, "gpv8000\n");
+#elif defined(EP8000)
+	int len = sprintf(page, "ep8000\n");
+#elif defined(EPP8000)
+	int len = sprintf(page, "epp8000\n");
 #elif defined(ATEMIO520)
 	int len = sprintf(page, "atemio520\n");
 #elif defined(ATEMIO530)
@@ -448,6 +462,12 @@ static int info_chipset_read(char *page, char **start, off_t off, int count, int
 	int len = sprintf(page, "STi7111\n");
 #elif defined(SPARK7162)
 	int len = sprintf(page, "STi7162\n");
+#elif defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD)
+	int len = sprintf(page, "STiH237 (Cardiff)\n");
+#elif defined(EP8000) || defined(EPP8000)
+	int len = sprintf(page, "STiH239 (Newport)\n");
+#elif defined(GPV8000)
+	int len = sprintf(page, "STiH253 (Firenze)\n");
 #else
 	int len = sprintf(page, "unknown\n");
 #endif
@@ -868,7 +888,14 @@ struct ProcStructure_s e2Proc[] =
  || defined(SPARK7162) \
  || defined(SAGEMCOM88) \
  || defined(VITAMIN_HD5000) \
- || defined(PACE7241)
+ || defined(PACE7241) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	{cProcDir  , "stb/cec"                                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/cec/state_activesource"                                       , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/cec/state_standby"                                            , NULL, NULL, NULL, NULL, ""},

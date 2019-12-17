@@ -6434,7 +6434,14 @@ static int stv090x_setup(struct dvb_frontend *fe)
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(SPARK)
+ || defined(SPARK) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	STV090x_SETFIELD_Px(reg, STOP_ENABLE_FIELD, 1);
 #endif
 	/* I2C repeater OFF */
@@ -6457,7 +6464,14 @@ static int stv090x_setup(struct dvb_frontend *fe)
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(SPARK)
+ || defined(SPARK) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	if (stv090x_write_reg(state, STV090x_SYNTCTRL, 0x10 | config->clk_mode) < 0) /* enable PLL */
 		goto err;
 #else
@@ -6672,7 +6686,14 @@ static int hdbox_set_voltage(struct dvb_frontend *fe, enum fe_sec_voltage voltag
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(SPARK)
+ || defined(SPARK) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 
 #define LNB_VOLTAGE_OFF 0x2b0010
 #define LNB_VOLTAGE_VER 0x2b0011
@@ -6828,7 +6849,14 @@ static struct dvb_frontend_ops stv090x_ops =
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(SPARK)
+ || defined(SPARK) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	.set_voltage = lnb_set_voltage,
 #elif defined(UFS912)
 	.set_voltage = lnbh23_set_voltage,
@@ -6869,7 +6897,14 @@ struct dvb_frontend *stv090x_attach(const struct stv090x_config *config,
  || defined(HS7819) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
- || defined(SPARK)
+ || defined(SPARK) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	mutex_init(&demod_lock);
 #else
 	if (state->demod == STV090x_DEMODULATOR_0)

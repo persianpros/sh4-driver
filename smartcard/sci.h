@@ -41,6 +41,8 @@
 #elif defined(CONFIG_CPU_SUBTYPE_STX7105) \
  || defined(ATEVIO7500)
 #include "sci_7105.h"
+#elif defined(CONFIG_CPU_SUBTYPE_STXH205) //|| defined(FOREVER_9898HD) || defined(DP7001)
+#include "sci_h205.h"
 #endif
 
 #define MYVERSION "1.0.1"
