@@ -384,7 +384,7 @@ int avs_pio_init(void)
 	avs_standby	= stpio_request_pin (6, 6, "avs1", STPIO_OUT);
 	avs_mode	= stpio_request_pin (6, 4, "avs2", STPIO_OUT);
 	avs_mute	= NULL;
-	avs_src		= NULL;
+//	avs_src		= NULL;
 #else
 	return 0;
 #endif
