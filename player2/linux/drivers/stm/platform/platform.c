@@ -34,6 +34,8 @@
 #include "platform_7105.h"
 #elif defined(CONFIG_CPU_SUBTYPE_STX7108)
 #include "platform_7108.h"
+#elif defined(CONFIG_CPU_SUBTYPE_STX7H205)
+#include "platform_h205.h"
 #endif
 
 MODULE_DESCRIPTION("Player2 Platform Driver");
