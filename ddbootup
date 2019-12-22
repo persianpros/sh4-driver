@@ -1,5 +1,8 @@
 #!/bin/sh
 
+brandcheck=`cat /etc/brand`
+modelcheck=`cat /etc/model`
+
 # Create display device if not present
 if [ -e /dev/dbox/oled0 ] ; then
 	ln -s /dev/dbox/oled0 /dev/vfd
@@ -13,12 +16,22 @@ fi
 # Flush eth0 device which is set by kernel cmdline
 ip addr flush dev eth0 scope global
 
-if [ ! -e /boot/audio.elf ] ; then
-	echo "Audio firmware missing!"
-	echo "Audio FW missing!" > /dev/vfd
-fi
-
-if [ ! -e /boot/video.elf ] ; then
-	echo "Video firmware missing!"
-	echo "Video FW missing!" > /dev/vfd
+if [ $brandcheck == "forever" ]; then
+	if [ ! -e /boot/companion_h205_audio.bin ] ; then
+		echo "Audio firmware missing!"
+		echo "Audio FW missing!" > /dev/vfd
+	fi
+	if [ ! -e /boot/companion_h205_video_Ax.bin ] || [ ! -e /boot/companion_h205_video_Bx.bin ] ; then
+		echo "Video firmware missing!"
+		echo "Video FW missing!" > /dev/vfd
+	fi
+else
+	if [ ! -e /boot/audio.elf ] ; then
+		echo "Audio firmware missing!"
+		echo "Audio FW missing!" > /dev/vfd
+	fi
+	if [ ! -e /boot/video.elf ] ; then
+		echo "Video firmware missing!"
+		echo "Video FW missing!" > /dev/vfd
+	fi
 fi
