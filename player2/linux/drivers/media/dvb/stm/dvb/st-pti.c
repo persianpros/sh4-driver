@@ -92,6 +92,7 @@ extern void fe_core_register_frontend(struct dvb_adapter *dvb_adap);
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 extern void stv090x_register_frontend(struct dvb_adapter *dvb_adap);
@@ -544,6 +545,7 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 	unsigned long start = 0xfe230000;
@@ -639,6 +641,7 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		stv090x_register_frontend(&pContext->DvbContext->DvbAdapter);

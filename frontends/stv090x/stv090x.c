@@ -6446,6 +6446,7 @@ static int stv090x_setup(struct dvb_frontend *fe)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \
@@ -6476,6 +6477,7 @@ static int stv090x_setup(struct dvb_frontend *fe)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \
@@ -6698,6 +6700,7 @@ static int hdbox_set_voltage(struct dvb_frontend *fe, enum fe_sec_voltage voltag
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \
@@ -6861,6 +6864,7 @@ static struct dvb_frontend_ops stv090x_ops =
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \
@@ -6909,6 +6913,7 @@ struct dvb_frontend *stv090x_attach(const struct stv090x_config *config,
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \

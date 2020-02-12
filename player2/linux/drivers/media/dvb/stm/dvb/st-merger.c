@@ -63,6 +63,7 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 #define TSMergerBaseAddress 0xFE242000
@@ -152,6 +153,7 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 #define SysConfigBaseAddress 0xFE001000
@@ -629,6 +631,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(VITAMIN_HD5000) \
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
+ && !defined(FOREVER_3434HD) \
  && !defined(DP7001) \
  && !defined(EPP8000)
 	unsigned int stream_sync = 0xbc4733;
@@ -679,6 +682,7 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7819) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		if (!reinit)
@@ -821,6 +825,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(VITAMIN_HD5000) \
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
+ && !defined(FOREVER_3434HD) \
  && !defined(DP7001) \
  && !defined(EPP8000)
 		ctrl_outl(0x0, reg_sys_config + SYS_CFG1);
@@ -899,6 +904,7 @@ void stm_tsm_init(int use_cimax)
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		ctrl_outl(0x0, tsm_io + SWTS_CFG(1));
@@ -926,6 +932,7 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7819) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		/* RAM partitioning of streams */
@@ -1070,6 +1077,7 @@ void stm_tsm_init(int use_cimax)
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		ret = ctrl_inl(tsm_io + TSM_STREAM2_CFG);
@@ -1095,6 +1103,7 @@ void stm_tsm_init(int use_cimax)
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		ret = ctrl_inl(tsm_io + TSM_STREAM3_CFG);
@@ -1148,6 +1157,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(VITAMIN_HD5000) \
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
+ && !defined(FOREVER_3434HD) \
  && !defined(DP7001) \
  && !defined(EPP8000)
 		/* swts_req_trigger + pace cycles (1101) */
@@ -1165,6 +1175,7 @@ void stm_tsm_init(int use_cimax)
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		ctrl_outl(0x8f0000e, tsm_io + SWTS_CFG(0));
@@ -1213,6 +1224,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(VITAMIN_HD5000) \
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
+ && !defined(FOREVER_3434HD) \
  && !defined(DP7001) \
  && !defined(EPP8000)
 		/* UFS910 stream configuration */
@@ -1254,6 +1266,7 @@ void stm_tsm_init(int use_cimax)
  || defined(HS7819) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		ctrl_outl(0x15, tsm_io + TSM_PTI_SEL);
@@ -1494,6 +1507,7 @@ void stm_tsm_init(int use_cimax)
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		tsm_handle.fdma_reqline = 31;

@@ -109,6 +109,9 @@ endif
 ifdef DP7001
 CCFLAGSY += -DDP7001
 endif
+ifdef FOREVER_3434HD
+CCFLAGSY += -DFOREVER_3434HD
+endif
 ifdef FOREVER_2424HD
 CCFLAGSY += -DFOREVER_2424HD
 endif
@@ -285,6 +288,11 @@ obj-y += smartcard/
 endif
 
 ifdef DP7001
+obj-y += cec/
+obj-y += smartcard/
+endif
+
+ifdef FOREVER_3434HD
 obj-y += cec/
 obj-y += smartcard/
 endif

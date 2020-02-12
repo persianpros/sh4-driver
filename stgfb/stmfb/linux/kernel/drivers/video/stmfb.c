@@ -895,7 +895,7 @@ restart:
     }
   }
 
-//#if (defined(UFS912) || defined(HS7110) || defined(HS7119) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000) || defined(ATEMIO520) || defined(ATEMIO530) || defined(SPARK) || defined(AT7500)) && defined(__TDT__)
+//#if (defined(UFS912) || defined(HS7110) || defined(HS7119) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD) || defined(DP7001) || defined(EPP8000) || defined(ATEMIO520) || defined(ATEMIO530) || defined(SPARK) || defined(AT7500)) && defined(__TDT__)
   // WORKAROUND: Clear the framebuffer 
   memset(i->info.screen_base, 0x00, i->ulFBSize);
 //#endif

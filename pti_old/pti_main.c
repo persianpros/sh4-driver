@@ -769,6 +769,7 @@ void pti_hal_init ( struct stpti *pti , struct dvb_demux* demux, void (*_demulti
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \

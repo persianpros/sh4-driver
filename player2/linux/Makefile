@@ -118,6 +118,9 @@ endif
 ifdef DP7001
  PART2=1
 endif
+ifdef FOREVER_3434HD
+ PART2=1
+endif
 ifdef FOREVER_2424HD
  PART2=1
 endif

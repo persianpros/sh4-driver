@@ -135,6 +135,7 @@ static unsigned short normal_i2c[] = {
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \
@@ -268,7 +269,7 @@ static int avs_command_ioctl(struct i2c_client *client, unsigned int cmd, void *
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
- && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000) \
@@ -317,6 +318,7 @@ int avs_command_kernel(unsigned int cmd, void *arg)
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000) \
@@ -345,6 +347,7 @@ int avs_command_kernel(unsigned int cmd, void *arg)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \

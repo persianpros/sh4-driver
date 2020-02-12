@@ -204,6 +204,7 @@ static void WriteRegister(volatile unsigned long *reg, unsigned long val)
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 #define SPDIF_EN (1L<<3)
@@ -242,6 +243,7 @@ void spdif_out_mute(int mute)
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 	RegMap = (unsigned long *)ioremap(STb7105_AUDIO_BASE, 0x10);
@@ -268,6 +270,7 @@ void spdif_out_mute(int mute)
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		val = ReadRegister(RegMap);
@@ -297,6 +300,7 @@ void spdif_out_mute(int mute)
  || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		val = ReadRegister(RegMap);

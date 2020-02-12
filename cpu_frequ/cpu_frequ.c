@@ -114,7 +114,7 @@
 #define _CONFIG_SH_EXTERNAL_CLOCK 30000000
 #endif
 
-#if defined(STXH205) //TODO: replace with correct values for FOREVER_9898HD/DP7001
+#if defined(STXH205) //TODO: replace with correct values for FOREVER_9898HD/FOREVER_3434HD/DP7001
 #define CKGA_BASE_ADDR          0xFE213000
 #define CKGA_PLL0_CFG           (CKGA_BASE_ADDR + 0x00) 
 #define CKGA_PLL1_CFG           (CKGA_BASE_ADDR + 0x04) 

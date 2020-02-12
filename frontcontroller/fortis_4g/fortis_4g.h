@@ -95,11 +95,21 @@ extern short paramDebug;
 #define MAX_LED        1
 #define MAX_LED_BRIGHT 1 // LED is either on or off
 #define MAX_BRIGHT     8
+#elif defined(FOREVER_3434HD) // 1: standby (red), 2: blue, 4: logo
+#define LED_RED        1
+#define LED_BLUE       2
+#define LED_LOGO       4
+#define MAX_LED        7
 #elif defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_9898HD) // 1: standby (red), 2: logo
 #define LED_RED        1
 #define LED_LOGO       2
 #define MAX_LED        3
-#define MAX_LED_BRIGHT 1 // LED is either on or off, 4G Fortis models cannot dim their LEDs
+#endif
+
+#define MAX_BRIGHT     8  // display brightness
+
+/* Defines for the icons */
+#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
 #define ICON_MIN       0
 #define ICON_DOT       1
 #define ICON_REC       ICON_DOT
@@ -108,13 +118,12 @@ extern short paramDebug;
 #define ICON_COLON3    4
 #define ICON_MAX       5
 #define ICON_ALL       ICON_MAX
-#define MAX_BRIGHT     8
 #endif
 
 /* Defines for the FP display */
 #if defined(FOREVER_NANOSMART) || defined(DP7001)|| defined(FOREVER_2424HD)
 #define DISP_SIZE 4
-#elif defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000)
+#elif defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
 #define DISP_SIZE 8
 #endif
 

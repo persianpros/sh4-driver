@@ -105,31 +105,35 @@ obj-y += nuvoton/
 endif
 
 ifdef FOREVER_NANOSMART
-obj-y += fortis_4g/
+obj-y += fortis_4g_fp/
 endif
 
 ifdef FOREVER_9898HD
-obj-y += nuvoton/
+obj-y += fortis_4g_fp/
 endif
 
 ifdef DP7001
-obj-y += fortis_4g/
+obj-y += fortis_4g_fp/
+endif
+
+ifdef FOREVER_3434HD
+obj-y += fortis_4g_fp/
 endif
 
 ifdef FOREVER_2424HD
-obj-y += fortis_4g/
+obj-y += fortis_4g_fp/
 endif
 
 ifdef GPV8000
-obj-y += fortis_4g/
+obj-y += fortis_4g_fp/
 endif
 
 ifdef EP8000
-obj-y += fortis_4g/
+obj-y += fortis_4g_fp/
 endif
 
 ifdef EPP8000
-obj-y += fortis_4g/
+obj-y += fortis_4g_fp/
 endif
 
 ifdef ATEMIO520

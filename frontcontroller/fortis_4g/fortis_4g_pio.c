@@ -90,7 +90,7 @@
 #include "fortis_4g.h"
 #include "fortis_4g_pio.h"
 
-#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000)
+#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
 #define DISP_SIZE 8
 #else
 #warning Architecture not supported!
@@ -256,7 +256,7 @@ static struct et16315_char et16315_fp_chars[] =
  */
 static int polling = 1;
 static struct workqueue_struct *keyboard_workqueue;
-#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000)
+#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
 /* Front panel Keys are conected as follows:
   
   Channel Up  : between KS1 & K1 
@@ -292,20 +292,24 @@ static struct et16315_platform_data et16315_init_values = {
 	.digits      = et16315_config_8_digits_20_segments, // 8 character display
 	.brightness  = MAX_BRIGHT,
 	.char_tbl    = et16315_fp_chars,
-#if defined(FOREVER_9898HD)
-	.text        = "FOREVER_9898HD", /* initial display text */
-#elif defined(GPV8000)
-	.text        = "GPV8000",
+#if defined(FOREVER_3434HD)
+	.text        = "FOREVER_3434HD",  /* initial display text */
+#elif defined(FOREVER_9898HD)
+	.text        = "FOREVER_9898HD",
 #elif defined(EP8000)
 	.text        = "EP8000",
 #elif defined(EPP8000)
 	.text        = "EPP8000",
+#elif defined(GPV8000)
+	.text        = "GPV8000",
 #else
 	.text        = "--------",
 #endif
 	/* LEDs */
-#if defined(FOREVER_9898HD)
-	.led         = 0,
+#if defined(FOREVER_3434HD)
+	.led         = LED_BLUE + LED_LOGO,  // blue & logo on
+#elif defined(FOREVER_9898HD)
+	.led         = 0,  // all LEDs off
 #elif defined(GPV8000) || defined(EP8000) || defined(EPP8000)
 	.led         = LED_LOGO, // all LEDs off, but logo on
 #else
@@ -455,7 +459,7 @@ static void et16315_set_text(struct et16315_chip *chip, const char *text)
 	}
 //	dprintk(10, "%s Display [%s] (length = %02d)\n", __func__, text, len);
 
-	/* On EPP8000, display digits are connected right to left */
+	/* On FOREVER_3434HD, FOREVER_9898HD, EP8000, EPP8000 & GPV8000, display digits are connected right to left */
 	for (i = 3 * (chip->digits - 1); i > 3 * (chip->digits - 1 - len); i -= 3)
 	{
 		chip->last_display[i] = data[i] = chip->char_tbl[*text - 0x20].value0;
@@ -978,7 +982,7 @@ int fortis_4gSetTimeDisplayOnOff(char onoff)
 }
 
 /* Function WriteString */
-#if defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_9898HD)
+#if defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD)
 int fortis_4gWriteString(unsigned char *aBuf, int len)
 {
 	int i;
@@ -1019,7 +1023,7 @@ int fortis_4gWriteString(unsigned char *aBuf, int len)
 	dprintk(100, "%s <\n", __func__);
 	return ret;
 }
-#else // not GPV/EP/EPP8000 or FOREVER_9898HD
+#else  // not FOREVER_3434HD, GPV8000, EP8000, EPP8000 or FOREVER_9898HD
 int fortis_4gWriteString(unsigned char* aBuf, int len)
 {
 	dprintk(100, "%s >\n", __func__);

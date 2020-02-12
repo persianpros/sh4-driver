@@ -31,6 +31,7 @@
 
     #if (defined(FOREVER_NANOSMART) \
      || defined(FOREVER_9898HD) \
+     || defined(FOREVER_3434HD) \
      || defined(DP7001) \
      || defined(EPP8000)) \
      && defined(__TDT__)
@@ -65,6 +66,7 @@ static struct stmcore_display_pipeline_data platform_data[] = {
 		.hdmi_irq                 = evt2irq(0x15C0),
 #if defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 		.hdmi_i2c_adapter_id	  = 2,
@@ -76,6 +78,7 @@ static struct stmcore_display_pipeline_data platform_data[] = {
 		.hdmi_output_id           = STih205_OUTPUT_IDX_VDP0_HDMI,
 #if (defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)) \
  && defined(__TDT__)

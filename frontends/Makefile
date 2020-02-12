@@ -242,6 +242,15 @@ obj-m += stv090x.o
 obj-y += lnb/
 endif
 
+ifdef FOREVER_3434HD
+stv090x-objs += stv090x/stv090x.o
+stv090x-objs += stv090x/stv6110x.o
+stv090x-objs += stv090x/ix7306.o
+stv090x-objs += stv090x/core.o
+obj-m += stv090x.o
+obj-y += lnb/
+endif 
+
 ifdef FOREVER_2424HD
 stv090x-objs += stv090x/stv090x.o
 stv090x-objs += stv090x/stv6110x.o

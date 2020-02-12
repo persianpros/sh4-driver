@@ -40,7 +40,7 @@
    scrolling in low level VFD driver */
 #define VFD_SCROLL     1
 
-#if defined(EP8000) || defined(EPP8000) || defined(GPV8000) || defined(FOREVER_9898HD)
+#if defined(EP8000) || defined(EPP8000) || defined(GPV8000) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD)
 #define GPIO_LED_LOGO  stm_gpio(15, 7)
 #endif
 

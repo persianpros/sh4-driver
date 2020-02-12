@@ -15,6 +15,7 @@
 #if defined(__TDT__) \
  && (defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000))
 #define USE_FS1_FOR_SD

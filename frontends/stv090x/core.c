@@ -46,6 +46,7 @@ static struct stv090x_config tt1600_stv090x_config =
 #elif defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -122,6 +123,7 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int i)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD)
 	frontend = stv090x_attach(&tt1600_stv090x_config, cfg->i2c_adap, STV090x_DEMODULATOR_0, STV090x_TUNER1);
 #else
@@ -236,6 +238,7 @@ static struct dvb_frontend *init_stv090x_device(struct dvb_adapter *adapter, str
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD)
 		/* give the tuner some time to power up. trial fix for tuner
 		 * not available after boot on some boxes.
@@ -304,6 +307,7 @@ struct plat_tuner_config tuner_resources[] =
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)

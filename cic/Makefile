@@ -143,38 +143,43 @@ endif
 
 ifdef FOREVER_NANOSMART
 obj-m += starci.o
-starci-objs:= starci2win/starci2win.o
+starci-objs:= fortis_4g/starci2win.o
 endif
 
 ifdef FOREVER_9898HD
 obj-m += starci.o
-starci-objs:= starci2win/starci2win.o
+starci-objs:= fortis_4g/starci2win.o
 endif
 
 ifdef DP7001
 obj-m += starci.o
-starci-objs:= starci2win/starci2win.o
+starci-objs:= fortis_4g/starci2win.o
+endif
+
+ifdef FOREVER_3434HD
+obj-m += starci.o
+starci-objs:= fortis_4g/starci2win.o
 endif
 
 ifdef FOREVER_2424HD
 obj-m += starci.o
-starci-objs:= starci2win/starci2win.o
+starci-objs:= fortis_4g/starci2win.o
 endif
 
 ifdef GPV8000
-obj-m += starci.o
-starci-objs:= starci2win/starci2win.o
+obj-m += dummy_cic.o
+dummy_cic-objs += dummy_cic/dummy_cic.o  # uses PMT4401B-GC2
 endif
 
 ifdef EP8000
-obj-m += starci.o
-starci-objs:= starci2win/starci2win.o
+obj-m += dummy_cic.o
+dummy_cic-objs += dummy_cic/dummy_cic.o  # uses PMT4401B-GC2
 endif
 
-#ifdef EPP8000
-#obj-m += starci.o
-#starci-objs:= starci2win/starci2win.o
-#endif
+ifdef EPP8000
+obj-m += dummy_cic.o
+dummy_cic-objs += dummy_cic/dummy_cic.o  # uses PMT4401B-GC2
+endif
 
 ifdef ATEMIO520
 obj-m += cnbox_cic.o

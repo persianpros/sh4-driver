@@ -325,6 +325,8 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "forever_9898hd\n");
 #elif defined(DP7001)
 	int len = sprintf(page, "dp7001\n");
+#elif defined(FOREVER_3434HD)
+	int len = sprintf(page, "forever_3434hd\n");
 #elif defined(FOREVER_2424HD)
 	int len = sprintf(page, "forever_2424hd\n");
 #elif defined(GPV8000)
@@ -462,7 +464,7 @@ static int info_chipset_read(char *page, char **start, off_t off, int count, int
 	int len = sprintf(page, "STi7111\n");
 #elif defined(SPARK7162)
 	int len = sprintf(page, "STi7162\n");
-#elif defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD)
+#elif defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD) || defined(FOREVER_3434HD)
 	int len = sprintf(page, "STiH237 (Cardiff)\n");
 #elif defined(EP8000) || defined(EPP8000)
 	int len = sprintf(page, "STiH239 (Newport)\n");
@@ -892,6 +894,7 @@ struct ProcStructure_s e2Proc[] =
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) \

@@ -11,6 +11,9 @@ else
     ifdef FOREVER_9898HD
         fortis_4g_fp-objs += fortis_4g_pio.o
     endif
+    ifdef FOREVER_3434HD
+        fortis_4g_fp-objs += fortis_4g_pio.o
+    endif
     ifdef FOREVER_2424HD
         fortis_4g_fp-objs += fortis_4g_i2c.o
     endif

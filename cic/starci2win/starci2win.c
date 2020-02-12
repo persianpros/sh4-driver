@@ -60,6 +60,7 @@ static int extmoduldetect = 0;
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -162,6 +163,7 @@ unsigned char default_values[33] =
 #elif defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000) //TODO: check/change values
@@ -198,6 +200,7 @@ unsigned long reg_buffer = 0;
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -215,6 +218,7 @@ unsigned long reg_sysconfig = 0;
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -263,6 +267,7 @@ static unsigned short *slot_membase[2];
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -431,6 +436,7 @@ void getCiSource(int slot, int* source)
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000)
@@ -684,6 +690,7 @@ static int starci_slot_reset(struct dvb_ca_en50221 *ca, int slot)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -863,6 +870,7 @@ static int starci_slot_ts_enable(struct dvb_ca_en50221 *ca, int slot)
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000)
@@ -907,6 +915,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -948,6 +957,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000)
@@ -964,6 +974,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -982,6 +993,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000)
@@ -1030,6 +1042,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -1068,6 +1081,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -1087,6 +1101,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000)
@@ -1113,6 +1128,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -1164,7 +1180,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 
 #endif
 
-#if !defined(ATEVIO7500) && !defined(FORTIS_HDBOX) && !defined(HS7110) && !defined(HS7119) && !defined(HS7810A) && !defined(HS7819) && !defined(FOREVER_NANOSMART) && !defined(FOREVER_9898HD) && !defined(DP7001) && !defined(FOREVER_2424HD) && !defined(GPV8000) && !defined(EP8000)
+#if !defined(ATEVIO7500) && !defined(FORTIS_HDBOX) && !defined(HS7110) && !defined(HS7119) && !defined(HS7810A) && !defined(HS7819) && !defined(FOREVER_NANOSMART) && !defined(FOREVER_9898HD) && !defined(DP7001) && !defined(FOREVER_3434HD) && !defined(FOREVER_2424HD) && !defined(GPV8000) && !defined(EP8000)
   ctrl_outl(0x1, reg_config + EMI_CLK_EN);
 #endif
 
@@ -1184,6 +1200,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -1217,6 +1234,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
@@ -1245,6 +1263,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(DP7001) \
+ && !defined(FOREVER_3434HD) \
  && !defined(FOREVER_2424HD) \
  && !defined(GPV8000) \
  && !defined(EP8000)

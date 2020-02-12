@@ -379,7 +379,7 @@ int avs_pio_init(void)
 	avs_mode	= stpio_request_pin (6, 4, "avs2", STPIO_OUT);
 	avs_mute	= NULL;
 //	avs_src		= NULL;
-#elif defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) //TODO: get correct pin numbers
+#elif defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_3434HD) || defined(FOREVER_2424HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) //TODO: get correct pin numbers
 	avs_format	= stpio_request_pin (6, 5, "avs0", STPIO_OUT);
 	avs_standby	= stpio_request_pin (6, 6, "avs1", STPIO_OUT);
 	avs_mode	= stpio_request_pin (6, 4, "avs2", STPIO_OUT);

@@ -128,6 +128,7 @@ static int current_input = ENCODER;
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 static int current_volume = 0;
@@ -207,6 +208,7 @@ int proc_avs_0_volume_write(struct file *file, const char __user *buf,
  || defined(ADB_BOX) \
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001)
 		current_volume = volume;
 #else

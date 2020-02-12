@@ -1142,6 +1142,7 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
  || defined(SPARK) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG7, 4);
@@ -1173,6 +1174,7 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
  || defined(VITAMIN_HD5000) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
+ || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG5, 4);
