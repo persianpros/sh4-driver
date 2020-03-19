@@ -3075,9 +3075,9 @@ typedef	union	_EEPROM_WORD_STRUC	{
 #define QID_AC_VO               3
 #define QID_HCCA                4
 #ifdef	CONFIG_MULTI_CHANNEL
-#define NUM_OF_TX_RING          5
+#define NUM_OF_TX_RING          6
 #else
-#define NUM_OF_TX_RING          4
+#define NUM_OF_TX_RING          5
 #endif
 #define QID_MGMT                13
 #define QID_RX                  14

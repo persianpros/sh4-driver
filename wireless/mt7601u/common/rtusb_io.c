@@ -672,49 +672,30 @@ NTSTATUS RTUSBReadEEPROM(
 
 	========================================================================
 */
-NTSTATUS RTUSBWriteEEPROM(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	USHORT			Offset,
-	IN	PUCHAR			pData,
-	IN	USHORT			length)
+NTSTATUS RTUSBWriteEEPROM(IN PRTMP_ADAPTER pAd, IN USHORT Offset, IN PUCHAR pData, IN USHORT length)
 {
-	NTSTATUS	Status = STATUS_SUCCESS;
-	USHORT Value;
+	NTSTATUS Status = STATUS_SUCCESS;
+//	USHORT Value;
 
-	Status = RTUSB_VendorRequest(
-				pAd,
-				USBD_TRANSFER_DIRECTION_OUT,
-				DEVICE_VENDOR_REQUEST_OUT,
-				0x8,
-				0,
-				Offset,
-				pData,
-				length);
-
+	Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x8, 0, Offset, pData, length);
 	return Status;
 }
 
-
-NTSTATUS RTUSBReadEEPROM16(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	USHORT			offset,
-	OUT	PUSHORT			pData)
+NTSTATUS RTUSBReadEEPROM16(IN PRTMP_ADAPTER pAd, IN USHORT offset, OUT PUSHORT pData)
 {
 	NTSTATUS status;
 	USHORT  localData;
 
 	status = RTUSBReadEEPROM(pAd, offset, (PUCHAR)(&localData), 2);
 	if (status == STATUS_SUCCESS)
+	{
 		*pData = le2cpu16(localData);
-
+	}
 	return status;
 
 }
 
-NTSTATUS RTUSBWriteEEPROM16(
-	IN RTMP_ADAPTER *pAd,
-	IN USHORT offset,
-	IN USHORT value)
+NTSTATUS RTUSBWriteEEPROM16(IN RTMP_ADAPTER *pAd, IN USHORT offset, IN USHORT value)
 {
 	USHORT tmpVal;
 

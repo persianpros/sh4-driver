@@ -169,7 +169,7 @@ static int stv6412_s_old_src;
 //Trick: hack ;)
 int stv6412_set(struct i2c_client *client)
 {
-	char buffer[10];
+	char buffer[11];
 
 	printk("[AVS] [STV6418] set!\n");
 
@@ -184,8 +184,7 @@ int stv6412_set(struct i2c_client *client)
 	buffer[8] = 0x21;
 	buffer[9] = 0xc0;
 	buffer[10] = 0x00;
-	i2c_master_send(client, buffer, 10);
-
+	i2c_master_send(client, buffer, 10); //not 11?
 	return 0;
 }
 #else
@@ -201,7 +200,6 @@ int stv6412_set(struct i2c_client *client)
 	{
 		return -EFAULT;
 	}
-
 	return 0;
 }
 #endif
@@ -221,15 +219,18 @@ int stv6412_set_volume( struct i2c_client *client, int vol )
 //	}
 #if !defined(ADB_BOX)
 	if(c==63)
+	{
 		c=62;
+	}
 	if(c==0)
+	{
 		c=1;
-
+	}
 	if ((c > 63) || (c < 0))
+	{
 		return -EINVAL;
-
+	}
 	c /= 2;
-
 	stv6412_data.t_vol_c = c;
 #endif
 	return stv6412_set(client);
@@ -268,7 +269,6 @@ inline int stv6412_set_mute( struct i2c_client *client, int type )
 			v_asc  = 0xff;
 		}
 	}
-
 	return stv6412_set(client);
 }
 
@@ -286,9 +286,12 @@ inline int stv6412_set_vsw( struct i2c_client *client, int sw, int type )
 	switch(sw)
 	{
 		case 0:	// vcr
+		{
 			stv6412_data.v_vsc = type;
 			break;
+		}
 		case 1:	// rgb
+		{
 			if (type<0 || type>2)
 			{
 				return -EINVAL;
@@ -296,13 +299,17 @@ inline int stv6412_set_vsw( struct i2c_client *client, int sw, int type )
 
 			stv6412_data.rgb_vsc = type;
 			break;
+		}
 		case 2: // tv
+		{
 			stv6412_data.t_vsc = type;
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
 	return stv6412_set(client);
 }
 
@@ -313,6 +320,7 @@ inline int stv6412_set_asw( struct i2c_client *client, int sw, int type )
 	switch(sw)
 	{
 		case 0:
+		{
 			if (type<=0 || type>3)
 			{
 				return -EINVAL;
@@ -320,13 +328,18 @@ inline int stv6412_set_asw( struct i2c_client *client, int sw, int type )
 
 			/* if muted ? yes: save in temp */
 			if ( v_asc == 0xff )
+			{
 				stv6412_data.v_asc = type;
+			}
 			else
+			{
 				v_asc = type;
-
+			}
 			break;
+		}
 		case 1:
 		case 2:
+		{
 			if (type<=0 || type>4)
 			{
 				return -EINVAL;
@@ -334,15 +347,20 @@ inline int stv6412_set_asw( struct i2c_client *client, int sw, int type )
 
 			/* if muted ? yes: save in temp */
 			if ( tc_asc == 0xff )
+			{
 				stv6412_data.tc_asc = type;
+			}
 			else
+			{
 				tc_asc = type;
-
+			}
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
 	return stv6412_set(client);
 }
 
@@ -380,7 +398,6 @@ inline int stv6412_set_wss( struct i2c_client *client, int vol )
 	{
 		return  -EINVAL;
 	}
-
 	return stv6412_set(client);
 }
 
@@ -392,7 +409,6 @@ inline int stv6412_set_fblk( struct i2c_client *client, int type )
 	{
 		return -EINVAL;
 	}
-
 	stv6412_data.fblk = type;
 
 	return stv6412_set(client);
@@ -426,7 +442,6 @@ int stv6412_get_volume(void)
 	{
 		c *= 2;
 	}
-
 	return c;
 }
 
@@ -458,18 +473,25 @@ inline int stv6412_get_vsw( int sw )
 	switch(sw)
 	{
 		case 0:
+		{
 			return stv6412_data.v_vsc;
 			break;
+		}
 		case 1:
+		{
 			return stv6412_data.rgb_vsc;
 			break;
+		}
 		case 2:
+		{
 			return stv6412_data.t_vsc;
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
 	return -EINVAL;
 }
 
@@ -480,22 +502,35 @@ inline int stv6412_get_asw( int sw )
 	switch(sw)
 	{
 		case 0:
+		{
 			// muted ? yes: return tmp values
 			if ( v_asc == 0xff )
+			{
 				return stv6412_data.v_asc;
+			}
 			else
+			{
 				return v_asc;
+			}
+		}
 		case 1:
 		case 2:
-			if ( tc_asc == 0xff )
+		{
+			if (tc_asc == 0xff)
+			{
 				return stv6412_data.tc_asc;
+			}
 			else
+			{
 				return tc_asc;
+			}
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
 	return -EINVAL;
 }
 
@@ -503,7 +538,6 @@ inline int stv6412_get_asw( int sw )
 //NOT IMPLEMENTED
 int stv6412_set_encoder( struct i2c_client *client, int vol )
 {
-
 	return 0;
 }
 
@@ -514,33 +548,44 @@ int stv6412_set_mode( struct i2c_client *client, int vol )
 	dprintk("[AVS]: SAAIOSMODE command : %d\n", vol);
 	if (vol == SAA_MODE_RGB)
 	{
-		if(stv6412_data.t_vsc == 4) // scart selected
+		if (stv6412_data.t_vsc == 4) // scart selected
+		{
 			stv6412_s_old_src = 1;
+		}
 		else
+		{
 			stv6412_data.t_vsc = 1;
+		}
 		stv6412_data.fblk = 1;
 	}
 	else if (vol == SAA_MODE_FBAS)
 	{
-		if(stv6412_data.t_vsc == 4) // scart selected
+		if (stv6412_data.t_vsc == 4) // scart selected
+		{
 			stv6412_s_old_src = 1;
+		}
 		else
+		{
 			stv6412_data.t_vsc = 1;
+		}
 		stv6412_data.fblk = 0;
 	}
 	else if (vol == SAA_MODE_SVIDEO)
 	{
-		if(stv6412_data.t_vsc == 4) // scart selected
+		if (stv6412_data.t_vsc == 4) // scart selected
+		{
 			stv6412_s_old_src = 2;
+		}
 		else
+		{
 			stv6412_data.t_vsc = 2;
+		}
 		stv6412_data.fblk = 0;
 	}
 	else
 	{
 		return  -EINVAL;
 	}
- 
 	return stv6412_set(client);
 }
 
@@ -550,26 +595,25 @@ int stv6412_src_sel( struct i2c_client *client, int src )
 {
 	if (src == SAA_SRC_ENC)
 	{
-	   stv6412_data.t_vsc = stv6412_s_old_src;
-	   stv6412_data.v_vsc = stv6412_s_old_src;
-	   stv6412_data.tc_asc = 1;
-	   stv6412_data.v_asc = 1;
+		stv6412_data.t_vsc = stv6412_s_old_src;
+		stv6412_data.v_vsc = stv6412_s_old_src;
+		stv6412_data.tc_asc = 1;
+		stv6412_data.v_asc = 1;
 	}
-	else if(src == SAA_SRC_SCART)
+	else if (src == SAA_SRC_SCART)
 	{
-	   stv6412_s_old_src = stv6412_data.t_vsc;
+		stv6412_s_old_src = stv6412_data.t_vsc;
 #if !defined(ADB_BOX)
-	   stv6412_data.t_vsc = 4;
-	   stv6412_data.v_vsc = 0;
-	   stv6412_data.tc_asc = 2;
-	   stv6412_data.v_asc = 0;
+		stv6412_data.t_vsc = 4;
+		stv6412_data.v_vsc = 0;
+		stv6412_data.tc_asc = 2;
+		stv6412_data.v_asc = 0;
 #endif
   	}
   	else
 	{
 		return  -EINVAL;
 	}
- 
 	return stv6412_set(client);
 }
 
@@ -601,7 +645,9 @@ inline int stv6412_standby( struct i2c_client *client, int type )
 			t_stnby = 1;
 		}
 		else
+		{
 			return -EINVAL;		
+		}
 	}
 	else
 	{
@@ -611,9 +657,10 @@ inline int stv6412_standby( struct i2c_client *client, int type )
 			t_stnby = 0;
 		}
 		else
+		{
 			return -EINVAL;
+		}
 	}
- 
 	return stv6412_set(client);
 }
 
@@ -639,101 +686,152 @@ int stv6412_command(struct i2c_client *client, unsigned int cmd, void *arg )
 		{
 			/* set video */
 			case AVSIOSVSW1:
+			{
 				return stv6412_set_vsw(client,0,val);
+			}
 			case AVSIOSVSW2:
+			{
 				return stv6412_set_vsw(client,1,val);
+			}
 			case AVSIOSVSW3:
+			{
 				return stv6412_set_vsw(client,2,val);
+			}
 			/* set audio */
 			case AVSIOSASW1:
+			{
 				return stv6412_set_asw(client,0,val);
+			}
 			case AVSIOSASW2:
+			{
 				return stv6412_set_asw(client,1,val);
+			}
 			case AVSIOSASW3:
+			{
 				return stv6412_set_asw(client,2,val);
+			}
 			/* set vol & mute */
 			case AVSIOSVOL:
+			{
 				return stv6412_set_volume(client,val);
+			}
 			case AVSIOSMUTE:
+			{
 				return stv6412_set_mute(client,val);
+			}
 			/* set video fast blanking */
 			case AVSIOSFBLK:
+			{
 #if defined(FORTIS_HDBOX) || defined(HL101) || defined(IPBOX9900) || defined(IPBOX99)
-				printk("[AVS STV6418] not support AVSIOSFBLK yet!\n");
-				return;
+				printk("[AVS STV6418] does not support AVSIOSFBLK yet!\n");
+				return -1;
 #else
 				return stv6412_set_fblk(client,val);
 #endif
-
+			}
 #if 1
 /* no direct manipulation allowed, use set_wss instead */
 			/* set slow blanking (tv) */
 			case AVSIOSSCARTPIN8:
+			{
 				return stv6412_set_t_sb(client,scartPin8Table[val]);
+			}
 			case AVSIOSFNC:
+			{
 				return stv6412_set_t_sb(client,val);
+			}
 #endif
 			case AVSIOSTANDBY:
+			{
 				return stv6412_standby(client,val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-	} else if (cmd & AVSIOGET)
+	}
+	else if (cmd & AVSIOGET)
 	{
 		switch (cmd)
 		{
 			/* get video */
 			case AVSIOGVSW1:
-                                val = stv6412_get_vsw(0);
-                                break;
+			{
+				val = stv6412_get_vsw(0);
+				break;
+			}
 			case AVSIOGVSW2:
-                                val = stv6412_get_vsw(1);
-                                break;
+			{
+				val = stv6412_get_vsw(1);
+				break;
+			}
 			case AVSIOGVSW3:
-                                val = stv6412_get_vsw(2);
-                                break;
+			{
+				val = stv6412_get_vsw(2);
+				break;
+			}
 			/* get audio */
 			case AVSIOGASW1:
-                                val = stv6412_get_asw(0);
-                                break;
+			{
+				val = stv6412_get_asw(0);
+				break;
+			}
 			case AVSIOGASW2:
-                                val = stv6412_get_asw(1);
-                                break;
+			{
+				val = stv6412_get_asw(1);
+				break;
+			}
 			case AVSIOGASW3:
-                                val = stv6412_get_asw(2);
-                                break;
+			{
+				val = stv6412_get_asw(2);
+				break;
+			}
 			/* get vol & mute */
 			case AVSIOGVOL:
-                                val = stv6412_get_volume();
-                                break;
+			{
+				val = stv6412_get_volume();
+				break;
+			}
 			case AVSIOGMUTE:
-                                val = stv6412_get_mute();
-                                break;
+			{
+				val = stv6412_get_mute();
+				break;
+			}
 			/* get video fast blanking */
 			case AVSIOGFBLK:
+			{
 #if defined(FORTIS_HDBOX) || defined(HL101) || defined(IPBOX9900) || defined(IPBOX99)
 				printk("[AVS STV6418] not support AVSIOSFBLK yet!\n");
 				break;
 #else
-                                val = stv6412_get_fblk();
-                                break;
+				val = stv6412_get_fblk();
+				break;
 #endif
+			}
 			case AVSIOGSCARTPIN8:
+			{
 				val = scartPin8Table_reverse[stv6412_get_t_sb()];
 				break;
+			}
 			/* get slow blanking (tv) */
 			case AVSIOGFNC:
+			{
 				val = stv6412_get_t_sb();
 				break;
+			}
 			/* get status */
 			case AVSIOGSTATUS:
-                                // TODO: error handling
-                                val = stv6412_get_status(client);
-                                break;
+			{
+				// TODO: error handling
+				val = stv6412_get_status(client);
+				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
 		return put_user(val,(int*)arg);
 	}
 	else
@@ -748,20 +846,29 @@ int stv6412_command(struct i2c_client *client, unsigned int cmd, void *arg )
 
 		switch(cmd)
 		{
-		case SAAIOSMODE:
-           		 return stv6412_set_mode(client,val);
- 	        case SAAIOSENC:
-        		 return stv6412_set_encoder(client,val);
-		case SAAIOSWSS:
-			return stv6412_set_wss(client,val);
-		case SAAIOSSRCSEL:
-        		return stv6412_src_sel(client,val);
-		default:
-			dprintk("[AVS]: SAA command not supported\n");
-			return -EINVAL;
+			case SAAIOSMODE:
+			{
+		   		 return stv6412_set_mode(client,val);
+			}
+	 	        case SAAIOSENC:
+			{
+				 return stv6412_set_encoder(client,val);
+			}
+			case SAAIOSWSS:
+			{
+				return stv6412_set_wss(client,val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return stv6412_src_sel(client,val);
+			}
+			default:
+			{
+				dprintk("[AVS]: SAA command not supported\n");
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
@@ -786,40 +893,67 @@ int stv6412_command_kernel(struct i2c_client *client, unsigned int cmd, void *ar
 		{
 			/* set video */
 			case AVSIOSVSW1:
+			{
 				return stv6412_set_vsw(client,0,val);
+			}
 			case AVSIOSVSW2:
+			{
 				return stv6412_set_vsw(client,1,val);
+			}
 			case AVSIOSVSW3:
+			{
 				return stv6412_set_vsw(client,2,val);
+			}
 			/* set audio */
 			case AVSIOSASW1:
+			{
 				return stv6412_set_asw(client,0,val);
+			}
 			case AVSIOSASW2:
+			{
 				return stv6412_set_asw(client,1,val);
+			}
 			case AVSIOSASW3:
+			{
 				return stv6412_set_asw(client,2,val);
+			}
 			/* set vol & mute */
 			case AVSIOSVOL:
+			{
 				return stv6412_set_volume(client,val);
+			}
 			case AVSIOSMUTE:
+			{
 				return stv6412_set_mute(client,val);
+			}
 			/* set video fast blanking */
 			case AVSIOSFBLK:
+			{
 				return stv6412_set_fblk(client,val);
+			}
 #if 1
 /* no direct manipulation allowed, use set_wss instead */
 			/* set slow blanking (tv) */
 			case AVSIOSSCARTPIN8:
+			{
 				return stv6412_set_t_sb(client,scartPin8Table[val]);
+			}
 			case AVSIOSFNC:
+			{
 				return stv6412_set_t_sb(client,val);
+			}
 #endif
 			case AVSIOSTANDBY:
+			{
 				return stv6412_standby(client,val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-	} else if (cmd & AVSIOGET)
+	}
+	else if (cmd & AVSIOGET)
 	{
 		dprintk("[AVS]: AVSIOGET command\n");
 
@@ -827,35 +961,35 @@ int stv6412_command_kernel(struct i2c_client *client, unsigned int cmd, void *ar
 		{
 			/* get video */
 			case AVSIOGVSW1:
-                                val = stv6412_get_vsw(0);
-                                break;
+				val = stv6412_get_vsw(0);
+				break;
 			case AVSIOGVSW2:
-                                val = stv6412_get_vsw(1);
-                                break;
+				val = stv6412_get_vsw(1);
+				break;
 			case AVSIOGVSW3:
-                                val = stv6412_get_vsw(2);
-                                break;
+				val = stv6412_get_vsw(2);
+				break;
 			/* get audio */
 			case AVSIOGASW1:
-                                val = stv6412_get_asw(0);
-                                break;
+				val = stv6412_get_asw(0);
+				break;
 			case AVSIOGASW2:
-                                val = stv6412_get_asw(1);
-                                break;
+				val = stv6412_get_asw(1);
+				break;
 			case AVSIOGASW3:
-                                val = stv6412_get_asw(2);
-                                break;
+				val = stv6412_get_asw(2);
+				break;
 			/* get vol & mute */
 			case AVSIOGVOL:
-                                val = stv6412_get_volume();
-                                break;
+				val = stv6412_get_volume();
+				break;
 			case AVSIOGMUTE:
-                                val = stv6412_get_mute();
-                                break;
+				val = stv6412_get_mute();
+				break;
 			/* get video fast blanking */
 			case AVSIOGFBLK:
-                                val = stv6412_get_fblk();
-                                break;
+				val = stv6412_get_fblk();
+				break;
 			case AVSIOGSCARTPIN8:
 				val = scartPin8Table_reverse[stv6412_get_t_sb()];
 				break;
@@ -865,15 +999,14 @@ int stv6412_command_kernel(struct i2c_client *client, unsigned int cmd, void *ar
 				break;
 			/* get status */
 			case AVSIOGSTATUS:
-                                // TODO: error handling
-                                val = stv6412_get_status(client);
-                                break;
+				// TODO: error handling
+				val = stv6412_get_status(client);
+				break;
 			default:
 				return -EINVAL;
 		}
-
 		*((int*) arg) = (int) val;
-	        return 0;
+		return 0;
 	}
 	else
 	{
@@ -883,20 +1016,19 @@ int stv6412_command_kernel(struct i2c_client *client, unsigned int cmd, void *ar
 
 		switch(cmd)
 		{
-		case SAAIOSMODE:
-           		 return stv6412_set_mode(client,val);
- 	        case SAAIOSENC:
-        		 return stv6412_set_encoder(client,val);
-		case SAAIOSWSS:
-			return stv6412_set_wss(client,val);
-		case SAAIOSSRCSEL:
-        		return stv6412_src_sel(client,val);
-		default:
-			dprintk("[AVS]: SAA command not supported\n");
-			return -EINVAL;
+			case SAAIOSMODE:
+		   		 return stv6412_set_mode(client,val);
+	 	        case SAAIOSENC:
+				 return stv6412_set_encoder(client,val);
+			case SAAIOSWSS:
+				return stv6412_set_wss(client,val);
+			case SAAIOSSRCSEL:
+				return stv6412_src_sel(client,val);
+			default:
+				dprintk("[AVS]: SAA command not supported\n");
+				return -EINVAL;
 		}
 	}
-
 	return 0;
 }
 

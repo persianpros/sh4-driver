@@ -26,8 +26,8 @@
 #include "sci_7111.h"
 #elif defined(CONFIG_CPU_SUBTYPE_STX7105) || defined(ATEVIO7500)
 #include "sci_7105.h"
-#elif defined(CONFIG_CPU_SUBTYPE_STXH205) //|| defined(FOREVER_9898HD) || defined(FOREVER_3434HD) || defined(DP7001)
-#include "sci_h205.h"
+#elif defined(CONFIG_CPU_SUBTYPE_STXH205) || defined(CONFIG_SH_ST_B2064) || defined(CONFIG_SH_ST_B2067)
+#include "sci_h205.h"  // CAUTION: to t\be checked!
 #endif
 
 #define MAIN_FREQ           100000000

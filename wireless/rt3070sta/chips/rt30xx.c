@@ -471,33 +471,30 @@ VOID RT30xxLoadRFNormalModeSetup(
 	
 	==========================================================================
  */
-VOID RT30xxLoadRFSleepModeSetup(
-	IN PRTMP_ADAPTER 	pAd)
+VOID RT30xxLoadRFSleepModeSetup(IN PRTMP_ADAPTER pAd)
 {
 	UCHAR RFValue;
-	UINT32 MACValue;
+//	UINT32 MACValue;
 
-	{
-			/* RF_BLOCK_en. RF R1 register Bit 0 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
-			RFValue &= (~0x01);
-			RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
+	/* RF_BLOCK_en. RF R1 register Bit 0 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
+	RFValue &= (~0x01);
+	RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
 
-			/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
-			RFValue &= (~0x30);
-			RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
+	/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
+	RFValue &= (~0x30);
+	RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
 
-			/* Idoh, RF R9 register Bit 1, Bit 2 & Bit 3 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R09, &RFValue);
-			RFValue &= (~0x0E);
-			RT30xxWriteRFRegister(pAd, RF_R09, RFValue);
+	/* Idoh, RF R9 register Bit 1, Bit 2 & Bit 3 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R09, &RFValue);
+	RFValue &= (~0x0E);
+	RT30xxWriteRFRegister(pAd, RF_R09, RFValue);
 
-			/* RX_CTB_en, RF R21 register Bit 7 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
-			RFValue &= (~0x80);
-			RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
-	}
+	/* RX_CTB_en, RF R21 register Bit 7 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
+	RFValue &= (~0x80);
+	RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
 }
 
 /*
@@ -508,16 +505,13 @@ VOID RT30xxLoadRFSleepModeSetup(
 	
 	==========================================================================
  */
-VOID RT30xxReverseRFSleepModeSetup(
-	IN PRTMP_ADAPTER 	pAd,
-	IN BOOLEAN			FlgIsInitState)
+VOID RT30xxReverseRFSleepModeSetup(IN PRTMP_ADAPTER pAd, IN BOOLEAN FlgIsInitState)
 {
 	UCHAR RFValue;
-	UINT32 MACValue;
+//	UINT32 MACValue;
 
-	if(!IS_RT3572(pAd))
+	if (!IS_RT3572(pAd))
 	{
-
 		/* RF_BLOCK_en, RF R1 register Bit 0 to 1*/
 		RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
 		RFValue |= 0x01;
@@ -539,22 +533,23 @@ VOID RT30xxReverseRFSleepModeSetup(
 		RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
 	}
 
-	if (IS_RT3090(pAd) ||	/* IS_RT3090 including RT309x and RT3071/72*/
-		IS_RT3390(pAd) ||
-		(IS_RT3070(pAd) && ((pAd->MACVersion & 0xffff) < 0x0201)))
+	if (IS_RT3090(pAd)
+	||  IS_RT3390(pAd)	/* IS_RT3090 including RT309x and RT3071/72*/
+	|| (IS_RT3070(pAd)
+	&& ((pAd->MACVersion & 0xffff) < 0x0201)))
 	{
+		RT30xxReadRFRegister(pAd, RF_R27, &RFValue);
+		if ((pAd->MACVersion & 0xffff) < 0x0211)
 		{
-			RT30xxReadRFRegister(pAd, RF_R27, &RFValue);
-			if ((pAd->MACVersion & 0xffff) < 0x0211)
-				RFValue = (RFValue & (~0x77)) | 0x3;
-			else
-				RFValue = (RFValue & (~0x77));
-			RT30xxWriteRFRegister(pAd, RF_R27, RFValue);
+			RFValue = (RFValue & (~0x77)) | 0x3;
 		}
-
+		else
+		{
+			RFValue = (RFValue & (~0x77));
+		}
+		RT30xxWriteRFRegister(pAd, RF_R27, RFValue);
 		/* RT3071 version E has fixed this issue*/
 	}
-
 }
 /* end johnli*/
 

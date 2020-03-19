@@ -89,7 +89,7 @@ extern int remove_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *wri
 
 /* from other front_bsla modules */
 extern int pt6302_write_dcram(unsigned char addr, unsigned char *data, unsigned char len);
-extern int pt6958_ShowBuf(unsigned char *data, unsigned char len);
+extern int pt6958_ShowBuf(unsigned char *data, unsigned char len, int utf8_flag);
 extern void pt6302_set_brightness(int level);
 extern void pt6958_set_brightness(int level);
 extern void clear_display(void);
@@ -114,7 +114,6 @@ static u32 led2_pattern = 0;
 static u32 led3_pattern = 0;
 static int led_pattern_speed = 20;
 extern int box_variant;
-//static int fan_speed = 64;
 extern unsigned long fan_registers;
 extern struct stpio_pin* fan_pin;
 extern tIconState spinner_state;
@@ -185,7 +184,7 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 		kfree(myString);
 
 		if (symbol_circle != 0)
-		{ // spinner on
+		{  // spinner on
 			if (symbol_circle > 255)
 			{
 				symbol_circle = 255;  // set maximum value
@@ -203,16 +202,16 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 						msleep(250);
 						i++;
 					}
-					while (icon_state.status != ICON_THREAD_STATUS_HALTED && i < 20);  //time out of 5 seconds
+					while (icon_state.status != THREAD_STATUS_HALTED && i < 20);  //time out of 5 seconds
 //					dprintk(50, "%s Icon thread stopped\n", __func__);
 				}
-				if (symbol_circle == 1) //handle special value 1
+				if (symbol_circle == 1)  // handle special value 1
 				{
-					spinner_state.period = 250; //set standard speed
+					spinner_state.period = 250;  //set standard speed
 				}
 				else
 				{
-					spinner_state.period = symbol_circle * 10; //set user specified speed
+					spinner_state.period = symbol_circle * 10;  //set user specified speed
 				}
 				spinner_state.state = 1;
 				lastdata.icon_state[ICON_SPINNER] = 1;
@@ -232,10 +231,10 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 					msleep(250);
 					i++;
 				}
-				while (spinner_state.status != ICON_THREAD_STATUS_HALTED && i < 20);  //time out of 20 seconds
+				while (spinner_state.status != THREAD_STATUS_HALTED && i < 20);  //time out of 20 seconds
 //				dprintk(50, "%s Spinner thread stopped\n", __func__);
 			}
-			if (old_icon_state != 0) // restart icon thread when it was active
+			if (old_icon_state != 0)  // restart icon thread when it was active
 			{
 				icon_state.state = old_icon_state;
 				up(&icon_state.sem);
@@ -279,7 +278,7 @@ static int text_write(struct file *file, const char __user *buf, unsigned long c
 			}
 			if (display_led == 1)
 			{
-				ret = pt6958_ShowBuf(page, count);
+				ret = pt6958_ShowBuf(page, count, 0);
 			}
 			if (ret >= 0)
 			{
@@ -589,44 +588,6 @@ static int was_timer_wakeup_read(char *page, char **start, off_t off, int count,
 		}
 		len = sprintf(page,"%d\n", wakeup_mode);
 	}
-	return len;
-}
-#endif
-
-#if 0
-static int fp_version_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
-{ // TODO: return string with year
-	int len = 0;
-	int version = -1;
-
-	switch (front_seg_num)
-	{
-		case 12:
-		{
-			version = 0;
-			break;
-		}
-		case 13:
-		{
-			version = 1;
-			break;
-		}
-		case 14:
-		{
-			version = 2;
-			break;
-		}
-		case 4:
-		{
-			version = 3;
-			break;
-		}
-		default:
-		{
-			return -EFAULT;
-		}
-	}
-	len = sprintf(page, "%d\n", version);
 	return len;
 }
 #endif

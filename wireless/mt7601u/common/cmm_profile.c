@@ -2661,270 +2661,276 @@ VOID rtmp_read_multest_from_file(
 	IN PSTRING tmpbuf,
 	IN PSTRING buffer)
 {
-	PSTRING		macptr;
-	INT			i=0, j;
-	STRING		tok_str[16];
-	BOOLEAN		bUsePrevFormat = FALSE;
-	UCHAR		macAddress[MAC_ADDR_LEN];
-	UCHAR	    keyMaterial[40];	
-	UCHAR		KeyLen, CipherAlg = CIPHER_NONE, KeyIdx;
-	PRT_802_11_WDS_ENTRY pWdsEntry;
+	PSTRING macptr;
+	INT i = 0, j;
+	STRING tok_str[16];
+	BOOLEAN bUsePrevFormat = FALSE;
+	UCHAR macAddress[MAC_ADDR_LEN];
+	UCHAR keyMaterial[40];	
+	UCHAR KeyLen, CipherAlg = CIPHER_NONE, KeyIdx;
+//	PRT_802_11_WDS_ENTRY pWdsEntry;
 		
 	/*WdsPhyMode */
 	if (RTMPGetKeyParameter("WdsPhyMode", tmpbuf, MAX_PARAM_BUFFER_SIZE, buffer, TRUE))
 	{	
-		for (i=0, macptr = rstrtok(tmpbuf,";"); (macptr && i < MAX_WDS_ENTRY); macptr = rstrtok(NULL,";"), i++) 
-		{
-	        if ((strncmp(macptr, "CCK", 3) == 0) || (strncmp(macptr, "cck", 3) == 0))
-	            pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_CCK;
-	        else if ((strncmp(macptr, "OFDM", 4) == 0) || (strncmp(macptr, "ofdm", 4) == 0))
-	            pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_OFDM;
-#ifdef DOT11_N_SUPPORT
-	        else if ((strncmp(macptr, "HTMIX", 5) == 0) || (strncmp(macptr, "htmix", 5) == 0))
-	            pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_HTMIX;
-	        else if ((strncmp(macptr, "GREENFIELD", 10) == 0) || (strncmp(macptr, "greenfield", 10) == 0))
-	            pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_HTGREENFIELD;
-#endif /* DOT11_N_SUPPORT */
-	        else
-	            pAd->MulTestTab.WdsEntry[i].PhyMode = 0xff;
-		
-	        DBGPRINT(RT_DEBUG_TRACE, ("If/wds%d - WdsPhyMode=%d\n", i, pAd->MulTestTab.WdsEntry[i].PhyMode));	    
-		}
-	}
-	
-	/*WdsList */
-	if (RTMPGetKeyParameter("WdsList", tmpbuf, MAX_PARAM_BUFFER_SIZE, buffer, TRUE))
-	{
-		for (i=0, macptr = rstrtok(tmpbuf,";"); (macptr && i < MAX_WDS_ENTRY); macptr = rstrtok(NULL,";"), i++) 
-		{				
-			if(strlen(macptr) != 17)  /*Mac address acceptable format 01:02:03:04:05:06 length 17 */
-				continue; 
-			if(strcmp(macptr,"00:00:00:00:00:00") == 0)
-				continue; 
-			if(i >= MAX_WDS_ENTRY)
-				break; 
-
-			for (j=0; j<ETH_LENGTH_OF_ADDRESS; j++)
-			{
-				AtoH(macptr, &macAddress[j], 1);
-				macptr=macptr+3;
-			}	
-
-			{
-				INT iii;
-				LONG WdsTabIdx = -1;
-				
-				for (iii = 0; iii < MAX_WDS_ENTRY; iii++)
-				{
-					if (pAd->MulTestTab.WdsEntry[iii].Valid == FALSE)
-					{
-						pAd->MulTestTab.WdsEntry[iii].Valid = TRUE;
-						pAd->MulTestTab.Size ++;
-						COPY_MAC_ADDR(pAd->MulTestTab.WdsEntry[iii].PeerWdsAddr, macAddress);
-						WdsTabIdx = iii;
-						break;
-					}
-					else if (MAC_ADDR_EQUAL(pAd->MulTestTab.WdsEntry[iii].PeerWdsAddr, macAddress))
-					{
-						WdsTabIdx = iii;
-						break;
-					}
-				}
-				
-				if (iii == MAX_WDS_ENTRY)
-					DBGPRINT(RT_DEBUG_ERROR, ("%s: Unable to allocate MulTestEntry.\n", __FUNCTION__));
-			}			
-		}
-	}
-
-	/*WdsEncrypType */
-	if (RTMPGetKeyParameter("WdsEncrypType", tmpbuf, 128, buffer, TRUE))
-	{				
-	    for (i = 0, macptr = rstrtok(tmpbuf,";"); (macptr && i < MAX_WDS_ENTRY); macptr = rstrtok(NULL,";"), i++)
-	    {
-	        if ((strncmp(macptr, "NONE", 4) == 0) || (strncmp(macptr, "none", 4) == 0))
-	            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11WEPDisabled;
-	        else if ((strncmp(macptr, "WEP", 3) == 0) || (strncmp(macptr, "wep", 3) == 0))
-	            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11WEPEnabled;
-	        else if ((strncmp(macptr, "TKIP", 4) == 0) || (strncmp(macptr, "tkip", 4) == 0))
-	            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11Encryption2Enabled;
-	        else if ((strncmp(macptr, "AES", 3) == 0) || (strncmp(macptr, "aes", 3) == 0))
-	            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11Encryption3Enabled;
-	        else
-	            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11WEPDisabled;
-
-	        DBGPRINT(RT_DEBUG_TRACE, ("WdsEncrypType[%d]=%d(%s)\n", i, pAd->MulTestTab.WdsEntry[i].WepStatus, GetEncryptType(pAd->MulTestTab.WdsEntry[i].WepStatus)));
-	    }
-		
-		/* Previous WDS only supports single encryption type. */
-		/* For backward compatible, other wds link encryption type shall be the same with the first. */
-		if (i == 1)
-		{
-			for (j = 1; j < MAX_WDS_ENTRY; j++)
-			{
-				pAd->MulTestTab.WdsEntry[j].WepStatus = pAd->MulTestTab.WdsEntry[0].WepStatus;	
-				DBGPRINT(RT_DEBUG_TRACE, ("@WdsEncrypType[%d]=%d(%s)\n", j, pAd->MulTestTab.WdsEntry[i].WepStatus, GetEncryptType(pAd->MulTestTab.WdsEntry[i].WepStatus)));	
-			}
-		}
-	}
-
-	/* WdsKey */
-	/* This is a previous parameter and it only stores WPA key material, not WEP key */
-	if (RTMPGetKeyParameter("WdsKey", tmpbuf, 255, buffer, FALSE))
-	{			
-		for (i = 0; i < MAX_WDS_ENTRY; i++)
-			NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
-
-		if (strlen(tmpbuf) > 0)
-			bUsePrevFormat = TRUE;
-
-		/* check if the wds-0 link key material is valid */
-		if (((pAd->MulTestTab.WdsEntry[0].WepStatus == Ndis802_11Encryption2Enabled)
-				|| (pAd->MulTestTab.WdsEntry[0].WepStatus == Ndis802_11Encryption3Enabled))
-			&& (strlen(tmpbuf) >= 8) && (strlen(tmpbuf) <= 64))
-		{
-			RT_CfgSetWPAPSKKey(pAd, tmpbuf, strlen(tmpbuf), (PUCHAR)RALINK_PASSPHRASE, sizeof(RALINK_PASSPHRASE), keyMaterial);
-			if (pAd->MulTestTab.WdsEntry[0].WepStatus == Ndis802_11Encryption3Enabled)
-				pAd->MulTestTab.WdsEntry[0].WdsKey.CipherAlg = CIPHER_AES;
-			else
-				pAd->MulTestTab.WdsEntry[0].WdsKey.CipherAlg = CIPHER_TKIP;
-			
-			NdisMoveMemory(&pAd->MulTestTab.WdsEntry[0].WdsKey.Key, keyMaterial, 16);
-			pAd->MulTestTab.WdsEntry[0].WdsKey.KeyLen = 16;
-			NdisMoveMemory(&pAd->MulTestTab.WdsEntry[0].WdsKey.RxMic, keyMaterial+16, 8);
-			NdisMoveMemory(&pAd->MulTestTab.WdsEntry[0].WdsKey.TxMic, keyMaterial+16, 8);
-		}
-
-		/* Previous WDS only supports single key-material. */
-		/* For backward compatible, other wds link key-material shall be the same with the first. */
-		if (pAd->MulTestTab.WdsEntry[0].WdsKey.KeyLen == 16)
-		{
-			for (j = 1; j < MAX_WDS_ENTRY; j++)
-			{
-				NdisMoveMemory(&pAd->MulTestTab.WdsEntry[j].WdsKey, &pAd->MulTestTab.WdsEntry[0].WdsKey, sizeof(CIPHER_KEY));								
-			}
-		}
-	
-	}
-
-	/* The parameters can provide different key information for each WDS-Link */
-	/* no matter WEP or WPA */
-	if (!bUsePrevFormat)
-	{
-		for (i = 0; i < MAX_WDS_ENTRY; i++)
-		{
-			AP_WDS_KeyNameMakeUp(tok_str, sizeof(tok_str), i);
-
-			/* WdsXKey (X=0~MAX_WDS_ENTRY-1) */
-			if (RTMPGetKeyParameter(tok_str, tmpbuf, 128, buffer, FALSE))
-			{			
-				if (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption1Enabled)
-				{
-					/* Ascii type */
-					if (strlen(tmpbuf) == 5 || strlen(tmpbuf) == 13)
-					{		
-						KeyLen = strlen(tmpbuf);
-						pAd->MulTestTab.WdsEntry[i].WdsKey.KeyLen = KeyLen;
-						NdisMoveMemory(pAd->MulTestTab.WdsEntry[i].WdsKey.Key, tmpbuf, KeyLen);
-						if (KeyLen == 5)
-							CipherAlg = CIPHER_WEP64;
-						else
-							CipherAlg = CIPHER_WEP128;	
-
-						pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CipherAlg;
-						DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d Key=%s ,type=Ascii, CipherAlg(%s)\n", i, tmpbuf, (CipherAlg == CIPHER_WEP64 ? "wep64" : "wep128")));
-					}
-					/* Hex type */
-					else if (strlen(tmpbuf) == 10 || strlen(tmpbuf) == 26)
-					{		
-						KeyLen = strlen(tmpbuf);
-						pAd->MulTestTab.WdsEntry[i].WdsKey.KeyLen = KeyLen / 2;
-						AtoH(tmpbuf, pAd->MulTestTab.WdsEntry[i].WdsKey.Key, KeyLen / 2);						
-						if (KeyLen == 10)
-							CipherAlg = CIPHER_WEP64;
-						else
-							CipherAlg = CIPHER_WEP128;	
-
-						pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CipherAlg;
-						DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d Key=%s ,type=Hex, CipherAlg(%s)\n", i, tmpbuf, (CipherAlg == CIPHER_WEP64 ? "wep64" : "wep128")));
-					}
-					/* Invalid type */
-					else
-					{
-						pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11EncryptionDisabled;
-						NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
-						DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d has invalid key for WEP, reset encryption to OPEN\n", i));
-					}
-				}
-				else if ((pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption2Enabled)
-					|| (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption3Enabled)
-					)					
-				{
-					if ((strlen(tmpbuf) >= 8) && (strlen(tmpbuf) <= 64))
-					{
-						RT_CfgSetWPAPSKKey(pAd, tmpbuf, strlen(tmpbuf), (PUCHAR) RALINK_PASSPHRASE, sizeof(RALINK_PASSPHRASE), keyMaterial);
-
-						if (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption3Enabled)
-						{
-							pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CIPHER_AES;
-							CipherAlg = CIPHER_AES;
-						}
-						else
-						{
-							pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CIPHER_TKIP;
-							CipherAlg = CIPHER_TKIP;
-						}
-						
-						NdisMoveMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey.Key, keyMaterial, 16);
-						pAd->MulTestTab.WdsEntry[i].WdsKey.KeyLen = 16;
-						NdisMoveMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey.RxMic, keyMaterial+16, 8);
-						NdisMoveMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey.TxMic, keyMaterial+16, 8);
-						DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d Key=%s, CipherAlg(%s)\n", i, tmpbuf, (CipherAlg == CIPHER_AES ? "AES" : "TKIP")));
-					}
-					else
-					{
-						DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d has invalid key for WPA, reset encryption to OPEN\n", i));
-						pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11EncryptionDisabled;
-						NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
-					}
-
-				}
-				else
-				{									
-					pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11EncryptionDisabled;
-					NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
-				}								
-			}
-		}
-	}
-
-	/* WdsDefaultKeyID */
-	if(RTMPGetKeyParameter("WdsDefaultKeyID", tmpbuf, 10, buffer, TRUE))
-	{
 		for (i = 0, macptr = rstrtok(tmpbuf,";"); (macptr && i < MAX_WDS_ENTRY); macptr = rstrtok(NULL,";"), i++)
 		{
-			KeyIdx = (UCHAR) simple_strtol(macptr, 0, 10);
-			if((KeyIdx >= 1 ) && (KeyIdx <= 4))
-				pAd->MulTestTab.WdsEntry[i].KeyIdx = (UCHAR) (KeyIdx - 1);
-			else
-				pAd->MulTestTab.WdsEntry[i].KeyIdx = 0;
-
-			if ((pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption2Enabled)
-					|| (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption3Enabled))
-				pAd->MulTestTab.WdsEntry[i].KeyIdx = 0;	
-
-			DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d - WdsDefaultKeyID(0~3)=%d\n", i, pAd->MulTestTab.WdsEntry[i].KeyIdx));	
-		}				
+		        if ((strncmp(macptr, "CCK", 3) == 0) || (strncmp(macptr, "cck", 3) == 0))
+		        {
+			    pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_CCK;
+			}
+		        else if ((strncmp(macptr, "OFDM", 4) == 0) || (strncmp(macptr, "ofdm", 4) == 0))
+		        {
+			    pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_OFDM;
+			}
+#ifdef DOT11_N_SUPPORT
+		        else if ((strncmp(macptr, "HTMIX", 5) == 0) || (strncmp(macptr, "htmix", 5) == 0))
+		        {
+			    pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_HTMIX;
+			}
+		        else if ((strncmp(macptr, "GREENFIELD", 10) == 0) || (strncmp(macptr, "greenfield", 10) == 0))
+		  	{
+			          pAd->MulTestTab.WdsEntry[i].PhyMode = MODE_HTGREENFIELD;
+			}
+#endif /* DOT11_N_SUPPORT */
+		        else
+		        {
+				pAd->MulTestTab.WdsEntry[i].PhyMode = 0xff;
+			}
+		        DBGPRINT(RT_DEBUG_TRACE, ("If/wds%d - WdsPhyMode=%d\n", i, pAd->MulTestTab.WdsEntry[i].PhyMode));	    
+			}
+		}
+		/*WdsList */
+		if (RTMPGetKeyParameter("WdsList", tmpbuf, MAX_PARAM_BUFFER_SIZE, buffer, TRUE))
+		{
+			for (i=0, macptr = rstrtok(tmpbuf,";"); (macptr && i < MAX_WDS_ENTRY); macptr = rstrtok(NULL,";"), i++) 
+			{				
+				if(strlen(macptr) != 17)  /*Mac address acceptable format 01:02:03:04:05:06 length 17 */
+					continue; 
+				if(strcmp(macptr,"00:00:00:00:00:00") == 0)
+					continue; 
+				if(i >= MAX_WDS_ENTRY)
+					break; 
+	
+				for (j=0; j<ETH_LENGTH_OF_ADDRESS; j++)
+				{
+					AtoH(macptr, &macAddress[j], 1);
+					macptr=macptr+3;
+				}	
+	
+				{
+					INT iii;
+					LONG WdsTabIdx = -1;
+					
+					for (iii = 0; iii < MAX_WDS_ENTRY; iii++)
+					{
+						if (pAd->MulTestTab.WdsEntry[iii].Valid == FALSE)
+						{
+							pAd->MulTestTab.WdsEntry[iii].Valid = TRUE;
+							pAd->MulTestTab.Size ++;
+							COPY_MAC_ADDR(pAd->MulTestTab.WdsEntry[iii].PeerWdsAddr, macAddress);
+							WdsTabIdx = iii;
+							break;
+						}
+						else if (MAC_ADDR_EQUAL(pAd->MulTestTab.WdsEntry[iii].PeerWdsAddr, macAddress))
+						{
+							WdsTabIdx = iii;
+							break;
+						}
+					}
+					
+					if (iii == MAX_WDS_ENTRY)
+						DBGPRINT(RT_DEBUG_ERROR, ("%s: Unable to allocate MulTestEntry.\n", __FUNCTION__));
+				}			
+			}
+		}
+	
+		/*WdsEncrypType */
+		if (RTMPGetKeyParameter("WdsEncrypType", tmpbuf, 128, buffer, TRUE))
+		{				
+		    for (i = 0, macptr = rstrtok(tmpbuf,";"); (macptr && i < MAX_WDS_ENTRY); macptr = rstrtok(NULL,";"), i++)
+		    {
+		        if ((strncmp(macptr, "NONE", 4) == 0) || (strncmp(macptr, "none", 4) == 0))
+		            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11WEPDisabled;
+		        else if ((strncmp(macptr, "WEP", 3) == 0) || (strncmp(macptr, "wep", 3) == 0))
+		            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11WEPEnabled;
+		        else if ((strncmp(macptr, "TKIP", 4) == 0) || (strncmp(macptr, "tkip", 4) == 0))
+		            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11Encryption2Enabled;
+		        else if ((strncmp(macptr, "AES", 3) == 0) || (strncmp(macptr, "aes", 3) == 0))
+		            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11Encryption3Enabled;
+		        else
+		            pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11WEPDisabled;
+	
+		        DBGPRINT(RT_DEBUG_TRACE, ("WdsEncrypType[%d]=%d(%s)\n", i, pAd->MulTestTab.WdsEntry[i].WepStatus, GetEncryptType(pAd->MulTestTab.WdsEntry[i].WepStatus)));
+		    }
+			
+			/* Previous WDS only supports single encryption type. */
+			/* For backward compatible, other wds link encryption type shall be the same with the first. */
+			if (i == 1)
+			{
+				for (j = 1; j < MAX_WDS_ENTRY; j++)
+				{
+					pAd->MulTestTab.WdsEntry[j].WepStatus = pAd->MulTestTab.WdsEntry[0].WepStatus;	
+					DBGPRINT(RT_DEBUG_TRACE, ("@WdsEncrypType[%d]=%d(%s)\n", j, pAd->MulTestTab.WdsEntry[i].WepStatus, GetEncryptType(pAd->MulTestTab.WdsEntry[i].WepStatus)));	
+				}
+			}
+		}
+	
+		/* WdsKey */
+		/* This is a previous parameter and it only stores WPA key material, not WEP key */
+		if (RTMPGetKeyParameter("WdsKey", tmpbuf, 255, buffer, FALSE))
+		{			
+			for (i = 0; i < MAX_WDS_ENTRY; i++)
+				NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
+	
+			if (strlen(tmpbuf) > 0)
+				bUsePrevFormat = TRUE;
+	
+			/* check if the wds-0 link key material is valid */
+			if (((pAd->MulTestTab.WdsEntry[0].WepStatus == Ndis802_11Encryption2Enabled)
+					|| (pAd->MulTestTab.WdsEntry[0].WepStatus == Ndis802_11Encryption3Enabled))
+				&& (strlen(tmpbuf) >= 8) && (strlen(tmpbuf) <= 64))
+			{
+				RT_CfgSetWPAPSKKey(pAd, tmpbuf, strlen(tmpbuf), (PUCHAR)RALINK_PASSPHRASE, sizeof(RALINK_PASSPHRASE), keyMaterial);
+				if (pAd->MulTestTab.WdsEntry[0].WepStatus == Ndis802_11Encryption3Enabled)
+					pAd->MulTestTab.WdsEntry[0].WdsKey.CipherAlg = CIPHER_AES;
+				else
+					pAd->MulTestTab.WdsEntry[0].WdsKey.CipherAlg = CIPHER_TKIP;
+				
+				NdisMoveMemory(&pAd->MulTestTab.WdsEntry[0].WdsKey.Key, keyMaterial, 16);
+				pAd->MulTestTab.WdsEntry[0].WdsKey.KeyLen = 16;
+				NdisMoveMemory(&pAd->MulTestTab.WdsEntry[0].WdsKey.RxMic, keyMaterial+16, 8);
+				NdisMoveMemory(&pAd->MulTestTab.WdsEntry[0].WdsKey.TxMic, keyMaterial+16, 8);
+			}
+	
+			/* Previous WDS only supports single key-material. */
+			/* For backward compatible, other wds link key-material shall be the same with the first. */
+			if (pAd->MulTestTab.WdsEntry[0].WdsKey.KeyLen == 16)
+			{
+				for (j = 1; j < MAX_WDS_ENTRY; j++)
+				{
+					NdisMoveMemory(&pAd->MulTestTab.WdsEntry[j].WdsKey, &pAd->MulTestTab.WdsEntry[0].WdsKey, sizeof(CIPHER_KEY));								
+				}
+			}
+		
+		}
+	
+		/* The parameters can provide different key information for each WDS-Link */
+		/* no matter WEP or WPA */
+		if (!bUsePrevFormat)
+		{
+			for (i = 0; i < MAX_WDS_ENTRY; i++)
+			{
+				AP_WDS_KeyNameMakeUp(tok_str, sizeof(tok_str), i);
+	
+				/* WdsXKey (X=0~MAX_WDS_ENTRY-1) */
+				if (RTMPGetKeyParameter(tok_str, tmpbuf, 128, buffer, FALSE))
+				{			
+					if (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption1Enabled)
+					{
+						/* Ascii type */
+						if (strlen(tmpbuf) == 5 || strlen(tmpbuf) == 13)
+						{		
+							KeyLen = strlen(tmpbuf);
+							pAd->MulTestTab.WdsEntry[i].WdsKey.KeyLen = KeyLen;
+							NdisMoveMemory(pAd->MulTestTab.WdsEntry[i].WdsKey.Key, tmpbuf, KeyLen);
+							if (KeyLen == 5)
+								CipherAlg = CIPHER_WEP64;
+							else
+								CipherAlg = CIPHER_WEP128;	
+	
+							pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CipherAlg;
+							DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d Key=%s ,type=Ascii, CipherAlg(%s)\n", i, tmpbuf, (CipherAlg == CIPHER_WEP64 ? "wep64" : "wep128")));
+						}
+						/* Hex type */
+						else if (strlen(tmpbuf) == 10 || strlen(tmpbuf) == 26)
+						{		
+							KeyLen = strlen(tmpbuf);
+							pAd->MulTestTab.WdsEntry[i].WdsKey.KeyLen = KeyLen / 2;
+							AtoH(tmpbuf, pAd->MulTestTab.WdsEntry[i].WdsKey.Key, KeyLen / 2);						
+							if (KeyLen == 10)
+								CipherAlg = CIPHER_WEP64;
+							else
+								CipherAlg = CIPHER_WEP128;	
+	
+							pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CipherAlg;
+							DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d Key=%s ,type=Hex, CipherAlg(%s)\n", i, tmpbuf, (CipherAlg == CIPHER_WEP64 ? "wep64" : "wep128")));
+						}
+						/* Invalid type */
+						else
+						{
+							pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11EncryptionDisabled;
+							NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
+							DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d has invalid key for WEP, reset encryption to OPEN\n", i));
+						}
+					}
+					else if ((pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption2Enabled)
+						|| (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption3Enabled)
+						)					
+					{
+						if ((strlen(tmpbuf) >= 8) && (strlen(tmpbuf) <= 64))
+						{
+							RT_CfgSetWPAPSKKey(pAd, tmpbuf, strlen(tmpbuf), (PUCHAR) RALINK_PASSPHRASE, sizeof(RALINK_PASSPHRASE), keyMaterial);
+	
+							if (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption3Enabled)
+							{
+								pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CIPHER_AES;
+								CipherAlg = CIPHER_AES;
+							}
+							else
+							{
+								pAd->MulTestTab.WdsEntry[i].WdsKey.CipherAlg = CIPHER_TKIP;
+								CipherAlg = CIPHER_TKIP;
+							}
+							
+							NdisMoveMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey.Key, keyMaterial, 16);
+							pAd->MulTestTab.WdsEntry[i].WdsKey.KeyLen = 16;
+							NdisMoveMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey.RxMic, keyMaterial+16, 8);
+							NdisMoveMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey.TxMic, keyMaterial+16, 8);
+							DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d Key=%s, CipherAlg(%s)\n", i, tmpbuf, (CipherAlg == CIPHER_AES ? "AES" : "TKIP")));
+						}
+						else
+						{
+							DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d has invalid key for WPA, reset encryption to OPEN\n", i));
+							pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11EncryptionDisabled;
+							NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
+						}
+	
+					}
+					else
+					{									
+						pAd->MulTestTab.WdsEntry[i].WepStatus = Ndis802_11EncryptionDisabled;
+						NdisZeroMemory(&pAd->MulTestTab.WdsEntry[i].WdsKey, sizeof(CIPHER_KEY));
+					}								
+				}
+			}
+		}
+	
+		/* WdsDefaultKeyID */
+		if(RTMPGetKeyParameter("WdsDefaultKeyID", tmpbuf, 10, buffer, TRUE))
+		{
+			for (i = 0, macptr = rstrtok(tmpbuf,";"); (macptr && i < MAX_WDS_ENTRY); macptr = rstrtok(NULL,";"), i++)
+			{
+				KeyIdx = (UCHAR) simple_strtol(macptr, 0, 10);
+				if((KeyIdx >= 1 ) && (KeyIdx <= 4))
+					pAd->MulTestTab.WdsEntry[i].KeyIdx = (UCHAR) (KeyIdx - 1);
+				else
+					pAd->MulTestTab.WdsEntry[i].KeyIdx = 0;
+	
+				if ((pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption2Enabled)
+						|| (pAd->MulTestTab.WdsEntry[i].WepStatus == Ndis802_11Encryption3Enabled))
+					pAd->MulTestTab.WdsEntry[i].KeyIdx = 0;	
+	
+				DBGPRINT(RT_DEBUG_TRACE, ("IF/wds%d - WdsDefaultKeyID(0~3)=%d\n", i, pAd->MulTestTab.WdsEntry[i].KeyIdx));	
+			}				
+		}
 	}
-}
-
 
 #ifdef SINGLE_SKU_V2
-NDIS_STATUS	RTMPSetSingleSKUParameters(
-	IN RTMP_ADAPTER *pAd)
+NDIS_STATUS RTMPSetSingleSKUParameters(IN RTMP_ADAPTER *pAd)
 {
 	PSTRING buffer;
-	PSTRING		readline, token;
+	PSTRING readline, token;
 	RTMP_OS_FD srcf;
 	INT retval;
 	PSTRING ptr;

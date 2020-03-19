@@ -16,3 +16,4 @@ struct tuner_devctl
 	int (*tuner_get_status)(struct dvb_frontend *fe, u32 *status);
 };
 #endif
+// vim:ts=4

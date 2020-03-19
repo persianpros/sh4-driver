@@ -578,7 +578,7 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 	RTMP_IRQ_UNLOCK(&pAd->MLMEBulkOutLock, IrqFlags);
 
 
-#if RT_CFG80211_SUPPORT
+#if defined RT_CFG80211_SUPPORT
 {
 	HEADER_802_11  *pHeader;	
 	pHeader = (HEADER_802_11 *)(GET_OS_PKT_DATAPTR(pPacket)+ TXINFO_SIZE + pAd->chipCap.TXWISize);
@@ -595,24 +595,22 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 
 	/* No-matter success or fail, we free the mgmt packet. */
 	if (pPacket)
+	{
 		RTMPFreeNdisPacket(pAd, pPacket);
-
-	if ((RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_RESET_IN_PROGRESS | 
-								fRTMP_ADAPTER_HALT_IN_PROGRESS | 
-								fRTMP_ADAPTER_NIC_NOT_EXIST))))
+	}
+	if ((RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_RESET_IN_PROGRESS | fRTMP_ADAPTER_HALT_IN_PROGRESS | fRTMP_ADAPTER_NIC_NOT_EXIST))))
 	{
 		/* do nothing and return directly. */
 	}
 	else
 	{
-		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_BULKOUT_RESET) && 
-			((pAd->bulkResetPipeid & BULKOUT_MGMT_RESET_FLAG) == BULKOUT_MGMT_RESET_FLAG))
+		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_BULKOUT_RESET)
+		&&  ((pAd->bulkResetPipeid & BULKOUT_MGMT_RESET_FLAG) == BULKOUT_MGMT_RESET_FLAG))
 		{	/* For Mgmt Bulk-Out failed, ignore it now. */
 			RTEnqueueInternalCmd(pAd, CMDTHREAD_RESET_BULK_OUT, NULL, 0);
 		}
 		else
 		{
-
 			/* Always call Bulk routine, even reset bulk. */
 			/* The protectioon of rest bulk should be in BulkOut routine */
 			if (pAd->MgmtRing.TxSwFreeIdx < MGMT_RING_SIZE /* pMLMEContext->bWaitingBulkOut == TRUE */)
@@ -620,14 +618,11 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 				RTUSB_SET_BULK_FLAG(pAd, fRTUSB_BULK_OUT_MLME);
 			}
 				RTUSBKickBulkOut(pAd);
-			}
 		}
-
-
+	}
 #ifdef CONFIG_STA_SUPPORT
 #endif /* CONFIG_STA_SUPPORT */
 }
-
 
 static void rtusb_hcca_dma_done_tasklet(unsigned long data)
 {

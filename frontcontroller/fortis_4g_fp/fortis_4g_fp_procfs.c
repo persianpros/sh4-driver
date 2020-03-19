@@ -103,7 +103,11 @@ extern int remove_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *wri
 
 /* Globals */
 static int progress = 0;
-#if defined(EP8000) || defined(EPP8000) || defined(GPV8000) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 //static int symbol_circle = 0;
 static int old_icon_state;
 #endif
@@ -370,13 +374,14 @@ static int model_name_read(char *page, char **start, off_t off, int count, int *
 				break;
 			}
 			case 0x2902:  // FOREVER_9898HD
+			default:
 			{
 				table = FOREVER_9898HD_table;
 				break;
 			}
 			case 0x2903:  // FOREVER_3434HD
 			{
-				table = FOREVER_9898HD_table;
+				table = FOREVER_3434HD_table;
 				break;
 			}
 			case 0x2910:  // FOREVER_2424HD

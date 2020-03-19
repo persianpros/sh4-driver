@@ -77,7 +77,10 @@
  || defined(CUBEREVO) \
  || defined(ADB_BOX) \
  || defined(SPARK7162) \
- || defined(IPBOX9900)
+ || defined(EP8000) \
+ || defined(EPP8000) \
+ || defined(GPV8000) \
+ || defined(FOREVER_9898HD)
 #define SCI_NUMBER_OF_CONTROLLERS   2           /* Num of SC controllers */
 #else
 #define SCI_NUMBER_OF_CONTROLLERS   1           /* Num of SC controllers */

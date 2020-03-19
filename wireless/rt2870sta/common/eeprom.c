@@ -24,22 +24,18 @@
  *                                                                       *
  *************************************************************************/
 
-
 #include "rt_config.h"
 
-
-INT RtmpChipOpsEepromHook(
-	IN RTMP_ADAPTER *pAd,
-	IN INT			infType)
+INT RtmpChipOpsEepromHook(IN RTMP_ADAPTER *pAd, IN INT infType)
 {
-	RTMP_CHIP_OP	*pChipOps = &pAd->chipOps;
+	RTMP_CHIP_OP *pChipOps = &pAd->chipOps;
 #ifdef RT30xx
 #ifdef RTMP_EFUSE_SUPPORT
-	UINT32			eFuseCtrl, mac_val;
+	UINT32 eFuseCtrl, mac_val;
 	int index;
 #endif
 #endif
-	ULONG                   FwMode = 0;
+//	ULONG FwMode = 0;
 
 #ifdef RTMP_FLASH_SUPPORT
 	pChipOps->eeinit = rtmp_nv_init;
@@ -54,14 +50,16 @@ INT RtmpChipOpsEepromHook(
 	do
 	{
 		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))			
+		{
 			return -1;
-		
+		}
 		RTMP_IO_READ32(pAd, MAC_CSR0, &mac_val);
 		pAd->MACVersion = mac_val;
 
 		if ((pAd->MACVersion != 0x00) && (pAd->MACVersion != 0xFFFFFFFF))
+		{
 			break;
-
+		}
 		RTMPusecDelay(10);
 	} while (index++ < 100);
 	
@@ -76,20 +74,20 @@ INT RtmpChipOpsEepromHook(
 	{
 		RTMP_IO_READ32(pAd, EFUSE_CTRL, &eFuseCtrl);
 	}
-
 	pAd->bUseEfuse = ( (eFuseCtrl & 0x80000000) == 0x80000000) ? 1 : 0;	
 
 #ifdef RTMP_MAC_USB
-    RTUSBFirmwareOpmode(pAd, &FwMode);
-    if ((FwMode&0x00000003) == 2)
-    {
-        DBGPRINT(RT_DEBUG_ERROR, ("NICLoadFirmware: The NIC is AutoRun Mode\n"));
-        pAd->FWinAutoRunMode = TRUE;
-               pAd->bUseEfuse = TRUE;
-    }
+	RTUSBFirmwareOpmode(pAd, &FwMode);
+
+	if ((FwMode&0x00000003) == 2)
+	{
+		DBGPRINT(RT_DEBUG_ERROR, ("NICLoadFirmware: The NIC is AutoRun Mode\n"));
+		pAd->FWinAutoRunMode = TRUE;
+		pAd->bUseEfuse = TRUE;
+	}
 #endif /* RTMP_MAC_USB */
 
-	if(pAd->bUseEfuse)
+	if (pAd->bUseEfuse)
 	{
 		pChipOps->eeinit = eFuse_init;
 		pChipOps->eeread = rtmp_ee_efuse_read16;
@@ -107,22 +105,23 @@ INT RtmpChipOpsEepromHook(
 
 	switch(infType) 
 	{
-
-
 #ifdef RTMP_USB_SUPPORT
 		case RTMP_DEV_INF_USB:
+		{
 			pChipOps->eeinit = NULL;
 			pChipOps->eeread = RTUSBReadEEPROM16;
 			pChipOps->eewrite = RTUSBWriteEEPROM16;
 			DBGPRINT(RT_DEBUG_OFF, ("pChipOps->eeread = RTUSBReadEEPROM16\n"));
 			DBGPRINT(RT_DEBUG_OFF, ("pChipOps->eewrite = RTUSBWriteEEPROM16\n"));
 			break;
+		}
 #endif /* RTMP_USB_SUPPORT */
 		default:
+		{
 			DBGPRINT(RT_DEBUG_ERROR, ("RtmpChipOpsEepromHook() failed!\n"));
 			break;
+		}
 	}
-
 	return 0;
 }
 

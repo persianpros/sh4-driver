@@ -602,32 +602,34 @@ err1:
 
 #ifdef RT3290
 	if (IS_RT3290(pAd))
+	{
 		RTMPEnableWlan(pAd, FALSE, FALSE);
+	}
 #endif /* RT3290 */
 
 #ifdef DOT11_N_SUPPORT
-	if(pAd->mpdu_blk_pool.mem)
+	if (pAd->mpdu_blk_pool.mem)
+	{
 		os_free_mem(pAd, pAd->mpdu_blk_pool.mem); /* free BA pool*/
+	}
 #endif /* DOT11_N_SUPPORT */
 
 	/* shall not set priv to NULL here because the priv didn't been free yet.*/
 	/*net_dev->priv = 0;*/
-#ifdef INF_AMAZON_SE
-err0:
-#endif /* INF_AMAZON_SE */
-#ifdef ST
-err0:
-#endif /* ST */
-
+//#ifdef INF_AMAZON_SE
+//err0:
+//#endif /* INF_AMAZON_SE */
+//#ifdef ST
+//err0:
+//#endif /* ST */
 	DBGPRINT(RT_DEBUG_ERROR, ("!!! rt28xx Initialized fail !!!\n"));
 	return FALSE;
 }
 
 
-VOID RTMPDrvOpen(
-	IN VOID			*pAdSrc)
+VOID RTMPDrvOpen(IN VOID *pAdSrc)
 {
-	PRTMP_ADAPTER	pAd = (PRTMP_ADAPTER)pAdSrc;
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
 
 #ifdef CONFIG_STA_SUPPORT
 #endif /* CONFIG_STA_SUPPORT */

@@ -15,7 +15,7 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
@@ -25,29 +25,29 @@
   
 struct tda10024_private_data_s
 {
-    u32 ts_out;	
-    u32 si;
-    u32 power;
-    u32 agc_th;
+	u32 ts_out;	
+	u32 si;
+	u32 power;
+	u32 agc_th;
 };
 
 struct mxl201_private_data_s  
 { 
-    u32 if_freq; 
-    u32 xtal; 
-    u8  xtal_cap; 
-    u8  clk_out; 
-    u8  clk_amp; 
-    u8  si; 
-    u8  mode; 
-    u8  power;
-    u8  lt; 
+	u32 if_freq; 
+	u32 xtal; 
+	u8  xtal_cap; 
+	u8  clk_out; 
+	u8  clk_amp; 
+	u8  si; 
+	u8  mode; 
+	u8  power;
+	u8  lt; 
 };
 
 struct tda10024_s
 {
-      struct mxl201_private_data_s*   mxl201;
-      struct tda10024_private_data_s* tda10024;
+	struct mxl201_private_data_s*   mxl201;
+	struct tda10024_private_data_s* tda10024;
 };
-
 #endif
+// vim:ts=4

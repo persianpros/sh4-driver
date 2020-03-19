@@ -1,5 +1,5 @@
 /*
- * a8293.c -
+ * a8293.c - Allegro A8293 LNB controller driver
  *
  */
 
@@ -15,22 +15,26 @@ static short paramDebug;
 		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
 	} while (0)
 
+#if defined(IPBOX9900)
 extern int _12v_isON; //defined in e2_proc ->I will implement a better mechanism later
+#endif
 
 struct lnb_state
 {
 	struct i2c_adapter *i2c;
-	u32 lnb[6];
+	u32                lnb[6];
 };
 
 unsigned char a8293_read(struct lnb_state *state)
 {
 	u8 buf[2];
 	struct i2c_msg msg;
-	msg.addr = state->lnb[1];
+
+	msg.addr  = state->lnb[1];
 	msg.flags = I2C_M_RD;
-	msg.buf = buf;
-	msg.len = 1;
+	msg.buf   = buf;
+	msg.len   = 1;
+
 	if (i2c_transfer(state->i2c, &msg, 1) != 1)
 	{
 		printk("%s: a8293_read error\n", __FUNCTION__);
@@ -44,12 +48,16 @@ static int a8293_write(struct lnb_state *state, unsigned char data)
 	int ret = -EREMOTEIO;
 	struct i2c_msg msg;
 	u8 buf;
+
 	buf = data;
-	msg.addr = state->lnb[1];
+
+	msg.addr  = state->lnb[1];
 	msg.flags = 0;
-	msg.buf = &buf;
-	msg.len = 1;
+	msg.buf   = &buf;
+	msg.len   = 1;
+
 	dprintk(100, "%s: write 0x%02x to 0x%02x\n", __FUNCTION__, data, msg.addr);
+
 	if ((ret = i2c_transfer(state->i2c, &msg, 1)) != 1)
 	{
 		printk("%s: writereg error(err == %i)\n", __FUNCTION__, ret);
@@ -63,19 +71,24 @@ u16 a8293_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t vo
 	struct lnb_state *state = (struct lnb_state *) _state;
 	unsigned char reg = state->lnb[5];
 	dprintk(1, "%s (%x)\n", __func__, voltage);
+
 	if (voltage != SEC_VOLTAGE_OFF)
 	{
-		reg |= (1 << 5); /* lnb enable/disable */
+		reg |= (1 << 5);  /* lnb enable/disable */
 	}
 	switch (voltage)
 	{
 		case SEC_VOLTAGE_OFF:
 		{
 			dprintk(1, "set voltage off\n");
+#if defined(IPBOX9900)
 			if (_12v_isON == 0)
 			{
 				a8293_write(state, reg);
 			}
+#else
+			a8293_write(state, reg);
+#endif
 			break;
 		}
 		case SEC_VOLTAGE_13:
@@ -105,12 +118,15 @@ void *lnb_a8293_attach(u32 *lnb, struct equipment_s *equipment)
 {
 	unsigned char reg;
 	int res;
+
 	struct lnb_state *state = kmalloc(sizeof(struct lnb_state), GFP_KERNEL);
 	memcpy(state->lnb, lnb, sizeof(state->lnb));
 	equipment->lnb_set_voltage = a8293_set_voltage;
 	state->i2c = i2c_get_adapter(lnb[0]);
 	dprintk(0, "i2c adapter = %p\n", state->i2c);
+
 //TODO: make it configurable
+
 //#ifndef UFS913
 	/* this read is necessarily needed, otherwise
 	 * lnb power is not supplied!
@@ -124,6 +140,7 @@ void *lnb_a8293_attach(u32 *lnb, struct equipment_s *equipment)
 	{
 		/* setup pio6 */
 		u32 reg = ctrl_inl(0xfd026030);
+
 		dprintk(1, "%s: reg = 0x%08x\n", __func__, reg);
 		reg |= 0x00000001;
 		dprintk(1, "%s: reg = 0x%08x\n", __func__, reg);
@@ -143,7 +160,7 @@ EXPORT_SYMBOL(lnb_a8293_attach);
 /* ---------------------------------------------------------------------- */
 
 /* ******************************* */
-/* module functions */
+/* module functions                */
 /* ******************************* */
 
 int __init lnb_a8293_init(void)
@@ -167,4 +184,4 @@ MODULE_LICENSE("GPL");
 
 module_init(lnb_a8293_init);
 module_exit(lnb_a8293_cleanup);
-
+// vim:ts=4

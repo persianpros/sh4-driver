@@ -85,9 +85,7 @@ VOID InitFrequencyCalibration(
 		
 		StopFrequencyCalibration(pAd);
 
-		DBGPRINT(RT_DEBUG_ERROR, ("%s: frequency offset in the EEPROM = %ld(0x%x)\n", 
-			__FUNCTION__, 
-			pAd->RfFreqOffset, pAd->RfFreqOffset));
+		DBGPRINT(RT_DEBUG_ERROR, ("%s: frequency offset in the EEPROM = %ld(0x%x)\n", __FUNCTION__, pAd->RfFreqOffset, (unsigned int)pAd->RfFreqOffset));
 
 		DBGPRINT(RT_DEBUG_ERROR, ("<--- %s\n", __FUNCTION__));
 	}
@@ -127,16 +125,14 @@ VOID FrequencyCalibrationMode(
 	UINT8 Mode)
 {
 	UCHAR RFValue = 0;
-	UINT32 PreRFValue = 0; 
+//	UINT32 PreRFValue = 0; 
 
 #ifdef MT7601
 	if (Mode == FREQ_CAL_MODE2)
 	{
 		rlt_rf_write(pAd, RF_BANK0, RF_R12, pAd->FreqCalibrationCtrl.AdaptiveFreqOffset);
 
-		AndesRFRandomWrite(pAd, 2,
-			RF_BANK0, RF_R04, 0x0A,
-			RF_BANK0, RF_R05, 0x20);
+		AndesRFRandomWrite(pAd, 2, RF_BANK0, RF_R04, 0x0A, RF_BANK0, RF_R05, 0x20);
 		rlt_rf_read(pAd, RF_BANK0, RF_R04, &RFValue);
 		RFValue = ((RFValue & ~0x80) | 0x80); 	/* vcocal_en (initiate VCO calibration (reset after completion)) - It should be at the end of RF configuration. */
 		rlt_rf_write(pAd, RF_BANK0, RF_R04, RFValue);
@@ -144,13 +140,13 @@ VOID FrequencyCalibrationMode(
 	}
 	else
 #endif /* MT7601 */
+	{
 		DBGPRINT(RT_DEBUG_ERROR, ("Unknown FrqCalibration Mode\n")); 
+	}
 }
 
-
 /* The frequency calibration algorithm*/
-VOID FrequencyCalibration(
-	IN PRTMP_ADAPTER pAd)
+VOID FrequencyCalibration(IN PRTMP_ADAPTER pAd)
 {
 	/*BOOLEAN bUpdateRFR = FALSE;*/
 	CHAR HighFreqTriggerPoint = 0, LowFreqTriggerPoint = 0;
@@ -159,9 +155,9 @@ VOID FrequencyCalibration(
 	/* Frequency calibration period: */
 	/* a) 10 seconds: Check the reported frequency offset*/
 	/* b) 500 ms: Update the RF frequency if possible*/
-	if ((pAd->FreqCalibrationCtrl.bEnableFrequencyCalibration == TRUE) && 
-	     (((pAd->FreqCalibrationCtrl.bApproachFrequency == FALSE) && ((pAd->Mlme.PeriodicRound % FREQUENCY_CALIBRATION_PERIOD) == 0)) || 
-	       ((pAd->FreqCalibrationCtrl.bApproachFrequency == TRUE) && ((pAd->Mlme.PeriodicRound % (FREQUENCY_CALIBRATION_PERIOD / 20)) == 0))))
+	if ((pAd->FreqCalibrationCtrl.bEnableFrequencyCalibration == TRUE)
+	&&  (((pAd->FreqCalibrationCtrl.bApproachFrequency == FALSE) && ((pAd->Mlme.PeriodicRound % FREQUENCY_CALIBRATION_PERIOD) == 0))
+	||   ((pAd->FreqCalibrationCtrl.bApproachFrequency == TRUE) && ((pAd->Mlme.PeriodicRound % (FREQUENCY_CALIBRATION_PERIOD / 20)) == 0))))
 	{
 		DBGPRINT(RT_DEBUG_INFO, ("---> %s\n", __FUNCTION__));
 
@@ -179,7 +175,7 @@ VOID FrequencyCalibration(
 				if (pAd->FreqCalibrationCtrl.BeaconPhyMode == MODE_CCK) /* CCK*/
 				{
 #ifdef MT7601
-					if ( IS_MT7601(pAd) )
+					if (IS_MT7601(pAd))
 					{
 					HighFreqTriggerPoint = MT7601_HIGH_FREQUENCY_TRIGGER_POINT_CCK;
 					LowFreqTriggerPoint = MT7601_LOW_FREQUENCY_TRIGGER_POINT_CCK;

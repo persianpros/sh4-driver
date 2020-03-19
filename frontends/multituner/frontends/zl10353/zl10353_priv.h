@@ -10,7 +10,7 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *
  *  GNU General Public License for more details.
  *
@@ -22,16 +22,17 @@
 #ifndef _ZL10353_PRIV_
 #define _ZL10353_PRIV_
 
-#define ID_ZL10353	0x14 /* Zarlink ZL10353 */
-#define ID_CE6230	0x18 /* Intel CE6230 */
-#define ID_CE6231	0x19 /* Intel CE6231 */
+#define ID_ZL10353 0x14 /* Zarlink ZL10353 */
+#define ID_CE6230  0x18 /* Intel CE6230 */
+#define ID_CE6231  0x19 /* Intel CE6231 */
 
 #define I2C_ADDR_PLL 0xC2
 
 #define msb(x) (((x) >> 8) & 0xff)
 #define lsb(x) ((x) & 0xff)
 
-enum zl10353_reg_addr {
+enum zl10353_reg_addr
+{
 	INTERRUPT_0        = 0x00,
 	INTERRUPT_1        = 0x01,
 	INTERRUPT_2        = 0x02,
@@ -66,11 +67,11 @@ enum zl10353_reg_addr {
 	BW_CTL             = 0x64,
 	TRL_NOMINAL_RATE_1 = 0x65,
 	TRL_NOMINAL_RATE_0 = 0x66,
-	TUNER_ADDR		   = 0x67,
+	TUNER_ADDR         = 0x67,
 	CHAN_START_1	   = 0x68,
 	CHAN_START_0	   = 0x69,
-	CONT_1			   = 0x6A,
-	CONT_0			   = 0x6B,
+	CONT_1             = 0x6A,
+	CONT_0             = 0x6B,
 	INPUT_FREQ_1       = 0x6C,
 	INPUT_FREQ_0       = 0x6D,
 	TPS_GIVEN_1        = 0x6E,
@@ -89,4 +90,5 @@ enum zl10353_reg_addr {
 	ACQ_DELAY          = 0xE9,
 };
 
-#endif                          /* _ZL10353_PRIV_ */
+#endif  /* _ZL10353_PRIV_ */
+// vim:ts=4

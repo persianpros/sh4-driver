@@ -3,23 +3,23 @@
  *
  * @author konfetti
  *
- * 	Copyright (C) 2011 duckbox
+ * Copyright (C) 2011 duckbox
  *
- *  core part for demod
+ * core part for demodulator
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/version.h>
@@ -55,15 +55,14 @@ static int stv0288_writeregI(struct i2c_adapter *i2c, u32 demod_address, u8 reg,
 {
 	int ret;
 	u8 buf[] = { reg, data };
-	struct i2c_msg msg = {
+	struct i2c_msg msg =
+	{
 		.addr = demod_address,
 		.flags = 0,
 		.buf = buf,
 		.len = 2
 	};
-
 	ret = i2c_transfer(i2c, &msg, 1);
-
 	return (ret != 1) ? -EREMOTEIO : 0;
 }
 
@@ -72,7 +71,8 @@ static u8 stv0288_readreg(struct i2c_adapter *i2c, u32 demod_address, u8 reg)
 	int ret;
 	u8 b0[] = { reg };
 	u8 b1[] = { 0 };
-	struct i2c_msg msg[] = {
+	struct i2c_msg msg[] =
+	{
 		{
 			.addr = demod_address,
 			.flags = 0,
@@ -85,159 +85,147 @@ static u8 stv0288_readreg(struct i2c_adapter *i2c, u32 demod_address, u8 reg)
 			.len = 1
 		}
 	};
-
 	ret = i2c_transfer(i2c, msg, 2);
-
 	return b1[0];
 }
 
 static void stv0288_register_frontend(struct dvb_adapter *dvb_adap, struct socket_s *socket)
 {
-    struct dvb_frontend* frontend;
-    struct stv0288_config* cfg;
-    struct stv0288_private_data_s* priv;
-    
-    printk("%s\n", __func__);
+	struct dvb_frontend           *frontend;
+	struct stv0288_config         *cfg;
+	struct stv0288_private_data_s *priv;
 
-    if (numSockets + 1 == cMaxSockets)
-    {
-        printk("Max number sockets reached ... cannot register\n");
-        return;
-    }
+	printk("%s\n", __func__);
 
-    socketList[numSockets] = *socket;
-    numSockets++;
+	if (numSockets + 1 == cMaxSockets)
+	{
+		printk("Max. number of sockets reached... cannot register\n");
+		return;
+		}
+	socketList[numSockets] = *socket;
+	numSockets++;
 
-    priv = (struct stv0288_private_data_s*) frontend_cfg->private;
+	priv = (struct stv0288_private_data_s*) frontend_cfg->private;
 
-    cfg = kmalloc(sizeof(struct stv0288_config), GFP_KERNEL);
+	cfg = kmalloc(sizeof(struct stv0288_config), GFP_KERNEL);
 
-    if (cfg == NULL)
-    {
-        printk("stv0288: error malloc\n");
-        return;
-    }
+	if (cfg == NULL)
+	{
+		printk("stv0288: error malloc\n");
+	        return;
+	}
+	if (socket->tuner_enable[0] != -1)
+	{
+		cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
+		printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+		stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
+		stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
+		msleep(250);
+		cfg->tuner_active_lh   = socket->tuner_enable[2];
+	}
+	else
+	{
+		cfg->tuner_enable_pin = NULL;
+	}
+	cfg->demod_address = frontend_cfg->demod_i2c;
+	cfg->tuner_address = frontend_cfg->tuner_i2c;
+	cfg->usedLNB       = priv->usedLNB;
+	memcpy(cfg->lnb, socket->lnb, sizeof(cfg->lnb));
 
-    if (socket->tuner_enable[0] != -1)
-    {
-        cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0],
-                                                   socket->tuner_enable[1],
-                                                   "tun_enab",
-                                                   STPIO_OUT);
+	cfg->inittab               = priv->inittab;
+	cfg->min_delay_ms          = priv->min_delay_ms;
 
-        printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
-        stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
-        stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
- 
-        msleep(250);
-        cfg->tuner_active_lh   = socket->tuner_enable[2];
-    } else
-       cfg->tuner_enable_pin = NULL;
+	frontend =  stv0288_attach(cfg, i2c_get_adapter(socket->i2c_bus));
 
-    cfg->demod_address         = frontend_cfg->demod_i2c;
-    cfg->tuner_address         = frontend_cfg->tuner_i2c;
-    cfg->usedLNB               = priv->usedLNB;
-    memcpy(cfg->lnb, socket->lnb, sizeof(cfg->lnb));
-
-    cfg->inittab               = priv->inittab;
-    cfg->min_delay_ms          = priv->min_delay_ms;
-
-    frontend =  stv0288_attach(cfg, i2c_get_adapter(socket->i2c_bus));
-
-    if (frontend == NULL)
-    {
-        printk("stv0288: stv0288_attach failed\n");
-
-        if (cfg->tuner_enable_pin)
-            stpio_free_pin(cfg->tuner_enable_pin);
-
-        kfree(cfg);
-        return;
-    }
+	if (frontend == NULL)
+	{
+		printk("stv0288: stv0288_attach failed\n");
+		if (cfg->tuner_enable_pin)
+		{
+			stpio_free_pin(cfg->tuner_enable_pin);
+		}
+		kfree(cfg);
+	 	return;
+	}
 
 #if 0
-    if (ix2476_attach(frontend, cfg->tuner_address, i2c_get_adapter(socket->i2c_bus), DVB_PLL_TUA6034) == NULL)
-    {
-        printk("ix2476: ix2476_attach failed at i2c-%d addr 0x%02x\n", socket->i2c_bus, cfg->tuner_address);
+	if (ix2476_attach(frontend, cfg->tuner_address, i2c_get_adapter(socket->i2c_bus), DVB_PLL_TUA6034) == NULL)
+	{
+		printk("ix2476: ix2476_attach failed at i2c-%d addr 0x%02x\n", socket->i2c_bus, cfg->tuner_address);
 
-        if (cfg->tuner_enable_pin)
-            stpio_free_pin(cfg->tuner_enable_pin);
-
-        kfree(cfg);
-        return;
-    }
+	        if (cfg->tuner_enable_pin)
+		{
+			stpio_free_pin(cfg->tuner_enable_pin);
+		}
+	    	kfree(cfg);
+	        return;
+	}
 #endif
-    if (dvb_register_frontend (dvb_adap, frontend))
-    {
-        printk ("%s: Frontend registration failed !\n", __FUNCTION__);
-        if (frontend->ops.release)
-            frontend->ops.release (frontend);
-        return;
-    }
-
-    return;
+	if (dvb_register_frontend (dvb_adap, frontend))
+	{
+		printk ("%s: Frontend registration failed !\n", __FUNCTION__);
+		if (frontend->ops.release)
+		{
+			frontend->ops.release (frontend);
+		}
+		return;
+	}
+	return;
 }
 
 static int stv0288_demod_detect(struct socket_s *socket, struct frontend_s *frontend)
 {
-   int                    id;
-   struct stpio_pin*      pin = NULL;
+	int              id;
+	struct stpio_pin *pin = NULL;
    
-   printk("%s >\n", __func__);
+	printk("%s >\n", __func__);
 
-   if (socket->tuner_enable[0] != -1)
-   {
-       pin = stpio_request_pin(socket->tuner_enable[0],
-                                                 socket->tuner_enable[1],
-                                                 "tun_enab",
-                                                 STPIO_OUT);
-   }
-   
-   printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	if (socket->tuner_enable[0] != -1)
+	{
+		pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
+	}  
+	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
-   if (pin != NULL)
-   {
-        stpio_set_pin(pin, !socket->tuner_enable[2]);
-        stpio_set_pin(pin, socket->tuner_enable[2]);
+	if (pin != NULL)
+	{
+		stpio_set_pin(pin, !socket->tuner_enable[2]);
+		stpio_set_pin(pin, socket->tuner_enable[2]);
+		msleep(250);
+	}
 
-        msleep(250);
-   }
-      
-   stv0288_writeregI(i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x41, 0x04);
-   msleep(200);
-   id = stv0288_readreg(i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x00);
+	stv0288_writeregI(i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x41, 0x04);
+	msleep(200);
+	id = stv0288_readreg(i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x00);
 
-   /* register 0x00 contains 0x11 for STV0288  */
-   if (id != 0x11)
-   {
-	   printk ("id = %02x\n", id);
-	   printk ("Invalid probe, probably not a STV0288 device\n");
+	/* register 0x00 contains 0x11 for STV0288  */
+	if (id != 0x11)
+	{
+		printk ("id = %02x\n", id);
+		printk ("Invalid probe, probably not a STV0288 device\n");
 
-       if (pin != NULL)
-           stpio_free_pin(pin);
-
+		if (pin != NULL)
+		{
+			stpio_free_pin(pin);
+		}
 	   return -EREMOTEIO;
-   }
-
-   printk("%s: Detected STV0288\n", __func__);
+	}
+	printk("%s: Detected STV0288\n", __func__);
    
-   if (pin != NULL)
-      stpio_free_pin(pin);
-
-   printk("%s <\n", __func__);
-
-   return 0;
+	if (pin != NULL)
+	{
+		stpio_free_pin(pin);
+	}
+	printk("%s <\n", __func__);
+	return 0;
 }
 
 static int stv0288_demod_attach(struct dvb_adapter* adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-    printk("%s >\n", __func__);
+	printk("%s >\n", __func__);
 
-    stv0288_register_frontend(adapter, socket);
-
-    printk("%s <\n", __func__);
-    
-    return 0;
+	stv0288_register_frontend(adapter, socket);
+	printk("%s <\n", __func__);
+	return 0;
 }
 
 /* ******************************* */
@@ -246,73 +234,71 @@ static int stv0288_demod_attach(struct dvb_adapter* adapter, struct socket_s *so
 
 static int stv0288_probe (struct platform_device *pdev)
 {
-    struct platform_frontend_config_s *plat_data = pdev->dev.platform_data;
-    struct frontend_s frontend;
+	struct platform_frontend_config_s *plat_data = pdev->dev.platform_data;
+	struct frontend_s frontend;
 
-    printk("%s >\n", __func__);
+	printk("%s >\n", __func__);
 
-    frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
-    memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
+	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
+	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
 
-    printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
+	printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
 
-    frontend.demod_detect = stv0288_demod_detect;
-    frontend.demod_attach = stv0288_demod_attach;
-    frontend.name         = "stv0288";
-    
-    if (socket_register_frontend(&frontend) < 0)
-    {
-        printk("failed to register frontend\n");
-    }
+	frontend.demod_detect = stv0288_demod_detect;
+	frontend.demod_attach = stv0288_demod_attach;
+	frontend.name         = "stv0288";
+	
+	if (socket_register_frontend(&frontend) < 0)
+	{
+	    printk("failed to register frontend\n");
+	}
 
-    printk("%s <\n", __func__);
+	printk("%s <\n", __func__);
 
-    return 0;
+	return 0;
 }
 
 static int stv0288_remove (struct platform_device *pdev)
 {
-    return 0;
+	return 0;
 }
 
-static struct platform_driver stv0288_driver = {
-    .probe = stv0288_probe,
-    .remove = stv0288_remove,
-    .driver	= {
-        .name	= "stv0288",
-        .owner  = THIS_MODULE,
-    },
+static struct platform_driver stv0288_driver =
+{
+	.probe  = stv0288_probe,
+	.remove = stv0288_remove,
+	.driver	=
+	{
+	    .name   = "stv0288",
+	    .owner  = THIS_MODULE,
+	},
 };
-
 
 /* ******************************* */
 /* module functions                */
 /* ******************************* */
-
 int __init stv0288_init(void)
 {
-    int ret;
+	int ret;
 
-    printk("%s >\n", __func__);
-
-    ret = platform_driver_register (&stv0288_driver);
-
-    printk("%s < %d\n", __func__, ret);
-
-    return ret;
+	printk("%s >\n", __func__);
+	ret = platform_driver_register (&stv0288_driver);
+	printk("%s < %d\n", __func__, ret);
+	return ret;
 }
 
 static void stv0288_cleanup(void)
 {
-    printk("%s >\n", __func__);
+	printk("%s >\n", __func__);
 }
 
-module_init             (stv0288_init);
-module_exit             (stv0288_cleanup);
+module_init (stv0288_init);
+module_exit (stv0288_cleanup);
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
-MODULE_DESCRIPTION      ("Tunerdriver");
-MODULE_AUTHOR           ("konfetti");
-MODULE_LICENSE          ("GPL");
+MODULE_DESCRIPTION ("STV0288 demodulator driver");
+MODULE_AUTHOR      ("konfetti");
+MODULE_LICENSE     ("GPL");
+// vim:ts=4

@@ -13,4 +13,4 @@ CFLAGS += $(CCFLAGSY)
 endif
 
 obj-m := lnb.o
-lnb-objs := a8293.o lnb24.o lnb_pio.o lnb_core.o 
+lnb-objs := a8293.o lnb24.o lnbh25p.o lnbh26p.o lnb_pio.o lnb_core.o 

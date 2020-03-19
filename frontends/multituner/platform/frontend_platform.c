@@ -12,7 +12,7 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
@@ -41,13 +41,17 @@
 
 #include "ufs922_platform.h"
 
-#elif defined (CUBEREVO_MINI2) || defined (CUBEREVO_MINI) || \
-      defined (CUBEREVO_250HD) || defined (CUBEREVO_MINI_FTA) || defined (CUBEREVO_3000HD)
+#elif defined (CUBEREVO_MINI2) \
+   || defined (CUBEREVO_MINI) \
+   || defined (CUBEREVO_250HD) \
+   || defined (CUBEREVO_MINI_FTA) \
+   || defined (CUBEREVO_3000HD)
 
 #include "cuberevo_mini_platform.h"
 
-#elif defined (CUBEREVO) || defined (CUBEREVO_9500HD) || \
-      defined (CUBEREVO_2000HD)
+#elif defined (CUBEREVO) \
+   || defined (CUBEREVO_9500HD) \
+   || defined (CUBEREVO_2000HD)
 
 #include "cuberevo_platform.h"
 
@@ -63,18 +67,15 @@
 
 int __init frontend_platform_init(void)
 {
-    int ret;
+	int ret;
 
-    ret = platform_add_devices(platform, sizeof(platform)
-                               / sizeof(struct platform_device*));
-    if (ret != 0)
-    {
-        printk("failed to register platform device\n");
-    }
-
-    return ret;
+	ret = platform_add_devices(platform, sizeof(platform) / sizeof(struct platform_device *));
+	if (ret != 0)
+	{
+		printk("failed to register platform device\n");
+	}
+	return ret;
 }
-
 
 MODULE_DESCRIPTION("Frontend platform module");
 
@@ -82,3 +83,4 @@ MODULE_AUTHOR("konfetti");
 MODULE_LICENSE("GPL");
 
 module_init(frontend_platform_init);
+// vim:ts=4

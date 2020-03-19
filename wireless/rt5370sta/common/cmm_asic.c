@@ -1090,22 +1090,22 @@ VOID InitLookupTable(
 }
 
 VOID AsicGetAutoAgcOffsetForTemperatureSensor(
-	IN PRTMP_ADAPTER 		pAd,
-	IN PCHAR				pDeltaPwr,
-	IN PCHAR				pTotalDeltaPwr,
-	IN PCHAR				pAgcCompensate,
-	IN PCHAR 				pDeltaPowerByBbpR1)
+	IN PRTMP_ADAPTER pAd,
+	IN PCHAR pDeltaPwr,
+	IN PCHAR pTotalDeltaPwr,
+	IN PCHAR pAgcCompensate,
+	IN PCHAR pDeltaPowerByBbpR1)
 {
 	RTMP_CHIP_CAP *pChipCap = &pAd->chipCap;
-	const TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTable;
+	TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTable;
 	TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTableEntry0 = NULL; /* Ant0 */
 	TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTableEntry1 = NULL; /* Ant1 */
-	BBP_R49_STRUC	BbpR49;
-	BOOLEAN			bAutoTxAgc = FALSE;
-	PCHAR			pTxAgcCompensate = NULL;
-	UCHAR 			RFValue = 0;
-	CHAR			TuningTableUpperBound = 0, TuningTableIndex0 = 0, TuningTableIndex1 = 0;
-	INT 				CurrentTemp = 0;
+	BBP_R49_STRUC BbpR49;
+	BOOLEAN bAutoTxAgc = FALSE;
+	PCHAR pTxAgcCompensate = NULL;
+	UCHAR RFValue = 0;
+	CHAR TuningTableUpperBound = 0, TuningTableIndex0 = 0, TuningTableIndex1 = 0;
+	INT CurrentTemp = 0;
 	INT RefTemp;
 	INT *LookupTable;
 	INT	LookupTableIndex = pAd->TxPowerCtrl.LookupTableIndex + TEMPERATURE_COMPENSATION_LOOKUP_TABLE_OFFSET;

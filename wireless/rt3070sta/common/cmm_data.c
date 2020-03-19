@@ -3018,7 +3018,7 @@ VOID RtmpPrepareHwNullFrame(
 	UCHAR *ptr;
 	UINT i;
 	UINT32 longValue;
-	UCHAR MlmeRate;
+//	UCHAR MlmeRate;
 
 	NState = MlmeAllocateMemory(pAd, (PUCHAR *)&pNullFrame);
 
@@ -3124,10 +3124,13 @@ VOID RtmpPrepareHwNullFrame(
 		{
 			longValue =  *ptr + (*(ptr + 1) << 8) + (*(ptr + 2) << 16) + (*(ptr + 3) << 24);
 			if (Index == 0)
+			{
 				RTMP_IO_WRITE32(pAd, pAd->NullBufOffset[0] + i, longValue);
+			}
 			else if (Index == 1)
+			{
 				RTMP_IO_WRITE32(pAd, pAd->NullBufOffset[1] + i, longValue);
-				
+			}
 			ptr += 4;
 		}
 		
@@ -3139,16 +3142,19 @@ VOID RtmpPrepareHwNullFrame(
 		for (i= 0; i< Length; i+=4)
 		{
 			longValue =  *ptr + (*(ptr + 1) << 8) + (*(ptr + 2) << 16) + (*(ptr + 3) << 24);
-			hex_dump("null frame before", &longValue, 4);
-			if (Index == 0) //for ra0 
+			hex_dump("null frame before", (unsigned char *)&longValue, 4);
+			if (Index == 0) //for ra0
+			{
 				RTMP_IO_WRITE32(pAd, pAd->NullBufOffset[0] + TXWISize+ i, longValue);
+			}
 			else if (Index == 1) //for p2p0
+			{
 				RTMP_IO_WRITE32(pAd, pAd->NullBufOffset[1] + TXWISize+ i, longValue);
-				
+			}
 			ptr += 4;
 		
-			RTMP_IO_READ32(pAd, pAd->NullBufOffset + TXWISize+ i, &longValue);
-			hex_dump("null frame after", &longValue, 4);
+			RTMP_IO_READ32(pAd, (USHORT)(pAd->NullBufOffset + TXWISize + i), &longValue);
+			hex_dump("null frame after", (unsigned char *)&longValue, 4);
 		}
 	}
 

@@ -1,8 +1,11 @@
 /*
  */
+#define DEBUG 1
 
-#ifdef DEBUG
-#define dprintk(fmt, args...) printk(fmt, ##args)
+#if defined(DEBUG)
+#define dprintk(fmt, args...) \
+	printk(fmt, ##args)
 #else
 #define dprintk(fmt, args...)
 #endif
+// vim:ts=4

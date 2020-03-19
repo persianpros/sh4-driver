@@ -328,7 +328,7 @@ void announce_802_3_packet(
 	IN PNDIS_PACKET pPacket,
 	IN UCHAR OpMode)
 {
-	RTMP_ADAPTER *pAd = (RTMP_ADAPTER *)pAdSrc;
+//	RTMP_ADAPTER *pAd = (RTMP_ADAPTER *)pAdSrc;
 	PNDIS_PACKET pRxPkt = pPacket;
 
 	ASSERT(pPacket);

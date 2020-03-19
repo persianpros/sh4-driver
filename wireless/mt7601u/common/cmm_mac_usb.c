@@ -211,53 +211,36 @@ Return Value:
 Note:
 ========================================================================
 */
-VOID	RTMPFreeTxRxRingMemory(
-	IN	PRTMP_ADAPTER	pAd)
+VOID	RTMPFreeTxRxRingMemory(IN PRTMP_ADAPTER	pAd)
 {
-	UINT                i, acidx;
-	PTX_CONTEXT			pNullContext   = &pAd->NullContext[0];
-	PTX_CONTEXT			pPsPollContext = &pAd->PsPollContext;
+	UINT i, acidx;
+	PTX_CONTEXT pNullContext = &pAd->NullContext[0];
+	PTX_CONTEXT pPsPollContext = &pAd->PsPollContext;
 	PCMD_RSP_CONTEXT pCmdRspEventContext = &pAd->CmdRspEventContext;
 
 	DBGPRINT(RT_DEBUG_ERROR, ("---> RTMPFreeTxRxRingMemory\n"));
 
 	/* Free all resources for the RECEIVE buffer queue.*/
-	for(i=0; i<(RX_RING_SIZE); i++)
+	for (i = 0; i < (RX_RING_SIZE); i++)
 	{
 		PRX_CONTEXT  pRxContext = &(pAd->RxContext[i]);
 		if (pRxContext)
-			RTMPFreeUsbBulkBufStruct(pAd, 
-										&pRxContext->pUrb, 
-										(PUCHAR *)&pRxContext->TransferBuffer, 
-										MAX_RXBULK_SIZE, 
-										pRxContext->data_dma);
+		{
+			RTMPFreeUsbBulkBufStruct(pAd, &pRxContext->pUrb, (PUCHAR *)&pRxContext->TransferBuffer, MAX_RXBULK_SIZE, pRxContext->data_dma);
+		}
 	}
 
 	/* Command Response */
-	RTMPFreeUsbBulkBufStruct(pAd,
-							 &pCmdRspEventContext->pUrb,
-							 (PUCHAR *)&pCmdRspEventContext->CmdRspBuffer,
-							 CMD_RSP_BULK_SIZE,
-							 pCmdRspEventContext->data_dma); 
-					
-
+	RTMPFreeUsbBulkBufStruct(pAd, &pCmdRspEventContext->pUrb, (PUCHAR *)&pCmdRspEventContext->CmdRspBuffer, CMD_RSP_BULK_SIZE, pCmdRspEventContext->data_dma);
 
 	/* Free PsPoll frame resource*/
-	RTMPFreeUsbBulkBufStruct(pAd, 
-								&pPsPollContext->pUrb, 
-								(PUCHAR *)&pPsPollContext->TransferBuffer, 
-								sizeof(TX_BUFFER), 
-								pPsPollContext->data_dma);
+	RTMPFreeUsbBulkBufStruct(pAd, &pPsPollContext->pUrb, (PUCHAR *)&pPsPollContext->TransferBuffer, sizeof(TX_BUFFER), pPsPollContext->data_dma);
 
 	/* Free NULL frame resource*/
-	RTMPFreeUsbBulkBufStruct(pAd, 
-								&pNullContext->pUrb, 
-								(PUCHAR *)&pNullContext->TransferBuffer, 
-								sizeof(TX_BUFFER), 
-								pNullContext->data_dma);
+	RTMPFreeUsbBulkBufStruct(pAd, &pNullContext->pUrb, (PUCHAR *)&pNullContext->TransferBuffer, sizeof(TX_BUFFER), pNullContext->data_dma);
 
 	/* Free mgmt frame resource*/
-	for(i = 0; i < MGMT_RING_SIZE; i++)
+	for (i = 0; i < MGMT_RING_SIZE; i++)
 	{
 		PTX_CONTEXT pMLMEContext = (PTX_CONTEXT)pAd->MgmtRing.Cell[i].AllocVa;
 		if (pMLMEContext)
@@ -275,33 +258,31 @@ VOID	RTMPFreeTxRxRingMemory(
 			RELEASE_NDIS_PACKET(pAd, pAd->MgmtRing.Cell[i].pNdisPacket, NDIS_STATUS_FAILURE);
 			pAd->MgmtRing.Cell[i].pNdisPacket = NULL;
 			if (pMLMEContext)
-				pMLMEContext->TransferBuffer = NULL; 
+			{
+				pMLMEContext->TransferBuffer = NULL;
+			}
 		}
 	}
 	
 	if (pAd->MgmtDescRing.AllocVa)
+	{
 		os_free_mem(pAd, pAd->MgmtDescRing.AllocVa);
-	
-	
+	}
 	/* Free Tx frame resource*/
 	for (acidx = 0; acidx < 4; acidx++)
 	{
 		PHT_TX_CONTEXT pHTTXContext = &(pAd->TxContext[acidx]);
 		if (pHTTXContext)
-			RTMPFreeUsbBulkBufStruct(pAd, 
-										&pHTTXContext->pUrb, 
-										(PUCHAR *)&pHTTXContext->TransferBuffer, 
-										sizeof(HTTX_BUFFER), 
-										pHTTXContext->data_dma);
+		{
+			RTMPFreeUsbBulkBufStruct(pAd, &pHTTXContext->pUrb, (PUCHAR *)&pHTTXContext->TransferBuffer, sizeof(HTTX_BUFFER), pHTTXContext->data_dma);
+		}
 	}
-	
 	if (pAd->FragFrame.pFragPacket)
+	{
 		RELEASE_NDIS_PACKET(pAd, pAd->FragFrame.pFragPacket, NDIS_STATUS_SUCCESS);
-
-
+	}
 	DBGPRINT(RT_DEBUG_ERROR, ("<--- RTMPFreeTxRxRingMemory\n"));
 }
-
 
 /*
 ========================================================================
@@ -1367,19 +1348,20 @@ Note:
 VOID RT28XXDMAEnable(
 	IN RTMP_ADAPTER *pAd)
 {
-	WPDMA_GLO_CFG_STRUC GloCfg;
-	USB_DMA_CFG_STRUC	UsbCfg;
-	
+//	WPDMA_GLO_CFG_STRUC GloCfg;
+//	USB_DMA_CFG_STRUC UsbCfg;
 	
 	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0x4);
 
-	if (AsicWaitPDMAIdle(pAd, 200, 1000) == FALSE) {
+	if (AsicWaitPDMAIdle(pAd, 200, 1000) == FALSE)
+	{
 		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))
+		{
 			return;
+		}
 	}
-
 /*
-	// USB not support WPDMA
+	// USB does not support WPDMA
 	RTMPusecDelay(50);
 	RTMP_IO_READ32(pAd, WPDMA_GLO_CFG, &GloCfg.word);
 	GloCfg.field.EnTXWriteBackDDONE = 1;
@@ -1388,8 +1370,6 @@ VOID RT28XXDMAEnable(
 	RTMP_IO_WRITE32(pAd, WPDMA_GLO_CFG, GloCfg.word);
 	DBGPRINT(RT_DEBUG_TRACE, ("<== WRITE DMA offset 0x208 = 0x%x\n", GloCfg.word));
 */
-
-
 }
 
 /********************************************************************
@@ -1928,9 +1908,8 @@ VOID RT28xxUsbAsicRadioOn(RTMP_ADAPTER *pAd)
 	BOOLEAN brc;
 	UINT RetryRound = 0;
 	UINT32 rx_filter_flag;
-	WPDMA_GLO_CFG_STRUC GloCfg;
+//	WPDMA_GLO_CFG_STRUC GloCfg;
 	RTMP_CHIP_OP *pChipOps = &pAd->chipOps;
-
 
 #ifdef CONFIG_PM
 #ifdef USB_SUPPORT_SELECTIVE_SUSPEND
@@ -1939,7 +1918,7 @@ VOID RT28xxUsbAsicRadioOn(RTMP_ADAPTER *pAd)
 
 	DBGPRINT(RT_DEBUG_TRACE, ("--> %s\n", __FUNCTION__));
 	
-	if( (RTMP_Usb_AutoPM_Get_Interface(pObj->pUsb_Dev,pObj->intf)) == 1)
+	if ((RTMP_Usb_AutoPM_Get_Interface(pObj->pUsb_Dev,pObj->intf)) == 1)
 	{
 		DBGPRINT(RT_DEBUG_TRACE, ("RT28xxUsbAsicRadioOn: autopm_resume success\n"));
 		RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_SUSPEND);
@@ -1951,22 +1930,20 @@ VOID RT28xxUsbAsicRadioOn(RTMP_ADAPTER *pAd)
 		return;
 	}
 	else
+	{
 		DBGPRINT(RT_DEBUG_TRACE, ("RT28xxUsbAsicRadioOn: autopm_resume do nothing \n"));
-
+	}
 #endif /* USB_SUPPORT_SELECTIVE_SUSPEND */
 #endif /* CONFIG_PM */
-
 	
 	/* make some traffic to invoke EvtDeviceD0Entry callback function*/
-	
 
 	RTUSBReadMACRegister(pAd,0x1000,&MACValue);
 	DBGPRINT(RT_DEBUG_TRACE,("A MAC query to invoke EvtDeviceD0Entry, MACValue = 0x%x\n",MACValue));
 
 	/* 1. Send wake up command.*/
-
 #ifdef MT7601
-	if ( IS_MT7601(pAd) )
+	if (IS_MT7601(pAd))
 	{
 		RTMP_SET_FLAG(pAd, fRTMP_ADAPTER_MCU_SEND_IN_BAND_CMD);
 		AndesPwrSavingOP(pAd, RADIO_ON, 0, 0, 0, 0, 0);
@@ -1980,42 +1957,44 @@ VOID RT28xxUsbAsicRadioOn(RTMP_ADAPTER *pAd)
 	else
 #endif /* MT7601 */
 	{
-	RetryRound = 0;
-
-	do
-	{
-		brc = AsicSendCommandToMcu(pAd, 0x31, PowerWakeCID, 0x00, 0x02, FALSE);   
-		if (brc)
+		RetryRound = 0;
+		do
 		{
-			/* Wait command ok.*/
-			brc = AsicCheckCommandOk(pAd, PowerWakeCID);
-		}
-		if(brc){
-			break;      /* PowerWakeCID cmd successed*/
-		}
-		DBGPRINT(RT_DEBUG_WARN, ("PSM :WakeUp Cmd Failed, retry %d\n", RetryRound));
+			brc = AsicSendCommandToMcu(pAd, 0x31, PowerWakeCID, 0x00, 0x02, FALSE);   
+			if (brc)
+			{
+				/* Wait command ok.*/
+				brc = AsicCheckCommandOk(pAd, PowerWakeCID);
+			}
+			if (brc)
+			{
+				break;      /* PowerWakeCID cmd successed*/
+			}
+			DBGPRINT(RT_DEBUG_WARN, ("PSM :WakeUp Cmd Failed, retry %d\n", RetryRound));
 
-		/* try 10 times at most*/
-		if ((RetryRound++) > 10)
-			break;
-		/* delay and try again*/
-		RTMPusecDelay(200);
-	} while (TRUE);
-	if (RetryRound > 10)
-		DBGPRINT(RT_DEBUG_WARN, ("PSM :ASIC 0x31 WakeUp Cmd may Fail %d*******\n", RetryRound));
-
+			/* try 10 times at most*/
+			if ((RetryRound++) > 10)
+			{
+				break;
+			}
+			/* delay and try again*/
+			RTMPusecDelay(200);
+		} while (TRUE);
+		if (RetryRound > 10)
+		{
+			DBGPRINT(RT_DEBUG_WARN, ("PSM :ASIC 0x31 WakeUp Cmd may Fail %d*******\n", RetryRound));
+		}
 	}
-
-
 	/* 2. Enable Tx/Rx DMA.*/
 	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0x4);
-
 
 	/* enable RX of MAC block*/
 
 #ifdef XLINK_SUPPORT
 		if (pAd->StaCfg.PSPXlink)
+		{
 			rx_filter_flag = PSPXLINK;
+		}
 		else
 #endif /* XLINK_SUPPORT */	
 			rx_filter_flag = STANORMAL;     /* Staion not drop control frame will fail WiFi Certification.*/
@@ -2025,8 +2004,9 @@ VOID RT28xxUsbAsicRadioOn(RTMP_ADAPTER *pAd)
 	/* 3. Turn on RF*/
 /*	RT28xxUsbAsicRFOn(pAd);*/
 	if (pChipOps->AsicReverseRfFromSleepMode)
+	{
 		pChipOps->AsicReverseRfFromSleepMode(pAd, FALSE);
-
+	}
 
 	/* 4. Clear idle flag*/
 	RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_IDLE_RADIO_OFF);
@@ -2041,25 +2021,20 @@ VOID RT28xxUsbAsicRadioOn(RTMP_ADAPTER *pAd)
 	}
 #endif /* CONFIG_STA_SUPPORT */
 	DBGPRINT(RT_DEBUG_TRACE, ("<== %s\n", __FUNCTION__));
-
-
 }
 
-
-BOOLEAN AsicCheckCommandOk(
-	IN PRTMP_ADAPTER pAd,
-	IN UCHAR		 Command)
+BOOLEAN AsicCheckCommandOk(IN PRTMP_ADAPTER pAd, IN UCHAR Command)
 {
 	UINT32	CmdStatus, CID, i;
 	UINT32	ThisCIDMask = 0;
 	INT ret;
 
-
 #ifdef RTMP_MAC_USB
 	if (IS_USB_INF(pAd))
 	{
 		RTMP_SEM_EVENT_WAIT(&pAd->reg_atomic, ret);
-		if (ret != 0) {
+		if (ret != 0)
+		{
 			DBGPRINT(RT_DEBUG_ERROR, ("reg_atomic get failed(ret=%d)\n", ret));
 			return FALSE;
 		}
@@ -2093,18 +2068,20 @@ BOOLEAN AsicCheckCommandOk(
 
 		RTMPusecDelay(100);
 		i++;
-	}while (i < 200);
+	} while (i < 200);
 
 	ret = FALSE;
 	RTUSBReadMACRegister(pAd, H2M_MAILBOX_STATUS, &CmdStatus);
 	if (i < 200)
 	{
 		if (((CmdStatus & ThisCIDMask) == 0x1) || ((CmdStatus & ThisCIDMask) == 0x100) 
-			|| ((CmdStatus & ThisCIDMask) == 0x10000) || ((CmdStatus & ThisCIDMask) == 0x1000000))
+		||  ((CmdStatus & ThisCIDMask) == 0x10000) || ((CmdStatus & ThisCIDMask) == 0x1000000))
+		{
 			ret = TRUE;
+		}
 	}
-			RTUSBWriteMACRegister(pAd, H2M_MAILBOX_STATUS, 0xffffffff, FALSE);
-			RTUSBWriteMACRegister(pAd, H2M_MAILBOX_CID, 0xffffffff, FALSE);
+	RTUSBWriteMACRegister(pAd, H2M_MAILBOX_STATUS, 0xffffffff, FALSE);
+	RTUSBWriteMACRegister(pAd, H2M_MAILBOX_CID, 0xffffffff, FALSE);
 
 #ifdef RTMP_MAC_USB
 	if (IS_USB_INF(pAd))
@@ -2112,16 +2089,13 @@ BOOLEAN AsicCheckCommandOk(
 		RTMP_SEM_EVENT_UP(&pAd->reg_atomic);
 	}
 #endif /* RTMP_MAC_USB */
-
-
 	return ret;
 
 }
 
 
 #ifdef WOW_SUPPORT
-VOID RT28xxUsbAsicWOWEnable(
-	IN PRTMP_ADAPTER pAd)
+VOID RT28xxUsbAsicWOWEnable(IN PRTMP_ADAPTER pAd)
 {
 	UINT32 Value;
 	
@@ -2141,8 +2115,7 @@ VOID RT28xxUsbAsicWOWEnable(
 	DBGPRINT(RT_DEBUG_OFF, ("Hold time: 0x7020 ==> %x\n", Value));
 }
 
-VOID RT28xxUsbAsicWOWDisable(
-	IN PRTMP_ADAPTER pAd)
+VOID RT28xxUsbAsicWOWDisable(IN PRTMP_ADAPTER pAd)
 {
 	UINT32 Value;
 	/* load normal firmware */

@@ -578,7 +578,7 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 	RTMP_IRQ_UNLOCK(&pAd->MLMEBulkOutLock, IrqFlags);
 
 
-#if RT_CFG80211_SUPPORT
+#if defined RT_CFG80211_SUPPORT
 {
 	HEADER_802_11  *pHeader;	
 	pHeader = (HEADER_802_11 *)(GET_OS_PKT_DATAPTR(pPacket)+ TXINFO_SIZE + pAd->chipCap.TXWISize);
@@ -595,11 +595,10 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 
 	/* No-matter success or fail, we free the mgmt packet. */
 	if (pPacket)
+	{
 		RTMPFreeNdisPacket(pAd, pPacket);
-
-	if ((RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_RESET_IN_PROGRESS | 
-								fRTMP_ADAPTER_HALT_IN_PROGRESS | 
-								fRTMP_ADAPTER_NIC_NOT_EXIST))))
+	}
+	if ((RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_RESET_IN_PROGRESS | fRTMP_ADAPTER_HALT_IN_PROGRESS | fRTMP_ADAPTER_NIC_NOT_EXIST))))
 	{
 		/* do nothing and return directly. */
 	}
@@ -619,11 +618,9 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 			{
 				RTUSB_SET_BULK_FLAG(pAd, fRTUSB_BULK_OUT_MLME);
 			}
-				RTUSBKickBulkOut(pAd);
-			}
+			RTUSBKickBulkOut(pAd);
 		}
-
-
+	}
 #ifdef CONFIG_STA_SUPPORT
 #endif /* CONFIG_STA_SUPPORT */
 }
@@ -631,25 +628,21 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 
 static void rtusb_hcca_dma_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER		pAd;
-	PHT_TX_CONTEXT		pHTTXContext;
-	UCHAR				BulkOutPipeId = 4;
-	purbb_t				pUrb;
-
+	PRTMP_ADAPTER pAd;
+	PHT_TX_CONTEXT pHTTXContext;
+	UCHAR BulkOutPipeId = 4;
+	purbb_t pUrb;
 	
 	DBGPRINT_RAW(RT_DEBUG_ERROR, ("--->hcca_dma_done_tasklet\n"));
 
-
-	pUrb			= (purbb_t)data;
-/*	pHTTXContext	= (PHT_TX_CONTEXT)pUrb->context; */
-	pHTTXContext	= (PHT_TX_CONTEXT)RTMP_USB_URB_DATA_GET(pUrb);
-	pAd				= pHTTXContext->pAd;
+	pUrb = (purbb_t)data;
+/*	pHTTXContext = (PHT_TX_CONTEXT)pUrb->context; */
+	pHTTXContext = (PHT_TX_CONTEXT)RTMP_USB_URB_DATA_GET(pUrb);
+	pAd = pHTTXContext->pAd;
 
 	rtusb_dataout_complete((unsigned long)pUrb);
 
-	if ((RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_RESET_IN_PROGRESS | 
-								fRTMP_ADAPTER_HALT_IN_PROGRESS | 
-								fRTMP_ADAPTER_NIC_NOT_EXIST)))) 
+	if ((RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_RESET_IN_PROGRESS | fRTMP_ADAPTER_HALT_IN_PROGRESS | fRTMP_ADAPTER_NIC_NOT_EXIST))))
 	{
 		/* do nothing and return directly. */
 	}
@@ -661,29 +654,25 @@ static void rtusb_hcca_dma_done_tasklet(unsigned long data)
 		}
 		else
 		{	pHTTXContext = &pAd->TxContext[BulkOutPipeId];
-			if ((pAd->TxSwQueue[BulkOutPipeId].Number > 0) && 
-				/*((pHTTXContext->CurWritePosition > (pHTTXContext->NextBulkOutPosition + 0x6000)) || (pHTTXContext->NextBulkOutPosition > pHTTXContext->CurWritePosition + 0x6000)) && */
-				(pAd->DeQueueRunning[BulkOutPipeId] == FALSE) && 
-				(pHTTXContext->bCurWriting == FALSE))
+			if ((pAd->TxSwQueue[BulkOutPipeId].Number > 0)
+		        &&  (pAd->DeQueueRunning[BulkOutPipeId] == FALSE)
+		        &&  (pHTTXContext->bCurWriting == FALSE))
 			{
 				RTMPDeQueuePacket(pAd, FALSE, BulkOutPipeId, MAX_TX_PROCESS);
 			}
-			
 #ifdef CONFIG_MULTI_CHANNEL
 			if ((pAd->MultiChannelFlowCtl & (1 << BulkOutPipeId)) == (1 << BulkOutPipeId))
+			{
 				return;
+			}
 #endif /* CONFIG_MULTI_CHANNEL */
-
 			RTUSB_SET_BULK_FLAG(pAd, fRTUSB_BULK_OUT_DATA_NORMAL);
 			RTUSBKickBulkOut(pAd);
 		}
 	}
-	
 	//DBGPRINT_RAW(RT_DEBUG_ERROR, ("<---hcca_dma_done_tasklet\n"));
-
-		return;
+	return;
 }
-
 
 static void rtusb_ac3_dma_done_tasklet(unsigned long data)
 {

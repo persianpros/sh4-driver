@@ -280,45 +280,45 @@ VOID STAHandleRxDataFrame(
 	MAC_TABLE_ENTRY *pEntry = NULL;
 	UCHAR FromWhichBSSID = BSS0;
 	UCHAR UserPriority = 0;
-	UCHAR OldPwrMgmt = PWR_ACTIVE;
-	FRAME_CONTROL *pFmeCtrl = &pHeader->FC;
+//	UCHAR OldPwrMgmt = PWR_ACTIVE;
+//	FRAME_CONTROL *pFmeCtrl = &pHeader->FC;
 
-	if ((pHeader->FC.FrDs == 1) && (pHeader->FC.ToDs == 1)) {
+	if ((pHeader->FC.FrDs == 1) && (pHeader->FC.ToDs == 1))
+	{
 #ifdef CLIENT_WDS
-			if ((pRxWI->WirelessCliID < MAX_LEN_OF_MAC_TABLE)
-			    && IS_ENTRY_CLIENT(&pAd->MacTab.Content[pRxWI->WirelessCliID])) {
+		if ((pRxWI->WirelessCliID < MAX_LEN_OF_MAC_TABLE)
+		&&  IS_ENTRY_CLIENT(&pAd->MacTab.Content[pRxWI->WirelessCliID]))
+		{
 			RX_BLK_SET_FLAG(pRxBlk, fRX_WDS);
 			pEntry = &pAd->MacTab.Content[pRxWI->WirelessCliID];
-		} else
+		}
+		else
 #endif /* CLIENT_WDS */
 		{		/* release packet */
 			RELEASE_NDIS_PACKET(pAd, pRxPacket,
 					    NDIS_STATUS_FAILURE);
 			return;
 		}
-	} else {
-
-
+	}
+	else
+	{
 #ifdef QOS_DLS_SUPPORT
-		if (RTMPRcvFrameDLSCheck
-		    (pAd, pHeader, pRxWI->MPDUtotalByteCount, pRxD)) {
+		if (RTMPRcvFrameDLSCheck(pAd, pHeader, pRxWI->MPDUtotalByteCount, pRxD))
+		{
 			return;
 		}
 #endif /* QOS_DLS_SUPPORT */
-
 		/* Drop not my BSS frames */
 		if (pRxWI->WirelessCliID < MAX_LEN_OF_MAC_TABLE)
+		{
 			pEntry = &pAd->MacTab.Content[pRxWI->WirelessCliID];
-
-		if (pRxD->MyBss == 0) {
-			{
-				/* release packet */
-				RELEASE_NDIS_PACKET(pAd, pRxPacket,
-						    NDIS_STATUS_FAILURE);
-				return;
-			}
 		}
-
+		if (pRxD->MyBss == 0)
+		{
+			/* release packet */
+			RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_FAILURE);
+			return;
+		}
 #ifdef RT3290
 		// TODO: shiang, find out what's this??
 		if (pRxD->MyBss)
@@ -331,8 +331,8 @@ VOID STAHandleRxDataFrame(
 
 #ifdef UAPSD_SUPPORT
 		if (pAd->StaCfg.UapsdInfo.bAPSDCapable
-		    && pAd->CommonCfg.APEdcaParm.bAPSDCapable
-			&& (pHeader->FC.SubType & 0x08))
+		&& pAd->CommonCfg.APEdcaParm.bAPSDCapable
+		&& (pHeader->FC.SubType & 0x08))
 		{
 			UCHAR *pData;
 			DBGPRINT(RT_DEBUG_INFO, ("bAPSDCapable\n"));
@@ -343,47 +343,43 @@ VOID STAHandleRxDataFrame(
 			{
 				{
 					DBGPRINT(RT_DEBUG_INFO, ("RxDone- Rcv EOSP frame, driver may fall into sleep\n"));
-				pAd->CommonCfg.bInServicePeriod = FALSE;
+					pAd->CommonCfg.bInServicePeriod = FALSE;
 
-				/* Force driver to fall into sleep mode when rcv EOSP frame */
+					/* Force driver to fall into sleep mode when rcv EOSP frame */
 					if (!OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_DOZE))
 					{
 						{
 
 #ifdef RTMP_MAC_USB
-					RTEnqueueInternalCmd(pAd,
-							     CMDTHREAD_FORCE_SLEEP_AUTO_WAKEUP,
-							     NULL, 0);
+							RTEnqueueInternalCmd(pAd, CMDTHREAD_FORCE_SLEEP_AUTO_WAKEUP, NULL, 0);
 #endif /* RTMP_MAC_USB */
+						}
+					}
 				}
 			}
-			}
-			}
-
-			if ((pHeader->FC.MoreData)
-			    && (pAd->CommonCfg.bInServicePeriod)) {
-				DBGPRINT(RT_DEBUG_TRACE,
-					 ("Sending another trigger frame when More Data bit is set to 1\n"));
+			if ((pHeader->FC.MoreData) && (pAd->CommonCfg.bInServicePeriod))
+			{
+				DBGPRINT(RT_DEBUG_TRACE, ("Sending another trigger frame when More Data bit is set to 1\n"));
 			}
 		}
 #endif /* UAPSD_SUPPORT */
 
-
 		/* Drop NULL, CF-ACK(no data), CF-POLL(no data), and CF-ACK+CF-POLL(no data) data frame */
-		if ((pHeader->FC.SubType & 0x04)) {	/* bit 2 : no DATA */
+		if ((pHeader->FC.SubType & 0x04))  /* bit 2 : no DATA */
+		{
 			/* release packet */
-			RELEASE_NDIS_PACKET(pAd, pRxPacket,
-					    NDIS_STATUS_FAILURE);
+			RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_FAILURE);
 			return;
 		}
-
-		if (pAd->StaCfg.BssType == BSS_INFRA) {
+		if (pAd->StaCfg.BssType == BSS_INFRA)
+		{
 			/* Infrastructure mode, check address 2 for BSSID */
 			if (1
 #ifdef QOS_DLS_SUPPORT
 			    && (!pAd->CommonCfg.bDLSCapable)
 #endif /* QOS_DLS_SUPPORT */
-			    ) {
+			    )
+			{
 				if (!RTMPEqualMemory(&pHeader->Addr2, &pAd->MlmeAux.Bssid, 6))
 				{
 					/* Receive frame not my BSSID */
@@ -392,17 +388,18 @@ VOID STAHandleRxDataFrame(
 					return;
 				}
 			}
-		} else {	/* Ad-Hoc mode or Not associated */
-
+		}
+		else	/* Ad-Hoc mode or Not associated */
+		{
 			/* Ad-Hoc mode, check address 3 for BSSID */
-			if (!RTMPEqualMemory(&pHeader->Addr3, &pAd->CommonCfg.Bssid, 6)) {
+			if (!RTMPEqualMemory(&pHeader->Addr3, &pAd->CommonCfg.Bssid, 6))
+			{
 				/* Receive frame not my BSSID */
 				/* release packet */
 				RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_FAILURE);
 				return;
 			}
 		}
-
 		/*/ find pEntry */
 		if (pRxWI->WirelessCliID < MAX_LEN_OF_MAC_TABLE) {
 			pEntry = &pAd->MacTab.Content[pRxWI->WirelessCliID];
@@ -1732,29 +1729,40 @@ VOID STAFindCipherAlgorithm(
 		}
 
 		if (KeyIdx == 0xff)
+		{
 			CipherAlg = CIPHER_NONE;
-		else if ((Cipher == Ndis802_11EncryptionDisabled)
-			 || (((Cipher == Ndis802_11Encryption1Enabled) && (pAd->SharedKey[BSS0][KeyIdx].KeyLen == 0))
-			|| (((Cipher == Ndis802_11Encryption2Enabled) || (Cipher == Ndis802_11Encryption3Enabled)
-			|| (Cipher == Ndis802_11Encryption4Enabled)) && pMacEntry && (pMacEntry->PairwiseKey.KeyLen == 0))
-			&& (!ADHOC_ON(pAd))) || (ADHOC_ON(pAd) && (pAd->SharedKey[BSS0][KeyIdx].KeyLen == 0)))
-			CipherAlg = CIPHER_NONE;
-#ifdef WPA_SUPPLICANT_SUPPORT
-		else if (pAd->StaCfg.WpaSupplicantUP &&
-			 (Cipher == Ndis802_11Encryption1Enabled) &&
-			 (pAd->StaCfg.IEEE8021X == TRUE) &&
-			 (pAd->StaCfg.PortSecured ==
-			  WPA_802_1X_PORT_NOT_SECURED))
-			CipherAlg = CIPHER_NONE;
-#endif /* WPA_SUPPLICANT_SUPPORT */
-		else {
-			if (ADHOC_ON(pAd)) {
-			CipherAlg = pAd->SharedKey[BSS0][KeyIdx].CipherAlg;
-			pKey = &pAd->SharedKey[BSS0][KeyIdx];
 		}
-			else if (((Cipher == Ndis802_11Encryption2Enabled) ||
-                           (Cipher == Ndis802_11Encryption3Enabled) ||
-			   (Cipher == Ndis802_11Encryption4Enabled)) && pMacEntry) {
+		else if ((Cipher == Ndis802_11EncryptionDisabled)
+		        || (((Cipher == Ndis802_11Encryption1Enabled) && (pAd->SharedKey[BSS0][KeyIdx].KeyLen == 0))
+		        || ((((Cipher == Ndis802_11Encryption2Enabled) || (Cipher == Ndis802_11Encryption3Enabled) || (Cipher == Ndis802_11Encryption4Enabled))
+		        && pMacEntry && (pMacEntry->PairwiseKey.KeyLen == 0))
+		        && !ADHOC_ON(pAd)))
+		        || ((ADHOC_ON(pAd) && (pAd->SharedKey[BSS0][KeyIdx].KeyLen == 0))))
+		{
+			CipherAlg = CIPHER_NONE;
+		}
+#ifdef WPA_SUPPLICANT_SUPPORT
+		else if (pAd->StaCfg.WpaSupplicantUP
+		     && (Cipher == Ndis802_11Encryption1Enabled)
+		     && (pAd->StaCfg.IEEE8021X == TRUE)
+		     && (pAd->StaCfg.PortSecured == WPA_802_1X_PORT_NOT_SECURED))
+		{
+
+			CipherAlg = CIPHER_NONE;
+		}
+#endif /* WPA_SUPPLICANT_SUPPORT */
+		else
+		{
+			if (ADHOC_ON(pAd))
+			{
+				CipherAlg = pAd->SharedKey[BSS0][KeyIdx].CipherAlg;
+				pKey = &pAd->SharedKey[BSS0][KeyIdx];
+			}
+			else if (((Cipher == Ndis802_11Encryption2Enabled)
+			     ||   (Cipher == Ndis802_11Encryption3Enabled)
+			     ||   (Cipher == Ndis802_11Encryption4Enabled))
+			     && pMacEntry)
+			{
 				CipherAlg = pMacEntry->PairwiseKey.CipherAlg;
 				pKey = &pMacEntry->PairwiseKey;
 			} else {
@@ -1763,17 +1771,13 @@ VOID STAFindCipherAlgorithm(
 			}
 		}
 	}
-
 	pTxBlk->CipherAlg = CipherAlg;
 	pTxBlk->pKey = pKey;
 	pTxBlk->KeyIdx = KeyIdx;
 }
 
-VOID STABuildCommon802_11Header(
-	IN PRTMP_ADAPTER pAd,
-	IN TX_BLK *pTxBlk)
+VOID STABuildCommon802_11Header(IN PRTMP_ADAPTER pAd, IN TX_BLK *pTxBlk)
 {
-
 	HEADER_802_11 *pHeader_802_11;
 #ifdef QOS_DLS_SUPPORT
 	BOOLEAN bDLSFrame = FALSE;
@@ -1786,119 +1790,117 @@ VOID STABuildCommon802_11Header(
 	/* normal wlan header size : 24 octets */
 	pTxBlk->MpduHeaderLen = sizeof (HEADER_802_11);
 
-	pHeader_802_11 =
-	    (HEADER_802_11 *) & pTxBlk->HeaderBuf[TXINFO_SIZE + TXWISize];
+	pHeader_802_11 = (HEADER_802_11 *) & pTxBlk->HeaderBuf[TXINFO_SIZE + TXWISize];
 
 	NdisZeroMemory(pHeader_802_11, sizeof (HEADER_802_11));
 
 	pHeader_802_11->FC.FrDs = 0;
 	pHeader_802_11->FC.Type = BTYPE_DATA;
-	pHeader_802_11->FC.SubType =
-	    ((TX_BLK_TEST_FLAG(pTxBlk, fTX_bWMM)) ? SUBTYPE_QDATA :
-	     SUBTYPE_DATA);
+	pHeader_802_11->FC.SubType = ((TX_BLK_TEST_FLAG(pTxBlk, fTX_bWMM)) ? SUBTYPE_QDATA : SUBTYPE_DATA);
 
 #ifdef QOS_DLS_SUPPORT
-	if (INFRA_ON(pAd)) {
+	if (INFRA_ON(pAd))
+	{
 		/* Check if the frame can be sent through DLS direct link interface */
 		/* If packet can be sent through DLS, then force aggregation disable. (Hard to determine peer STA's capability) */
 		DlsEntryIndex = RTMPCheckDLSFrame(pAd, pTxBlk->pSrcBufHeader);
 		if (DlsEntryIndex >= 0)
+		{
 			bDLSFrame = TRUE;
+		}
 		else
+		{
 			bDLSFrame = FALSE;
+		}
 	}
 #endif /* QOS_DLS_SUPPORT */
 
-	if (pTxBlk->pMacEntry) {
-		if (TX_BLK_TEST_FLAG(pTxBlk, fTX_bForceNonQoS)) {
-			pHeader_802_11->Sequence =
-			    pTxBlk->pMacEntry->NonQosDataSeq;
-			pTxBlk->pMacEntry->NonQosDataSeq =
-			    (pTxBlk->pMacEntry->NonQosDataSeq + 1) & MAXSEQ;
-		} else {
-			pHeader_802_11->Sequence =
-			    pTxBlk->pMacEntry->TxSeq[pTxBlk->UserPriority];
-			pTxBlk->pMacEntry->TxSeq[pTxBlk->UserPriority] =
-			    (pTxBlk->pMacEntry->TxSeq[pTxBlk->UserPriority] + 1) & MAXSEQ;
+	if (pTxBlk->pMacEntry)
+	{
+		if (TX_BLK_TEST_FLAG(pTxBlk, fTX_bForceNonQoS))
+		{
+			pHeader_802_11->Sequence = pTxBlk->pMacEntry->NonQosDataSeq;
+			pTxBlk->pMacEntry->NonQosDataSeq = (pTxBlk->pMacEntry->NonQosDataSeq + 1) & MAXSEQ;
 		}
-	} else {
+		else
+		{
+			pHeader_802_11->Sequence = pTxBlk->pMacEntry->TxSeq[pTxBlk->UserPriority];
+			pTxBlk->pMacEntry->TxSeq[pTxBlk->UserPriority] = (pTxBlk->pMacEntry->TxSeq[pTxBlk->UserPriority] + 1) & MAXSEQ;
+		}
+	}
+	else
+	{
 		pHeader_802_11->Sequence = pAd->Sequence;
 		pAd->Sequence = (pAd->Sequence + 1) & MAXSEQ;	/* next sequence  */
 	}
-
 	pHeader_802_11->Frag = 0;
-
 	pHeader_802_11->FC.MoreData = TX_BLK_TEST_FLAG(pTxBlk, fTX_bMoreData);
 
+	if (pAd->StaCfg.BssType == BSS_INFRA)
 	{
-		if (pAd->StaCfg.BssType == BSS_INFRA) {
 #ifdef QOS_DLS_SUPPORT
-			if (bDLSFrame) {
-				COPY_MAC_ADDR(pHeader_802_11->Addr1,
-					      pTxBlk->pSrcBufHeader);
-				COPY_MAC_ADDR(pHeader_802_11->Addr2,
-					      pAd->CurrentAddress);
-				COPY_MAC_ADDR(pHeader_802_11->Addr3,
-					      pAd->CommonCfg.Bssid);
-				pHeader_802_11->FC.ToDs = 0;
-			} else
+		if (bDLSFrame)
+		{
+			COPY_MAC_ADDR(pHeader_802_11->Addr1, pTxBlk->pSrcBufHeader);
+			COPY_MAC_ADDR(pHeader_802_11->Addr2, pAd->CurrentAddress);
+			COPY_MAC_ADDR(pHeader_802_11->Addr3, pAd->CommonCfg.Bssid);
+			pHeader_802_11->FC.ToDs = 0;
+		}
+		else
 #endif /* QOS_DLS_SUPPORT */
-			{
-				COPY_MAC_ADDR(pHeader_802_11->Addr1,
-					      pAd->CommonCfg.Bssid);
-				COPY_MAC_ADDR(pHeader_802_11->Addr2,
-					      pAd->CurrentAddress);
-				COPY_MAC_ADDR(pHeader_802_11->Addr3,
-					      pTxBlk->pSrcBufHeader);
-				pHeader_802_11->FC.ToDs = 1;
+		{
+			COPY_MAC_ADDR(pHeader_802_11->Addr1, pAd->CommonCfg.Bssid);
+			COPY_MAC_ADDR(pHeader_802_11->Addr2, pAd->CurrentAddress);
+			COPY_MAC_ADDR(pHeader_802_11->Addr3, pTxBlk->pSrcBufHeader);
+			pHeader_802_11->FC.ToDs = 1;
 #ifdef CLIENT_WDS
-				if (!MAC_ADDR_EQUAL
-				    ((pTxBlk->pSrcBufHeader + MAC_ADDR_LEN),
-				     pAd->CurrentAddress)) {
-					pHeader_802_11->FC.FrDs = 1;
-					COPY_MAC_ADDR(&pHeader_802_11->Octet[0], pTxBlk->pSrcBufHeader + MAC_ADDR_LEN);	/* ADDR4 = SA */
-					pTxBlk->MpduHeaderLen += MAC_ADDR_LEN;
-				}
-#endif /* CLIENT_WDS */
+			if (!MAC_ADDR_EQUAL((pTxBlk->pSrcBufHeader + MAC_ADDR_LEN), pAd->CurrentAddress))
+			{
+				pHeader_802_11->FC.FrDs = 1;
+				COPY_MAC_ADDR(&pHeader_802_11->Octet[0], pTxBlk->pSrcBufHeader + MAC_ADDR_LEN);	/* ADDR4 = SA */
+				pTxBlk->MpduHeaderLen += MAC_ADDR_LEN;
 			}
-		} else if (ADHOC_ON(pAd)) {
-			COPY_MAC_ADDR(pHeader_802_11->Addr1,
-				      pTxBlk->pSrcBufHeader);
+#endif /* CLIENT_WDS */
+		}
+	}
+	else if (ADHOC_ON(pAd))
+	{
+		COPY_MAC_ADDR(pHeader_802_11->Addr1, pTxBlk->pSrcBufHeader);
 #ifdef XLINK_SUPPORT
-			if (pAd->StaCfg.PSPXlink)
-				/* copy the SA of ether frames to address 2 of 802.11 frame */
-				COPY_MAC_ADDR(pHeader_802_11->Addr2,
-					      pTxBlk->pSrcBufHeader +
-					      MAC_ADDR_LEN);
-			else
+		if (pAd->StaCfg.PSPXlink)
+		{
+			/* copy the SA of ether frames to address 2 of 802.11 frame */
+			COPY_MAC_ADDR(pHeader_802_11->Addr2, pTxBlk->pSrcBufHeader + MAC_ADDR_LEN);
+		}
+		else
 #endif /* XLINK_SUPPORT */
-				COPY_MAC_ADDR(pHeader_802_11->Addr2,
-					      pAd->CurrentAddress);
-			COPY_MAC_ADDR(pHeader_802_11->Addr3,
-				      pAd->CommonCfg.Bssid);
+		{
+			COPY_MAC_ADDR(pHeader_802_11->Addr2, pAd->CurrentAddress);
+			COPY_MAC_ADDR(pHeader_802_11->Addr3, pAd->CommonCfg.Bssid);
 			pHeader_802_11->FC.ToDs = 0;
 		}
 	}
-
 	if (pTxBlk->CipherAlg != CIPHER_NONE)
+	{
 		pHeader_802_11->FC.Wep = 1;
-
+	}
 	/*
 	   -----------------------------------------------------------------
 	   STEP 2. MAKE A COMMON 802.11 HEADER SHARED BY ENTIRE FRAGMENT BURST. Fill sequence later. 
 	   -----------------------------------------------------------------
 	 */
 	if (pAd->CommonCfg.bAPSDForcePowerSave)
+	{
 		pHeader_802_11->FC.PwrMgmt = PWR_SAVE;
+	}
 	else
+	{
 		pHeader_802_11->FC.PwrMgmt = (RtmpPktPmBitCheck(pAd) == TRUE);
+	}
 }
 
 #ifdef DOT11_N_SUPPORT
-VOID STABuildCache802_11Header(
-	IN RTMP_ADAPTER *pAd,
-	IN TX_BLK *pTxBlk,
-	IN UCHAR *pHeader)
+VOID STABuildCache802_11Header(IN RTMP_ADAPTER *pAd, IN TX_BLK *pTxBlk, IN UCHAR *pHeader)
 {
 	MAC_TABLE_ENTRY *pMacEntry;
 	PHEADER_802_11 pHeader80211;

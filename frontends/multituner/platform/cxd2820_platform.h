@@ -15,32 +15,32 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-  
+
 struct cxd2820_private_data_s
 {
-    u32 ts_out;	
-    u32 si;
+	u32 ts_out;	
+	u32 si;
 };
 
 struct tda18272_private_data_s  
 { 
-    int    lt;       //1 = lt ->really ??
-    u8     stdby;    //3 = d3
-    u8     iic_mode; //0 = iic_0
-    u8     xtout;    //0 = off
+	int    lt;       //1 = lt ->really ??
+	u8     stdby;    //3 = d3
+	u8     iic_mode; //0 = iic_0
+	u8     xtout;    //0 = off
 };
 
 struct cxd2820_s
 {
-      struct tda18272_private_data_s* tda18272;
-      struct cxd2820_private_data_s*  cxd2820;
+	struct tda18272_private_data_s *tda18272;
+	struct cxd2820_private_data_s * cxd2820;
 };
-
 #endif
+// vim:ts=4

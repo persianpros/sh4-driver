@@ -46,6 +46,8 @@
 #endif
 #include <net/iw_handler.h>
 #include <linux/if_arp.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wframe-larger-than="
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27))
 #define  iwe_stream_add_event(a, b, c, d, e)  iwe_stream_add_event(b, c, d, e)
@@ -1391,15 +1393,15 @@ static int r8711_wx_get_rate(struct net_device *dev,
 			     union iwreq_data *wrqu, char *extra);
 
 static int r871x_wx_set_priv(struct net_device *dev,
-				struct iw_request_info *info,
-				union iwreq_data *awrq,
-				char *extra)
+                             struct iw_request_info *info,
+                             union iwreq_data *awrq,
+                             char *extra)
 {
 	int ret = 0, len = 0;
 	char *ext;
 
 	_adapter *padapter = netdev_priv(dev);
-	struct iw_point *dwrq = (struct iw_point*)awrq;
+	struct iw_point *dwrq = (struct iw_point *)awrq;
 
 	#ifdef DEBUG_RTW_WX_SET_PRIV
 	char *ext_dbg;
@@ -1411,89 +1413,109 @@ static int r871x_wx_set_priv(struct net_device *dev,
 	if (!(ext = _malloc(len)))
 		return -ENOMEM;
 
-	if (copy_from_user(ext, dwrq->pointer, len)) {
+	if (copy_from_user(ext, dwrq->pointer, len))
+	{
 		_mfree(ext, len);
 		return -EFAULT;
 	}
 
 	#ifdef DEBUG_RTW_WX_SET_PRIV
 	if (!(ext_dbg = _malloc(len)))
+	{
 		return -ENOMEM;
 	
+	}
 	_memcpy(ext_dbg, ext, len);
 	#endif
 
 	#if 0
-	if(0 == strcasecmp(ext,"START")){
+	if (0 == strcasecmp(ext,"START"))
+	{
 		//Turn on Wi-Fi hardware
 		//OK if successful
 		ret=-1;
 		goto FREE_EXT;
 		
-	}else if(0 == strcasecmp(ext,"STOP")){
+	}
+	else if(0 == strcasecmp(ext,"STOP"))
+	{
 		//Turn off Wi-Fi hardwoare
 		//OK if successful
 		ret=-1;
 		goto FREE_EXT;
 		
-	}else
+	}
+	else
 	#endif
-	if(0 == strcasecmp(ext,"RSSI")){
+	if (0 == strcasecmp(ext,"RSSI"))
+	{
 		//Return received signal strength indicator in -db for current AP
 		//<ssid> Rssi xx 
 		struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);	
 		struct	wlan_network	*pcur_network = &pmlmepriv->cur_network;
 		//static u8 xxxx;
-		if(check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) {
+		if (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)
+		{
 			sprintf(ext, "%s rssi %d",
 				pcur_network->network.Ssid.Ssid,
 				//(xxxx=xxxx+10)
 				((padapter->recvpriv.fw_rssi)>>1)-100
 				//pcur_network->network.Rssi
 				);
-		} else {
+		}
+		else
+		{
 			sprintf(ext, "OK");
 		}
-		
-	}else if(0 == strcasecmp(ext,"LINKSPEED")){
+	}
+	else if (0 == strcasecmp(ext,"LINKSPEED"))
+	{
 		//Return link speed in MBPS
 		//LinkSpeed xx 
 		union iwreq_data wrqd;
 		int ret_inner;
 		int mbps;
 		
-		if( 0!=(ret_inner=r8711_wx_get_rate(dev, info, &wrqd, extra)) ){
-			mbps=0;
-		} else {
-			mbps=wrqd.bitrate.value / 1000000;
+		if (0 != (ret_inner=r8711_wx_get_rate(dev, info, &wrqd, extra)))
+		{
+			mbps = 0;
+		}
+		else
+		{
+			mbps = wrqd.bitrate.value / 1000000;
 		}
 		
 		sprintf(ext, "LINKSPEED %d", mbps);
-		
-		
-	}else if(0 == strcasecmp(ext,"MACADDR")){
+	}
+	else if (0 == strcasecmp(ext,"MACADDR"))
+	{
 		//Return mac address of the station
 		//Macaddr = xx.xx.xx.xx.xx.xx 
 		sprintf(ext,
-			"MACADDR = %02x.%02x.%02x.%02x.%02x.%02x",
-			*(dev->dev_addr),*(dev->dev_addr+1),*(dev->dev_addr+2),
-			*(dev->dev_addr+3),*(dev->dev_addr+4),*(dev->dev_addr+5));
+		        "MACADDR = %02x.%02x.%02x.%02x.%02x.%02x",
+		        *(dev->dev_addr),*(dev->dev_addr+1),*(dev->dev_addr+2),
+		        *(dev->dev_addr+3),*(dev->dev_addr+4),*(dev->dev_addr+5));
 
-	}else if(0 == strcasecmp(ext,"SCAN-ACTIVE")){
+	}
+	else if (0 == strcasecmp(ext,"SCAN-ACTIVE"))
+	{
 		//Set scan type to active
 		//OK if successful
-		struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
-		pmlmepriv->passive_mode=1;
+		struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
+		pmlmepriv->passive_mode = 1;
 		sprintf(ext, "OK");
 		
-	}else if(0 == strcasecmp(ext,"SCAN-PASSIVE")){
+	}
+	else if (0 == strcasecmp(ext,"SCAN-PASSIVE"))
+	{
 		//Set scan type to passive
 		//OK if successfu
-		struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
-		pmlmepriv->passive_mode=0;
+		struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
+		pmlmepriv->passive_mode = 0;
 		sprintf(ext, "OK");
-		
-	}else{
+	}
+	else
+	{
 		#ifdef DEBUG_RTW_WX_SET_PRIV
 		printk("rtw_wx_set_priv: %s unknowned req=%s\n", 
 		dev->name, ext_dbg);
@@ -1501,8 +1523,7 @@ static int r871x_wx_set_priv(struct net_device *dev,
 		goto FREE_EXT;
 
 	}
-
-	if (copy_to_user(dwrq->pointer, ext, min(dwrq->length,strlen(ext)+1) ) )
+	if (copy_to_user(dwrq->pointer, ext, min((long unsigned int)dwrq->length, strlen(ext)+1)))
 		ret = -EFAULT;
 
 	#ifdef DEBUG_RTW_WX_SET_PRIV
@@ -3870,4 +3891,5 @@ struct iw_handler_def r871x_handlers_def =
 	.get_wireless_stats = r871x_get_wireless_stats,
 #endif
 };
+#pragma GCC diagnostic pop
 

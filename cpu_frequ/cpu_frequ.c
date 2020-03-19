@@ -59,7 +59,7 @@
 #error unknown archictecture!
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
 #define CKGA_BASE_ADDR          0xb9213000
 #define CKGA_LCK                (CKGA_BASE_ADDR + 0x00) 
 #define CKGA_MD_STA             (CKGA_BASE_ADDR + 0x04) 
@@ -148,7 +148,7 @@ static struct proc_dir_entry
 *cpu_dir, 
 *pll0_ndiv_mdiv, 
 *pll1_ndiv_mdiv, 
-#ifdef STB7100
+#if defined(STB7100)
 *pll1_clk_div, 
 *pll1_fdma_bypass, 
 *sh4_ratio, 
@@ -162,7 +162,7 @@ static struct proc_dir_entry
 unsigned long get_pll0_frequ(void)
 {
   unsigned long value, freq_pll0 = 0, ndiv, mdiv;
-#ifdef STB7100
+#if defined(STB7100)
   unsigned long pdiv;
   value = ctrl_inl(CKGA_PLL0_CFG);
   mdiv = (value >>  0) & 0xff;
@@ -281,7 +281,7 @@ int update_tmu(unsigned long parent_rate)
   struct clock_event_device *ced = NULL;
   struct clocksource *cs = NULL;
 
-#ifdef STB7100
+#if defined(STB7100)
   unsigned long frequ, value;
   int module_div=2;
   frequ = get_pll0_frequ();
@@ -394,7 +394,7 @@ static int read_ratio(char *page, char **start,
 
   len+=sprintf(page+len, "Modul HZ = %d\n", modul_hz);
 
-#ifdef STB7100
+#if defined(STB7100)
   int sh4_ic_div=2, module_div=2, slim_div=2, slim_bypass=0;
   unsigned long pdiv, val_sysaclkout=0;
   value = ctrl_inl(CKGA_LCK);
@@ -407,7 +407,7 @@ static int read_ratio(char *page, char **start,
   value = ctrl_inl(CKGA_PLL0_CFG);
   len+=sprintf(page+len, "CKGA_PLL0_CFG = %lx\n", value);
 
-#ifdef STB7100
+#if defined(STB7100)
   mdiv = (value >>  0) & 0xff;
   ndiv = (value >>  8) & 0xff;
   pdiv = (value >> 16) & 0x7;
@@ -485,7 +485,7 @@ static int read_ratio(char *page, char **start,
   value = ctrl_inl(CKGA_PLL1_CFG);
   len+=sprintf(page+len, "CKGA_PLL1_CFG = %lx\n", value);
 
-#ifdef STB7100
+#if defined(STB7100)
   mdiv = (value >>  0) & 0xff;
   ndiv = (value >>  8) & 0xff;
   pdiv = (value >> 16) & 0x7;
@@ -565,7 +565,7 @@ static int read_ratio(char *page, char **start,
   len+=sprintf(page+len, "\n");
   len+=sprintf(page+len, "PLL0     = %ld MHz\n", freq_pll0);
   len+=sprintf(page+len, "SH4      = %ld MHz\n", freq_pll0 / sh4_div);
-#ifdef STB7100
+#if defined(STB7100)
   len+=sprintf(page+len, "SH4_IC   = %ld MHz\n", freq_pll0 / sh4_ic_div);
   len+=sprintf(page+len, "MODULE   = %ld MHz\n", freq_pll0 / module_div);
 
@@ -575,7 +575,7 @@ static int read_ratio(char *page, char **start,
     len+=sprintf(page+len, "SLIM     = %ld MHz\n", freq_pll1);
 #endif
   len+=sprintf(page+len, "PLL1     = %ld MHz\n", freq_pll1);
-#ifdef STB7100
+#if defined(STB7100)
   len+=sprintf(page+len, "COMMS    = %ld MHz\n", freq_pll1 / 4);
   len+=sprintf(page+len, "TMU0     = %ld MHz\n", (freq_pll0 / module_div) / 4);
   len+=sprintf(page+len, "TMU1     = %ld MHz\n", (freq_pll0 / module_div) / 4);
@@ -601,7 +601,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   unsigned long regdata1;
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   mdiv = (ndiv_mdiv >> 0) & 0xff;
   ndiv = (ndiv_mdiv >> 8) & 0xff;
 #endif
@@ -621,13 +621,13 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
     return count;
   }
 
-#ifdef STB7100
+#if defined(STB7100)
   ctrl_outl(0xC0DE, CKGA_LCK);
 #endif
 
   regdata = ctrl_inl(CKGA_PLL1_CFG);  // get data from register
 
-#ifdef STB7100
+#if defined(STB7100)
   //ctrl_outl(0x00000002, CKGA_PLL1_BYPASS);  // set to SYSACLKIN
 #endif
 #if defined(STX7105) || defined(STX7111) || defined(STXH205)
@@ -635,7 +635,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   //regdata = regdata & ~(1 << 19);  // disable PLL1
   //ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
@@ -645,7 +645,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   ctrl_outl(regdata1, CKGA_POWER_CFG);  //power down PLL1
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   regdata = regdata & ~(0xff);  // clear MDIV
   regdata = regdata & ~(0xff) << 8;   // clear NDIV
   regdata = regdata & ~(0x07) << 16;  // clear PDIV
@@ -663,7 +663,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   //regdata = regdata | 1 << 19;  // aktivate PLL1
   ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
@@ -672,7 +672,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   ctrl_outl(regdata1, CKGA_POWER_CFG);  //power up PLL1
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   // wait for lock
 /*
   sta = ctrl_inl(CKGA_PLL1_LCK_STA);
@@ -690,7 +690,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   }
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   //ctrl_outl(0x00000000, CKGA_PLL1_BYPASS);  // set to PLL1_CLK
 #endif
 #if defined(STX7105) || defined(STX7111) || defined(STXH205)
@@ -698,7 +698,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
   ctrl_outl(regdata, CKGA_PLL1_CFG);
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   ctrl_outl(0x0, CKGA_LCK);
 
   // set /proc
@@ -723,7 +723,7 @@ static int write_pll1_ndiv_mdiv(struct file *file, const char *buffer,
 static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
                         unsigned long count, void *data)
 {
-#ifdef STB7100
+#if defined(STB7100)
   struct clk *clk;
   unsigned long sta;
 #endif
@@ -734,7 +734,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
 //  unsigned long regdata1;
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   mdiv = (ndiv_mdiv >> 0) & 0xff;
   ndiv = (ndiv_mdiv >> 8) & 0xff;
 #endif
@@ -754,13 +754,13 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
     return count;
   }
 
-#ifdef STB7100
+#if defined(STB7100)
   ctrl_outl(0xC0DE, CKGA_LCK);
 #endif
 
   regdata = ctrl_inl(CKGA_PLL0_CFG);  // get data from register
 
-#ifdef STB7100
+#if defined(STB7100)
   regdata = regdata | 1 << 20;  // set to SYSACLKIN
   ctrl_outl(regdata, CKGA_PLL0_CFG);
   regdata = regdata & ~(1 << 19);  // disable PLL0
@@ -772,7 +772,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
 //  ctrl_outl(regdata1, CKGA_POWER_CFG);  //power down PLL0
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   regdata = regdata & ~(0xff);  // clear MDIV
   regdata = regdata & ~(0xff) << 8;   // clear NDIV
   regdata = regdata & ~(0x07) << 16;  // clear PDIV
@@ -790,7 +790,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   ctrl_outl(regdata, CKGA_PLL0_CFG);
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   regdata = regdata | 1 << 19;  // aktivate PLL0
   ctrl_outl(regdata, CKGA_PLL0_CFG);
 #endif
@@ -799,7 +799,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
 //  ctrl_outl(regdata1, CKGA_POWER_CFG);  //power up PLL0
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   // wait for lock
   sta = ctrl_inl(CKGA_PLL0_LCK_STA);
   while((sta & 0x01) == 0x00)
@@ -815,12 +815,12 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
 //  }
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   regdata = regdata & ~(1 << 20);  // set to PLL0 CLK
   ctrl_outl(regdata, CKGA_PLL0_CFG);
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   ctrl_outl(0x0, CKGA_LCK);
 
   // set /proc
@@ -849,7 +849,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   update_bogomips(frequ / 2);
 #endif
 
-#ifdef STB7100
+#if defined(STB7100)
   clk=set_clock("sh4_clk", 0);
   if(clk)
   {
@@ -873,7 +873,7 @@ static int write_pll0_ndiv_mdiv(struct file *file, const char *buffer,
   return count;
 }
 
-#ifdef STB7100
+#if defined(STB7100)
 static int write_sh4_ratio(struct file *file, const char *buffer,
                         unsigned long count, void *data)
 {
@@ -1082,7 +1082,7 @@ int __init cpu_frequ_init(void)
   pll1_ndiv_mdiv->read_proc=read_ratio;
   pll1_ndiv_mdiv->write_proc=write_pll1_ndiv_mdiv;
 
-#ifdef STB7100
+#if defined(STB7100)
   sh4_ratio=create_proc_entry("sh4_ratio",0644,cpu_dir);
   sh4_ratio->read_proc=read_ratio;
   sh4_ratio->write_proc=write_sh4_ratio;
@@ -1124,7 +1124,7 @@ void __exit cpu_frequ_exit(void)
   dprintk("[CPU_FREQU] unloading ...\n");
   remove_proc_entry("pll0_ndiv_mdiv", cpu_dir);
   remove_proc_entry("pll1_ndiv_mdiv", cpu_dir);
-#ifdef STB7100
+#if defined(STB7100)
   remove_proc_entry("sh4_ratio", cpu_dir);
   remove_proc_entry("sh4_ic_ratio", cpu_dir);
   remove_proc_entry("module_ratio", cpu_dir);

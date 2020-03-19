@@ -37,18 +37,9 @@
 
 #include "wsc.h"
 
-
-
-
-
-
-
 #ifdef CLIENT_WDS
 #include "client_wds_cmm.h"
 #endif /* CLIENT_WDS */
-
-
-
 
 #ifdef WFD_SUPPORT
 #include "wfd_cmm.h"
@@ -7829,24 +7820,12 @@ NDIS_STATUS RTMPCheckRxError(
 /*////////////////////////////////////*/
 
 #ifdef AP_QLOAD_SUPPORT
-VOID QBSS_LoadInit(
- 	IN		RTMP_ADAPTER	*pAd);
-
-VOID QBSS_LoadAlarmReset(
- 	IN		RTMP_ADAPTER	*pAd);
-
-VOID QBSS_LoadAlarmResume(
- 	IN		RTMP_ADAPTER	*pAd);
-
-UINT32 QBSS_LoadBusyTimeGet(
- 	IN		RTMP_ADAPTER	*pAd);
-
-BOOLEAN QBSS_LoadIsAlarmIssued(
- 	IN		RTMP_ADAPTER	*pAd);
-
-BOOLEAN QBSS_LoadIsBusyTimeAccepted(
- 	IN		RTMP_ADAPTER	*pAd,
-	IN		UINT32			BusyTime);
+VOID QBSS_LoadInit(IN RTMP_ADAPTER *pAd);
+VOID QBSS_LoadAlarmReset(IN RTMP_ADAPTER *pAd);
+VOID QBSS_LoadAlarmResume(IN RTMP_ADAPTER *pAd);
+UINT32 QBSS_LoadBusyTimeGet(IN RTMP_ADAPTER *pAd);
+BOOLEAN QBSS_LoadIsAlarmIssued(IN RTMP_ADAPTER *pAd);
+BOOLEAN QBSS_LoadIsBusyTimeAccepted(IN RTMP_ADAPTER *pAd, IN UINT32 BusyTime);
 
 UINT32 QBSS_LoadElementAppend(
  	IN		RTMP_ADAPTER	*pAd,
@@ -7886,29 +7865,27 @@ PSTRING RTMPGetRalinkEncryModeStr(
 /*//////////////////////////////////*/
 
 #ifdef CONFIG_STA_SUPPORT
-VOID AsicStaBbpTuning(
-	IN PRTMP_ADAPTER pAd);
+VOID AsicStaBbpTuning(IN PRTMP_ADAPTER pAd);
 
 BOOLEAN StaAddMacTableEntry(
-	IN  PRTMP_ADAPTER		pAd,
-	IN  PMAC_TABLE_ENTRY	pEntry,
-	IN  UCHAR				MaxSupportedRateIn500Kbps,
-	IN  HT_CAPABILITY_IE	*pHtCapability,
-	IN  UCHAR				HtCapabilityLen,
-	IN  ADD_HT_INFO_IE		*pAddHtInfo,
-	IN  UCHAR				AddHtInfoLen,
+	IN PRTMP_ADAPTER pAd,
+	IN PMAC_TABLE_ENTRY pEntry,
+	IN UCHAR MaxSupportedRateIn500Kbps,
+	IN HT_CAPABILITY_IE *pHtCapability,
+	IN UCHAR HtCapabilityLen,
+	IN ADD_HT_INFO_IE *pAddHtInfo,
+	IN UCHAR AddHtInfoLen,
 	IN IE_LISTS *ie_list,
-	IN  USHORT        		CapabilityInfo);
-
+	IN USHORT CapabilityInfo);
 
 BOOLEAN	AUTH_ReqSend(
-	IN  PRTMP_ADAPTER 		pAd,
-	IN  PMLME_QUEUE_ELEM	pElem,
-	IN  PRALINK_TIMER_STRUCT pAuthTimer,
-	IN  PSTRING				pSMName,
-	IN  USHORT				SeqNo,
-	IN  PUCHAR				pNewElement,
-	IN  ULONG				ElementLen);
+	IN PRTMP_ADAPTER pAd,
+	IN PMLME_QUEUE_ELEM pElem,
+	IN PRALINK_TIMER_STRUCT pAuthTimer,
+	IN PSTRING pSMName,
+	IN USHORT SeqNo,
+	IN PUCHAR pNewElement,
+	IN ULONG ElementLen);
 #endif /* CONFIG_STA_SUPPORT */ 
 
 

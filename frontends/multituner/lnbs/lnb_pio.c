@@ -3,21 +3,21 @@
  *
  * @author konfetti
  *
- * 	Copyright (C) 2011 duckbox
+ * Copyright (C) 2011 duckbox
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/version.h>
@@ -35,94 +35,83 @@ static short paramDebug;
 #define TAGDEBUG "[lnb_pio] "
 
 #define dprintk(level, x...) do { \
-if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-} while (0)
+		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
+	} while (0)
 
+#if defined(IPBOX9900)
 extern int _12v_isON; //defined in e2_proc ->I will implement a better mechanism later
-
+#endif
 struct lnb_state
 {
-    struct stpio_pin*	lnb_pin;
-    struct stpio_pin*	lnb_enable_pin;
+	struct stpio_pin *lnb_pin;
+	struct stpio_pin *lnb_enable_pin;
 
-#if defined(ATEVIO7500)
-//konfetti: little hack for hw rev 1.2
-    struct stpio_pin*	lnb_2nd_pin;
-#endif
-
-    u32                 lnb[6];
+	u32 lnb[6];
 };
 
-u16 lnb_pio_set_voltage(void *_state, struct dvb_frontend* fe, fe_sec_voltage_t voltage)
+u16 lnb_pio_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 {
-    struct lnb_state *state = (struct lnb_state *) _state;
-    u16 ret = 0;
+	struct lnb_state *state = (struct lnb_state *) _state;
+	u16 ret = 0;
 
-    dprintk (10, "%s(%p, %d)\n", __FUNCTION__, fe, voltage);
+	dprintk(10, "%s(%p, %d)\n", __FUNCTION__, fe, voltage);
 
-    switch (voltage)
-    {
-    case SEC_VOLTAGE_OFF:
-        if(_12v_isON == 0)
-           if (state->lnb_enable_pin)
-             stpio_set_pin (state->lnb_enable_pin, !state->lnb[2]);
-        break;
-    case SEC_VOLTAGE_13: //vertical
-        if (state->lnb_enable_pin)
-            stpio_set_pin (state->lnb_enable_pin, state->lnb[2]);
-        stpio_set_pin (state->lnb_pin, state->lnb[5]);
-
-#if defined(ATEVIO7500)
-        if (state->lnb_2nd_pin != NULL)
-            stpio_set_pin (state->lnb_2nd_pin, state->lnb[5]);
+	switch (voltage)
+	{
+		case SEC_VOLTAGE_OFF:
+		{
+#if defined(IPBOX9900)
+			if (_12v_isON == 0)
+			{
+				if (state->lnb_enable_pin)
+				{
+					stpio_set_pin(state->lnb_enable_pin, !state->lnb[2]);
+				}
+			}
+#else
+			stpio_set_pin (state->lnb_enable_pin, !state->lnb[2]);
 #endif
-
-        dprintk(10, "%s: v %p %d\n", __func__, state->lnb_pin, state->lnb[5]);
-        break;
-    case SEC_VOLTAGE_18: //horizontal
-        if (state->lnb_enable_pin)
-            stpio_set_pin (state->lnb_enable_pin, state->lnb[2]);
-        stpio_set_pin (state->lnb_pin, !state->lnb[5]);
-
-#if defined(ATEVIO7500)
-        if (state->lnb_2nd_pin != NULL)
-            stpio_set_pin (state->lnb_2nd_pin, !state->lnb[5]);
-#endif
-        dprintk(10, "%s: h %p %d\n", __func__, state->lnb_pin, !state->lnb[5]);
-        break;
-    default:
-        return -EINVAL;
-    }
-
-    return ret;
+	        	break;
+		}
+		case SEC_VOLTAGE_13: //vertical
+		{
+			if (state->lnb_enable_pin)
+			{
+				stpio_set_pin(state->lnb_enable_pin, state->lnb[2]);
+			}
+			stpio_set_pin(state->lnb_pin, state->lnb[5]);
+			dprintk(10, "%s: v %p %d\n", __func__, state->lnb_pin, state->lnb[5]);
+			break;
+		}
+		case SEC_VOLTAGE_18: //horizontal
+		{
+			if (state->lnb_enable_pin)
+			{
+				stpio_set_pin(state->lnb_enable_pin, state->lnb[2]);
+			}
+			stpio_set_pin(state->lnb_pin, !state->lnb[5]);
+			dprintk(10, "%s: h %p %d\n", __func__, state->lnb_pin, !state->lnb[5]);
+			break;
+		}
+		default:
+		{
+			return -EINVAL;
+		}
+	}
+	return ret;
 }
 
-void* lnb_pio_attach(u32* lnb, struct equipment_s* equipment)
+void *lnb_pio_attach(u32 *lnb, struct equipment_s *equipment)
 {
-    struct lnb_state* state = kmalloc(sizeof(struct lnb_state), GFP_KERNEL);
+	struct lnb_state *state = kmalloc(sizeof(struct lnb_state), GFP_KERNEL);
 
-    memcpy(state->lnb, lnb, sizeof(state->lnb));
-
-    equipment->lnb_set_voltage = lnb_pio_set_voltage;
-
-    state->lnb_enable_pin = stpio_request_pin (lnb[0],
-                            lnb[1],
-                            "lnb_enab",
-                            STPIO_OUT);
-
-    printk("lnb_enable_pin %p\n", state->lnb_enable_pin);
-    stpio_set_pin(state->lnb_enable_pin, lnb[2]);
-
-    state->lnb_pin = stpio_request_pin (lnb[3],
-                                        lnb[4],
-                                        "lnb_sel",
-                                        STPIO_OUT);
-
-#if defined(ATEVIO7500)
-    state->lnb_2nd_pin = stpio_request_pin (3, 0, "lnb_sel", STPIO_OUT);
-#endif
-
-    return state;
+	memcpy(state->lnb, lnb, sizeof(state->lnb));
+	equipment->lnb_set_voltage = lnb_pio_set_voltage;
+	state->lnb_enable_pin = stpio_request_pin(lnb[0], lnb[1], "lnb_enab", STPIO_OUT);
+	printk("lnb_enable_pin %p\n", state->lnb_enable_pin);
+	stpio_set_pin(state->lnb_enable_pin, lnb[2]);
+	state->lnb_pin = stpio_request_pin(lnb[3], lnb[4], "lnb_sel", STPIO_OUT);
+	return state;
 }
 
 EXPORT_SYMBOL(lnb_pio_attach);
@@ -133,13 +122,13 @@ EXPORT_SYMBOL(lnb_pio_attach);
 
 int __init lnbpio_init(void)
 {
-    printk("%s >\n", __func__);
-    return 0;
+	printk("%s >\n", __func__);
+	return 0;
 }
 
 static void lnbpio_cleanup(void)
 {
-    printk("%s >\n", __func__);
+	printk("%s >\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);
@@ -150,6 +139,6 @@ MODULE_DESCRIPTION("LNB PIO Handling");
 MODULE_AUTHOR("konfetti");
 MODULE_LICENSE("GPL");
 
-module_init(lnbpio_init);
-module_exit(lnbpio_cleanup);
-
+module_init (lnbpio_init);
+module_exit (lnbpio_cleanup);
+// vim:ts=4

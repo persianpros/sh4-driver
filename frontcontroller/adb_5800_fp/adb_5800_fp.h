@@ -92,29 +92,26 @@ extern short paramDebug;
 #define PIO_PORT(n) \
 	(((n) * PIO_PORT_SIZE) + PIO_BASE)
 
-#define VFD_MAJOR            147
-#define LED_DISP_SIZE        4
-#define ICON_WIDTH           1
-#define VFD_DISP_SIZE        16 - ICON_WIDTH  // position 16 is used for icon display
+#define VFD_MAJOR                  147
+#define LED_DISP_SIZE              4
+#define ICON_WIDTH                 1
+#define VFD_DISP_SIZE              16 - ICON_WIDTH  // position 16 is used for icon display
 
 // Commands to the PT6958
-#define DATA_SETCMD 0x40
+#define DATA_SETCMD                0x40
 // Options for DATA_SETCMD
-#define TEST_MODE 0x08
-#define ADDR_FIX  0x04
-#define READ_KEYD 0x02 
+#define TEST_MODE                  0x08
+#define ADDR_FIX                   0x04
+#define READ_KEYD                  0x02 
 
-#define ADDR_SETCMD 0xc0
+#define ADDR_SETCMD                0xc0
 
-#define DISP_CTLCMD 0x80
+// Commands to the PT6302 & PT6958
+#define DISP_CTLCMD                0x80
 // Options for DATA_CTLCMD
-#define DISPLAY_ON 0x08
+#define DISPLAY_ON                 0x08
 
 // Commands to the PT6302
-#define DISP_CTLCMD 0x80
-// Options for DATA_CTLCMD
-#define DISPLAY_ON 0x08
-
 #define PT6302_COMMAND_DCRAM_WRITE 1
 #define PT6302_COMMAND_CGRAM_WRITE 2
 #define PT6302_COMMAND_ADRAM_WRITE 3
@@ -122,47 +119,47 @@ extern short paramDebug;
 
 #define PT6302_COMMAND_SET_DUTY    5
 // options for PT6302_COMMAND_SET_DUTY
-#define PT6302_DUTY_MIN       0
-#define PT6302_DUTY_MAX       7
+#define PT6302_DUTY_MIN            0
+#define PT6302_DUTY_MAX            7
 
 #define PT6302_COMMAND_SET_DIGITS  6
 // options for PT6302_COMMAND_SET_DIGITS
-#define PT6302_DIGITS_MIN     9
-#define PT6302_DIGITS_MAX    16
-#define PT6302_DIGITS_OFFSET  8
+#define PT6302_DIGITS_MIN          9
+#define PT6302_DIGITS_MAX         16
+#define PT6302_DIGITS_OFFSET       8
 
 #define PT6302_COMMAND_SET_LIGHT   7
 // options for PT6302_COMMAND_SET_LIGHT
-#define PT6302_LIGHT_NORMAL   0
-#define PT6302_LIGHT_OFF      1
-#define PT6302_LIGHT_ON       3
+#define PT6302_LIGHT_NORMAL        0
+#define PT6302_LIGHT_OFF           1
+#define PT6302_LIGHT_ON            3
 
 #define PT6302_COMMAND_TESTMODE    8  // do not use
 
-#define LED_Delay     1  // us, for PT6958
-#define VFD_Delay     8  // us, tDOFF for PT6302
+#define LED_Delay                  1  // us, for PT6958
+#define VFD_Delay                  8  // us, tDOFF for PT6302
 
 // box_variant stuff
-#define I2C_ADDR_STB0899_1   (0xd0 >> 1)  //d0 = 0x68 d2 = 69 tuner 1 demod BSLA & BSKA/BXZB
-#define I2C_ADDR_STB0899_2   (0xd2 >> 1)  //d0 = 0x68 d2 = 69 tuner 2 demod BSLA only
-#define I2C_ADDR_STV090x     (0xd0 >> 1)  //d0 = 0x68 d2 = 69 tuner 1/2 demod BZZB only
-#define I2C_BUS              0
+#define I2C_ADDR_STB0899_1         (0xd0 >> 1)  //d0 = 0x68 d2 = 69 tuner 1 demod BSLA & BSKA/BXZB
+#define I2C_ADDR_STB0899_2         (0xd2 >> 1)  //d0 = 0x68 d2 = 69 tuner 2 demod BSLA only
+#define I2C_ADDR_STV090x           (0xd0 >> 1)  //d0 = 0x68 d2 = 69 tuner 1/2 demod BZZB only
+#define I2C_BUS                    0
 
-#define STB0899_NCOARSE      0xf1b3
-#define STB0899_DEV_ID       0xf000
-#define STV090x_MID          0xf100
+#define STB0899_NCOARSE            0xf1b3
+#define STB0899_DEV_ID             0xf000
+#define STV090x_MID                0xf100
 
 // IOCTL definitions
-#define VFDDISPLAYCHARS      0xc0425a00
-#define VFDBRIGHTNESS        0xc0425a03
-#define VFDDISPLAYWRITEONOFF 0xc0425a05
-#define VFDDRIVERINIT        0xc0425a08
-#define VFDICONDISPLAYONOFF  0xc0425a0a
+#define VFDDISPLAYCHARS            0xc0425a00
+#define VFDBRIGHTNESS              0xc0425a03
+#define VFDDISPLAYWRITEONOFF       0xc0425a05
+#define VFDDRIVERINIT              0xc0425a08
+#define VFDICONDISPLAYONOFF        0xc0425a0a
 
-#define VFDSETFAN            0xc0425af6
-#define VFDLEDBRIGHTNESS     0xc0425af8
-#define VFDSETLED            0xc0425afe
-#define VFDSETMODE           0xc0425aff
+#define VFDSETFAN                  0xc0425af6
+#define VFDLEDBRIGHTNESS           0xc0425af8
+#define VFDSETLED                  0xc0425afe
+#define VFDSETMODE                 0xc0425aff
 
 struct set_brightness_s
 {
@@ -312,10 +309,11 @@ enum  // spinner numbers and their names
 	SPINNER_15   // 15
 };
 
-#define ICON_THREAD_STATUS_RUNNING 0
-#define ICON_THREAD_STATUS_STOPPED 1
-#define ICON_THREAD_STATUS_INIT    2
-#define ICON_THREAD_STATUS_HALTED  3  // (semaphore down)
+// Thread stuff
+#define THREAD_STATUS_RUNNING 0
+#define THREAD_STATUS_STOPPED 1
+#define THREAD_STATUS_INIT    2
+#define THREAD_STATUS_HALTED  3  // (semaphore down)
 
 typedef struct
 {
@@ -336,15 +334,19 @@ struct iconToInternal
 
 int icon_thread(void *arg);
 
+
+// struct to store current values
 struct saved_data_s
 {
 	int length;
+//	int ledlength;
+//	int vfdlength;
 	char leddata[8];
 	char vfddata[16];
 //	int brightness;
 //	int display_on;
-	int icon_state[ICON_MAX + 2];
-	int icon_count; // number of icons switched on
+	int icon_state[ICON_MAX + 2];  // state of each icon
+	int icon_count;  // number of icons switched on
 	int icon_list[8];  // holds the numbers of the last eight icons set
 };
 
@@ -357,5 +359,12 @@ extern void ReadKey(void);
 extern struct file_operations vfd_fops;
 extern struct saved_data_s lastdata;
 extern struct iconToInternal vfdIcons[];
-#endif // ADB_5800_FP_H
+extern struct semaphore led_text_thread_sem;
+extern struct task_struct *led_text_task;
+extern int led_text_thread_status;
+extern struct semaphore vfd_text_thread_sem;
+extern struct task_struct *vfd_text_task;
+extern int vfd_text_thread_status;
+
+#endif  // ADB_5800_FP_H
 // vim:ts=4

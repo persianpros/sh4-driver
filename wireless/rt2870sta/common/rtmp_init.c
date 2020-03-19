@@ -1813,36 +1813,30 @@ retry:
 		
 	========================================================================
 */
-NDIS_STATUS	NICInitializeAsic(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  BOOLEAN		bHardReset)
+NDIS_STATUS NICInitializeAsic(IN PRTMP_ADAPTER pAd, IN BOOLEAN bHardReset)
 {
-	ULONG			Index = 0;
-	UINT32			MacCsr12 = 0;
+	ULONG Index = 0;
+	UINT32 MacCsr12 = 0;
 #ifdef RTMP_MAC_USB
-	UINT32			Counter = 0;
+	UINT32 Counter = 0;
 #endif /* RTMP_MAC_USB */
-	USHORT			KeyIdx;
-	INT				i,apidx;
+	USHORT KeyIdx;
+//	INT i, apidx;
 	DBGPRINT(RT_DEBUG_TRACE, ("--> NICInitializeAsic\n"));
 
-
-
 #ifdef RTMP_MAC_USB
-	
 	/* Make sure MAC gets ready after NICLoadFirmware().*/
-	
 	Index = 0;
 	
 	/*To avoid hang-on issue when interface up in kernel 2.4, */
 	/*we use a local variable "MacCsr0" instead of using "pAd->MACVersion" directly.*/
 	if (WaitForAsicReady(pAd) != TRUE)
-			return NDIS_STATUS_FAILURE;
-
+	{
+		return NDIS_STATUS_FAILURE;
+	}
 	// TODO: shiang, how about the value setting of pAd->MACVersion?? Original it assigned here
 
-	DBGPRINT(RT_DEBUG_TRACE, ("%s():MACVersion[Ver:Rev=0x%08x]\n",
-			__FUNCTION__, pAd->MACVersion));
+	DBGPRINT(RT_DEBUG_TRACE, ("%s():MACVersion[Ver:Rev=0x%08x]\n", __FUNCTION__, pAd->MACVersion));
 	/* turn on bit13 (set to zero) after rt2860D. This is to solve high-current issue.*/
 	RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &MacCsr12);
 	MacCsr12 &= (~0x2000);
@@ -1858,8 +1852,8 @@ NDIS_STATUS	NICInitializeAsic(
 	for(Index=0; Index<NUM_MAC_REG_PARMS; Index++)
 	{
 #ifdef RT30xx
-		if ((MACRegTable[Index].Register == TX_SW_CFG0) &&
-			(IS_RT3070(pAd) || IS_RT3071(pAd) || IS_RT3390(pAd)))
+		if ((MACRegTable[Index].Register == TX_SW_CFG0)
+		&&  (IS_RT3070(pAd) || IS_RT3071(pAd) || IS_RT3390(pAd)))
 		{
 			MACRegTable[Index].Value = 0x00000400;
 		}
@@ -1868,13 +1862,11 @@ NDIS_STATUS	NICInitializeAsic(
 	}
 #endif /* RTMP_MAC_USB */
 
-
-
 	/* re-set specific MAC registers for individual chip */
 	if (pAd->chipOps.AsicMacInit != NULL)
+	{
 		pAd->chipOps.AsicMacInit(pAd);
-
-	
+	}
 	/* Before program BBP, we need to wait BBP/RF get wake up.*/
 	Index = 0;
 	do
@@ -1882,15 +1874,16 @@ NDIS_STATUS	NICInitializeAsic(
 		RTMP_IO_READ32(pAd, MAC_STATUS_CFG, &MacCsr12);
 
 		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))			
+		{
 			return NDIS_STATUS_FAILURE;
-
+		}
 		if ((MacCsr12 & 0x03) == 0)	/* if BB.RF is stable*/
+		{
 			break;
-		
+		}		
 		DBGPRINT(RT_DEBUG_TRACE, ("Check MAC_STATUS_CFG  = Busy = %x\n", MacCsr12));
 		RTMPusecDelay(1000);
 	} while (Index++ < 100);
-
 
 #ifdef RTMP_MAC_USB
 	/* The commands to firmware should be after these commands, these commands will init firmware*/

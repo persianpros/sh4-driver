@@ -1,20 +1,25 @@
 /*
- * lnb_core.c - LNB power control driver
+ *   lnb_core.c - LNB power control driver
  */
 
 #include "lnb_core.h"
+#define TAGDEBUG "[LNB] "
 
 enum
 {
 	A8293,
 	LNB24,
-	LNB_PIO,
+	LNBH25P,
+	LNBH26P,
+	LNB_PIO
 };
 
 static const struct i2c_device_id lnb_id[] =
 {
 	{ "a8293", A8293 },
 	{ "lnb24", LNB24 },
+	{ "lnbh25p", LNBH25P },
+	{ "lnbh26p", LNBH26P },
 	{ "pio", LNB_PIO },
 	{ }
 };
@@ -29,7 +34,7 @@ short paramDebug = 0;
  */
 static unsigned short normal_i2c[] =
 {
-	0x08, /* A8293 */
+	0x08, /* A8293, LNBH25P, LNBH26P  */
 	I2C_CLIENT_END
 };
 I2C_CLIENT_INSMOD;
@@ -48,7 +53,9 @@ static int lnb_newprobe(struct i2c_client *client, const struct i2c_device_id *i
 		dprintk(10, "Failure, client already registered\n");
 		return -ENODEV;
 	}
+
 	dprintk(10, "I2C device found at address 0x%02x\n", client->addr);
+
 	switch (devType)
 	{
 		case A8293:
@@ -59,6 +66,16 @@ static int lnb_newprobe(struct i2c_client *client, const struct i2c_device_id *i
 		case LNB24:
 		{
 			lnb24_init(client);
+			break;
+		}
+		case LNBH25P:
+		{
+			lnbh25p_init(client);
+			break;
+		}
+		case LNBH26P:
+		{
+			lnbh26p_init(client);
 			break;
 		}
 		case LNB_PIO:
@@ -89,7 +106,9 @@ static int lnb_remove(struct i2c_client *client)
 static int lnb_command_ioctl(struct i2c_client *client, unsigned int cmd, void *arg)
 {
 	int err = 0;
+
 	dprintk(10, "%s (%x)\n", __func__, cmd);
+
 	if (!client && (devType != LNB_PIO))
 	{
 		return -1;
@@ -106,6 +125,16 @@ static int lnb_command_ioctl(struct i2c_client *client, unsigned int cmd, void *
 			err = lnb24_command(client, cmd, arg);
 			break;
 		}
+		case LNBH25P:
+		{
+			err = lnbh25p_command(client, cmd, arg);
+			break;
+		}
+		case LNBH26P:
+		{
+			err = lnbh26p_command(client, cmd, arg);
+			break;
+		}
 		case LNB_PIO:
 		{
 			err = lnb_pio_command(cmd, arg);
@@ -119,7 +148,9 @@ int lnb_command_kernel(unsigned int cmd, void *arg)
 {
 	int err = 0;
 	struct i2c_client *client = lnb_client;
+
 	dprintk(10, "%s (%x)\n", __func__, cmd);
+
 	if (!client && (devType != LNB_PIO))
 	{
 		return -1;
@@ -134,6 +165,16 @@ int lnb_command_kernel(unsigned int cmd, void *arg)
 		case LNB24:
 		{
 			err = lnb24_command_kernel(client, cmd, arg);
+			break;
+		}
+		case LNBH25P:
+		{
+			err = lnbh25p_command_kernel(client, cmd, arg);
+			break;
+		}
+		case LNBH26P:
+		{
+			err = lnbh26p_command_kernel(client, cmd, arg);
 			break;
 		}
 		case LNB_PIO:
@@ -165,9 +206,9 @@ static int lnb_close(struct inode *inode, struct file *filp)
 
 static struct file_operations lnb_fops =
 {
-	.owner = THIS_MODULE,
-	.ioctl = lnb_ioctl,
-	.open = lnb_open,
+	.owner   = THIS_MODULE,
+	.ioctl   = lnb_ioctl,
+	.open    = lnb_open,
 	.release = lnb_close
 };
 
@@ -190,7 +231,15 @@ static int lnb_detect(struct i2c_client *client, int kind, struct i2c_board_info
 		{
 			kind = LNB24;
 		}
-		else if (!strcmp("pio", type))
+		else if (!strcmp("lnbh25p", type))
+		{
+			kind = LNBH25P;
+		}
+		else if (!strcmp("lnbh26p", type))
+		{
+			kind = LNBH26P;
+		}
+		else if(!strcmp("pio", type))
 		{
 			kind = LNB_PIO;
 		}
@@ -199,6 +248,7 @@ static int lnb_detect(struct i2c_client *client, int kind, struct i2c_board_info
 			return -ENODEV;
 		}
 	}
+
 	switch (kind)
 	{
 		case A8293:
@@ -209,6 +259,16 @@ static int lnb_detect(struct i2c_client *client, int kind, struct i2c_board_info
 		case LNB24:
 		{
 			name = "lnb24";
+			break;
+		}
+		case LNBH25P:
+		{
+			name = "lnbh25p";
+			break;
+		}
+		case LNBH26P:
+		{
+			name = "lnbh26p";
 			break;
 		}
 		case LNB_PIO:
@@ -234,14 +294,14 @@ static struct i2c_driver lnb_i2c_driver =
 	.class = I2C_CLASS_TV_DIGITAL,
 	.driver = {
 		.owner = THIS_MODULE,
-		.name = "lnb_driver", /* 2.6.30 requires name without spaces */
+		.name  = "lnb_driver", /* 2.6.30 requires name without spaces */
 	},
-	.probe = lnb_newprobe,
-	.detect = lnb_detect,
-	.remove = lnb_remove,
-	.id_table = lnb_id,
+	.probe        = lnb_newprobe,
+	.detect       = lnb_detect,
+	.remove       = lnb_remove,
+	.id_table     = lnb_id,
 	.address_data = &addr_data,
-	.command = lnb_command_ioctl
+	.command      = lnb_command_ioctl
 };
 
 /*
@@ -252,14 +312,17 @@ int __init lnb_init(void)
 {
 	int res, err;
 	const char *name;
+
 	struct i2c_board_info info;
 	err = lnb_detect(NULL, -1, &info);
 	name = info.type;
+
 	if (err)
 	{
 		dprintk(1, "Unknown LNB type\n");
 		return err;
 	}
+
 	if (devType == LNB_PIO)
 	{
 		res = lnb_pio_init();
@@ -278,12 +341,14 @@ int __init lnb_init(void)
 			return res;
 		}
 	}
+
 	if (!lnb_client)
 	{
 		dprintk(1, "No client found\n");
 		i2c_del_driver(&lnb_i2c_driver);
 		return -EIO;
 	}
+
 	if (register_chrdev(LNB_MAJOR, "LNB", &lnb_fops) < 0)
 	{
 		dprintk(1, "Unable to register device\n");
@@ -312,7 +377,7 @@ module_init(lnb_init);
 module_exit(lnb_exit);
 
 module_param(type, charp, 0);
-MODULE_PARM_DESC(type, "device type (a8293, lnb24, pio)");
+MODULE_PARM_DESC(type, "device type (a8293, lnb24, lnbh25p, lnbh26p, pio)");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");

@@ -31,8 +31,8 @@
  *
  ****************************************************************************************/
 
-#ifndef _123_nuvoton
-#define _123_nuvoton
+#ifndef nuvoton_h
+#define nuvoton_h
 
 extern short paramDebug;
 #define TAGDEBUG "[nuvoton] "
@@ -46,16 +46,11 @@ extern short paramDebug;
 
 /****************************************************************************************/
 
-#if defined(OCTAGON1008) \
- || defined(HS7420) \
- || defined(HS7429)
+#if defined(OCTAGON1008) || defined(HS7420) || defined(HS7429)
 #define DISP_SIZE 8
-#elif defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)
+#elif defined(FORTIS_HDBOX) || defined(ATEVIO7500)
 #define DISP_SIZE 12
-#elif defined(HS7810A) \
- || defined(HS7119) \
- || defined(HS7819)
+#elif defined(HS7810A) || defined(HS7119) || defined(HS7819)
 #define DISP_SIZE 4
 #elif defined(HS7110)
 #define DISP_SIZE 0
@@ -78,13 +73,12 @@ extern tFrontPanelOpen FrontPanelOpen[LASTMINOR];
 #define SOP                   0x02
 #define EOP                   0x03
 
-#if defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
 #define ICON_THREAD_STATUS_RUNNING 0
 #define ICON_THREAD_STATUS_STOPPED 1
 #define ICON_THREAD_STATUS_INIT    2
-#define ICON_THREAD_STATUS_HALTED  3 // (semaphore down)
-//#define ICON_THREAD_STATUS_PAUSED  4 // (state == 0)
+#define ICON_THREAD_STATUS_HALTED  3  // (semaphore down)
+//#define ICON_THREAD_STATUS_PAUSED  4  // (state == 0)
 #endif
 
 /* ioctl numbers ->hacky */
@@ -118,30 +112,19 @@ extern tFrontPanelOpen FrontPanelOpen[LASTMINOR];
 #define VFDGETWAKEUPTIME      0xc0425b03 // added by audioniek, unused, used by other boxes
 #define VFDSETTIMEFORMAT      0xc0425b04 // added by audioniek
 
-#if defined(FORTIS_HDBOX) \
- || defined(OCTAGON1008)
-#define RESELLER_OFFSET 0x000000f0 // offset to 32 bit word in mtd0 that holds the resellerID & loader version
-#elif defined(ATEVIO7500) \
- ||  defined(HS7110) \
- ||  defined(HS7420) \
- ||  defined(HS7810A) \
- ||  defined(HS7119) \
- ||  defined(HS7429) \
- ||  defined(HS7819)
+#if defined(FORTIS_HDBOX) || defined(OCTAGON1008)
+#define RESELLER_OFFSET 0x000000f0  // offset to 32 bit word in mtd0 that holds the resellerID & loader version
+#elif defined(ATEVIO7500) || defined(HS7110) || defined(HS7420) || defined(HS7810A) || defined(HS7119) || defined(HS7429) || defined(HS7819)
 #define RESELLER_OFFSET 0x00000430
 #endif
+
 /***************************************************************************
  *
  * Icon definitions.
  *
  ***************************************************************************/
 #if defined(OCTAGON1008)
-/***************************************************************************
- *
- * Icons for HS9510
- *
- */
-enum //HS9510 icon numbers and their names
+enum  // HS9510 icon numbers and their names
 {
 	ICON_MIN,     // 00
 	ICON_DOLBY,   // 01
@@ -189,6 +172,35 @@ enum //HS742X icon numbers and their names
 	ICON_COLON2,  // 03, pos 4, byte 2, bit 7
 	ICON_COLON3,  // 04, pos 2, byte 2, bit 7
 	ICON_MAX      // 05
+};
+
+#elif defined(HS7119)
+/***************************************************************
+ *
+ * Icons for HS7119
+ *
+ */ 
+enum //HS7119 icon numbers and their names
+{
+	ICON_MIN,       // 00
+	ICON_COLON,     // 01
+	ICON_MAX        // 02
+};
+
+#elif defined(HS7810A) || defined(HS7819)
+/***************************************************************
+ *
+ * Icons for HS7810A and HS7819
+ *
+ */ 
+enum //HS7810A/7819 icon numbers and their names
+{
+	ICON_MIN,       // 00
+	ICON_COLON,     // 01
+	ICON_PERIOD1,   // 02
+	ICON_PERIOD2,   // 03
+	ICON_PERIOD3,   // 04
+	ICON_MAX        // 05
 };
 
 #elif defined(FORTIS_HDBOX)
@@ -248,7 +260,7 @@ enum //FS9X00 icon numbers and their names
  *
  * Icons for HS8200
  *
- */ 
+ */
 enum //HS8200 icon numbers and their names
 {
 	ICON_MIN,       // 00
@@ -277,35 +289,9 @@ enum //HS8200 icon numbers and their names
 	ICON_MAX,       // 23
 	ICON_SPINNER    // 24
 };
-#elif defined(HS7119)
-/***************************************************************
- *
- * Icons for HS7119
- *
- */ 
-enum //HS7119 icon numbers and their names
-{
-	ICON_MIN,       // 00
-	ICON_COLON,     // 01
-	ICON_MAX        // 02
-};
-#elif defined(HS7810A) || defined(HS7819)
-/***************************************************************
- *
- * Icons for HS7810A and HS7819
- *
- */ 
-enum //HS7810A/7819 icon numbers and their names
-{
-	ICON_MIN,       // 00
-	ICON_COLON,     // 01
-	ICON_PERIOD1,   // 02
-	ICON_PERIOD2,   // 03
-	ICON_PERIOD3,   // 04
-	ICON_MAX        // 05
-};
-#endif //Icon definitions
+#endif  // Icon definitions
 /* End of character and icon definitions */
+
 
 /********************************************************************************************************************************************
  *
@@ -490,9 +476,7 @@ struct saved_data_s
 };
 extern struct saved_data_s lastdata;
 
-#if defined(OCTAGON1008) \
- || defined(HS7420) \
- || defined(HS7429)
+#if defined(OCTAGON1008) || defined(HS7420) || defined(HS7429)
 struct vfd_buffer
 {
 	u8 buf0;
@@ -501,8 +485,7 @@ struct vfd_buffer
 };
 #endif
 
-#if defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
 typedef struct
 {
 	int state;
@@ -535,5 +518,5 @@ extern struct file_operations vfd_fops;
 extern char *gmt_offset;  // module param, string
 extern int rtc_offset;
 
-#endif //_123_nuvoton
+#endif  //nuvoton_h
 // vim:ts=4

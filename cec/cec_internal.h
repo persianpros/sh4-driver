@@ -23,7 +23,7 @@
 
 #define CEC_IRQ_7111                143
 #define CEC_IRQ_7105                157
-#define CEC_IRQ_H205                207
+#define CEC_IRQ_H205                143 // Maybe 207?
 
 #ifdef STx7105
 #define CEC_IRQ                157
@@ -31,8 +31,9 @@
 #ifdef STx7111
 #define CEC_IRQ                143
 #endif
-#ifdef STxH205
-#define CEC_IRQ                207
+
+#if defined CONFIG_CPU_SUBTYPE_STXH205
+#define CEC_IRQ                143  // CAUTION: to be verified!
 #endif
 
 #define CEC_STATUS_RECV_BTF 128

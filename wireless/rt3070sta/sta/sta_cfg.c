@@ -5488,15 +5488,16 @@ RtmpIoctl_rt_ioctl_siwscan(
 	}
 #endif /* WPA_SUPPLICANT_SUPPORT */
 
-    pAd->StaCfg.bSkipAutoScanConn = TRUE;
-	do{
+	pAd->StaCfg.bSkipAutoScanConn = TRUE;
+	do
+	{
 
-		if ((OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED)) &&
-			((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA) || 
-				(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK) ||
-				(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2) ||
-				(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK)) &&	
-			(pAd->StaCfg.PortSecured == WPA_802_1X_PORT_NOT_SECURED))
+		if ((OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED))
+		&&  ((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA)
+		||   (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK)
+	 	||   (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2)
+		||   (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK))
+		&&  (pAd->StaCfg.PortSecured == WPA_802_1X_PORT_NOT_SECURED))
 		{
 			DBGPRINT(RT_DEBUG_TRACE, ("!!! Link UP, Port Not Secured! ignore this set::OID_802_11_BSSID_LIST_SCAN\n"));
 			Status = NDIS_STATUS_SUCCESS;
@@ -5506,23 +5507,25 @@ RtmpIoctl_rt_ioctl_siwscan(
 #ifdef WPA_SUPPLICANT_SUPPORT
 		if (pConfig->FlgScanThisSsid)
 		{
-				NDIS_802_11_SSID          Ssid;
-				Ssid.SsidLength = pConfig->SsidLen;
-				DBGPRINT(RT_DEBUG_TRACE, ("rt_ioctl_siwscan:: req.essid_len-%d, essid-%s\n", pConfig->SsidLen, pConfig->pSsid));
-				NdisZeroMemory(&Ssid.Ssid, NDIS_802_11_LENGTH_SSID);
-				NdisMoveMemory(Ssid.Ssid, pConfig->pSsid, Ssid.SsidLength);
-				StaSiteSurvey(pAd, &Ssid, SCAN_ACTIVE);
+			NDIS_802_11_SSID Ssid;
+
+			Ssid.SsidLength = pConfig->SsidLen;
+			DBGPRINT(RT_DEBUG_TRACE, ("rt_ioctl_siwscan:: req.essid_len-%d, essid-%s\n", pConfig->SsidLen, pConfig->pSsid));
+			NdisZeroMemory(&Ssid.Ssid, NDIS_802_11_LENGTH_SSID);
+			NdisMoveMemory(Ssid.Ssid, pConfig->pSsid, Ssid.SsidLength);
+			StaSiteSurvey(pAd, &Ssid, SCAN_ACTIVE);
 		}
 		else
 #endif /* WPA_SUPPLICANT_SUPPORT */
-		StaSiteSurvey(pAd, NULL, SCAN_ACTIVE);
-	}while(0);
+		{
+			StaSiteSurvey(pAd, NULL, SCAN_ACTIVE);
+		}
+	} while(0);
 
 	pConfig->Status = Status;
 /* #endif */ /* SIOCGIWSCAN || RT_CFG80211_SUPPORT */
 	return NDIS_STATUS_SUCCESS;
 }
-
 
 /*
 ========================================================================
@@ -5539,18 +5542,15 @@ Return Value:
 Note:
 ========================================================================
 */
-static void set_quality(
-	IN	RT_CMD_STA_IOCTL_BSS	*pSignal,
-	IN	PBSS_ENTRY				pBssEntry)
+static void set_quality(IN RT_CMD_STA_IOCTL_BSS	*pSignal, IN PBSS_ENTRY pBssEntry)
 {
-	memcpy(pSignal->Bssid, pBssEntry->Bssid, MAC_ADDR_LEN);
-
 	BOOLEAN bInitial = FALSE;
+
+	memcpy(pSignal->Bssid, pBssEntry->Bssid, MAC_ADDR_LEN);
 	if (!(pBssEntry->AvgRssiX8 | pBssEntry->AvgRssi))
 	{
 		bInitial = TRUE;
 	}
-
 	if (bInitial)
 	{
 		pBssEntry->AvgRssiX8 = pBssEntry->Rssi << 3;
@@ -5567,22 +5567,32 @@ static void set_quality(
 
 	/* Normalize Rssi */
 	if (pBssEntry->AvgRssi >= -50)
-        pSignal->ChannelQuality = 100;
+	{
+	        pSignal->ChannelQuality = 100;
+	}
 	else if (pBssEntry->AvgRssi >= -80) /* between -50 ~ -80dbm */
+	{
 		pSignal->ChannelQuality = (__u8)(24 + ((pBssEntry->AvgRssi + 80) * 26)/10);
+	}
 	else if (pBssEntry->AvgRssi >= -90)   /* between -80 ~ -90dbm */
-        pSignal->ChannelQuality = (__u8)((pBssEntry->AvgRssi + 90) * 26)/10;   
+	{
+	        pSignal->ChannelQuality = (__u8)((pBssEntry->AvgRssi + 90) * 26)/10;   
+	}
 	else
+	{
 		pSignal->ChannelQuality = 0;
-
+	}
 	pSignal->Rssi = (__u8)(pBssEntry->AvgRssi);
 
 	if (pBssEntry->AvgRssi >= -70)
+	{
 		pSignal->Noise = -92;
+	}
 	else
+	{
 		pSignal->Noise = pBssEntry->AvgRssi - pBssEntry->MinSNR;
+	}
 }
-
 
 /*
 ========================================================================
@@ -5600,20 +5610,14 @@ Return Value:
 Note:
 ========================================================================
 */
-INT
-RtmpIoctl_rt_ioctl_giwscan(
-	IN	RTMP_ADAPTER			*pAd,
-	IN	VOID					*pData,
-	IN	ULONG					Data)
+INT RtmpIoctl_rt_ioctl_giwscan(IN RTMP_ADAPTER *pAd, IN VOID *pData, IN ULONG Data)
 {
 	RT_CMD_STA_IOCTL_SCAN_TABLE *pIoctlScan = (RT_CMD_STA_IOCTL_SCAN_TABLE *)pData;
 	RT_CMD_STA_IOCTL_BSS_TABLE *pBssTable;
 	PBSS_ENTRY pBssEntry;
 	UINT32 IdBss;
 
-
 	pIoctlScan->BssNr = 0;
-
 
 #ifdef WPA_SUPPLICANT_SUPPORT
 	if ((pAd->StaCfg.WpaSupplicantUP & 0x7F) == WPA_SUPPLICANT_ENABLE)

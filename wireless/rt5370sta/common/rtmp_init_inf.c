@@ -602,32 +602,35 @@ err1:
 
 #ifdef RT3290
 	if (IS_RT3290(pAd))
+	{
 		RTMPEnableWlan(pAd, FALSE, FALSE);
+	}
 #endif /* RT3290 */
 
 #ifdef DOT11_N_SUPPORT
 	if(pAd->mpdu_blk_pool.mem)
+	{
 		os_free_mem(pAd, pAd->mpdu_blk_pool.mem); /* free BA pool*/
+	}
 #endif /* DOT11_N_SUPPORT */
 
 	/* shall not set priv to NULL here because the priv didn't been free yet.*/
 	/*net_dev->priv = 0;*/
-#ifdef INF_AMAZON_SE
-err0:
-#endif /* INF_AMAZON_SE */
-#ifdef ST
-err0:
-#endif /* ST */
-
+//#ifdef INF_AMAZON_SE
+//err0:
+//#endif /* INF_AMAZON_SE */
+//#ifdef ST
+//err0:
+//#endif /* ST */
 	DBGPRINT(RT_DEBUG_ERROR, ("!!! rt28xx Initialized fail !!!\n"));
 	return FALSE;
 }
 
 
-VOID RTMPDrvOpen(
-	IN VOID			*pAdSrc)
+VOID RTMPDrvOpen(IN VOID *pAdSrc)
 {
-	PRTMP_ADAPTER	pAd = (PRTMP_ADAPTER)pAdSrc;
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
+	UINT32 reg;
 
 #ifdef CONFIG_STA_SUPPORT
 #endif /* CONFIG_STA_SUPPORT */
@@ -639,36 +642,16 @@ VOID RTMPDrvOpen(
 	RTMPEnableRxTx(pAd);
 	RTMP_SET_FLAG(pAd, fRTMP_ADAPTER_START_UP);
 
-	{
-	UINT32 reg = 0;
+	reg = 0;
 	RTMP_IO_READ32(pAd, 0x1300, &reg);  /* clear garbage interrupts*/
 	printk("0x1300 = %08x\n", reg);
-	}
-
-	{
-/*	u32 reg;*/
-/*	UINT8  byte;*/
-/*	u16 tmp;*/
-
-/*	RTMP_IO_READ32(pAd, XIFS_TIME_CFG, &reg);*/
-
-/*	tmp = 0x0805;*/
-/*	reg  = (reg & 0xffff0000) | tmp;*/
-/*	RTMP_IO_WRITE32(pAd, XIFS_TIME_CFG, reg);*/
-
-	}
-
 
 #ifdef CONFIG_STA_SUPPORT
 #ifdef PCIE_PS_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
         RTMPInitPCIeLinkCtrlValue(pAd);
 #endif /* PCIE_PS_SUPPORT */
-
-
 #endif /* CONFIG_STA_SUPPORT */
-
-
 
 #ifdef CONFIG_STA_SUPPORT
 	/*
@@ -676,9 +659,10 @@ VOID RTMPDrvOpen(
 		do auto reconnect here instead of waiting STAMlmePeriodicExec to do auto reconnect.
 	*/
 	if (pAd->OpMode == OPMODE_STA)
+	{
 		MlmeAutoReconnectLastSSID(pAd);
+	}
 #endif /* CONFIG_STA_SUPPORT */
-
 
 #ifdef CONFIG_STA_SUPPORT
 #endif /* CONFIG_STA_SUPPORT */
@@ -687,18 +671,14 @@ VOID RTMPDrvOpen(
 #ifdef CONFIG_MULTI_CHANNEL
 	MultiChannelThreadInit(pAd);
 #endif /* CONFIG_MULTI_CHANNEL */
-
 }
 
 
-VOID RTMPDrvClose(
-	IN VOID				*pAdSrc,
-	IN VOID				*net_dev)
+VOID RTMPDrvClose(IN VOID *pAdSrc, IN VOID *net_dev)
 {
-	PRTMP_ADAPTER	pAd = (PRTMP_ADAPTER)pAdSrc;
-	BOOLEAN 		Cancelled;
-	UINT32			i = 0;
-
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
+	BOOLEAN Cancelled;
+	UINT32 i = 0;
 
 	Cancelled = FALSE;
 

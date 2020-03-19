@@ -471,33 +471,30 @@ VOID RT30xxLoadRFNormalModeSetup(
 	
 	==========================================================================
  */
-VOID RT30xxLoadRFSleepModeSetup(
-	IN PRTMP_ADAPTER 	pAd)
+VOID RT30xxLoadRFSleepModeSetup(IN PRTMP_ADAPTER pAd)
 {
 	UCHAR RFValue;
-	UINT32 MACValue;
+//	UINT32 MACValue;
 
-	{
-			/* RF_BLOCK_en. RF R1 register Bit 0 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
-			RFValue &= (~0x01);
-			RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
+	/* RF_BLOCK_en. RF R1 register Bit 0 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
+	RFValue &= (~0x01);
+	RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
 
-			/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
-			RFValue &= (~0x30);
-			RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
+	/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
+	RFValue &= (~0x30);
+	RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
 
-			/* Idoh, RF R9 register Bit 1, Bit 2 & Bit 3 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R09, &RFValue);
-			RFValue &= (~0x0E);
-			RT30xxWriteRFRegister(pAd, RF_R09, RFValue);
+	/* Idoh, RF R9 register Bit 1, Bit 2 & Bit 3 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R09, &RFValue);
+	RFValue &= (~0x0E);
+	RT30xxWriteRFRegister(pAd, RF_R09, RFValue);
 
-			/* RX_CTB_en, RF R21 register Bit 7 to 0*/
-			RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
-			RFValue &= (~0x80);
-			RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
-	}
+	/* RX_CTB_en, RF R21 register Bit 7 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
+	RFValue &= (~0x80);
+	RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
 }
 
 /*
@@ -508,14 +505,12 @@ VOID RT30xxLoadRFSleepModeSetup(
 	
 	==========================================================================
  */
-VOID RT30xxReverseRFSleepModeSetup(
-	IN PRTMP_ADAPTER 	pAd,
-	IN BOOLEAN			FlgIsInitState)
+VOID RT30xxReverseRFSleepModeSetup(IN PRTMP_ADAPTER pAd, IN BOOLEAN FlgIsInitState)
 {
 	UCHAR RFValue;
-	UINT32 MACValue;
+//	UINT32 MACValue;
 
-	if(!IS_RT3572(pAd))
+	if (!IS_RT3572(pAd))
 	{
 
 		/* RF_BLOCK_en, RF R1 register Bit 0 to 1*/
@@ -538,67 +533,61 @@ VOID RT30xxReverseRFSleepModeSetup(
 		RFValue |= 0x80;
 		RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
 	}
-
-	if (IS_RT3090(pAd) ||	/* IS_RT3090 including RT309x and RT3071/72*/
-		IS_RT3390(pAd) ||
-		(IS_RT3070(pAd) && ((pAd->MACVersion & 0xffff) < 0x0201)))
+	if (IS_RT3090(pAd) /* IS_RT3090 including RT309x and RT3071/72*/
+	||  IS_RT3390(pAd)
+	||  (IS_RT3070(pAd) && ((pAd->MACVersion & 0xffff) < 0x0201)))
 	{
+		RT30xxReadRFRegister(pAd, RF_R27, &RFValue);
+		if ((pAd->MACVersion & 0xffff) < 0x0211)
 		{
-			RT30xxReadRFRegister(pAd, RF_R27, &RFValue);
-			if ((pAd->MACVersion & 0xffff) < 0x0211)
-				RFValue = (RFValue & (~0x77)) | 0x3;
-			else
-				RFValue = (RFValue & (~0x77));
+			RFValue = (RFValue & (~0x77)) | 0x3;
+		}
+		else
+		{
+			RFValue = (RFValue & (~0x77));
 			RT30xxWriteRFRegister(pAd, RF_R27, RFValue);
 		}
-
 		/* RT3071 version E has fixed this issue*/
 	}
-
 }
 /* end johnli*/
 
-VOID RT30xxHaltAction(
-	IN PRTMP_ADAPTER 	pAd)
+VOID RT30xxHaltAction(IN PRTMP_ADAPTER pAd)
 {
-	UINT32		TxPinCfg = 0x00050F0F;
+	UINT32 TxPinCfg = 0x00050F0F;
 
 
 	/* Turn off LNA_PE or TRSW_POL*/
 
-		if ((IS_RT3071(pAd) || IS_RT3572(pAd))
+	if ((IS_RT3071(pAd) || IS_RT3572(pAd))
 #ifdef RTMP_EFUSE_SUPPORT
-			&& (pAd->bUseEfuse)
+		&& (pAd->bUseEfuse)
 #endif /* RTMP_EFUSE_SUPPORT */
-			)
-		{
-			TxPinCfg &= 0xFFFBF0F0; /* bit18 off */
-		}
-		else
-		{
-			TxPinCfg &= 0xFFFFF0F0;
-		}
+		)
+	{
+		TxPinCfg &= 0xFFFBF0F0; /* bit18 off */
+	}
+	else
+	{
+		TxPinCfg &= 0xFFFFF0F0;
+	}
 #ifdef RT35xx
-		if (IS_RT3572(pAd))
-			RT30xxWriteRFRegister(pAd, RF_R08, (UCHAR)0x00);
+	if (IS_RT3572(pAd))
+	{
+		RT30xxWriteRFRegister(pAd, RF_R08, (UCHAR)0x00);
+	}
 #endif /* RT35xx */
 
-		RTMP_IO_WRITE32(pAd, TX_PIN_CFG, TxPinCfg);   
+	RTMP_IO_WRITE32(pAd, TX_PIN_CFG, TxPinCfg);   
 }
 
-
-VOID RT30xx_ChipSwitchChannel(
-	IN PRTMP_ADAPTER 			pAd,
-	IN UCHAR					Channel,
-	IN BOOLEAN					bScan)
+VOID RT30xx_ChipSwitchChannel(IN PRTMP_ADAPTER pAd, IN UCHAR Channel, IN BOOLEAN bScan)
 {
 	CHAR    TxPwer = 0, TxPwer2 = DEFAULT_RF_TX_POWER; /*Bbp94 = BBPR94_DEFAULT, TxPwer2 = DEFAULT_RF_TX_POWER;*/
 	UCHAR	index;
 	UINT32 	Value = 0; /*BbpReg, Value;*/
 	UCHAR 	RFValue;
 	UINT32 i = 0;
-#ifdef RT33xx
-#endif
 
 	i = i; /* avoid compile warning */
 	RFValue = 0;

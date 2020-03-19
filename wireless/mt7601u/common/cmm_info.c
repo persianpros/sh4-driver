@@ -1081,7 +1081,7 @@ INT	Set_DebugFunc_Proc(
 {
 	DBGPRINT_S(RT_DEBUG_TRACE, ("==>%s()\n", __FUNCTION__));
 	RTDebugFunc = simple_strtol(arg, 0, 10);
-	DBGPRINT_S(RT_DEBUG_TRACE, ("Set RTDebugFunc = 0x%x\n",__FUNCTION__, RTDebugFunc));
+	DBGPRINT_S(RT_DEBUG_TRACE, ("Set RTDebugFunc = 0x%x\n", (unsigned int)RTDebugFunc));
 
 	return TRUE;
 }
@@ -5713,8 +5713,7 @@ INT set_fpga_mode(RTMP_ADAPTER *pAd, PSTRING arg)
 INT set_force_amsdu(RTMP_ADAPTER *pAd, PSTRING arg)
 {
 	pAd->force_amsdu = (simple_strtol(arg, 0, 10) > 0 ? TRUE : FALSE);
-	DBGPRINT(RT_DEBUG_TRACE, ("%s(): force_amsdu=%d\n",
-				__FUNCTION__, pAd->force_amsdu));
+	DBGPRINT(RT_DEBUG_TRACE, ("%s(): force_amsdu=%d\n", __FUNCTION__, pAd->force_amsdu));
 	return TRUE;
 }
 #endif /* WFA_VHT_PF */
@@ -5727,19 +5726,19 @@ INT set_rf(RTMP_ADAPTER *pAd, PSTRING arg)
 	
 	if (arg)
 	{
-		rv = sscanf(arg, "%d-%d-%x", &(bank_id), &(rf_id), &(rf_val));
-		DBGPRINT(RT_DEBUG_TRACE, ("%s():rv = %d, bank_id = %d, rf_id = %d, rf_val = 0x%02x\n", __FUNCTION__, rv, bank_id, rf_id, rf_val));
+		rv = sscanf(arg, "%d-%d-%x", &(bank_id), &(rf_id), (unsigned int *)&(rf_val));
+		DBGPRINT(RT_DEBUG_TRACE, ("%s():rv = %d, bank_id = %d, rf_id = %d, rf_val = 0x%02x\n", __FUNCTION__, rv, bank_id, rf_id, (unsigned int)rf_val));
 		if (rv == 3)
 		{
 			rlt_rf_write(pAd, (UCHAR)bank_id, (UCHAR)rf_id, (UCHAR)rf_val);
 			
 			rlt_rf_read(pAd, bank_id, rf_id, &rf_val);
-			DBGPRINT(RT_DEBUG_TRACE, ("%s():%d %03d 0x%02X\n", __FUNCTION__, bank_id, rf_id, rf_val));
+			DBGPRINT(RT_DEBUG_TRACE, ("%s():%d %03d 0x%02X\n", __FUNCTION__, bank_id, rf_id, (unsigned int)rf_val));
 		}
 		else if (rv == 2)
 		{
 			rlt_rf_read(pAd, bank_id, rf_id, &rf_val);
-			DBGPRINT(RT_DEBUG_TRACE, ("%s():%d %03d 0x%02X\n", __FUNCTION__, bank_id, rf_id, rf_val));
+			DBGPRINT(RT_DEBUG_TRACE, ("%s():%d %03d 0x%02X\n", __FUNCTION__, bank_id, rf_id, (unsigned int)rf_val));
 		}
 	}
 

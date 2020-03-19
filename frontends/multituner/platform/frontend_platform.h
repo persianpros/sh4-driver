@@ -12,7 +12,7 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
@@ -23,17 +23,26 @@
 #ifndef _platform_123
 #define _platform_123
 
-struct platform_frontend_config_s {
-    char*    name;
+struct platform_frontend_config_s
+{
+	char    *name;
 
-    /*
-     *  - i2c address
-     */
-    int demod_i2c;
-    int tuner_i2c;
+	/*
+	 *  - i2c address
+	 */
+	int demod_i2c;
+	int tuner_i2c;
 
-    /* specific stuff can be passed here */
-    void* private;
+	/* specific stuff can be passed here */
+	void *private;
 };
 
+#if 0
+struct platform_frontend_s
+{
+	int numConfigs;
+	struct platform_frontend_config_s *config;
+};
 #endif
+#endif
+// vim:ts=4

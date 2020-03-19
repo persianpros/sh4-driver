@@ -263,18 +263,17 @@ VOID RT33xx_Init(
 /* The original name of this function is AsicSetRxAnt(), now change to */
 /*VOID AsicSetRxAnt(*/
 
-VOID RT33xxSetRxAnt(
-	IN PRTMP_ADAPTER	pAd,
-	IN UCHAR			Ant)
+VOID RT33xxSetRxAnt(IN PRTMP_ADAPTER pAd, IN UCHAR Ant)
 {
 	UINT32	Value;
-	UINT32	x;
+//	UINT32	x;
 
-	if (/*(!pAd->NicConfig2.field.AntDiversity) ||*/
-		(RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_RESET_IN_PROGRESS))	||
-		(RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS))	||
-		(RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_RADIO_OFF)) ||
-		(RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST)))
+	if (/*(!pAd->NicConfig2.field.AntDiversity)
+	||*/
+	   (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_RESET_IN_PROGRESS))
+	|| (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS))
+	|| (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_RADIO_OFF))
+	|| (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST)))
 	{
 		return;
 	}
@@ -282,31 +281,31 @@ VOID RT33xxSetRxAnt(
 	/* the antenna selection is through firmware and MAC register(GPIO3)*/
 	if (IS_RT3390(pAd) && pAd->RfIcType == RFIC_3320)
 	{
-	if (Ant == 0)
-	{
-		/* Main antenna*/
-		/* E2PROM_CSR only in PCI bus Reg., USB Bus need MCU commad to control the EESK pin.*/
+		if (Ant == 0)
+		{
+			/* Main antenna*/
+			/* E2PROM_CSR only in PCI bus Reg., USB Bus need MCU commad to control the EESK pin.*/
 #ifdef RTMP_MAC_USB
-		AsicSendCommandToMcu(pAd, 0x73, 0xff, 0x1, 0x0, FALSE);
+			AsicSendCommandToMcu(pAd, 0x73, 0xff, 0x1, 0x0, FALSE);
 #endif /* RTMP_MAC_USB */
 
-		RTMP_IO_READ32(pAd, GPIO_CTRL_CFG, &Value);
-		Value &= ~(0x0808);
-		RTMP_IO_WRITE32(pAd, GPIO_CTRL_CFG, Value);
-		DBGPRINT_RAW(RT_DEBUG_TRACE, ("AsicSetRxAnt, switch to main antenna\n"));
-	}
-	else
-	{
-		/* Aux antenna*/
-		/* E2PROM_CSR only in PCI bus Reg., USB Bus need MCU commad to control the EESK pin.*/
+			RTMP_IO_READ32(pAd, GPIO_CTRL_CFG, &Value);
+			Value &= ~(0x0808);
+			RTMP_IO_WRITE32(pAd, GPIO_CTRL_CFG, Value);
+			DBGPRINT_RAW(RT_DEBUG_TRACE, ("AsicSetRxAnt, switch to main antenna\n"));
+		}
+		else
+		{
+			/* Aux antenna*/
+			/* E2PROM_CSR only in PCI bus Reg., USB Bus need MCU commad to control the EESK pin.*/
 #ifdef RTMP_MAC_USB
-		AsicSendCommandToMcu(pAd, 0x73, 0xff, 0x0, 0x0, FALSE);
+			AsicSendCommandToMcu(pAd, 0x73, 0xff, 0x0, 0x0, FALSE);
 #endif /* RTMP_MAC_USB */
-		RTMP_IO_READ32(pAd, GPIO_CTRL_CFG, &Value);
-		Value &= ~(0x0808);
-		Value |= 0x08;
-		RTMP_IO_WRITE32(pAd, GPIO_CTRL_CFG, Value);
-		DBGPRINT_RAW(RT_DEBUG_TRACE, ("AsicSetRxAnt, switch to aux antenna\n"));
+			RTMP_IO_READ32(pAd, GPIO_CTRL_CFG, &Value);
+			Value &= ~(0x0808);
+			Value |= 0x08;
+			RTMP_IO_WRITE32(pAd, GPIO_CTRL_CFG, Value);
+			DBGPRINT_RAW(RT_DEBUG_TRACE, ("AsicSetRxAnt, switch to aux antenna\n"));
 		}
 	}
 }
@@ -387,28 +386,25 @@ VOID RT33xxLoadRFNormalModeSetup(
 	
 	==========================================================================
  */
-VOID RT33xxLoadRFSleepModeSetup(
-	IN PRTMP_ADAPTER 	pAd)
+VOID RT33xxLoadRFSleepModeSetup(IN PRTMP_ADAPTER pAd)
 {
 	UCHAR RFValue;
-	UINT32 MACValue;
+//	UINT32 MACValue;
 
-		/* RF_BLOCK_en. RF R1 register Bit 0 to 0*/
-		RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
-		RFValue &= (~0x01);
-		RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
+	/* RF_BLOCK_en. RF R1 register Bit 0 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
+	RFValue &= (~0x01);
+	RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
 
-		/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 0*/
-		RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
-		RFValue &= (~0x30);
-		RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
+	/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
+	RFValue &= (~0x30);
+	RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
 
-
-		/* RX_CTB_en, RF R21 register Bit 7 to 0*/
-		RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
-		RFValue &= (~0x80);
-		RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
-
+	/* RX_CTB_en, RF R21 register Bit 7 to 0*/
+	RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
+	RFValue &= (~0x80);
+	RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
 }
 
 /*
@@ -419,66 +415,57 @@ VOID RT33xxLoadRFSleepModeSetup(
 	
 	==========================================================================
  */
-VOID RT33xxReverseRFSleepModeSetup(
-	IN PRTMP_ADAPTER 	pAd,
-	IN BOOLEAN			FlgIsInitState)
+VOID RT33xxReverseRFSleepModeSetup(IN PRTMP_ADAPTER pAd, IN BOOLEAN FlgIsInitState)
 {
 	UCHAR RFValue;
-	UINT32 MACValue;
+//	UINT32 MACValue;
 
-		/* RF_BLOCK_en, RF R1 register Bit 0 to 1*/
-		RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
-		RFValue |= 0x01;
-		RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
+	/* RF_BLOCK_en, RF R1 register Bit 0 to 1*/
+	RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
+	RFValue |= 0x01;
+	RT30xxWriteRFRegister(pAd, RF_R01, RFValue);
 
-		/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 1*/
-		RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
-		/* According to HK's comment for Max Input power issue.
-		    RF 07 must set to 0x60. */
-		RFValue |= 0x20; /* 0x30. */
-		RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
+	/* VCO_IC, RF R7 register Bit 4 & Bit 5 to 1*/
+	RT30xxReadRFRegister(pAd, RF_R07, &RFValue);
+	/* According to HK's comment for Max Input power issue.
+	    RF 07 must set to 0x60. */
+	RFValue |= 0x20; /* 0x30. */
+	RT30xxWriteRFRegister(pAd, RF_R07, RFValue);
 
-		/* RX_CTB_en, RF R21 register Bit 7 to 1*/
-		RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
-		RFValue |= 0x80;
-		RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
-
+	/* RX_CTB_en, RF R21 register Bit 7 to 1*/
+	RT30xxReadRFRegister(pAd, RF_R21, &RFValue);
+	RFValue |= 0x80;
+	RT30xxWriteRFRegister(pAd, RF_R21, RFValue);
 }
 /* end johnli*/
 
-VOID RT33xxHaltAction(
-	IN PRTMP_ADAPTER 	pAd)
+VOID RT33xxHaltAction(IN PRTMP_ADAPTER pAd)
 {
-	UINT32		TxPinCfg = 0x00050F0F;
+	UINT32 TxPinCfg = 0x00050F0F;
 
-	
 	/* Turn off LNA_PE or TRSW_POL*/
-	
-        /* Fixed suspend leakage current*/
-                /* According to MAC 0x0580 bit [31], set MAC 0x1328 bit[18] during suspend mode.*/
-                /* If SEL_EFUSE=0, set TRSW_POL=0 in suspend mode.*/
-                /* If SEL_EFUSE=1, set TRSW_POL=1 in suspend mode.*/
-	
-		if (IS_RT3390(pAd)
+
+	/* Fixed suspend leakage current*/
+	/* According to MAC 0x0580 bit [31], set MAC 0x1328 bit[18] during suspend mode.*/
+	/* If SEL_EFUSE=0, set TRSW_POL=0 in suspend mode.*/
+	/* If SEL_EFUSE=1, set TRSW_POL=1 in suspend mode.*/
+
+	if (IS_RT3390(pAd)
 #ifdef RTMP_EFUSE_SUPPORT
-			&& (pAd->bUseEfuse)
+		&& (pAd->bUseEfuse)
 #endif /* RTMP_EFUSE_SUPPORT */
-			)
-		{
-			TxPinCfg &= 0xFFFBF0F0; /* bit18 off*/
-		}
-		else
-		{
-			TxPinCfg &= 0xFFFFF0F0;
-		}
-
-		RTMP_IO_WRITE32(pAd, TX_PIN_CFG, TxPinCfg);   
+		)
+	{
+		TxPinCfg &= 0xFFFBF0F0; /* bit18 off*/
 	}
+	else
+	{
+		TxPinCfg &= 0xFFFFF0F0;
+	}
+	RTMP_IO_WRITE32(pAd, TX_PIN_CFG, TxPinCfg);   
+}
 
-VOID RT33xx_ChipSwitchChannel(
-	IN PRTMP_ADAPTER 			pAd,
-	IN UCHAR					Channel,
-	IN BOOLEAN					bScan)
+VOID RT33xx_ChipSwitchChannel(IN PRTMP_ADAPTER pAd, IN UCHAR Channel, IN BOOLEAN bScan)
 {
 	CHAR    TxPwer = 0, TxPwer2 = DEFAULT_RF_TX_POWER; /*Bbp94 = BBPR94_DEFAULT, TxPwer2 = DEFAULT_RF_TX_POWER;*/
 	UCHAR	index;
@@ -490,9 +477,8 @@ VOID RT33xx_ChipSwitchChannel(
 
 #ifdef RT30xx
 	UCHAR Tx0FinePowerCtrl = 0, Tx1FinePowerCtrl = 0;
-	BBP_R109_STRUC BbpR109 = {{0}};
+//	BBP_R109_STRUC BbpR109 = {{0}};
 #endif /* RT30xx */
-
 
 	RFValue = 0;
 	/* Search Tx power value*/

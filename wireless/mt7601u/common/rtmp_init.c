@@ -24,7 +24,6 @@
  *                                                                       *
  *************************************************************************/
 
-
 #include	"rt_config.h"
 
 #ifdef OS_ABL_FUNC_SUPPORT
@@ -38,49 +37,48 @@ UCHAR NUM_BIT8[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 char*   CipherName[] = {"none","wep64","wep128","TKIP","AES","CKIP64","CKIP128","CKIP152","SMS4"};
 #endif
 
-
 /* 
 	ASIC register initialization sets
 */
 RTMP_REG_PAIR MACRegTable[] = {
 #ifndef MT7601
 #if defined(HW_BEACON_OFFSET) && (HW_BEACON_OFFSET == 0x200)
-	{BCN_OFFSET0,			0xf8f0e8e0}, /* 0x3800(e0), 0x3A00(e8), 0x3C00(f0), 0x3E00(f8), 512B for each beacon */
-	{BCN_OFFSET1,			0x6f77d0c8}, /* 0x3200(c8), 0x3400(d0), 0x1DC0(77), 0x1BC0(6f), 512B for each beacon */
+	{BCN_OFFSET0, 0xf8f0e8e0}, /* 0x3800(e0), 0x3A00(e8), 0x3C00(f0), 0x3E00(f8), 512B for each beacon */
+	{BCN_OFFSET1, 0x6f77d0c8}, /* 0x3200(c8), 0x3400(d0), 0x1DC0(77), 0x1BC0(6f), 512B for each beacon */
 #elif defined(HW_BEACON_OFFSET) && (HW_BEACON_OFFSET == 0x100)
-	{BCN_OFFSET0,			0xece8e4e0}, /* 0x3800, 0x3A00, 0x3C00, 0x3E00, 512B for each beacon */
-	{BCN_OFFSET1,			0xfcf8f4f0}, /* 0x3800, 0x3A00, 0x3C00, 0x3E00, 512B for each beacon */
+	{BCN_OFFSET0, 0xece8e4e0}, /* 0x3800, 0x3A00, 0x3C00, 0x3E00, 512B for each beacon */
+	{BCN_OFFSET1, 0xfcf8f4f0}, /* 0x3800, 0x3A00, 0x3C00, 0x3E00, 512B for each beacon */
 #endif /* HW_BEACON_OFFSET */
 #endif /* MT7601 */
 
-	{LEGACY_BASIC_RATE,		0x0000013f}, /*  Basic rate set bitmap*/
-	{HT_BASIC_RATE,		0x00008003}, /* Basic HT rate set , 20M, MCS=3, MM. Format is the same as in TXWI.*/
-	{MAC_SYS_CTRL,		0x00}, /* 0x1004, , default Disable RX*/
-	{RX_FILTR_CFG,		0x17f97}, /*0x1400  , RX filter control,  */
-	{BKOFF_SLOT_CFG,	0x209}, /* default set short slot time, CC_DELAY_TIME should be 2	 */
-	/*{TX_SW_CFG0,		0x40a06},  Gary,2006-08-23 */
-	{TX_SW_CFG0,		0x0}, 		/* Gary,2008-05-21 for CWC test */
-	{TX_SW_CFG1,		0x80606}, /* Gary,2006-08-23 */
-	{TX_LINK_CFG,		0x1020},		/* Gary,2006-08-23 */
-	/*{TX_TIMEOUT_CFG,	0x00182090},	 CCK has some problem. So increase timieout value. 2006-10-09 MArvek RT*/
-	{TX_TIMEOUT_CFG,	0x000a2090},	/* CCK has some problem. So increase timieout value. 2006-10-09 MArvek RT , Modify for 2860E ,2007-08-01*/
-	{MAX_LEN_CFG,		MAX_AGGREGATION_SIZE | 0x00001000},	/* 0x3018, MAX frame length. Max PSDU = 16kbytes.*/
+	{LEGACY_BASIC_RATE, 0x0000013f}, /*  Basic rate set bitmap*/
+	{HT_BASIC_RATE, 0x00008003}, /* Basic HT rate set , 20M, MCS=3, MM. Format is the same as in TXWI.*/
+	{MAC_SYS_CTRL, 0x00}, /* 0x1004, , default Disable RX*/
+	{RX_FILTR_CFG, 0x17f97}, /*0x1400  , RX filter control,  */
+	{BKOFF_SLOT_CFG, 0x209}, /* default set short slot time, CC_DELAY_TIME should be 2	 */
+	/*{TX_SW_CFG0, 0x40a06},  Gary,2006-08-23 */
+	{TX_SW_CFG0, 0x0}, 		/* Gary,2008-05-21 for CWC test */
+	{TX_SW_CFG1, 0x80606}, /* Gary,2006-08-23 */
+	{TX_LINK_CFG, 0x1020},		/* Gary,2006-08-23 */
+	/*{TX_TIMEOUT_CFG, 0x00182090},	 CCK has some problem. So increase timieout value. 2006-10-09 MArvek RT*/
+	{TX_TIMEOUT_CFG, 0x000a2090},	/* CCK has some problem. So increase timieout value. 2006-10-09 MArvek RT , Modify for 2860E ,2007-08-01*/
+	{MAX_LEN_CFG, MAX_AGGREGATION_SIZE | 0x00001000},	/* 0x3018, MAX frame length. Max PSDU = 16kbytes.*/
 #ifndef MT7601
-	{LED_CFG,		0x7f031e46}, /* Gary, 2006-08-23*/
+	{LED_CFG, 0x7f031e46}, /* Gary, 2006-08-23*/
 #endif /* MT7601 */
 
 #ifdef RLT_MAC
 
 #ifdef MT7601
 #ifdef CONFIG_MULTI_CHANNEL
-	{TX_MAX_PCNT,		0x1f1f1f1f/*0x1fbf1f1f */},
+	{TX_MAX_PCNT, 0x1f1f1f1f/*0x1fbf1f1f */},
 #else
-	{TX_MAX_PCNT,		0x1fbf1f1f},
+	{TX_MAX_PCNT, 0x1fbf1f1f},
 #endif /* CONFIG_MULTI_CHANNEL */
-	{RX_MAX_PCNT,		0x9f},
+	{RX_MAX_PCNT, 0x9f},
 #else
-	{TX_MAX_PCNT,		0xbfbf3f1f},
-	{RX_MAX_PCNT,		0x9f},
+	{TX_MAX_PCNT, 0xbfbf3f1f},
+	{RX_MAX_PCNT, 0x9f},
 #endif
 
 // TODO: shiang-6590, need set this in FPGA mode
@@ -88,65 +86,63 @@ RTMP_REG_PAIR MACRegTable[] = {
 #endif /* RTMP_MAC_USB */
 #else
 #ifdef INF_AMAZON_SE
-	{PBF_MAX_PCNT,			0x1F3F6F6F}, 	/*iverson modify for usb issue, 2008/09/19*/
+	{PBF_MAX_PCNT, 0x1F3F6F6F}, 	/*iverson modify for usb issue, 2008/09/19*/
 											/* 6F + 6F < total page count FE*/
 											/* so that RX doesn't occupy TX's buffer space when WMM congestion.*/
 #else
-	{PBF_MAX_PCNT,			0x1F3FBF9F}, 	/*0x1F3f7f9f},		Jan, 2006/04/20*/
+	{PBF_MAX_PCNT, 0x1F3FBF9F}, 	/*0x1F3f7f9f},		Jan, 2006/04/20*/
 #endif /* INF_AMAZON_SE */
 #endif /* RLT_MAC */
 
 	/*{TX_RTY_CFG,			0x6bb80408},	 Jan, 2006/11/16*/
 /* WMM_ACM_SUPPORT*/
-/*	{TX_RTY_CFG,			0x6bb80101},	 sample*/
-	{TX_RTY_CFG,			0x47d01f0f},	/* Jan, 2006/11/16, Set TxWI->ACK =0 in Probe Rsp Modify for 2860E ,2007-08-03*/
+/*	{TX_RTY_CFG, 0x6bb80101},	 sample*/
+	{TX_RTY_CFG, 0x47d01f0f},	/* Jan, 2006/11/16, Set TxWI->ACK =0 in Probe Rsp Modify for 2860E ,2007-08-03*/
 	
-	{AUTO_RSP_CFG,			0x00000013},	/* Initial Auto_Responder, because QA will turn off Auto-Responder*/
-	{CCK_PROT_CFG,			0x05740003 /*0x01740003*/},	/* Initial Auto_Responder, because QA will turn off Auto-Responder. And RTS threshold is enabled. */
-	{OFDM_PROT_CFG,			0x05740003 /*0x01740003*/},	/* Initial Auto_Responder, because QA will turn off Auto-Responder. And RTS threshold is enabled. */
+	{AUTO_RSP_CFG, 0x00000013},	/* Initial Auto_Responder, because QA will turn off Auto-Responder*/
+	{CCK_PROT_CFG, 0x05740003 /*0x01740003*/},	/* Initial Auto_Responder, because QA will turn off Auto-Responder. And RTS threshold is enabled. */
+	{OFDM_PROT_CFG, 0x05740003 /*0x01740003*/},	/* Initial Auto_Responder, because QA will turn off Auto-Responder. And RTS threshold is enabled. */
 #ifdef RTMP_MAC_USB
 #ifndef MT7601
-	{PBF_CFG, 				0xf40006}, 		/* Only enable Queue 2*/
-	{WPDMA_GLO_CFG,			0x00000030},		// MT7601U not support WPDMA
+	{PBF_CFG, 0xf40006}, 		/* Only enable Queue 2*/
+	{WPDMA_GLO_CFG, 0x00000030},		// MT7601U not support WPDMA
 #endif /* MT7601 */
-	{MM40_PROT_CFG,			0x3F44084},		/* Initial Auto_Responder, because QA will turn off Auto-Responder*/
+	{MM40_PROT_CFG,0x3F44084},		/* Initial Auto_Responder, because QA will turn off Auto-Responder*/
 #endif /* RTMP_MAC_USB */
-	{GF20_PROT_CFG,			0x01744004},    /* set 19:18 --> Short NAV for MIMO PS*/
-	{GF40_PROT_CFG,			0x03F44084},    
-	{MM20_PROT_CFG,			0x01744004},    
-	{TXOP_CTRL_CFG,			0x0000583f, /*0x0000243f*/ /*0x000024bf*/},	/*Extension channel backoff.*/
-	{TX_RTS_CFG,			0x01092b20},		// enable RTS fall back
+	{GF20_PROT_CFG,	0x01744004},    /* set 19:18 --> Short NAV for MIMO PS*/
+	{GF40_PROT_CFG,	0x03F44084},    
+	{MM20_PROT_CFG, 0x01744004},    
+	{TXOP_CTRL_CFG, 0x0000583f, /*0x0000243f*/ /*0x000024bf*/},	/*Extension channel backoff.*/
+	{TX_RTS_CFG, 0x01092b20},		// enable RTS fall back
 
-	{EXP_ACK_TIME,			0x002400ca},	/* default value */
-	{TXOP_HLDR_ET, 			0x00000002},
+	{EXP_ACK_TIME, 0x002400ca},	/* default value */
+	{TXOP_HLDR_ET, 0x00000002},
 
 	/* Jerry comments 2008/01/16: we use SIFS = 10us in CCK defaultly, but it seems that 10us
 		is too small for INTEL 2200bg card, so in MBSS mode, the delta time between beacon0
 		and beacon1 is SIFS (10us), so if INTEL 2200bg card connects to BSS0, the ping
 		will always lost. So we change the SIFS of CCK from 10us to 16us. */
-	{XIFS_TIME_CFG,			0x33a41010},
+	{XIFS_TIME_CFG, 0x33a41010},
 #if defined(RT65xx) || defined(MT7601)
-	{PWR_PIN_CFG,			0x00000000},
+	{PWR_PIN_CFG, 0x00000000},
 #else
-	{PWR_PIN_CFG,			0x00000003},	/* patch for 2880-E*/
+	{PWR_PIN_CFG, 0x00000003},	/* patch for 2880-E*/
 #endif /* defined(RT65xx) || defined(MT7601) */
 };
 
-
 #ifdef CONFIG_STA_SUPPORT
-RTMP_REG_PAIR	STAMACRegTable[] =	{
-	{WMM_AIFSN_CFG,		0x00002273},
+RTMP_REG_PAIR STAMACRegTable[] = {
+	{WMM_AIFSN_CFG, 0x00002273},
 	{WMM_CWMIN_CFG,	0x00002344},
 	{WMM_CWMAX_CFG,	0x000034aa},
 };
 #endif /* CONFIG_STA_SUPPORT */
 
 
-#define	NUM_MAC_REG_PARMS		(sizeof(MACRegTable) / sizeof(RTMP_REG_PAIR))
-#ifdef CONFIG_STA_SUPPORT
-#define	NUM_STA_MAC_REG_PARMS	(sizeof(STAMACRegTable) / sizeof(RTMP_REG_PAIR))
+#define	NUM_MAC_REG_PARMS     (sizeof(MACRegTable) / sizeof(RTMP_REG_PAIR))
+#ifdef CONFIG_STA_SUPPORT     
+#define	NUM_STA_MAC_REG_PARMS (sizeof(STAMACRegTable) / sizeof(RTMP_REG_PAIR))
 #endif /* CONFIG_STA_SUPPORT */
-
 
 /*
 	Use the global variable is not a good solution.
@@ -155,7 +151,6 @@ RTMP_REG_PAIR	STAMACRegTable[] =	{
 	Maybe we can put pAd in RTMPSetTimer/ RTMPModTimer/ RTMPCancelTimer.
 */
 NDIS_SPIN_LOCK TimerSemLock;
-
 
 /*
 	========================================================================
@@ -176,15 +171,12 @@ NDIS_SPIN_LOCK TimerSemLock;
 	
 	========================================================================
 */
-NDIS_STATUS	RTMPAllocAdapterBlock(
-	IN  PVOID	handle,
-	OUT	VOID	**ppAdapter)
+NDIS_STATUS	RTMPAllocAdapterBlock(IN PVOID handle, OUT VOID **ppAdapter)
 {
-	PRTMP_ADAPTER	pAd = NULL;
-	NDIS_STATUS		Status;
-	INT 			index;
-	UCHAR			*pBeaconBuf = NULL;
-
+	PRTMP_ADAPTER pAd = NULL;
+	NDIS_STATUS Status;
+	INT index;
+	UCHAR *pBeaconBuf = NULL;
 
 #ifdef OS_ABL_FUNC_SUPPORT
 	/* must put the function before any print message */
@@ -978,7 +970,9 @@ VOID	NICInitAsicFromEEPROM(
 #ifdef CONFIG_STA_SUPPORT
 	UINT32 data = 0;
 #endif /* CONFIG_STA_SUPPORT */
+#if !defined(RT65xx) && !defined(MT7601)
 	USHORT i;
+#endif
 #ifdef RALINK_ATE
 	USHORT value;
 #endif /* RALINK_ATE */
@@ -987,7 +981,7 @@ VOID	NICInitAsicFromEEPROM(
 	DBGPRINT(RT_DEBUG_TRACE, ("--> NICInitAsicFromEEPROM\n"));
 
 #if !defined(RT65xx) && !defined(MT7601)
-	for(i = EEPROM_BBP_ARRAY_OFFSET; i < NUM_EEPROM_BBP_PARMS; i++)
+	for (i = EEPROM_BBP_ARRAY_OFFSET; i < NUM_EEPROM_BBP_PARMS; i++)
 	{
 		UCHAR BbpRegIdx, BbpValue;
 	
@@ -1289,7 +1283,7 @@ NDIS_STATUS	NICInitializeAdapter(
 	IN   BOOLEAN    bHardReset)
 {
 	NDIS_STATUS     Status = NDIS_STATUS_SUCCESS;
-	WPDMA_GLO_CFG_STRUC	GloCfg;
+//	WPDMA_GLO_CFG_STRUC	GloCfg;
 	ULONG j=0;
 
 
@@ -1298,19 +1292,20 @@ NDIS_STATUS	NICInitializeAdapter(
 	/* Set DMA global configuration except TX_DMA_EN and RX_DMA_EN bits */
 retry:
 
-	if (AsicWaitPDMAIdle(pAd, 100, 1000) != TRUE) {
+	if (AsicWaitPDMAIdle(pAd, 100, 1000) != TRUE)
+	{
 		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))
+		{
 			return NDIS_STATUS_FAILURE;
+		}
 	}
-
-	
-
 	/* Initialze ASIC for TX & Rx operation*/
 	if (NICInitializeAsic(pAd , bHardReset) != NDIS_STATUS_SUCCESS)
 	{
 		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))
+		{
 			return NDIS_STATUS_FAILURE;
-
+		}
 		if (pAd->chipOps.loadFirmware)
 		{
 			if (j++ == 0)
@@ -1321,8 +1316,6 @@ retry:
 		}
 		return NDIS_STATUS_FAILURE;
 	}
-
-
 
 #ifdef MT7601
 #ifdef ED_MONITOR
@@ -1343,7 +1336,7 @@ retry:
 		Initialize ASIC
 
 	Arguments:
-		Adapter						Pointer to our adapter
+		Adapter	 Pointer to our adapter
 
 	Return Value:
 		None
@@ -1354,25 +1347,20 @@ retry:
 		
 	========================================================================
 */
-NDIS_STATUS	NICInitializeAsic(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  BOOLEAN		bHardReset)
+NDIS_STATUS	NICInitializeAsic(IN PRTMP_ADAPTER pAd, IN  BOOLEAN bHardReset)
 {
-	ULONG			Index = 0;
-	UINT32			MACValue = 0;
+	ULONG Index = 0;
+	UINT32 MACValue = 0;
 #ifdef RTMP_MAC_USB
-	UINT32			Counter = 0;
+	UINT32 Counter = 0;
 	USB_DMA_CFG_STRUC UsbCfg;
 #endif /* RTMP_MAC_USB */
-	USHORT			KeyIdx;
+//	USHORT KeyIdx;
 
 #ifdef RLT_MAC
 	RTMP_CHIP_CAP *pChipCap = &pAd->chipCap;
 #endif
-
 	DBGPRINT(RT_DEBUG_TRACE, ("--> NICInitializeAsic\n"));
-
-
 
 #ifdef RTMP_MAC_USB
 	/* Make sure MAC gets ready after NICLoadFirmware().*/
@@ -1382,22 +1370,20 @@ NDIS_STATUS	NICInitializeAsic(
 	/*To avoid hang-on issue when interface up in kernel 2.4, */
 	/*we use a local variable "MacCsr0" instead of using "pAd->MACVersion" directly.*/
 	if (WaitForAsicReady(pAd) != TRUE)
-			return NDIS_STATUS_FAILURE;
-
+	{
+		return NDIS_STATUS_FAILURE;
+	}
 	// TODO: shiang, how about the value setting of pAd->MACVersion?? Original it assigned here
 
-	DBGPRINT(RT_DEBUG_TRACE, ("%s():MACVersion[Ver:Rev=0x%08x]\n",
-			__FUNCTION__, pAd->MACVersion));
+	DBGPRINT(RT_DEBUG_TRACE, ("%s():MACVersion[Ver:Rev=0x%08x]\n", __FUNCTION__, pAd->MACVersion));
 
-
-	if ( !IS_MT7601(pAd) )
+	if (!IS_MT7601(pAd))
 	{
-	/* turn on bit13 (set to zero) after rt2860D. This is to solve high-current issue.*/
-	RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &MACValue);
-	MACValue &= (~0x2000);
-	RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, MACValue);
+		/* turn on bit13 (set to zero) after rt2860D. This is to solve high-current issue.*/
+		RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &MACValue);
+		MACValue &= (~0x2000);
+		RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, MACValue);
 	}
-	
 	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0x3);
 	RTMP_IO_WRITE32(pAd, USB_DMA_CFG, 0x0);
 
@@ -1413,10 +1399,11 @@ NDIS_STATUS	NICInitializeAsic(
 	
 	/* USB1.1 do not use bulk in aggregation */
 	if (pAd->BulkInMaxPacketSize == 512)
+	{
 		UsbCfg.field.RxBulkAggEn = 1;
-
+	}
 	/* for last packet, PBF might use more than limited, so minus 2 to prevent from error */
-		UsbCfg.field.RxBulkAggLmt = (MAX_RXBULK_SIZE /1024)-3;
+	UsbCfg.field.RxBulkAggLmt = (MAX_RXBULK_SIZE /1024)-3;
 	UsbCfg.field.RxBulkAggTOut = 0x80; 
 
 	UsbCfg.field.RxBulkEn = 1;
@@ -1425,18 +1412,15 @@ NDIS_STATUS	NICInitializeAsic(
 	RTMP_IO_WRITE32(pAd, USB_DMA_CFG, UsbCfg.word);
 
 #ifdef MT7601
-	if ( IS_MT7601(pAd) )
+	if (IS_MT7601(pAd))
 	{
 		UsbCfg.field.UDMA_RX_WL_DROP = 1;
 		RTMP_IO_WRITE32(pAd, USB_DMA_CFG, UsbCfg.word);
 	
 		UsbCfg.field.UDMA_RX_WL_DROP = 0;
 		RTMP_IO_WRITE32(pAd, USB_DMA_CFG, UsbCfg.word);
-
 	}
-	
 #endif /* MT7601 */
-
 #ifdef RLT_MAC
 	/* Select Q2 to receive command response */
 	RTMP_SET_FLAG(pAd, fRTMP_ADAPTER_MCU_SEND_IN_BAND_CMD);
@@ -1448,12 +1432,10 @@ NDIS_STATUS	NICInitializeAsic(
 #endif /* RTMP_MAC_USB */
 
 #if defined(RTMP_MAC_USB) && defined(RLT_MAC)
-
 	AndesRandomWritePair(pAd, MACRegTable, NUM_MAC_REG_PARMS);
 #else
-
 	/* Initialize MAC register to default value*/
-	for(Index=0; Index<NUM_MAC_REG_PARMS; Index++)
+	for (Index = 0; Index < NUM_MAC_REG_PARMS; Index++)
 	{
 		RTMP_IO_WRITE32(pAd, (USHORT)MACRegTable[Index].Register, MACRegTable[Index].Value);
 	}
@@ -1463,9 +1445,9 @@ NDIS_STATUS	NICInitializeAsic(
 
 	/* re-set specific MAC registers for individual chip */
 	if (pAd->chipOps.AsicMacInit != NULL)
+	{
 		pAd->chipOps.AsicMacInit(pAd);
-
-	
+	}
 	/* Before program BBP, we need to wait BBP/RF get wake up.*/
 	Index = 0;
 	do
@@ -1473,18 +1455,19 @@ NDIS_STATUS	NICInitializeAsic(
 		RTMP_IO_READ32(pAd, MAC_STATUS_CFG, &MACValue);
 
 		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))			
+		{
 			return NDIS_STATUS_FAILURE;
-
+		}
 		if ((MACValue & 0x03) == 0)	/* if BB.RF is stable*/
+		{
 			break;
-		
+		}		
 		DBGPRINT(RT_DEBUG_TRACE, ("Check MAC_STATUS_CFG  = Busy = %x\n", MACValue));
 		RTMPusecDelay(1000);
 	} while (Index++ < 100);
 
-
 #ifdef RTMP_MAC_USB
-	if ( !IS_MT7601(pAd) )
+	if (!IS_MT7601(pAd))
 	{
 	/* The commands to firmware should be after these commands, these commands will init firmware*/
 	/* PCI and USB are not the same because PCI driver needs to wait for PCI bus ready*/

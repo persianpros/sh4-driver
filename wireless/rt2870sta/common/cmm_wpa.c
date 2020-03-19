@@ -28,25 +28,25 @@
 #include "rt_config.h"
 
 /* WPA OUI*/
-UCHAR		OUI_WPA[3]				= {0x00, 0x50, 0xF2};
-UCHAR		OUI_WPA_NONE_AKM[4]		= {0x00, 0x50, 0xF2, 0x00};
-UCHAR       OUI_WPA_VERSION[4]      = {0x00, 0x50, 0xF2, 0x01};
-UCHAR       OUI_WPA_WEP40[4]      = {0x00, 0x50, 0xF2, 0x01};
-UCHAR       OUI_WPA_TKIP[4]     = {0x00, 0x50, 0xF2, 0x02};
-UCHAR       OUI_WPA_CCMP[4]     = {0x00, 0x50, 0xF2, 0x04};
-UCHAR       OUI_WPA_WEP104[4]      = {0x00, 0x50, 0xF2, 0x05};
-UCHAR       OUI_WPA_8021X_AKM[4]	= {0x00, 0x50, 0xF2, 0x01};
-UCHAR       OUI_WPA_PSK_AKM[4]      = {0x00, 0x50, 0xF2, 0x02};
+UCHAR OUI_WPA[3]             = {0x00, 0x50, 0xF2};
+UCHAR OUI_WPA_NONE_AKM[4]    = {0x00, 0x50, 0xF2, 0x00};
+UCHAR OUI_WPA_VERSION[4]     = {0x00, 0x50, 0xF2, 0x01};
+UCHAR OUI_WPA_WEP40[4]       = {0x00, 0x50, 0xF2, 0x01};
+UCHAR OUI_WPA_TKIP[4]        = {0x00, 0x50, 0xF2, 0x02};
+UCHAR OUI_WPA_CCMP[4]        = {0x00, 0x50, 0xF2, 0x04};
+UCHAR OUI_WPA_WEP104[4]      = {0x00, 0x50, 0xF2, 0x05};
+UCHAR OUI_WPA_8021X_AKM[4]   = {0x00, 0x50, 0xF2, 0x01};
+UCHAR OUI_WPA_PSK_AKM[4]     = {0x00, 0x50, 0xF2, 0x02};
 /* WPA2 OUI*/
-UCHAR		OUI_WPA2[3]				= {0x00, 0x0F, 0xAC};
-UCHAR       OUI_WPA2_WEP40[4]   = {0x00, 0x0F, 0xAC, 0x01};
-UCHAR       OUI_WPA2_TKIP[4]        = {0x00, 0x0F, 0xAC, 0x02};
-UCHAR       OUI_WPA2_CCMP[4]        = {0x00, 0x0F, 0xAC, 0x04};
-UCHAR       OUI_WPA2_8021X_AKM[4]   = {0x00, 0x0F, 0xAC, 0x01};
-UCHAR       OUI_WPA2_PSK_AKM[4]   	= {0x00, 0x0F, 0xAC, 0x02};
-UCHAR       OUI_WPA2_WEP104[4]   = {0x00, 0x0F, 0xAC, 0x05};
-UCHAR       OUI_WPA2_1X_SHA256[4]   = {0x00, 0x0F, 0xAC, 0x05};
-UCHAR       OUI_WPA2_PSK_SHA256[4]   = {0x00, 0x0F, 0xAC, 0x06};
+UCHAR OUI_WPA2[3]            = {0x00, 0x0F, 0xAC};
+UCHAR OUI_WPA2_WEP40[4]      = {0x00, 0x0F, 0xAC, 0x01};
+UCHAR OUI_WPA2_TKIP[4]       = {0x00, 0x0F, 0xAC, 0x02};
+UCHAR OUI_WPA2_CCMP[4]       = {0x00, 0x0F, 0xAC, 0x04};
+UCHAR OUI_WPA2_8021X_AKM[4]  = {0x00, 0x0F, 0xAC, 0x01};
+UCHAR OUI_WPA2_PSK_AKM[4]    = {0x00, 0x0F, 0xAC, 0x02};
+UCHAR OUI_WPA2_WEP104[4]     = {0x00, 0x0F, 0xAC, 0x05};
+UCHAR OUI_WPA2_1X_SHA256[4]  = {0x00, 0x0F, 0xAC, 0x05};
+UCHAR OUI_WPA2_PSK_SHA256[4] = {0x00, 0x0F, 0xAC, 0x06};
 
 
 
@@ -1015,37 +1015,33 @@ VOID PeerPairMsg2Action(
 		
 	========================================================================
 */
-VOID PeerPairMsg3Action(
-    IN PRTMP_ADAPTER    pAd, 
-    IN MAC_TABLE_ENTRY  *pEntry,
-    IN MLME_QUEUE_ELEM  *Elem) 
+VOID PeerPairMsg3Action(IN PRTMP_ADAPTER pAd, IN MAC_TABLE_ENTRY *pEntry, IN MLME_QUEUE_ELEM  *Elem) 
 {
-	PHEADER_802_11		pHeader;
-	UCHAR               Header802_3[14];
-	UCHAR				*mpool;
-	PEAPOL_PACKET		pEapolFrame;
-	PEAPOL_PACKET		pMsg3;
-	UINT            	MsgLen;				
-	PUINT8				pCurrentAddr = NULL;
-	UCHAR				group_cipher = Ndis802_11WEPDisabled;
-	BOOLEAN				Cancelled;
+	PHEADER_802_11 pHeader;
+	UCHAR Header802_3[14];
+	UCHAR *mpool;
+	PEAPOL_PACKET pEapolFrame;
+	PEAPOL_PACKET pMsg3;
+	UINT MsgLen;				
+	PUINT8 pCurrentAddr = NULL;
+	UCHAR group_cipher = Ndis802_11WEPDisabled;
+//	BOOLEAN Cancelled;
 	   
 	DBGPRINT(RT_DEBUG_TRACE, ("===> PeerPairMsg3Action \n"));
 	
 	if ((!pEntry) || (!IS_ENTRY_CLIENT(pEntry) && !IS_ENTRY_APCLI(pEntry)))
+	{
 		return;
-
-    if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG))
+	}
+	if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG))
+	{
 		return;
-
+	}
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{				
-		{
 		pCurrentAddr = pAd->CurrentAddress;
 		group_cipher = pAd->StaCfg.GroupCipher;
-
-	}	
 	}
 #endif /* CONFIG_STA_SUPPORT */
 
@@ -1059,8 +1055,9 @@ VOID PeerPairMsg3Action(
 
 	/* Sanity Check peer Pairwise message 3 - Replay Counter, MIC, RSNIE*/
 	if (PeerWpaMessageSanity(pAd, pMsg3, MsgLen, EAPOL_PAIR_MSG_3, pEntry) == FALSE)
+	{
 		return;
-	
+	}	
 	/* Save Replay counter, it will use construct message 4*/
 	NdisMoveMemory(pEntry->R_Counter, pMsg3->KeyDesc.ReplayCounter, LEN_KEY_DESC_REPLAY);
 
@@ -1816,17 +1813,17 @@ int RtmpPasswordHash(PSTRING password, PUCHAR ssid, INT ssidlength, PUCHAR outpu
 	Return Value:
 
 	Note:
-		Output ¡ö KDF-Length (K, label, Context) where
+		Output \A1\F6 KDF-Length (K, label, Context) where
 		Input:    K, a 256-bit key derivation key
 				  label, a string identifying the purpose of the keys derived using this KDF
 				  Context, a bit string that provides context to identify the derived key
 				  Length, the length of the derived key in bits
 		Output: a Length-bit derived key
 
-		result ¡ö ""
-		iterations ¡ö (Length+255)/256 
+		result \A1\F6 ""
+		iterations \A1\F6 (Length+255)/256 
 		do i = 1 to iterations
-			result ¡ö result || HMAC-SHA256(K, i || label || Context || Length)
+			result \A1\F6 result || HMAC-SHA256(K, i || label || Context || Length)
 		od
 		return first Length bits of result, and securely delete all unused bits
 

@@ -10,7 +10,7 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *
  *  GNU General Public License for more details.
  *
@@ -46,14 +46,14 @@ struct zl10353_config
 	u8 clock_ctl_1;  /* default: 0x46 */
 	u8 pll_0;        /* default: 0x15 */
 
-    struct stpio_pin*        tuner_enable_pin;
-    u32                      tuner_active_lh;
+	struct stpio_pin *tuner_enable_pin;
+	u32              tuner_active_lh;
 
-    u8                       tuner_address;
+	u8               tuner_address;
 };
 
-extern struct dvb_frontend* zl10353_attach(const struct zl10353_config *config,
-					   struct i2c_adapter *i2c);
+extern struct dvb_frontend* zl10353_attach(const struct zl10353_config *config, struct i2c_adapter *i2c);
 int zl10353_set_voltage(struct dvb_frontend* fe, fe_sec_voltage_t voltage);
 
 #endif /* ZL10353_H */
+// vim:ts=4

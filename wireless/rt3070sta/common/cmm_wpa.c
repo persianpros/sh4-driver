@@ -1015,37 +1015,35 @@ VOID PeerPairMsg2Action(
 		
 	========================================================================
 */
-VOID PeerPairMsg3Action(
-    IN PRTMP_ADAPTER    pAd, 
-    IN MAC_TABLE_ENTRY  *pEntry,
-    IN MLME_QUEUE_ELEM  *Elem) 
+VOID PeerPairMsg3Action(IN PRTMP_ADAPTER pAd, IN MAC_TABLE_ENTRY *pEntry, IN MLME_QUEUE_ELEM *Elem)
 {
-	PHEADER_802_11		pHeader;
-	UCHAR               Header802_3[14];
-	UCHAR				*mpool;
-	PEAPOL_PACKET		pEapolFrame;
-	PEAPOL_PACKET		pMsg3;
-	UINT            	MsgLen;				
-	PUINT8				pCurrentAddr = NULL;
-	UCHAR				group_cipher = Ndis802_11WEPDisabled;
-	BOOLEAN				Cancelled;
+	PHEADER_802_11 pHeader;
+	UCHAR Header802_3[14];
+	UCHAR *mpool;
+	PEAPOL_PACKET pEapolFrame;
+	PEAPOL_PACKET pMsg3;
+	UINT MsgLen;				
+	PUINT8 pCurrentAddr = NULL;
+	UCHAR group_cipher = Ndis802_11WEPDisabled;
+//	BOOLEAN Cancelled;
 	   
 	DBGPRINT(RT_DEBUG_TRACE, ("===> PeerPairMsg3Action \n"));
 	
 	if ((!pEntry) || (!IS_ENTRY_CLIENT(pEntry) && !IS_ENTRY_APCLI(pEntry)))
+	{
 		return;
-
-    if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG))
+	}
+	if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG))
+	{
 		return;
-
+	}
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{				
 		{
 		pCurrentAddr = pAd->CurrentAddress;
 		group_cipher = pAd->StaCfg.GroupCipher;
-
-	}	
+		}	
 	}
 #endif /* CONFIG_STA_SUPPORT */
 
@@ -1816,17 +1814,17 @@ int RtmpPasswordHash(PSTRING password, PUCHAR ssid, INT ssidlength, PUCHAR outpu
 	Return Value:
 
 	Note:
-		Output ¡ö KDF-Length (K, label, Context) where
+		Output \A1\F6 KDF-Length (K, label, Context) where
 		Input:    K, a 256-bit key derivation key
 				  label, a string identifying the purpose of the keys derived using this KDF
 				  Context, a bit string that provides context to identify the derived key
 				  Length, the length of the derived key in bits
 		Output: a Length-bit derived key
 
-		result ¡ö ""
-		iterations ¡ö (Length+255)/256 
+		result \A1\F6 ""
+		iterations \A1\F6 (Length+255)/256 
 		do i = 1 to iterations
-			result ¡ö result || HMAC-SHA256(K, i || label || Context || Length)
+			result \A1\F6 result || HMAC-SHA256(K, i || label || Context || Length)
 		od
 		return first Length bits of result, and securely delete all unused bits
 

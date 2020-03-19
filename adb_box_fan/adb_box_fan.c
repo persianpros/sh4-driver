@@ -1,5 +1,5 @@
 /*
- * ufs922_fan.c
+ * adb_box_fan.c
  * 
  * (c) 2009 Dagobert@teamducktales
  *
@@ -17,16 +17,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
- */
-
-/* 
  * Description:
  *
- * ufs922 fan controller controlling driver
+ * adb_box fan controller driver
+ *
  */
 
-#include <linux/proc_fs.h>  	/* proc fs */ 
-#include <asm/uaccess.h>    	/* copy_from_user */
+#include <linux/proc_fs.h>  /* proc fs */ 
+#include <asm/uaccess.h>  /* copy_from_user */
 
 #include <linux/string.h>
 #include <linux/module.h>
@@ -45,6 +43,15 @@
 #include <linux/stpio.h>
 #endif
 
+short paramDebug = 0;
+#define TAGDEBUG "[adb_box_fan] "
+
+#ifndef dprintk
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) printk(TAGDEBUG x); \
+} while (0)
+#endif
 
 int remove_e2_procs(char *path, read_proc_t *read_func, write_proc_t *write_func);
 int install_e2_procs(char *path, read_proc_t *read_func, write_proc_t *write_func, void *data);
@@ -52,15 +59,13 @@ int install_e2_procs(char *path, read_proc_t *read_func, write_proc_t *write_fun
 unsigned long fan_registers;
 struct stpio_pin* fan_pin;
 
-
-int proc_fan_write(struct file *file, const char __user *buf,
-                           unsigned long count, void *data)
+int proc_fan_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
-	char 		*page;
-	char		*myString;
-	ssize_t 	ret = -ENOMEM;
+	char    *page;
+	char    *myString;
+	ssize_t ret = -ENOMEM;
 	
-	printk("%s %d - ", __FUNCTION__, (int) count);
+	dprintk(10, "%s > count = %d - ", __func__, (int)count);
 
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (page) 
@@ -69,104 +74,89 @@ int proc_fan_write(struct file *file, const char __user *buf,
 		
 		ret = -EFAULT;
 		if (copy_from_user(page, buf, count))
+		{
 			goto out;
-
-		myString = (char *) kmalloc(count + 1, GFP_KERNEL);
+		}
+		myString = (char *)kmalloc(count + 1, GFP_KERNEL);
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 
 		sscanf(myString, "%d", &value);
 
-		printk("%d\n", value);
+		dprintk(1, "Value: %d\n", value);
 
 		//maruapp: 0xff = 1500, 0xaa = 1000, 0x73 = 500 U/min
 		//we are a little bit more nervy ;)
-#if !defined(ADB_BOX)
-		if (value >= 50 && value <= 255)
-#endif
-#if defined(ADB_BOX)
 		if (value <= 255)
-#endif
 		{
-		    ctrl_outl(value, fan_registers + 0x4);
+			ctrl_outl(value, fan_registers + 0x04);
 		}
-
 		kfree(myString);
 	}
-	
 	ret = count;
+
 out:
-	
 	free_page((unsigned long)page);
 	return ret;
 }
 
-int proc_fan_read(char *page, char **start, off_t off, int count,
-			  int *eof, void *data_unused)
+int proc_fan_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
 {
-	int len = 0;
-        unsigned int value;
+	int      len = 0;
+	unsigned int value;
 	
-	printk("%s\n", __FUNCTION__);
+	dprintk(10, "%s >\n", __func__);
 
 	value = ctrl_inl(fan_registers + 0x4);
 	len = sprintf(page, "%d\n", value);
-	
-        return len;
+	return len;
 }
-
 
 struct e2_procs
 {
-  char *name;
-  read_proc_t *read_proc;
-  write_proc_t *write_proc;
+	char         *name;
+	read_proc_t  *read_proc;
+	write_proc_t *write_proc;
 } e2_procs[] =
 {
-  {"stb/fan/fan_ctrl", proc_fan_read, proc_fan_write}
+	{"stb/fan/fan_ctrl", proc_fan_read, proc_fan_write}
 };
 
 static int __init init_fan_module(void)
 {
-  install_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc, NULL);
+	install_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc, NULL);
 
-  fan_registers = (unsigned long) ioremap(0x18010000, 0x100);
-  printk("fan_registers = 0x%.8lx\n\t", fan_registers);
+	fan_registers = (unsigned long)ioremap(0x18010000, 0x100);
+	dprintk(10, "fan_registers = 0x%.8lx\n\t", fan_registers);
 
+	fan_pin = stpio_request_pin(4, 7, "fan ctrl", STPIO_ALT_OUT);
 
-  fan_pin = stpio_request_pin (4, 7, "fan ctrl", STPIO_ALT_OUT);
-  
-#if !defined(ADB_BOX)
-  stpio_set_pin(fan_pin, 1);
-#endif
-  printk("fan pin %p\n", fan_pin);
+	dprintk(1, "fan pin %p\n", fan_pin);
 
-
-  //not sure if first one is necessary
-  ctrl_outl(0x200, fan_registers + 0x50);
-  
-  //set a default speed, because default is zero
-  ctrl_outl(0xaa, fan_registers + 0x4);
-
-  return 0;
+	//not sure if first one is necessary
+	ctrl_outl(0x200, fan_registers + 0x50);
+	
+	//set a default speed, because default is zero
+	ctrl_outl(0xaa, fan_registers + 0x04);
+	return 0;
 }
 
 static void __exit cleanup_fan_module(void)
 {
-    remove_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc);
-
-
-
-    if (fan_pin != NULL)
-    	stpio_free_pin (fan_pin);
-
-   	
+	remove_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc);
+	if (fan_pin != NULL)
+	{
+		stpio_free_pin (fan_pin);
+	}
 }
 
 module_init(init_fan_module);
 module_exit(cleanup_fan_module);
 
-MODULE_DESCRIPTION("Adb_Box fan controlling");
+module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
+
+MODULE_DESCRIPTION("Adb_Box fan control");
 MODULE_AUTHOR("Team Ducktales");
 MODULE_LICENSE("GPL");
-
+// vim:ts=4

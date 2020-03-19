@@ -1020,38 +1020,38 @@ VOID PeerPairMsg3Action(
     IN MAC_TABLE_ENTRY  *pEntry,
     IN MLME_QUEUE_ELEM  *Elem) 
 {
-	PHEADER_802_11		pHeader;
-	UCHAR               Header802_3[14];
-	UCHAR				*mpool;
-	PEAPOL_PACKET		pEapolFrame;
-	PEAPOL_PACKET		pMsg3;
-	UINT            	MsgLen;				
-	PUINT8				pCurrentAddr = NULL;
-	UCHAR				group_cipher = Ndis802_11WEPDisabled;
-	BOOLEAN				Cancelled;
+	PHEADER_802_11 pHeader;
+	UCHAR Header802_3[14];
+	UCHAR *mpool;
+	PEAPOL_PACKET pEapolFrame;
+	PEAPOL_PACKET pMsg3;
+	UINT MsgLen;				
+	PUINT8 pCurrentAddr = NULL;
+	UCHAR group_cipher = Ndis802_11WEPDisabled;
+//	BOOLEAN Cancelled;
 	   
 	DBGPRINT(RT_DEBUG_TRACE, ("===> PeerPairMsg3Action \n"));
 	
 	if ((!pEntry) || (!IS_ENTRY_CLIENT(pEntry) && !IS_ENTRY_APCLI(pEntry)))
+	{
 		return;
-
-    if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG))
+	}
+	if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG))
+	{
 		return;
-
+	}
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{				
-		{
 		pCurrentAddr = pAd->CurrentAddress;
 		group_cipher = pAd->StaCfg.GroupCipher;
-
-	}	
 	}
 #endif /* CONFIG_STA_SUPPORT */
 
 	if (pCurrentAddr == NULL)
+	{
 		return;
-	
+	}
 	/* Record 802.11 header & the received EAPOL packet Msg3*/
 	pHeader	= (PHEADER_802_11) Elem->Msg;
 	pMsg3 = (PEAPOL_PACKET) &Elem->Msg[LENGTH_802_11 + LENGTH_802_1_H];
@@ -1059,8 +1059,9 @@ VOID PeerPairMsg3Action(
 
 	/* Sanity Check peer Pairwise message 3 - Replay Counter, MIC, RSNIE*/
 	if (PeerWpaMessageSanity(pAd, pMsg3, MsgLen, EAPOL_PAIR_MSG_3, pEntry) == FALSE)
+	{
 		return;
-	
+	}
 	/* Save Replay counter, it will use construct message 4*/
 	NdisMoveMemory(pEntry->R_Counter, pMsg3->KeyDesc.ReplayCounter, LEN_KEY_DESC_REPLAY);
 
@@ -1069,15 +1070,13 @@ VOID PeerPairMsg3Action(
 	{
 		return;
 	}
-
 	/* Allocate memory for output*/
 	os_alloc_mem(NULL, (PUCHAR *)&mpool, TX_EAPOL_BUFFER);
 	if (mpool == NULL)
-    {
-        DBGPRINT(RT_DEBUG_ERROR, ("!!!%s : no memory!!!\n", __FUNCTION__));
-        return;
-    }
-
+	{
+		DBGPRINT(RT_DEBUG_ERROR, ("!!!%s : no memory!!!\n", __FUNCTION__));
+	        return;
+	}
 	pEapolFrame = (PEAPOL_PACKET)mpool;
 	NdisZeroMemory(pEapolFrame, TX_EAPOL_BUFFER);
 
@@ -1099,19 +1098,14 @@ VOID PeerPairMsg3Action(
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
-		{
 		NdisMoveMemory(pAd->StaCfg.PTK, pEntry->PTK, LEN_PTK);
-		WPAInstallPairwiseKey(pAd, 
-							  BSS0, 
-							  pEntry, 
-							  FALSE);
-			}
+		WPAInstallPairwiseKey(pAd, BSS0, pEntry, FALSE);
 	}
 #endif /* CONFIG_STA_SUPPORT */
 
 	/* open 802.1x port control and privacy filter*/
-	if (pEntry->AuthMode == Ndis802_11AuthModeWPA2PSK || 
-		pEntry->AuthMode == Ndis802_11AuthModeWPA2)
+	if (pEntry->AuthMode == Ndis802_11AuthModeWPA2PSK
+	||  pEntry->AuthMode == Ndis802_11AuthModeWPA2)
 	{
 		pEntry->PortSecured = WPA_802_1X_PORT_SECURED;
 		pEntry->PrivacyFilter = Ndis802_11PrivFilterAcceptAll;	
@@ -1127,20 +1121,11 @@ VOID PeerPairMsg3Action(
 									GetEncryptType(pEntry->WepStatus),
 									GetEncryptType(group_cipher)));
 	}
-	else
-	{	
-	}
-
 	/* Init 802.3 header and send out*/
 	MAKE_802_3_HEADER(Header802_3, pEntry->Addr, pCurrentAddr, EAPOL);	
-	RTMPToWirelessSta(pAd, pEntry, 
-					  Header802_3, sizeof(Header802_3), 
-					  (PUCHAR)pEapolFrame, 
-					  CONV_ARRARY_TO_UINT16(pEapolFrame->Body_Len) + 4, TRUE);
+	RTMPToWirelessSta(pAd, pEntry, Header802_3, sizeof(Header802_3), (PUCHAR)pEapolFrame, CONV_ARRARY_TO_UINT16(pEapolFrame->Body_Len) + 4, TRUE);
 
 	os_free_mem(NULL, mpool);
-
-
 	DBGPRINT(RT_DEBUG_TRACE, ("<=== PeerPairMsg3Action: send Msg4 of 4-way \n"));
 }
 
@@ -1816,17 +1801,17 @@ int RtmpPasswordHash(PSTRING password, PUCHAR ssid, INT ssidlength, PUCHAR outpu
 	Return Value:
 
 	Note:
-		Output ¡ö KDF-Length (K, label, Context) where
+		Output \A1\F6 KDF-Length (K, label, Context) where
 		Input:    K, a 256-bit key derivation key
 				  label, a string identifying the purpose of the keys derived using this KDF
 				  Context, a bit string that provides context to identify the derived key
 				  Length, the length of the derived key in bits
 		Output: a Length-bit derived key
 
-		result ¡ö ""
-		iterations ¡ö (Length+255)/256 
+		result \A1\F6 ""
+		iterations \A1\F6 (Length+255)/256 
 		do i = 1 to iterations
-			result ¡ö result || HMAC-SHA256(K, i || label || Context || Length)
+			result \A1\F6 result || HMAC-SHA256(K, i || label || Context || Length)
 		od
 		return first Length bits of result, and securely delete all unused bits
 

@@ -1813,36 +1813,30 @@ retry:
 		
 	========================================================================
 */
-NDIS_STATUS	NICInitializeAsic(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  BOOLEAN		bHardReset)
+NDIS_STATUS NICInitializeAsic(IN PRTMP_ADAPTER pAd, IN BOOLEAN bHardReset)
 {
-	ULONG			Index = 0;
-	UINT32			MacCsr12 = 0;
+	ULONG	Index = 0;
+	UINT32	MacCsr12 = 0;
 #ifdef RTMP_MAC_USB
-	UINT32			Counter = 0;
+	UINT32	Counter = 0;
 #endif /* RTMP_MAC_USB */
-	USHORT			KeyIdx;
-	INT				i,apidx;
+	USHORT	KeyIdx;
+//	INT	i,apidx;
 	DBGPRINT(RT_DEBUG_TRACE, ("--> NICInitializeAsic\n"));
 
-
-
 #ifdef RTMP_MAC_USB
-	
 	/* Make sure MAC gets ready after NICLoadFirmware().*/
-	
 	Index = 0;
 	
 	/*To avoid hang-on issue when interface up in kernel 2.4, */
 	/*we use a local variable "MacCsr0" instead of using "pAd->MACVersion" directly.*/
 	if (WaitForAsicReady(pAd) != TRUE)
-			return NDIS_STATUS_FAILURE;
-
+	{
+		return NDIS_STATUS_FAILURE;
+	}
 	// TODO: shiang, how about the value setting of pAd->MACVersion?? Original it assigned here
 
-	DBGPRINT(RT_DEBUG_TRACE, ("%s():MACVersion[Ver:Rev=0x%08x]\n",
-			__FUNCTION__, pAd->MACVersion));
+	DBGPRINT(RT_DEBUG_TRACE, ("%s():MACVersion[Ver:Rev=0x%08x]\n", __FUNCTION__, pAd->MACVersion));
 	/* turn on bit13 (set to zero) after rt2860D. This is to solve high-current issue.*/
 	RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &MacCsr12);
 	MacCsr12 &= (~0x2000);

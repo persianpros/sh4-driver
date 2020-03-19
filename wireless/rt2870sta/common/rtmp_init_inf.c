@@ -613,10 +613,10 @@ err1:
 	/* shall not set priv to NULL here because the priv didn't been free yet.*/
 	/*net_dev->priv = 0;*/
 #ifdef INF_AMAZON_SE
-err0:
+//err0:
 #endif /* INF_AMAZON_SE */
 #ifdef ST
-err0:
+//err0:
 #endif /* ST */
 
 	DBGPRINT(RT_DEBUG_ERROR, ("!!! rt28xx Initialized fail !!!\n"));
@@ -624,10 +624,9 @@ err0:
 }
 
 
-VOID RTMPDrvOpen(
-	IN VOID			*pAdSrc)
+VOID RTMPDrvOpen(IN VOID *pAdSrc)
 {
-	PRTMP_ADAPTER	pAd = (PRTMP_ADAPTER)pAdSrc;
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
 
 #ifdef CONFIG_STA_SUPPORT
 #endif /* CONFIG_STA_SUPPORT */

@@ -12,7 +12,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *
  * GNU General Public License for more details.
  *
@@ -37,28 +37,28 @@
 #include "zl10353_priv.h"
 #include "zl10353.h"
 
-struct zl10353_state {
+struct zl10353_state
+{
 	struct i2c_adapter *i2c;
 	struct dvb_frontend frontend;
 
 	struct zl10353_config config;
 
 	enum fe_bandwidth bandwidth;
-       u32 ucblocks;
-       u32 frequency;
-
+	u32 ucblocks;
+	u32 frequency;
 };
 
 static int debug;
 #define dprintk(args...) \
 	do { \
-		if (debug) printk(KERN_ERR "zl10353: " args); \
+		if (debug) printk(KERN_ERR "[zl10353] " args); \
 	} while (0)
 
 static int debug_regs;
 
 #ifdef check_two_times
-static int zl10353_write_zero(struct zl10353_state* state, u8 reg)
+static int zl10353_write_zero(struct zl10353_state *state, u8 reg)
 {
     int ret;
     u8 data = 0x00;

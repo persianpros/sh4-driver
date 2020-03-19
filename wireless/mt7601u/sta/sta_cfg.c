@@ -5206,7 +5206,8 @@ VOID RTMPIoctlRF(
 {
 	PSTRING				this_char;
 	PSTRING				value;
-	UCHAR				regRF = 0, rf_bank = 0;
+//	UCHAR				regRF = 0, rf_bank = 0;
+	UCHAR				regRF = 0;
 	PSTRING				mpool, msg;
 	PSTRING				arg;
 	PSTRING				ptr;
@@ -5300,10 +5301,10 @@ VOID RTMPIoctlRF(
 				if ( (sscanf((PSTRING)this_char, "%d", &(bank_Id)) == 1) && (sscanf((PSTRING)value, "%d", &(rfId)) == 1))
 				{
 
-					if ( (rfId <= maxRFIdx) && (bank_Id <= MAC_RF_BANK) )
+					if ((rfId <= maxRFIdx) && (bank_Id <= MAC_RF_BANK))
 					{
 						rlt_rf_write(pAdapter, bank_Id, rfId, rfValue);
-						sprintf(msg+strlen(msg), "BANK%d_R%02d:%02X  ", bank_Id, rfId, rfValue);
+						sprintf(msg+strlen(msg), "BANK%d_R%02d:%02X  ", bank_Id, rfId, (unsigned int)rfValue);
 					}
 					else
 					{

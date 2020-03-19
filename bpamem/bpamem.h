@@ -6,14 +6,14 @@
 
 typedef struct
 {
-	char          *bpa_part;
+	char           *bpa_part;
 	unsigned long  mem_size;
 	unsigned int   device_num;
 } BPAMemAllocMemData;
 
 typedef struct
 {
-	char          *bpa_part;
+	char           *bpa_part;
 	unsigned long  mem_size;
 	unsigned int   device_num;
 	unsigned long  phys_addr;
@@ -27,9 +27,10 @@ typedef struct
 #define BPAMEM_DEBUG
 
 #ifdef  BPAMEM_DEBUG
-#define DEBUG_PRINTK(format, ...) printk("(%s): " format "\n", __func__, ## __VA_ARGS__) 
+#define DEBUG_PRINTK(format, ...) printk("[bpamem] (%s): " format "\n", __func__, ## __VA_ARGS__) 
 #else 
 #define DEBUG_PRINTK(format,...)
 #endif
 
 #endif
+// vim:ts=4

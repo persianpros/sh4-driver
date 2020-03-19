@@ -578,7 +578,7 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 	RTMP_IRQ_UNLOCK(&pAd->MLMEBulkOutLock, IrqFlags);
 
 
-#if RT_CFG80211_SUPPORT
+#ifdef RT_CFG80211_SUPPORT
 {
 	HEADER_802_11  *pHeader;	
 	pHeader = (HEADER_802_11 *)(GET_OS_PKT_DATAPTR(pPacket)+ TXINFO_SIZE + pAd->chipCap.TXWISize);

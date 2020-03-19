@@ -2,7 +2,8 @@
  * fortis_4g_fp_main.c
  *
  * Frontpanel driver for Fortis 4th generation receivers
- * FOREVER_NANOSMART, FOREVER_9898HD, DP7001 , FOREVER_2424HD, GPV8000, EP8000 & EPP8000.
+ * FOREVER_3434HD, FOREVER_NANOSMART, FOREVER_9898HD, DP7001, FOREVER_2424HD,
+ * EP8000, EPP8000 & GPV8000.
  *
  * Based on code written by:
  * (c) 2009 Dagobert@teamducktales
@@ -59,8 +60,11 @@
  * 20150205 Audioniek       FOREVER_2424HD, GPV8000 and EP8000 models added.
  * 20191208 Audioniek       FOREVER_3434HD model added.
  * 20200122 Audioniek       Simplify brightness control.
+ * 20200126 Audioniek       Fix power on error message on VFD models.
+ * 20200215 Audioniek       Fix illegal icon number on VFD models.
  *
  ****************************************************************************************/
+
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/termbits.h>
@@ -93,10 +97,17 @@
 
 #include "fortis_4g_fp.h"
 #include "fortis_4g_fp_utf.h"
-#if defined(FOREVER_NANOSMART) || defined(DP7001) || defined(FOREVER_2424HD)
+#if defined(FOREVER_NANOSMART) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD)
 #include <linux/i2c.h>
 #include "fortis_4g_fp_et6226.h"
-#elif defined(FOREVER_9898HD) || defined(DP7001) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#elif defined(FOREVER_3434HD) \
+ ||   defined(FOREVER_9898HD) \
+ ||   defined(DP7001) \
+ ||   defined(GPV8000) \
+ ||   defined(EP8000) \
+ ||   defined(EPP8000)
 #include "fortis_4g_fp_et16315.h"
 #endif
 
@@ -567,10 +578,17 @@ int fortis_4gInit_func(void)
 
 	dprintk(100, "%s >\n", __func__);
 
-#if defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
 	// logo on, power LED blue
 	// done already by I/O init
-#elif defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000)
+#elif defined(FOREVER_9898HD) \
+ ||   defined(FOREVER_2424HD)
+	// all LEDs off
+	// done already by I/O init
+#elif defined(DP7001) \
+ ||   defined(GPV8000) \
+ ||   defined(EP8000) \
+ ||   defined(EPP8000)
 	// logo on, other LEDs off
 	// done already by I/O init 
 #elif defined(FOREVER_NANOSMART)
@@ -581,15 +599,15 @@ int fortis_4gInit_func(void)
 	/* Initialize the display thread */
 	sema_init(&display_thread_sem, 1);
 #if defined(FOREVER_NANOSMART)
-	printk("FOREVER_NANOSMART LED");
+	printk("Forever NanoSmart LED");
 #elif defined(FOREVER_9898HD)
-	printk("FOREVER_9898HD VFD");
+	printk("Forever 9898HD VFD");
 #elif defined(DP7001)
 	printk("Fortis DP7001 LED");
-#elif defined(FOREVER_3434HD)
-	printk("FOREVER_3434HD VFD");
 #elif defined(FOREVER_2424HD)
-	printk("FOREVER_2424HD LED");
+	printk("Forever 2424HD LED");
+#elif defined(FOREVER_3434HD)
+	printk("Forever 3434HD VFD");
 #elif defined(GPV8000)
 	printk("Fortis GPV8000 VFD");
 #elif defined(EP8000)
@@ -601,12 +619,26 @@ int fortis_4gInit_func(void)
 #endif
 	printk(" front panel module initializing\n");
 
-#if defined(FOREVER_3434HD) || defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000)
-	res |= fortis_4gSetIcon(ICON_MAX, 0); // all icons off
+#if defined(FOREVER_3434HD) \
+ ||   defined(FOREVER_9898HD) \
+ ||   defined(GPV8000) \
+ ||   defined(EP8000) \
+ ||   defined(EPP8000)
+	for (vLoop = 1; vLoop < ICON_MAX; vLoop++)
+	{
+		res |= fortis_4gSetIcon(vLoop, 0);  // all icons off
+	}
 #endif
 	res |= fortis_4gSetBrightness(MAX_BRIGHT);
 /* The following models can control display brightness */
-#if defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	for (vLoop = MAX_BRIGHT - 1; vLoop > 0; vLoop--)
 	{
 		res |= fortis_4gSetBrightness(vLoop);
@@ -618,10 +650,16 @@ int fortis_4gInit_func(void)
 		msleep(200);
 	}
 #endif
-#if defined(FOREVER_NANOSMART) || defined(DP7001) || defined(FOREVER_2424HD) // LED models
+#if defined(FOREVER_NANOSMART) \
+ || defined(DP7001)\
+ || defined(FOREVER_2424HD)  // LED models
 	res |= fortis_4gWriteString("----", 4);
-#elif defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD) // VFD models
-//	res |= fortis_4gWriteString("SH4", strlen("SH4"));
+#elif defined(FOREVER_3434HD) \
+ ||   defined(FOREVER_9898HD) \
+ ||   defined(GPV8000) \
+ ||   defined(EP8000) \
+ ||   defined(EPP8000)  // VFD models
+//	res |= fortis_4gWriteString("Audioniek", strlen("Audioniek"));
 	res |= fortis_4gWriteString(" ", strlen(" "));
 //	res |= clear_display();
 #endif
@@ -738,7 +776,8 @@ static ssize_t FORTIS4Gdev_write(struct file *filp, const char *buff, size_t len
 		display_data.length--;  // correct scroll when 2nd is a period and 3rd char is a colon
 	}
 #endif
-#if defined(FOREVER_NANOSMART) || defined(DP7001)
+#if defined(FOREVER_NANOSMART) \
+ || defined(DP7001)
 	if (kernel_buf[2] == ':')
 	{
 		display_data.length--;  // correct scroll when 2nd char is a colon
@@ -898,7 +937,11 @@ static int FORTIS4Gdev_ioctl(struct inode *Inode, struct file *File, unsigned in
 	struct vfd_ioctl_data *disp_data = (struct vfd_ioctl_data *)arg;
 	int res = 0;
 	int level;
-#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	int i, icon_nr = 0, on = 0;
 #endif
 
@@ -916,8 +959,8 @@ static int FORTIS4Gdev_ioctl(struct inode *Inode, struct file *File, unsigned in
 			mode = fortis_4g->u.mode.compat;
 			break;
 		}
-		case VFDSETLED: // TODO: check bitwise LED# handling
-		case VFDPWRLED: // deprecated
+		case VFDSETLED:  // TODO: check bitwise LED# handling
+//		case VFDPWRLED:  // deprecated
 		{
 			if (fortis_4g->u.led.level < 0)
 			{
@@ -932,7 +975,14 @@ static int FORTIS4Gdev_ioctl(struct inode *Inode, struct file *File, unsigned in
 		}
 		case VFDBRIGHTNESS:
 		{
-#if defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_2424HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 			level = (mode == 0 ? disp_data->start_address : fortis_4g->u.brightness.level);
 			level = (level > 7 ? 7 : level);
 			level = (level < 0 ? 0 : level);
@@ -949,7 +999,11 @@ static int FORTIS4Gdev_ioctl(struct inode *Inode, struct file *File, unsigned in
 		}
 		case VFDICONDISPLAYONOFF:
 		{
-#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 			icon_nr = mode == 0 ? disp_data->data[0] : fortis_4g->u.icon.icon_nr;
 			on = mode == 0 ? disp_data->data[4] : fortis_4g->u.icon.on;
 			dprintk(10, "%s Set icon %d to %d (mode %d)\n", __func__, icon_nr, on, mode);

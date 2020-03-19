@@ -176,8 +176,6 @@ VOID RTMPusecDelay(ULONG usec)
 /* Unify all delay routine by using udelay */
 VOID RtmpOsUsDelay(ULONG value)
 {
-	ULONG i;
-
 	udelay(value);
 }
 
@@ -2026,30 +2024,29 @@ VOID RtmpDrvAllE2PPrint(
 }
 
 
-VOID RtmpDrvAllRFPrint(
-	IN VOID *pReserved,
-	IN UINT32 *pBuf,
-	IN UINT32 BufLen)
+VOID RtmpDrvAllRFPrint(IN VOID *pReserved, IN UINT32 *pBuf, IN UINT32 BufLen)
 {
 	struct file *file_w;
 	PSTRING fileName = "RFDump.txt";
 	mm_segment_t orig_fs;
-	UINT32 macAddr = 0, macValue = 0;
+//	UINT32 macAddr = 0, macValue = 0;
 	
 	orig_fs = get_fs();
 	set_fs(KERNEL_DS);
 
 	/* open file */
 	file_w = filp_open(fileName, O_WRONLY | O_CREAT, 0);
-	if (IS_ERR(file_w)) {
-		DBGPRINT(RT_DEBUG_TRACE,
-			 ("-->2) %s: Error %ld opening %s\n", __FUNCTION__,
-			  -PTR_ERR(file_w), fileName));
-	} else {
-		if (file_w->f_op && file_w->f_op->write) {
+	if (IS_ERR(file_w))
+	{
+		DBGPRINT(RT_DEBUG_TRACE, ("-->2) %s: Error %ld opening %s\n", __FUNCTION__, -PTR_ERR(file_w), fileName));
+	}
+	else
+	{
+		if (file_w->f_op && file_w->f_op->write)
+		{
 			file_w->f_pos = 0;
 			/* write data to file */
-			file_w->f_op->write(file_w, pBuf, BufLen, &file_w->f_pos);
+			file_w->f_op->write(file_w, (const char *)pBuf, BufLen, &file_w->f_pos);
 		}
 		filp_close(file_w, NULL);
 	}
@@ -2164,16 +2161,10 @@ INT32 RtmpOsFileIsErr(IN VOID *pFile)
 	return IS_FILE_OPEN_ERR(pFile);
 }
 
-int RtmpOSIRQRelease(
-	IN PNET_DEV pNetDev,
-	IN UINT32 infType,
-	IN PPCI_DEV pci_dev,
-	IN BOOLEAN *pHaveMsi)
+int RtmpOSIRQRelease(IN PNET_DEV pNetDev, IN UINT32 infType, IN PPCI_DEV pci_dev, IN BOOLEAN *pHaveMsi)
 {
-	struct net_device *net_dev = (struct net_device *)pNetDev;
-
-
-
+//	struct net_device *net_dev = (struct net_device *)pNetDev;
+//
 	return 0;
 }
 

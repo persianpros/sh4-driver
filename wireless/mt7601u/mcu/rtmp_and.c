@@ -25,7 +25,7 @@
  *************************************************************************/
 
 
-#include	"rt_config.h"
+#include "rt_config.h"
 
 
 #ifdef RT_BIG_ENDIAN
@@ -46,11 +46,7 @@ typedef struct GNU_PACKED _TXINFO_NMAC_CMD_PKT {
 }TXINFO_NMAC_CMD_PKT;
 #endif /* RT_BIG_ENDIAN */
 
-
-
-
 #ifdef RTMP_USB_SUPPORT
-
 USBHST_STATUS USBUploadFWComplete(URBCompleteStatus Status, purbb_t pURB, pregs *pt_regs)
 {
 	VOID	*SentToMCUDone = RTMP_OS_USB_CONTEXT_GET(pURB);
@@ -62,30 +58,21 @@ USBHST_STATUS USBUploadFWComplete(URBCompleteStatus Status, purbb_t pURB, pregs 
 static NDIS_STATUS USBLoadIVB(RTMP_ADAPTER *pAd)
 {
 	NDIS_STATUS Status = NDIS_STATUS_SUCCESS;
-	UINT32 i;
-	USHORT Value;
-	USHORT Index;
-	USHORT Temp;
+//	UINT32 i;
+//	USHORT Value;
+//	USHORT Index;
+//	USHORT Temp;
 	RTMP_CHIP_CAP *pChipCap = &pAd->chipCap;
 
-	Status = RTUSB_VendorRequest(pAd,
-								 USBD_TRANSFER_DIRECTION_OUT,
-								 DEVICE_VENDOR_REQUEST_OUT,
-								 0x01,
-								 0x12,
-								 0x00,
-								 pChipCap->FWImageName + 32,
-								 64);
+	Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x01, 0x12, 0x00, pChipCap->FWImageName + 32, 64);
 
 	if (Status)
 	{
 			DBGPRINT(RT_DEBUG_ERROR, ("Upload IVB Fail\n"));
 			return Status;
 	}
-
 	return Status;
 }
-
 
 NDIS_STATUS USBLoadFirmwareToAndes(RTMP_ADAPTER *pAd)
 {
@@ -101,8 +88,8 @@ NDIS_STATUS USBLoadFirmwareToAndes(RTMP_ADAPTER *pAd)
 	USHORT Value;
 	INT Ret;
 	RTMP_CHIP_CAP *pChipCap = &pAd->chipCap;
-	USB_DMA_CFG_STRUC UsbCfg;
-	struct MCU_CTRL *MCtrl = &pAd->MCUCtrl;
+//	USB_DMA_CFG_STRUC UsbCfg;
+//	struct MCU_CTRL *MCtrl = &pAd->MCUCtrl;
 	//struct completion SentToMCUDone;
 	VOID *SentToMCUDone;
 	UINT32 ILMLen, DLMLen;
@@ -117,7 +104,9 @@ loadfw_protect:
 		Loop++;
 
 		if (((MACValue & 0x01) == 0) && (Loop < 10000))
+		{
 			goto loadfw_protect;
+		}
 	}
 
 	/* Enable USB_DMA_CFG */
@@ -127,8 +116,9 @@ loadfw_protect:
 	RTUSBReadMACRegister(pAd, COM_REG0, &MACValue);
 
 	if (MACValue == 0x01)
+	{
 		goto error0;
-
+	}
 	RTMP_IO_WRITE32(pAd, 0x94c, 0x0);
 	RTMP_IO_WRITE32(pAd, 0x800, 0x0);
 
@@ -136,24 +126,24 @@ loadfw_protect:
 	//mdelay(5);
 	RtmpOsMsDelay(5);
 	
-	ILMLen = (*(pChipCap->FWImageName + 3) << 24) | (*(pChipCap->FWImageName + 2) << 16) |
-			 (*(pChipCap->FWImageName + 1) << 8) | (*pChipCap->FWImageName);
+	ILMLen = (*(pChipCap->FWImageName + 3) << 24) | (*(pChipCap->FWImageName + 2) << 16)
+	       | (*(pChipCap->FWImageName + 1) << 8) | (*pChipCap->FWImageName);
 
-	DLMLen = (*(pChipCap->FWImageName + 7) << 24) | (*(pChipCap->FWImageName + 6) << 16) |
-			 (*(pChipCap->FWImageName + 5) << 8) | (*(pChipCap->FWImageName + 4));
+	DLMLen = (*(pChipCap->FWImageName + 7) << 24) | (*(pChipCap->FWImageName + 6) << 16)
+	       | (*(pChipCap->FWImageName + 5) << 8) | (*(pChipCap->FWImageName + 4));
 
 	FWVersion = (*(pChipCap->FWImageName + 11) << 8) | (*(pChipCap->FWImageName + 10));
 
 	BuildVersion = (*(pChipCap->FWImageName + 9) << 8) | (*(pChipCap->FWImageName + 8));
 	
-	DBGPRINT(RT_DEBUG_OFF, ("FW Version:%d.%d.%02d ", (FWVersion & 0xf000) >> 8,
-						(FWVersion & 0x0f00) >> 8, FWVersion & 0x00ff));
+	DBGPRINT(RT_DEBUG_OFF, ("FW Version:%d.%d.%02d ", (FWVersion & 0xf000) >> 8, (FWVersion & 0x0f00) >> 8, FWVersion & 0x00ff));
 	DBGPRINT(RT_DEBUG_OFF, ("Build:%x\n", BuildVersion));
 	DBGPRINT(RT_DEBUG_OFF, ("Build Time:"));
 
 	for (Loop = 0; Loop < 16; Loop++)
+	{
 		DBGPRINT(RT_DEBUG_OFF, ("%c", *(pChipCap->FWImageName + 16 + Loop)));
-
+	}
 	DBGPRINT(RT_DEBUG_OFF, ("\n"));
 
 	DBGPRINT(RT_DEBUG_OFF, ("ILM Length = %d(bytes)\n", ILMLen));
@@ -179,7 +169,7 @@ loadfw_protect:
 	RTMP_IO_WRITE32(pAd, USB_DMA_CFG, 0xC00000);
 
 #ifdef MT7601
-	if ( IS_MT7601(pAd) )
+	if (IS_MT7601(pAd))
 	{
 		USB_DMA_CFG_STRUC UsbCfg;
 
@@ -221,10 +211,8 @@ loadfw_protect:
 		Status = NDIS_STATUS_RESOURCES;
 		goto error1;
 	}
-
-
 	DBGPRINT(RT_DEBUG_OFF, ("Loading FW"));
-	
+
 	//init_completion(&SentToMCUDone);
 	SentToMCUDone = RtmpInitCompletion();
 
@@ -252,15 +240,7 @@ loadfw_protect:
 			Value = CurLen & 0xFFFF;
 
 			/* Set FCE DMA descriptor */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x230,
-										 NULL,
-										 0);
-
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x230, NULL, 0);
 
 			if (Status)
 			{
@@ -271,39 +251,23 @@ loadfw_protect:
 			Value = ((CurLen & 0xFFFF0000) >> 16);
 
 			/* Set FCE DMA descriptor */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x232,
-										 NULL,
-										 0);
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x232, NULL, 0);
 
 			if (Status)
 			{
 				DBGPRINT(RT_DEBUG_ERROR, ("Set FCE DMA descriptor fail\n"));
 				goto error2;
 			}
-
-			
-
 			CurLen += SentLen;
 
 			while ((SentLen % 4) != 0)
+			{
 				SentLen++;
-
+			}
 			Value = ((SentLen << 16) & 0xFFFF);
 
 			/* Set FCE DMA length */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x234,
-										 NULL,
-										 0);
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x234, NULL, 0);
 
 			if (Status)
 			{
@@ -314,14 +278,7 @@ loadfw_protect:
 			Value = (((SentLen << 16) & 0xFFFF0000) >> 16);
 
 			/* Set FCE DMA length */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x236,
-										 NULL,
-										 0);
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x236, NULL, 0);
 
 			if (Status)
 			{
@@ -330,15 +287,8 @@ loadfw_protect:
 			}
 		
 			/* Initialize URB descriptor */
-			RTUSB_FILL_HTTX_BULK_URB(pURB,
-									 pObj->pUsb_Dev,
-									 pChipCap->CommandBulkOutAddr,
-									 DataBuffer,
-									 SentLen + sizeof(*TxInfoCmd) + 4,
-									 USBUploadFWComplete,
-									 //&SentToMCUDone,
-									 SentToMCUDone,
-									 DataDMA);
+			RTUSB_FILL_HTTX_BULK_URB(pURB, pObj->pUsb_Dev, pChipCap->CommandBulkOutAddr, DataBuffer, SentLen + sizeof(*TxInfoCmd) + 4, USBUploadFWComplete, //&SentToMCUDone,
+				SentToMCUDone, DataDMA);
 
 			Status = RTUSB_SUBMIT_URB(pURB);
 
@@ -375,13 +325,13 @@ loadfw_protect:
 		{
 			RTMP_IO_READ32(pAd, COM_REG1, &MACValue);
 			if (MACValue & 0x80000000)			// DDONE 0x400234, bit[31]
+			{
 				break;
+			}
 			Loop++;
 			RtmpOsMsDelay(5);
 		} while (Loop <= 100);
-		
 	}
-
 	os_free_mem(NULL, SentToMCUDone);
 
 	//init_completion(&SentToMCUDone);
@@ -399,7 +349,6 @@ loadfw_protect:
 			TxInfoCmd->info_type = CMD_PACKET;
 			TxInfoCmd->pkt_len = SentLen;
 			TxInfoCmd->d_port = CPU_TX_PORT;
-
 #ifdef RT_BIG_ENDIAN
 			RTMPDescriptorEndianChange((PUCHAR)TxInfoCmd, TYPE_TXINFO);
 #endif
@@ -410,15 +359,7 @@ loadfw_protect:
 			Value = ((CurLen + 0x80000) & 0xFFFF);
 
 			/* Set FCE DMA descriptor */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x230,
-										 NULL,
-										 0);
-
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x230, NULL, 0);
 
 			if (Status)
 			{
@@ -429,14 +370,7 @@ loadfw_protect:
 			Value = (((CurLen + 0x80000) & 0xFFFF0000) >> 16);
 
 			/* Set FCE DMA descriptor */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x232,
-										 NULL,
-										 0);
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x232, NULL, 0);
 
 			if (Status)
 			{
@@ -444,59 +378,35 @@ loadfw_protect:
 				goto error2;
 			}
 
-			
-
 			CurLen += SentLen;
 
 			while ((SentLen % 4) != 0)
+			{
 				SentLen++;
-
+			}
 			Value = ((SentLen << 16) & 0xFFFF);
 
 			/* Set FCE DMA length */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x234,
-										 NULL,
-										 0);
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x234, NULL, 0);
 
 			if (Status)
 			{
 				DBGPRINT(RT_DEBUG_ERROR, ("Set FCE DMA length fail\n"));
 				goto error2;
 			}
-			
 			Value = (((SentLen << 16) & 0xFFFF0000) >> 16);
 
 			/* Set FCE DMA length */
-			Status = RTUSB_VendorRequest(pAd,
-										 USBD_TRANSFER_DIRECTION_OUT,
-										 DEVICE_VENDOR_REQUEST_OUT,
-										 0x42,
-										 Value,
-										 0x236,
-										 NULL,
-										 0);
+			Status = RTUSB_VendorRequest(pAd, USBD_TRANSFER_DIRECTION_OUT, DEVICE_VENDOR_REQUEST_OUT, 0x42, Value, 0x236, NULL, 0);
 
 			if (Status)
 			{
 				DBGPRINT(RT_DEBUG_ERROR, ("Set FCE DMA length fail\n"));
 				goto error2;
 			}
-		
 			/* Initialize URB descriptor */
-			RTUSB_FILL_HTTX_BULK_URB(pURB,
-									 pObj->pUsb_Dev,
-									 pChipCap->CommandBulkOutAddr,
-									 DataBuffer,
-									 SentLen + sizeof(*TxInfoCmd) + 4,
-									 USBUploadFWComplete,
-									 //&SentToMCUDone,
-									 SentToMCUDone,
-									 DataDMA);
+			RTUSB_FILL_HTTX_BULK_URB(pURB, pObj->pUsb_Dev, pChipCap->CommandBulkOutAddr, DataBuffer, SentLen + sizeof(*TxInfoCmd) + 4, USBUploadFWComplete, //&SentToMCUDone,
+				SentToMCUDone, DataDMA);
 
 			Status = RTUSB_SUBMIT_URB(pURB);
 
@@ -526,7 +436,6 @@ loadfw_protect:
 		{
 			break;
 		}		
-
 		//mdelay(5);
 		RtmpOsMsDelay(5);
 	}
@@ -543,21 +452,22 @@ loadfw_protect:
 	{
 		RTMP_IO_READ32(pAd, COM_REG0, &MACValue);
 		if (MACValue == 0x1)
+		{
 			break;
+		}
 		RtmpOsMsDelay(10);
 		Loop++;
 	} while (Loop <= 100);
 
-
 	DBGPRINT(RT_DEBUG_TRACE, ("%s: COM_REG0(0x%x) = 0x%x\n", __FUNCTION__, COM_REG0, MACValue));
 
 	if (MACValue != 0x1)
+	{
 		Status = NDIS_STATUS_FAILURE;
-	
+	}
 error2:
 	/* Free TransferBuffer */
-	RTUSB_URB_FREE_BUFFER(pObj->pUsb_Dev, 14592, 
-								DataBuffer, DataDMA);
+	RTUSB_URB_FREE_BUFFER(pObj->pUsb_Dev, 14592, DataBuffer, DataDMA);
 
 error1:
 	/* Free URB */
@@ -565,11 +475,12 @@ error1:
 
 error0: 	
 	if (pChipCap->IsComboChip)
+	{
 		RTUSBWriteMACRegister(pAd, SEMAPHORE_00, 0x1, FALSE);
+	}
 	return Status;
 }
 #endif /* RTMP_USB_SUPPORT */
-
 
 VOID MCUCtrlInit(PRTMP_ADAPTER pAd)
 {
@@ -588,7 +499,7 @@ VOID MCUCtrlExit(PRTMP_ADAPTER pAd)
 {
 	struct MCU_CTRL *MCtrl = &pAd->MCUCtrl;
 	struct CMD_RSP_EVENT *CmdRspEvent, *CmdRspEventTmp;
-	INT32 Ret;
+//	INT32 Ret;
 	unsigned long IrqFlags;
 
 	RtmpOsMsDelay(30);
@@ -631,10 +542,10 @@ BOOLEAN IsInBandCmdProcessing(PRTMP_ADAPTER pAd)
 UCHAR GetCmdRspNum(PRTMP_ADAPTER pAd)
 {
 	struct MCU_CTRL *MCtrl = &pAd->MCUCtrl;
-	unsigned long IrqFlags;
+//	unsigned long IrqFlags;
 	UCHAR Num = 0;
-	Num = DlListLen(&MCtrl->CmdRspEventList);
 
+	Num = DlListLen(&MCtrl->CmdRspEventList);
 	return Num;
 }
 
@@ -2068,7 +1979,8 @@ INT AndesLedOP(
 	struct CMD_UNIT CmdUnit;
 	CHAR *Pos, *pBuf;
 	UINT32 VarLen;
-	UINT32 Value, arg0, arg1;
+//	UINT32 Value, arg0, arg1;
+	UINT32 arg0, arg1;
 	INT32 Ret;
 #ifdef LED_CONTROL_SUPPORT
 	LED_NMAC_CMD LEC_CmdUnit;

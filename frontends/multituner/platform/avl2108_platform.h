@@ -18,17 +18,17 @@ struct avl_private_data_s
 
 	u16 max_lpf;
 	u32 lpf;
-	u8 lock_mode;
-	u8 iq_swap;
-	u8 auto_iq_swap;
+	u8  lock_mode;
+	u8  iq_swap;
+	u8  auto_iq_swap;
 
 	u16 agc_ref;
 
-	s8 mpeg_data_clk; /* enable/disable mpeg persistent clock mode
- * -1 = do not touch register
- * 0 = disable
- * 1 = enable
- */
+	s8  mpeg_data_clk; /* enable/disable mpeg persistent clock mode
+                            * -1 = do not touch register
+                            * 0  = disable
+                            * 1  = enable
+                            */
 };
-
 #endif
+// vim:ts=4

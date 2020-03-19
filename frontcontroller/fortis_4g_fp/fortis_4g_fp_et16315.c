@@ -578,7 +578,7 @@ static void keyboard_poll(struct work_struct *work)
 
 		if (diff)
 		{
-			dprintk(20, "data from ET16315: 0x%04x%04x\n", (key_data & 0xffff0000),(key_data & 0xffff));
+			dprintk(20, "Key data from ET16315: 0x%04x%04x\n", (key_data & 0xffff0000),(key_data & 0xffff));
 		}
 		for (i = 0; i < et16315_data->keys_num; i++)
 		{

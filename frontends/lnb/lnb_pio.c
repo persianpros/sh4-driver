@@ -1,7 +1,7 @@
 /*
- * lnb_pio.c - multi-platform LNB power supply controller driver
+ *   lnb_pio.c - multi-platform LNB power supply controller driver
  *
- * spider-team 2011.
+ *   spider-team 2011.
  *
  */
 
@@ -23,16 +23,20 @@
 #endif
 
 #include "lnb_core.h"
+#define TAGDEBUG "[LNB-PIO] "
 
-static struct stpio_pin *lnb_power;
-static struct stpio_pin *lnb_13_18;
-static struct stpio_pin *lnb_14_19;
+static struct stpio_pin	*lnb_power;
+static struct stpio_pin	*lnb_13_18;
+static struct stpio_pin	*lnb_14_19;
 
-extern int _12v_isON; //defined in e2_proc ->I will implement a better mechanism later
+#if defined(IPBOX9900)
+extern int _12v_isON;
+#endif
 
 int lnb_pio_command_kernel(unsigned int cmd, void *arg)
 {
 	dprintk(10, "%s (%x)\n", __func__, cmd);
+
 	if ((cmd != LNB_VOLTAGE_OFF) && lnb_power)
 	{
 		stpio_set_pin(lnb_power, 1);
@@ -42,6 +46,8 @@ int lnb_pio_command_kernel(unsigned int cmd, void *arg)
 		case LNB_VOLTAGE_OFF:
 		{
 			dprintk(10, "Switch LNB power off\n");
+
+#if defined(IPBOX9900)
 			if (_12v_isON == 0)
 			{
 				if (lnb_power)
@@ -49,11 +55,15 @@ int lnb_pio_command_kernel(unsigned int cmd, void *arg)
 					stpio_set_pin(lnb_power, 0);
 				}
 			}
+#else
+			stpio_set_pin(lnb_power, 0);
+#endif
 			break;
 		}
 		case LNB_VOLTAGE_VER:
 		{
 			dprintk(10, "Set LNB voltage vertical\n");
+
 			if (lnb_13_18)
 			{
 				stpio_set_pin(lnb_13_18, 1);
@@ -63,6 +73,7 @@ int lnb_pio_command_kernel(unsigned int cmd, void *arg)
 		case LNB_VOLTAGE_HOR:
 		{
 			dprintk(10, "Set LNB voltage horizontal\n");
+
 			if (lnb_13_18)
 			{
 				stpio_set_pin(lnb_13_18, 0);
@@ -83,10 +94,12 @@ int lnb_pio_init(void)
 	lnb_power = NULL;
 	lnb_13_18 = NULL;
 	lnb_14_19 = NULL;
+
 #if defined(SPARK)
 	lnb_power = stpio_request_pin(6, 5, "lnb_power", STPIO_OUT);
 	lnb_13_18 = stpio_request_pin(6, 6, "lnb_13/18", STPIO_OUT);
 	lnb_14_19 = stpio_request_pin(5, 5, "lnb_14/19", STPIO_OUT);
+
 	if ((lnb_power == NULL) || (lnb_13_18 == NULL) || (lnb_14_19 == NULL))
 	{
 		if (lnb_power != NULL)
@@ -97,6 +110,7 @@ int lnb_pio_init(void)
 		{
 			dprintk(10, "Error requesting LNB power pin\n");
 		}
+
 		if (lnb_13_18 != NULL)
 		{
 			stpio_free_pin(lnb_13_18);
@@ -105,6 +119,7 @@ int lnb_pio_init(void)
 		{
 			dprintk(10, "Error requesting LNB 13/18 pin\n");
 		}
+
 		if (lnb_14_19 != NULL)
 		{
 			stpio_free_pin(lnb_14_19);
@@ -118,6 +133,7 @@ int lnb_pio_init(void)
 #elif defined(ATEMIO520) || defined(ATEMIO530)
 	lnb_power = stpio_request_pin(6, 2, "lnb_power", STPIO_OUT);
 	lnb_13_18 = stpio_request_pin(6, 3, "lnb_13/18", STPIO_OUT);
+
 	if ((lnb_power == NULL) || (lnb_13_18 == NULL))
 	{
 		if (lnb_power != NULL)
@@ -128,6 +144,7 @@ int lnb_pio_init(void)
 		{
 			dprintk(10, "Error requesting LNB power pin\n");
 		}
+
 		if (lnb_13_18 != NULL)
 		{
 			stpio_free_pin(lnb_13_18);
@@ -140,6 +157,7 @@ int lnb_pio_init(void)
 	}
 #endif
 	stpio_set_pin(lnb_power, 0); // set power off
+
 	dprintk(10, "Init successful\n");
 	return 0;
 }

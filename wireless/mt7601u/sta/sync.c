@@ -24,9 +24,7 @@
  *                                                                       *
  *************************************************************************/
 
-
 #include "rt_config.h"
-
 
 #define ADHOC_ENTRY_BEACON_LOST_TIME	(2*OS_HZ)	/* 2 sec */
 
@@ -41,10 +39,7 @@
 
 	==========================================================================
  */
-VOID SyncStateMachineInit(
-	IN PRTMP_ADAPTER pAd, 
-	IN STATE_MACHINE *Sm, 
-	OUT STATE_MACHINE_FUNC Trans[]) 
+VOID SyncStateMachineInit(IN PRTMP_ADAPTER pAd, IN STATE_MACHINE *Sm, OUT STATE_MACHINE_FUNC Trans[]) 
 {
 	StateMachineInit(Sm, Trans, MAX_SYNC_STATE, MAX_SYNC_MSG, (STATE_MACHINE_FUNC)Drop, SYNC_IDLE, SYNC_MACHINE_BASE);
 

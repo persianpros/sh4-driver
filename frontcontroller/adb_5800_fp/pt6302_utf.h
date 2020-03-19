@@ -2,10 +2,14 @@
  *
  * Conversion table UTF-8 -> ASCII for PT6302-001
  *
+ * Note: the '-001' denotes the character generator
+ *       inside the PT6302. Author's receivers have
+ *       this version mounted on the PCB.
+ *
  */
 unsigned char PT6302_UTF_C2[64] =
 {
-	// table: 0xc2 0xXX -> non accented ASCII
+	// table: 0xc2 0xXX (symbols)-> matching symbol
 	0x00,	//0x80, nonprintable control, will be skipped
 	0x00,	//0x81, nonprintable control, will be skipped
 	0x00,	//0x82, nonprintable control, will be skipped
@@ -292,7 +296,7 @@ unsigned char PT6302_UTF_C5[64] =
 };
 
 unsigned char PT6302_UTF_D0[64] =
-// Cyrillic, not supported; displayed as spaces
+// Cyrillic, currently not supported; displayed as spaces
 {
 	// table: 0xd0
 	0x20,	//0x80,
@@ -365,7 +369,7 @@ unsigned char PT6302_UTF_D0[64] =
 };
 
 unsigned char PT6302_UTF_D1[64] =
-// Cyrillic, not supported
+// Cyrillic, currently not supported
 {
 	//  table: 0xd1
 	0x20,	//0x80,

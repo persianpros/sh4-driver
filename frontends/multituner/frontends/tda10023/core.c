@@ -3,23 +3,23 @@
  *
  * @author konfetti
  *
- * 	Copyright (C) 2011 duckbox
+ * Copyright (C) 2011 duckbox
  *
- *  core part for tda10023 demod
+ * core part for tda10023 demod
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/version.h>
@@ -56,9 +56,9 @@ static int i2c_writereg(struct i2c_adapter *adapter, u8 addr, u8 reg, u8 data)
 	int ret;
 
 	ret = i2c_transfer(adapter, &msg, 1);
-	if (ret != 1) {
-		printk(KERN_ERR "DVB: %s, writereg error (reg == 0x%02x, val == 0x%02x, ret == %i)\n",
-				__func__, reg, data, ret);
+	if (ret != 1)
+	{
+		printk(KERN_ERR "DVB: %s, writereg error (reg == 0x%02x, val == 0x%02x, ret == %i)\n", __func__, reg, data, ret);
 	}
 	return (ret != 1) ? -EREMOTEIO : 0;
 }
@@ -75,149 +75,143 @@ static u8 i2c_readreg(struct i2c_adapter *adapter, u8 addr, u8 reg)
 	
 	if (ret != 2) 
 	{
-		printk(KERN_ERR "DVB: %s: readreg error (reg == 0x%02x, ret == %i)\n",
-				__func__, reg, ret);
+		printk(KERN_ERR "DVB: %s: readreg error (reg == 0x%02x, ret == %i)\n", __func__, reg, ret);
 	}
 	return b1[0];
 }
 
 static void tda10023_register_frontend(struct dvb_adapter *dvb_adap, struct socket_s *socket)
 {
-    struct dvb_frontend* frontend;
-    struct tda10023_config* cfg;
-    struct tda10023_private_data_s* priv;
-    
-    printk("%s\n", __func__);
+	struct dvb_frontend* frontend;
+	struct tda10023_config* cfg;
+	struct tda10023_private_data_s* priv;
+	
+	printk("%s\n", __func__);
 
-    if (numSockets + 1 == cMaxSockets)
-    {
-        printk("Max number sockets reached ... cannot register\n");
-        return;
-    }
+	if (numSockets + 1 == cMaxSockets)
+	{
+	    printk("Max number sockets reached ... cannot register\n");
+	    return;
+	}
+	socketList[numSockets] = *socket;
+	numSockets++;
 
-    socketList[numSockets] = *socket;
-    numSockets++;
+	priv = (struct tda10023_private_data_s*) frontend_cfg->private;
 
-    priv = (struct tda10023_private_data_s*) frontend_cfg->private;
+	cfg = kmalloc(sizeof(struct tda10023_config), GFP_KERNEL);
 
-    cfg = kmalloc(sizeof(struct tda10023_config), GFP_KERNEL);
+	if (cfg == NULL)
+	{
+	    printk("tda10023: error malloc\n");
+	    return;
+	}
 
-    if (cfg == NULL)
-    {
-        printk("tda10023: error malloc\n");
-        return;
-    }
+	if (socket->tuner_enable[0] != -1)
+	{
+	    cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0],
+	                                               socket->tuner_enable[1],
+	                                               "tun_enab",
+	                                               STPIO_OUT);
 
-    if (socket->tuner_enable[0] != -1)
-    {
-        cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0],
-                                                   socket->tuner_enable[1],
-                                                   "tun_enab",
-                                                   STPIO_OUT);
-
-        printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
-        stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
-        stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
+	    printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+	    stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
+	    stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
  
-        msleep(250);
-        cfg->tuner_active_lh = socket->tuner_enable[2];
-    } else
-       cfg->tuner_enable_pin = NULL;
+	    msleep(250);
+	    cfg->tuner_active_lh = socket->tuner_enable[2];
+	}
+	else
+	{
+	   cfg->tuner_enable_pin = NULL;
+	}
 
+	cfg->demod_address = frontend_cfg->demod_i2c;
+	cfg->tuner_address = frontend_cfg->tuner_i2c;
 
-    cfg->demod_address     = frontend_cfg->demod_i2c;
-    cfg->tuner_address     = frontend_cfg->tuner_i2c;
+	cfg->xtal          = priv->xtal;
+	cfg->pll_m         = priv->pll_m;
+	cfg->pll_p         = priv->pll_p;
+	cfg->pll_n         = priv->pll_n;
+	cfg->output_mode   = priv->output_mode;
+	cfg->deltaf        = priv->deltaf;
 
-    cfg->xtal              = priv->xtal;
-    cfg->pll_m             = priv->pll_m;
-    cfg->pll_p             = priv->pll_p;
-    cfg->pll_n             = priv->pll_n;
-    cfg->output_mode       = priv->output_mode;
-    cfg->deltaf            = priv->deltaf;
+	frontend =  tda10023_attach(cfg, i2c_get_adapter(socket->i2c_bus), 0);
 
-    frontend =  tda10023_attach(cfg, i2c_get_adapter(socket->i2c_bus), 0);
+	if (frontend == NULL)
+	{
+	    printk("tda10023: tda10023_attach failed\n");
 
-    if (frontend == NULL)
-    {
-        printk("tda10023: tda10023_attach failed\n");
+	    if (cfg->tuner_enable_pin)
+		{
+	        stpio_free_pin(cfg->tuner_enable_pin);
+		}
+	    kfree(cfg);
+	    return;
+	}
 
-        if (cfg->tuner_enable_pin)
-            stpio_free_pin(cfg->tuner_enable_pin);
-
-        kfree(cfg);
-        return;
-    }
-
-    if (dvb_register_frontend (dvb_adap, frontend))
-    {
-        printk ("%s: Frontend registration failed !\n", __FUNCTION__);
-        if (frontend->ops.release)
-            frontend->ops.release (frontend);
-        return;
-    }
-
-    return;
+	if (dvb_register_frontend (dvb_adap, frontend))
+	{
+	    printk ("%s: Frontend registration failed !\n", __FUNCTION__);
+	    if (frontend->ops.release)
+		{
+	        frontend->ops.release (frontend);
+		}
+	    return;
+	}
+	return;
 }
 
 static int tda10023_demod_detect(struct socket_s *socket, struct frontend_s *frontend)
 {
-   int                    ret = 0;
-   struct stpio_pin*      pin = NULL;
-   
-   printk("%s >\n", __func__);
+	int              ret = 0;
+	struct stpio_pin *pin = NULL;
+	
+	printk("%s >\n", __func__);
 
-   if (socket->tuner_enable[0] != -1)
-   {
-       pin = stpio_request_pin(socket->tuner_enable[0],
-                                                 socket->tuner_enable[1],
-                                                 "tun_enab",
-                                                 STPIO_OUT);
-   }
-   
-   printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	if (socket->tuner_enable[0] != -1)
+	{
+		pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
+	}
+	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
-   if (pin != NULL)
-   {
-        stpio_set_pin(pin, !socket->tuner_enable[2]);
-        stpio_set_pin(pin, socket->tuner_enable[2]);
+	if (pin != NULL)
+	{
+		stpio_set_pin(pin, !socket->tuner_enable[2]);
+		stpio_set_pin(pin, socket->tuner_enable[2]);
+		msleep(250);
+	}
+	/* Wakeup if in standby */
+	i2c_writereg (i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x00, 0x2b);
 
-        msleep(250);
-   }
-      
-   /* Wakeup if in standby */
-   i2c_writereg (i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x00, 0x2b);
+	/* check if the demod is there */
+	if ((i2c_readreg(i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x1a) & 0xf0) != 0x70) 
+	{
+		printk ("ret = %d\n", ret);
+		printk ("Invalid probe, probably not a tda10023 device\n");
+	   
+		if (pin != NULL)
+		{
+	    	stpio_free_pin(pin);
+		}
+		return -EREMOTEIO;
+	}
 
-   /* check if the demod is there */
-   if ((i2c_readreg(i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, 0x1a) & 0xf0) != 0x70) 
-   {
-       printk ("ret = %d\n", ret);
-       printk ("Invalid probe, probably not a tda10023 device\n");
-       
-       if (pin != NULL)
-           stpio_free_pin(pin);
+	printk("%s: Detected tda10023\n", __func__);
 
-       return -EREMOTEIO;
-   }
-
-   printk("%s: Detected tda10023\n", __func__);
-   
-   if (pin != NULL)
-      stpio_free_pin(pin);
-
-   printk("%s <\n", __func__);
-
-   return 0;
+	if (pin != NULL)
+	{
+		stpio_free_pin(pin);
+	}
+	printk("%s <\n", __func__);
+	return 0;
 }
 
 static int tda10023_demod_attach(struct dvb_adapter* adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-    printk("%s >\n", __func__);
-
-    tda10023_register_frontend(adapter, socket);
-
-    printk("%s <\n", __func__);
-    
-    return 0;
+	printk("%s >\n", __func__);
+	tda10023_register_frontend(adapter, socket);
+	printk("%s <\n", __func__);
+	return 0;
 }
 
 /* ******************************* */
@@ -226,44 +220,41 @@ static int tda10023_demod_attach(struct dvb_adapter* adapter, struct socket_s *s
 
 static int tda10023_probe (struct platform_device *pdev)
 {
-    struct platform_frontend_config_s *plat_data = pdev->dev.platform_data;
-    struct frontend_s frontend;
+	struct platform_frontend_config_s *plat_data = pdev->dev.platform_data;
+	struct frontend_s frontend;
 
-    printk("%s >\n", __func__);
+	printk("%s >\n", __func__);
 
-    frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
-    memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
+	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
+	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
 
-    printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
+	printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
 
-    frontend.demod_detect = tda10023_demod_detect;
-    frontend.demod_attach = tda10023_demod_attach;
-    frontend.name         = "tda10023";
-    
-    if (socket_register_frontend(&frontend) < 0)
-    {
-        printk("failed to register frontend\n");
-    }
-
-    printk("%s <\n", __func__);
-
-    return 0;
+	frontend.demod_detect = tda10023_demod_detect;
+	frontend.demod_attach = tda10023_demod_attach;
+	frontend.name         = "tda10023";
+	
+	if (socket_register_frontend(&frontend) < 0)
+	{
+	    printk("failed to register frontend\n");
+	}
+	printk("%s <\n", __func__);
+	return 0;
 }
 
 static int tda10023_remove (struct platform_device *pdev)
 {
-    return 0;
+	return 0;
 }
 
 static struct platform_driver tda10023_driver = {
-    .probe = tda10023_probe,
-    .remove = tda10023_remove,
-    .driver	= {
-        .name	= "tda10023",
-        .owner  = THIS_MODULE,
-    },
+	.probe = tda10023_probe,
+	.remove = tda10023_remove,
+	.driver	= {
+	    .name	= "tda10023",
+	    .owner  = THIS_MODULE,
+	},
 };
-
 
 /* ******************************* */
 /* module functions                */
@@ -271,28 +262,26 @@ static struct platform_driver tda10023_driver = {
 
 int __init tda10023_init(void)
 {
-    int ret;
+	int ret;
 
-    printk("%s >\n", __func__);
-
-    ret = platform_driver_register (&tda10023_driver);
-
-    printk("%s < %d\n", __func__, ret);
-
-    return ret;
+	printk("%s >\n", __func__);
+	ret = platform_driver_register (&tda10023_driver);
+	printk("%s < %d\n", __func__, ret);
+	return ret;
 }
 
 static void tda10023_cleanup(void)
 {
-    printk("%s >\n", __func__);
+	printk("%s >\n", __func__);
 }
 
-module_init             (tda10023_init);
-module_exit             (tda10023_cleanup);
+module_init (tda10023_init);
+module_exit (tda10023_cleanup);
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
-MODULE_DESCRIPTION      ("Tunerdriver");
-MODULE_AUTHOR           ("konfetti");
-MODULE_LICENSE          ("GPL");
+MODULE_DESCRIPTION ("Tuner driver");
+MODULE_AUTHOR      ("konfetti");
+MODULE_LICENSE     ("GPL");
+// vim:ts=4

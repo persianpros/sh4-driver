@@ -4984,11 +4984,7 @@ VOID RTMPIoctlShow(
             wrq->u.data.length = strlen(extra) + 1; /* 1: size of '\0' */
             break;
         case SHOW_DRVIER_VERION:
-#ifdef INCLUDE_BUILDDATE
             snprintf(extra, size, "Driver version-%s, %s %s\n", STA_DRIVER_VERSION, __DATE__, __TIME__ );
-#else
-            snprintf(extra, size, "Driver version-%s\n", STA_DRIVER_VERSION);
-#endif
             wrq->u.data.length = strlen(extra) + 1; /* 1: size of '\0' */
             break;
 #ifdef DOT11_N_SUPPORT
@@ -5543,13 +5539,12 @@ Return Value:
 Note:
 ========================================================================
 */
-static void set_quality(
-	IN	RT_CMD_STA_IOCTL_BSS	*pSignal,
-	IN	PBSS_ENTRY				pBssEntry)
+static void set_quality(IN RT_CMD_STA_IOCTL_BSS	*pSignal, IN PBSS_ENTRY pBssEntry)
 {
+	BOOLEAN bInitial = FALSE;
+
 	memcpy(pSignal->Bssid, pBssEntry->Bssid, MAC_ADDR_LEN);
 
-	BOOLEAN bInitial = FALSE;
 	if (!(pBssEntry->AvgRssiX8 | pBssEntry->AvgRssi))
 	{
 		bInitial = TRUE;

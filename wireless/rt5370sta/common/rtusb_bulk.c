@@ -747,7 +747,7 @@ VOID	RTUSBBulkOutNullFrame(
 #endif /* defined(CONFIG_MULTI_CHANNEL) || defined(DOT11Z_TDLS_SUPPORT) */
 
 	pUrb = pNullContext->pUrb;
-	if((ret = RTUSB_SUBMIT_URB(pUrb))!=0)
+	if ((ret = RTUSB_SUBMIT_URB(pUrb))!=0)
 	{
 		RTMP_IRQ_LOCK(&pAd->BulkOutLock[BulkOutPipeId], IrqFlags);
 		pAd->BulkOutPending[BulkOutPipeId] = FALSE;

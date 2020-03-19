@@ -117,12 +117,10 @@ VOID StopFrequencyCalibration(
 }
 
 
-VOID FrequencyCalibrationMode(
-	PRTMP_ADAPTER pAd,
-	UINT8 Mode)
+VOID FrequencyCalibrationMode(PRTMP_ADAPTER pAd, UINT8 Mode)
 {
 	UCHAR RFValue = 0;
-	UCHAR PreRFValue = 0; 
+//	UCHAR PreRFValue = 0; 
 	
 	if (Mode == FREQ_CAL_MODE0)
 	{
@@ -149,8 +147,7 @@ VOID FrequencyCalibrationMode(
 
 
 /* The frequency calibration algorithm*/
-VOID FrequencyCalibration(
-	IN PRTMP_ADAPTER pAd)
+VOID FrequencyCalibration(IN PRTMP_ADAPTER pAd)
 {
 	/*BOOLEAN bUpdateRFR = FALSE;*/
 	CHAR HighFreqTriggerPoint = 0, LowFreqTriggerPoint = 0;

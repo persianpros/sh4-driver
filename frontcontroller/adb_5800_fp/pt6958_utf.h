@@ -5,10 +5,9 @@
  * Replaces accented letter with the non-accented
  * ASCII variants as segment pattern
  */
-unsigned char *UTF_Char_Table = NULL;
 unsigned char PT6958_UTF_C2[64] =
 {
-	// table: 0xc2 0xXX -> non accented ASCII (LED segment pattern)
+	// table: 0xc2 0xXX (symbols) -> (LED segment pattern)
 	0x00,	//0x80, nonprintable control
 	0x00,	//0x81, nonprintable control
 	0x00,	//0x82, nonprintable control
@@ -295,7 +294,7 @@ unsigned char PT6958_UTF_C5[64] =
 };
 
 unsigned char PT6958_UTF_D0[64] =
-// Cyrillic, not supported
+// Cyrillic, currently not supported
 {
 	// table: 0xd0 0xXX -> non accented ASCII (LED segment pattern)
 	0x00,	//0x80, 
@@ -368,7 +367,7 @@ unsigned char PT6958_UTF_D0[64] =
 };
 
 unsigned char PT6958_UTF_D1[64] =
-// Cyrillic, not supported
+// Cyrillic, currently not supported
 {
 	//  table: 0xd1 0xXX -> non accented ASCII (LED segment pattern)
 	0x00,	//0x80, 

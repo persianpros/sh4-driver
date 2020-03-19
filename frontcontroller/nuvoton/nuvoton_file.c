@@ -91,6 +91,8 @@
  * 20170516 Audioniek       Missing character entries for : and ; added for
  *                          HS9510/7420/7429.
  * 20180113 Audioniek       Fix build error with HS7110.
+ * 20200104 Audioniek       Improve nuvotonGetVersion return value
+ *                          determination.
  *
  *****************************************************************************
  *
@@ -450,34 +452,34 @@ struct iconToInternal
 } nuvotonIcons[] =
 {
 	/*- Name -------- icon -------- pos - mask1 mask2 mask3 -----*/
-	{ "ICON_DOLBY"  , ICON_DOLBY  , 0x00, 0x01, 0x00, 0x00},  // 01
-	{ "ICON_DTS"    , ICON_DTS    , 0x01, 0x01, 0x00, 0x00},  // 02
-	{ "ICON_VIDEO"  , ICON_VIDEO  , 0x02, 0x01, 0x00, 0x00},  // 03
-	{ "ICON_AUDIO"  , ICON_AUDIO  , 0x03, 0x01, 0x00, 0x00},  // 04
-	{ "ICON_LINK"   , ICON_LINK   , 0x04, 0x01, 0x00, 0x00},  // 05
-	{ "ICON_HDD"    , ICON_HDD    , 0x05, 0x01, 0x00, 0x00},  // 06
-	{ "ICON_DISC"   , ICON_DISC   , 0x06, 0x01, 0x00, 0x00},  // 07
-	{ "ICON_DVB"    , ICON_DVB    , 0x07, 0x01, 0x00, 0x00},  // 08
-	{ "ICON_DVD"    , ICON_DVD    , 0x08, 0x01, 0x00, 0x00},  // 09
-	{ "ICON_TIMER"  , ICON_TIMER  , 0x08, 0x00, 0x01, 0x00},  // 10
-	{ "ICON_TIME"   , ICON_TIME   , 0x08, 0x00, 0x02, 0x00},  // 11
-	{ "ICON_CARD"   , ICON_CARD   , 0x08, 0x00, 0x04, 0x00},  // 12
-	{ "ICON_1"      , ICON_1      , 0x08, 0x00, 0x08, 0x00},  // 13
-	{ "ICON_2"      , ICON_2      , 0x08, 0x00, 0x10, 0x00},  // 14
-	{ "ICON_KEY"    , ICON_KEY    , 0x08, 0x00, 0x20, 0x00},  // 15
-	{ "ICON_16_9"   , ICON_16_9   , 0x08, 0x00, 0x40, 0x00},  // 16
-	{ "ICON_USB"    , ICON_USB    , 0x08, 0x00, 0x80, 0x00},  // 17
-	{ "ICON_CRYPTED", ICON_CRYPTED, 0x08, 0x00, 0x00, 0x01},  // 18
-	{ "ICON_PLAY"   , ICON_PLAY   , 0x08, 0x00, 0x00, 0x02},  // 19
-	{ "ICON_REWIND" , ICON_REWIND , 0x08, 0x00, 0x00, 0x04},  // 20
-	{ "ICON_PAUSE"  , ICON_PAUSE  , 0x08, 0x00, 0x00, 0x08},  // 21
-	{ "ICON_FF"     , ICON_FF     , 0x08, 0x00, 0x00, 0x10},  // 22
-	{ "ICON_NONE"   , ICON_NONE   , 0x08, 0x00, 0x00, 0x20},  // 23
-	{ "ICON_REC"    , ICON_REC    , 0x08, 0x00, 0x00, 0x40},  // 24
-	{ "ICON_ARROW"  , ICON_ARROW  , 0x08, 0x00, 0x00, 0x80},  // 25
-	{ "ICON_COLON1" , ICON_COLON1 , 0x01, 0x00, 0x80, 0x00},  // 26
-	{ "ICON_COLON2" , ICON_COLON2 , 0x03, 0x00, 0x80, 0x00},  // 27
-	{ "ICON_COLON3" , ICON_COLON3 , 0x05, 0x00, 0x80, 0x00},  // 28
+	{ "ICON_DOLBY",   ICON_DOLBY,   0x00, 0x01, 0x00, 0x00 },  // 01
+	{ "ICON_DTS",     ICON_DTS,     0x01, 0x01, 0x00, 0x00 },  // 02
+	{ "ICON_VIDEO",   ICON_VIDEO,   0x02, 0x01, 0x00, 0x00 },  // 03
+	{ "ICON_AUDIO",   ICON_AUDIO,   0x03, 0x01, 0x00, 0x00 },  // 04
+	{ "ICON_LINK",    ICON_LINK,    0x04, 0x01, 0x00, 0x00 },  // 05
+	{ "ICON_HDD",     ICON_HDD,     0x05, 0x01, 0x00, 0x00 },  // 06
+	{ "ICON_DISC",    ICON_DISC,    0x06, 0x01, 0x00, 0x00 },  // 07
+	{ "ICON_DVB",     ICON_DVB,     0x07, 0x01, 0x00, 0x00 },  // 08
+	{ "ICON_DVD",     ICON_DVD,     0x08, 0x01, 0x00, 0x00 },  // 09
+	{ "ICON_TIMER",   ICON_TIMER,   0x08, 0x00, 0x01, 0x00 },  // 10
+	{ "ICON_TIME",    ICON_TIME,    0x08, 0x00, 0x02, 0x00 },  // 11
+	{ "ICON_CARD",    ICON_CARD,    0x08, 0x00, 0x04, 0x00 },  // 12
+	{ "ICON_1",       ICON_1,       0x08, 0x00, 0x08, 0x00 },  // 13
+	{ "ICON_2",       ICON_2,       0x08, 0x00, 0x10, 0x00 },  // 14
+	{ "ICON_KEY",     ICON_KEY,     0x08, 0x00, 0x20, 0x00 },  // 15
+	{ "ICON_16_9",    ICON_16_9,    0x08, 0x00, 0x40, 0x00 },  // 16
+	{ "ICON_USB",     ICON_USB,     0x08, 0x00, 0x80, 0x00 },  // 17
+	{ "ICON_CRYPTED", ICON_CRYPTED, 0x08, 0x00, 0x00, 0x01 },  // 18
+	{ "ICON_PLAY",    ICON_PLAY,    0x08, 0x00, 0x00, 0x02 },  // 19
+	{ "ICON_REWIND",  ICON_REWIND,  0x08, 0x00, 0x00, 0x04 },  // 20
+	{ "ICON_PAUSE",   ICON_PAUSE,   0x08, 0x00, 0x00, 0x08 },  // 21
+	{ "ICON_FF",      ICON_FF,      0x08, 0x00, 0x00, 0x10 },  // 22
+	{ "ICON_NONE",    ICON_NONE,    0x08, 0x00, 0x00, 0x20 },  // 23
+	{ "ICON_REC",     ICON_REC,     0x08, 0x00, 0x00, 0x40 },  // 24
+	{ "ICON_ARROW",   ICON_ARROW,   0x08, 0x00, 0x00, 0x80 },  // 25
+	{ "ICON_COLON1",  ICON_COLON1,  0x01, 0x00, 0x80, 0x00 },  // 26
+	{ "ICON_COLON2",  ICON_COLON2,  0x03, 0x00, 0x80, 0x00 },  // 27
+	{ "ICON_COLON3",  ICON_COLON3,  0x05, 0x00, 0x80, 0x00 },  // 28
 };
 
 #elif defined(HS7420) || defined(HS7429)
@@ -497,10 +499,10 @@ struct iconToInternal
 } nuvotonIcons[] =
 {
 	/*- Name ------- icon# ------ pos - mask1 mask2 mask3 -----*/
-	{ "ICON_DOT"   , ICON_DOT   , 0x07, 0x00, 0x80, 0x00},  // 01
-	{ "ICON_COLON1", ICON_COLON1, 0x06, 0x00, 0x80, 0x00},  // 02
-	{ "ICON_COLON2", ICON_COLON2, 0x04, 0x00, 0x80, 0x00},  // 03
-	{ "ICON_COLON3", ICON_COLON3, 0x02, 0x00, 0x80, 0x00},  // 04
+	{ "ICON_DOT",    ICON_DOT,    0x07, 0x00, 0x80, 0x00 },  // 01
+	{ "ICON_COLON1", ICON_COLON1, 0x06, 0x00, 0x80, 0x00 },  // 02
+	{ "ICON_COLON2", ICON_COLON2, 0x04, 0x00, 0x80, 0x00 },  // 03
+	{ "ICON_COLON3", ICON_COLON3, 0x02, 0x00, 0x80, 0x00 },  // 04
 };
 
 #elif defined(FORTIS_HDBOX)
@@ -542,45 +544,45 @@ struct iconToInternal
 } nuvotonIcons[] =
 {
 	/*- Name ---------- icon# ---------- code1 data1 code2 data2 -----*/
-	{ "ICON_STANDBY"  , ICON_STANDBY   , 0x20, 0x08, 0xff, 0x00},  // 01
-	{ "ICON_SAT"      , ICON_SAT       , 0x20, 0x04, 0xff, 0x00},  // 02
-	{ "ICON_REC"      , ICON_REC       , 0x30, 0x01, 0xff, 0x00},  // 03
-	{ "ICON_TIMESHIFT", ICON_TIMESHIFT , 0x31, 0x02, 0x32, 0x02},  // 04
-	{ "ICON_TIMER"    , ICON_TIMER     , 0x33, 0x02, 0xff, 0x00},  // 05
-	{ "ICON_HD"       , ICON_HD        , 0x34, 0x02, 0xff, 0x00},  // 06
-	{ "ICON_USB"      , ICON_USB       , 0x35, 0x02, 0xff, 0x00},  // 07
-	{ "ICON_SCRAMBLED", ICON_SCRAMBLED , 0x36, 0x02, 0xff, 0x00},  // 08
-	{ "ICON_DOLBY"    , ICON_DOLBY     , 0x37, 0x02, 0xff, 0x00},  // 09
-	{ "ICON_MUTE"     , ICON_MUTE      , 0x38, 0x02, 0xff, 0x00},  // 10
-	{ "ICON_TUNER1"   , ICON_TUNER1    , 0x39, 0x02, 0xff, 0x00},  // 11
-	{ "ICON_TUNER2"   , ICON_TUNER2    , 0x3a, 0x02, 0xff, 0x00},  // 12
-	{ "ICON_MP3"      , ICON_MP3       , 0x3b, 0x02, 0xff, 0x00},  // 13
-	{ "ICON_REPEAT"   , ICON_REPEAT    , 0x3c, 0x02, 0xff, 0x00},  // 14
-	{ "ICON_PLAY"     , ICON_PLAY      , 0x20, 0x02, 0xff, 0x00},  // 15 play in circle
-	{ "ICON_Circ0"    , ICON_Circ0     , 0x24, 0x01, 0xff, 0x00},  // 16 inner circle
-	{ "ICON_Circ1"    , ICON_Circ1     , 0x20, 0x01, 0xff, 0x00},  // 17 circle, segment 1
-	{ "ICON_Circ2"    , ICON_Circ2     , 0x22, 0x01, 0xff, 0x00},  // 18 circle, segment 2
-	{ "ICON_Circ3"    , ICON_Circ3     , 0x21, 0x02, 0xff, 0x00},  // 19 circle, segment 3
-	{ "ICON_Circ4"    , ICON_Circ4     , 0x23, 0x02, 0xff, 0x00},  // 20 circle, segment 4
-	{ "ICON_Circ5"    , ICON_Circ5     , 0x24, 0x02, 0xff, 0x00},  // 21 circle, segment 5
-	{ "ICON_Circ6"    , ICON_Circ6     , 0x22, 0x02, 0xff, 0x00},  // 22 circle, segment 6
-	{ "ICON_Circ7"    , ICON_Circ7     , 0x23, 0x01, 0xff, 0x00},  // 23 circle, segment 7
-	{ "ICON_Circ8"    , ICON_Circ8     , 0x21, 0x01, 0xff, 0x00},  // 24 circle, segment 8
-	{ "ICON_FILE"     , ICON_FILE      , 0x22, 0x04, 0xff, 0x00},  // 25
-	{ "ICON_TER"      , ICON_TER       , 0x21, 0x04, 0xff, 0x00},  // 26
-	{ "ICON_480i"     , ICON_480i      , 0x24, 0x40, 0x23, 0x40},  // 27
-	{ "ICON_480p"     , ICON_480p      , 0x24, 0x40, 0x22, 0x40},  // 28
-	{ "ICON_576i"     , ICON_576i      , 0x21, 0x40, 0x20, 0x40},  // 29
-	{ "ICON_576p"     , ICON_576p      , 0x21, 0x40, 0x24, 0x20},  // 30
-	{ "ICON_720p"     , ICON_720p      , 0x23, 0x20, 0xff, 0x00},  // 31
-	{ "ICON_1080i"    , ICON_1080i     , 0x22, 0x20, 0xff, 0x00},  // 32
-	{ "ICON_1080p"    , ICON_1080p     , 0x21, 0x20, 0xff, 0x00},  // 33
-	{ "ICON_COLON1"   , ICON_COLON1    , 0x36, 0x01, 0xff, 0x00},  // 34 ":" left between text
-	{ "ICON_COLON2"   , ICON_COLON2    , 0x39, 0x01, 0xff, 0x00},  // 35 ":" middle between text
-	{ "ICON_COLON3"   , ICON_COLON3    , 0x3a, 0x01, 0xff, 0x00},  // 36 ":" right between text
-	{ "ICON_COLON4"   , ICON_COLON4    , 0x3b, 0x01, 0xff, 0x00},  // 37 ":" right between text (dimmer)
-	{ "ICON_TV"       , ICON_TV        , 0x23, 0x04, 0xff, 0x00},  // 38
-	{ "ICON_RADIO"    , ICON_RADIO     , 0x24, 0x04, 0xff, 0x00}  // 39
+	{ "ICON_STANDBY",   ICON_STANDBY,   0x20, 0x08, 0xff, 0x00 },  // 01
+	{ "ICON_SAT",       ICON_SAT,       0x20, 0x04, 0xff, 0x00 },  // 02
+	{ "ICON_REC",       ICON_REC,       0x30, 0x01, 0xff, 0x00 },  // 03
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT, 0x31, 0x02, 0x32, 0x02 },  // 04
+	{ "ICON_TIMER",     ICON_TIMER,     0x33, 0x02, 0xff, 0x00 },  // 05
+	{ "ICON_HD",        ICON_HD,        0x34, 0x02, 0xff, 0x00 },  // 06
+	{ "ICON_USB",       ICON_USB,       0x35, 0x02, 0xff, 0x00 },  // 07
+	{ "ICON_SCRAMBLED", ICON_SCRAMBLED, 0x36, 0x02, 0xff, 0x00 },  // 08
+	{ "ICON_DOLBY",     ICON_DOLBY,     0x37, 0x02, 0xff, 0x00 },  // 09
+	{ "ICON_MUTE",      ICON_MUTE,      0x38, 0x02, 0xff, 0x00 },  // 10
+	{ "ICON_TUNER1",    ICON_TUNER1,    0x39, 0x02, 0xff, 0x00 },  // 11
+	{ "ICON_TUNER2",    ICON_TUNER2,    0x3a, 0x02, 0xff, 0x00 },  // 12
+	{ "ICON_MP3",       ICON_MP3,       0x3b, 0x02, 0xff, 0x00 },  // 13
+	{ "ICON_REPEAT",    ICON_REPEAT,    0x3c, 0x02, 0xff, 0x00 },  // 14
+	{ "ICON_PLAY",      ICON_PLAY,      0x20, 0x02, 0xff, 0x00 },  // 15 play in circle
+	{ "ICON_Circ0",     ICON_Circ0,     0x24, 0x01, 0xff, 0x00 },  // 16 inner circle
+	{ "ICON_Circ1",     ICON_Circ1,     0x20, 0x01, 0xff, 0x00 },  // 17 circle, segment 1
+	{ "ICON_Circ2",     ICON_Circ2,     0x22, 0x01, 0xff, 0x00 },  // 18 circle, segment 2
+	{ "ICON_Circ3",     ICON_Circ3,     0x21, 0x02, 0xff, 0x00 },  // 19 circle, segment 3
+	{ "ICON_Circ4",     ICON_Circ4,     0x23, 0x02, 0xff, 0x00 },  // 20 circle, segment 4
+	{ "ICON_Circ5",     ICON_Circ5,     0x24, 0x02, 0xff, 0x00 },  // 21 circle, segment 5
+	{ "ICON_Circ6",     ICON_Circ6,     0x22, 0x02, 0xff, 0x00 },  // 22 circle, segment 6
+	{ "ICON_Circ7",     ICON_Circ7,     0x23, 0x01, 0xff, 0x00 },  // 23 circle, segment 7
+	{ "ICON_Circ8",     ICON_Circ8,     0x21, 0x01, 0xff, 0x00 },  // 24 circle, segment 8
+	{ "ICON_FILE",      ICON_FILE,      0x22, 0x04, 0xff, 0x00 },  // 25
+	{ "ICON_TER",       ICON_TER,       0x21, 0x04, 0xff, 0x00 },  // 26
+	{ "ICON_480i",      ICON_480i,      0x24, 0x40, 0x23, 0x40 },  // 27
+	{ "ICON_480p",      ICON_480p,      0x24, 0x40, 0x22, 0x40 },  // 28
+	{ "ICON_576i",      ICON_576i,      0x21, 0x40, 0x20, 0x40 },  // 29
+	{ "ICON_576p",      ICON_576p,      0x21, 0x40, 0x24, 0x20 },  // 30
+	{ "ICON_720p",      ICON_720p,      0x23, 0x20, 0xff, 0x00 },  // 31
+	{ "ICON_1080i",     ICON_1080i,     0x22, 0x20, 0xff, 0x00 },  // 32
+	{ "ICON_1080p",     ICON_1080p,     0x21, 0x20, 0xff, 0x00 },  // 33
+	{ "ICON_COLON1",    ICON_COLON1,    0x36, 0x01, 0xff, 0x00 },  // 34 ":" left between text
+	{ "ICON_COLON2",    ICON_COLON2,    0x39, 0x01, 0xff, 0x00 },  // 35 ":" middle between text
+	{ "ICON_COLON3",    ICON_COLON3,    0x3a, 0x01, 0xff, 0x00 },  // 36 ":" right between text
+	{ "ICON_COLON4",    ICON_COLON4,    0x3b, 0x01, 0xff, 0x00 },  // 37 ":" right between text (dimmer)
+	{ "ICON_TV",        ICON_TV,        0x23, 0x04, 0xff, 0x00 },  // 38
+	{ "ICON_RADIO",     ICON_RADIO,     0x24, 0x04, 0xff, 0x00 }   // 39
 };
 
 #elif defined(ATEVIO7500)
@@ -624,32 +626,33 @@ struct iconToInternal
 	u8 pixeldata[5];
 } nuvotonIcons[] =
 {
-	/*- Name ---------- icon# ---------- data1 data2 data3 data4 data5-----*/
-	{ "ICON_STANDBY"  , ICON_STANDBY  , {0x38, 0x44, 0x5f, 0x44, 0x38}},  // 01
-	{ "ICON_REC"      , ICON_REC      , {0x1c, 0x3e, 0x3e, 0x3e, 0x1c}},  // 02
-	{ "ICON_TIMESHIFT", ICON_TIMESHIFT, {0x01, 0x3f, 0x01, 0x2c, 0x34}},  // 03
-	{ "ICON_TIMER"    , ICON_TIMER    , {0x3e, 0x49, 0x4f, 0x41, 0x3e}},  // 04
-	{ "ICON_HD"       , ICON_HD       , {0x3e, 0x08, 0x3e, 0x22, 0x1c}},  // 05
-	{ "ICON_USB"      , ICON_USB      , {0x08, 0x0c, 0x1a, 0x2a, 0x28}},  // 06
-	{ "ICON_SCRAMBLED", ICON_SCRAMBLED, {0x3c, 0x26, 0x25, 0x26, 0x3c}},  // 07
-	{ "ICON_DOLBY"    , ICON_DOLBY    , {0x3e, 0x22, 0x1c, 0x22, 0x3e}},  // 08
-	{ "ICON_MUTE"     , ICON_MUTE     , {0x1e, 0x12, 0x1e, 0x21, 0x3f}},  // 09
-	{ "ICON_TUNER1"   , ICON_TUNER1   , {0x01, 0x3f, 0x01, 0x04, 0x3e}},  // 10
-	{ "ICON_TUNER2"   , ICON_TUNER2   , {0x01, 0x3f, 0x01, 0x34, 0x2c}},  // 11
-	{ "ICON_MP3"      , ICON_MP3      , {0x77, 0x37, 0x00, 0x49, 0x77}},  // 12
-	{ "ICON_REPEAT"   , ICON_REPEAT   , {0x14, 0x34, 0x14, 0x16, 0x14}},  // 13
-	{ "ICON_PLAY"     , ICON_PLAY     , {0x00, 0x7f, 0x3e, 0x1c, 0x08}},  // 14
-	{ "ICON_STOP"     , ICON_STOP     , {0x3C, 0x3C, 0x3C, 0x3C, 0x3C}},  // 15
-	{ "ICON_PAUSE"    , ICON_PAUSE    , {0x3e, 0x3e, 0x00, 0x3e, 0x3e}},  // 16
-	{ "ICON_REWIND"   , ICON_REWIND   , {0x08, 0x1c, 0x08, 0x1c, 0x00}},  // 17
-	{ "ICON_FF"       , ICON_FF       , {0x00, 0x1c, 0x08, 0x1c, 0x08}},  // 18
-	{ "ICON_STEP_BACK", ICON_STEP_BACK, {0x08, 0x1c, 0x3e, 0x00, 0x3e}},  // 19
-	{ "ICON_STEP_FWD" , ICON_STEP_FWD , {0x3e, 0x00, 0x3e, 0x1c, 0x08}},  // 20 
-	{ "ICON_TV"       , ICON_TV       , {0x01, 0x3f, 0x1d, 0x20, 0x1c}},  // 21
-	{ "ICON_RADIO"    , ICON_RADIO    , {0x78, 0x4a, 0x4c, 0x4a, 0x79}}  // 22
+	/*- Name ---------- icon# ----------- data1 data2 data3 data4 data5-----*/
+	{ "ICON_STANDBY",   ICON_STANDBY,   { 0x38, 0x44, 0x5f, 0x44, 0x38 } },  // 01
+	{ "ICON_REC",       ICON_REC,       { 0x1c, 0x3e, 0x3e, 0x3e, 0x1c } },  // 02
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT, { 0x01, 0x3f, 0x01, 0x2c, 0x34 } },  // 03
+	{ "ICON_TIMER",     ICON_TIMER,     { 0x3e, 0x49, 0x4f, 0x41, 0x3e } },  // 04
+	{ "ICON_HD",        ICON_HD,        { 0x3e, 0x08, 0x3e, 0x22, 0x1c } },  // 05
+	{ "ICON_USB",       ICON_USB,       { 0x08, 0x0c, 0x1a, 0x2a, 0x28 } },  // 06
+	{ "ICON_SCRAMBLED", ICON_SCRAMBLED, { 0x3c, 0x26, 0x25, 0x26, 0x3c } },  // 07
+	{ "ICON_DOLBY",     ICON_DOLBY,     { 0x3e, 0x22, 0x1c, 0x22, 0x3e } },  // 08
+	{ "ICON_MUTE",      ICON_MUTE,      { 0x1e, 0x12, 0x1e, 0x21, 0x3f } },  // 09
+	{ "ICON_TUNER1",    ICON_TUNER1,    { 0x01, 0x3f, 0x01, 0x04, 0x3e } },  // 10
+	{ "ICON_TUNER2",    ICON_TUNER2,    { 0x01, 0x3f, 0x01, 0x34, 0x2c } },  // 11
+	{ "ICON_MP3",       ICON_MP3,       { 0x77, 0x37, 0x00, 0x49, 0x77 } },  // 12
+	{ "ICON_REPEAT",    ICON_REPEAT,    { 0x14, 0x34, 0x14, 0x16, 0x14 } },  // 13
+	{ "ICON_PLAY",      ICON_PLAY,      { 0x00, 0x7f, 0x3e, 0x1c, 0x08 } },  // 14
+	{ "ICON_STOP",      ICON_STOP,      { 0x3C, 0x3C, 0x3C, 0x3C, 0x3C } },  // 15
+	{ "ICON_PAUSE",     ICON_PAUSE,     { 0x3e, 0x3e, 0x00, 0x3e, 0x3e } },  // 16
+	{ "ICON_REWIND",    ICON_REWIND,    { 0x08, 0x1c, 0x08, 0x1c, 0x00 } },  // 17
+	{ "ICON_FF",        ICON_FF,        { 0x00, 0x1c, 0x08, 0x1c, 0x08 } },  // 18
+	{ "ICON_STEP_BACK", ICON_STEP_BACK, { 0x08, 0x1c, 0x3e, 0x00, 0x3e } },  // 19
+	{ "ICON_STEP_FWD",  ICON_STEP_FWD,  { 0x3e, 0x00, 0x3e, 0x1c, 0x08 } },  // 20 
+	{ "ICON_TV",        ICON_TV,        { 0x01, 0x3f, 0x1d, 0x20, 0x1c } },  // 21
+	{ "ICON_RADIO",     ICON_RADIO,     { 0x78, 0x4a, 0x4c, 0x4a, 0x79 } }   // 22
 };
-#endif  //Icon definitions
+#endif  // Icon definitions
 /* End of character and icon definitions */
+
 
 /***************************************************************************************
  *
@@ -710,9 +713,7 @@ int nuvotonWriteCommand(char *buffer, int len, int needAck)
  *                 display.
  *
  */
-#if defined (OCTAGON1008) \
- || defined(HS7420) \
- || defined(HS7429)
+#if defined (OCTAGON1008) || defined(HS7420) || defined(HS7429)
 int nuvotonSetIcon(int which, int on)
 {
 	char buffer[7];
@@ -983,9 +984,7 @@ int nuvotonSetIcon(int which, int on)
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(HS7810A) \
- || defined(HS7119) \
- || defined(HS7819)  // LED models
+#elif defined(HS7810A) || defined(HS7119) || defined(HS7819)  // LED models
 int nuvotonSetIcon(int which, int on)
 {
 	int res;
@@ -1061,19 +1060,14 @@ int nuvotonSetLED(int which, int level)
 
 	dprintk(100, "%s > %d, %d\n", __func__, which, level);
 
-#if defined(OCTAGON1008) \
- || defined(HS7420) \
- || defined(HS7429) \
- || defined(HS7810A) \
- || defined(HS7819)
+#if defined(OCTAGON1008) || defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
 #define MAX_LED 3    // LED number is a bit mask:
                      // bit 0 = standby (red),
                      // bit 1 = logo (not on all models)
                      // RC feedback (green, on HS78XX) seems to be not controllable
 
 #define MAX_BRIGHT 7
-#elif defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)                    
+#elif defined(FORTIS_HDBOX) || defined(ATEVIO7500)                    
 #define MAX_LED 255  // LED number is a bit mask: bit 0 (  1) = red power
                      //                           bit 1 (  2) = blue power
                      //                           bit 2 (  4) = -
@@ -1133,11 +1127,7 @@ EXPORT_SYMBOL(nuvotonSetLED);
  * nuvotonSetBrightness: sets brightness of front panel display.
  *
  */
-#if defined(FORTIS_HDBOX) \
- || defined(OCTAGON1008) \
- || defined(ATEVIO7500) \
- || defined(HS7420) \
- || defined(HS7429)  // VFD models
+#if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7420) || defined(HS7429)  // VFD models
 int nuvotonSetBrightness(int level)
 {
 	char buffer[5];
@@ -1166,9 +1156,7 @@ int nuvotonSetBrightness(int level)
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(HS7119) \
- || defined(HS7810A) \
- || defined(HS7819)
+#elif defined(HS7119) || defined(HS7810A) || defined(HS7819)
 int nuvotonSetBrightness(int level)
 {
 	char buffer[6];
@@ -1458,11 +1446,7 @@ int nuvotonSetTimeFormat(char format)
  *                         LED states and icon states
  *
  */
-#if defined(FORTIS_HDBOX) \
- || defined(OCTAGON1008) \
- || defined(ATEVIO7500) \
- || defined(HS7420) \
- || defined(HS7429)  // VFD models
+#if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7420) || defined(HS7429)  // VFD models
 int nuvotonSetDisplayOnOff(char level)
 {
 	int  res = 0;
@@ -1513,8 +1497,7 @@ int nuvotonSetDisplayOnOff(char level)
 				res |= nuvotonSetIcon(i, 1);
 			}
 		}
-#if defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
 		if (lastdata.icon_state[ICON_SPINNER] != 0)
 		{
 			spinner_state.state = 1;
@@ -1525,9 +1508,7 @@ int nuvotonSetDisplayOnOff(char level)
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(HS7810A) \
- || defined(HS7119) \
- || defined(HS7819)
+#elif defined(HS7810A) || defined(HS7119) || defined(HS7819)
 int nuvotonSetDisplayOnOff(char level)
 {
 	int  res = 0;
@@ -1594,9 +1575,14 @@ int nuvotonGetVersion(unsigned int *data)
 		return -1;
 	}
 #if 0
+#if defined(ATEVIO7500) ||  defined(HS7110) ||  defined(HS7420) ||  defined(HS7810A) ||  defined(HS7119) ||  defined(HS7429) ||  defined(HS7819)
+	if (strcmp(mtd_info->name, "boot"))
+#else
 	if (strcmp(mtd_info->name, "Boot_firmware"))
+#endif
 	{
-		printk([nuvoton] "mtd0 is not the Boot_firmware\n");
+		printk("[nuvoton] mtd0 is not the Boot_firmware\n");
+		dprintk(10, "MTD name       : %s\n", mtd_info->name);
 		put_mtd_device(mtd_info);
 		return -1;
 	}
@@ -1612,6 +1598,7 @@ int nuvotonGetVersion(unsigned int *data)
 		printk("[nuvoton] Error reading boot loader info\n");
 		return -1;
 	}
+	res = 0;
 
 	// determine version as (100 * major) + minor
 	data[0] = 0;
@@ -1628,7 +1615,6 @@ int nuvotonGetVersion(unsigned int *data)
 		data[1] <<= 8;
 		data[1] += buf[i];
 	}
-
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
@@ -1926,9 +1912,7 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(OCTAGON1008) \
- || defined(HS7420) \
- || defined(HS7429)
+#elif defined(OCTAGON1008) || defined(HS7420) || defined(HS7429)
 // 8 character 15-segment VFD with icons
 int nuvotonWriteString(unsigned char *aBuf, int len)
 {
@@ -1972,8 +1956,7 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#elif defined(ATEVIO7500) \
- || defined(FORTIS_HDBOX)
+#elif defined(ATEVIO7500) || defined(FORTIS_HDBOX)
 // ATEVIO7500  : 13 character dot matrix VFD without colons or icons,
 //               leftmost character used as icon display
 // FORTIS_HDBOX: 12 character dot matrix VFD with colons and icons
@@ -2181,8 +2164,7 @@ int nuvoton_init_func(void)
 	char initD[] = {SOP, cCommandSetWakeupTime, 0xff, 0xff, EOP};                // delete/invalidate wakeup time
 	char initE[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};                 // red LED off, deep standby brightness 8
 
-#elif defined(HS7420) \
- || defined(HS7429)
+#elif defined(HS7420) || defined(HS7429)
 /*
  * Shortened essential factory power on sequence HS7429 (note: HS7420 assumed to be similar)
  * SOP 11 81 EOP               cCommandSetTimeFormat 24h
@@ -2238,9 +2220,7 @@ int nuvoton_init_func(void)
 	char init7[] = {SOP, cCommandSetLed, 0x01, 0x00, 0x08, EOP};                 // power LED (red) off, deep standby brightness 8
 	char init8[] = {SOP, cCommandSetLed, 0xf2, 0x08, 0x00, EOP};                 // blue LED plus cross brightness 8, deep standby off
 
-#elif defined(HS7119) \
- || defined(HS7810A) \
- || defined(HS7819)
+#elif defined(HS7119) || defined(HS7810A) || defined(HS7819)
 /* Shortened essential factory sequence HS7810A (note: HS7819 assumed to be similar)
  *
  * SOP 23 03 0a 02 EOP         cCommandSetLEDBrightness
@@ -2335,27 +2315,14 @@ int nuvoton_init_func(void)
 	msleep(1);
 	res |= nuvotonWriteCommand(init4, sizeof(init4), 0);
  	res |= nuvotonWriteCommand(init5, sizeof(init5), 0);
-#if defined(FORTIS_HDBOX) \
- || defined(OCTAGON1008) \
- || defined(ATEVIO7500) \
- || defined(HS7420) \
- || defined(HS7429) \
- || defined(HS7119) \
- || defined(HS7810A) \
- || defined(HS7819)
+#if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7420) || defined(HS7429) || defined(HS7119) || defined(HS7810A) || defined(HS7819)
 	res |= nuvotonWriteCommand(init6, sizeof(init6), 0);
 #endif
-#if defined(FORTIS_HDBOX) \
- || defined(OCTAGON1008) \
- || defined(ATEVIO7500) \
- || defined(HS7420) \
- || defined(HS7429)
+#if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7420) || defined(HS7429)
 	res |= nuvotonWriteCommand(init7, sizeof(init7), 0);
 	res |= nuvotonWriteCommand(init8, sizeof(init8), 0);
 #endif
-#if defined(OCTAGON1008) \
- || defined(HS7420) \
- || defined(HS7429)
+#if defined(OCTAGON1008) || defined(HS7420) || defined(HS7429)
 	res |= nuvotonWriteCommand(init9, sizeof(init9), 0);
 	res |= nuvotonWriteCommand(initA, sizeof(initA), 0);
 	res |= nuvotonWriteCommand(initB, sizeof(initB), 0);
@@ -2369,7 +2336,7 @@ int nuvoton_init_func(void)
 		regs[vLoop] = 0x00;  // initialize local shadow registers
 	}
 
-//	res |= nuvotonWriteString("SH4", strlen("SH4"));
+//	res |= nuvotonWriteString("T.-Ducktales", strlen("T.-Ducktales"));
 
 #if !defined(HS7110)
 	for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX; vLoop++)
@@ -2381,9 +2348,7 @@ int nuvoton_init_func(void)
 	lastdata.icon_count = 0;
 #endif
 
-#if defined(HS7119) \
- || defined(HS7810A) \
- || defined(HS7819)  //LED models
+#if defined(HS7119) || defined(HS7810A) || defined(HS7819)  //LED models
 	res |= nuvotonWriteString("----", 4);  // HS7810A, HS7819 & HS7119: show 4 dashes
 #endif
 	wakeup_time[0] = 40587 >> 8;  // set initial wakeup time to Linux epoch
@@ -2477,16 +2442,13 @@ static ssize_t NUVOTONdev_write(struct file *filp, const char *buff, size_t len,
 	llen = len;
 
 	corr = 0;
-#if defined(HS7119) \
- || defined(HS7810A) \
- || defined(HS7819)
+#if defined(HS7119) || defined(HS7810A) || defined(HS7819)
 	if (kernel_buf[2] == ':')
 	{
 		corr++;  // correct scroll when 3rd char is a colon
 	}
 #endif
-#if defined(HS7810A) \
- || defined(HS7819)
+#if defined(HS7810A) || defined(HS7819)
 	if ((kernel_buf[2] == '.') && (kernel_buf[3] == ':'))
 	{
 		corr += 2;  // correct scroll when 2nd char is a period 3rd char is a colon
@@ -2778,8 +2740,7 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 			{
 				switch (icon_nr)
 				{
-#if defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
 					case 0x13:  // crypted
 					{
 						icon_nr = ICON_SCRAMBLED;
@@ -2833,8 +2794,7 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 						icon_nr = ICON_REC;
 						break;
 					}
-#elif defined(HS7420) \
- || defined(HS7429)
+#elif defined(HS7420) || defined(HS7429)
 					case 0x1e:  // record
 					{
 						icon_nr = ICON_DOT;
@@ -2851,8 +2811,7 @@ static int NUVOTONdev_ioctl(struct inode *Inode, struct file *File, unsigned int
 			// Part two: decide wether one icon, all or spinner
 			switch (icon_nr)
 			{
-#if defined(FORTIS_HDBOX) \
- || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
 				case ICON_SPINNER:
 				{
 					if (mode == 0)  // vfd mode
