@@ -22,7 +22,7 @@
 #define PINFO(fmt, args...)         printk(KERN_INFO " " fmt, ##args)
 #define PERROR(fmt, args...)        printk(KERN_ERR "[%s]: " fmt, __FUNCTION__, ##args)
 
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 #define I2C_BUS			1
 #else
 #define I2C_BUS			0

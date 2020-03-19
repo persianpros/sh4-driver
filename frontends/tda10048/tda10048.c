@@ -136,7 +136,7 @@ static unsigned int debug;
 	} while (0)
 
 
-#if !defined CONFIG_SH_QBOXHD_1_0 && !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD && !defined QBOXHD_MINI
 struct tda10048_state {
 
 	struct i2c_adapter *i2c;
@@ -166,7 +166,7 @@ static struct init_tab {
 	{ TDA10048_CONF_ADC_2, 0x00 },
 	{ TDA10048_CONF_C4_1, 0x00 },
 	{ TDA10048_CONF_PLL1, 0x0f },
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 	{ TDA10048_CONF_PLL2, 0x01 }, //<-- These are the right values for qboxhd_mini platform
 	{ TDA10048_CONF_PLL3, 0x44 },
 #else
@@ -212,7 +212,7 @@ static struct init_tab {
 };
 
 
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 static struct pll_tab {
 	u32	clk_freq_khz;
 	u32	if_freq_khz;
@@ -329,7 +329,7 @@ error:
 	return ret;
 }
 
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 static void tda10048_standby(struct dvb_frontend *fe)
 {
 	unsigned char t=0xFF;
@@ -565,7 +565,7 @@ static int tda10048_firmware_upload(struct dvb_frontend *fe)
 		ret = 0;
 	}
 
-#if !defined CONFIG_SH_QBOXHD_1_0 && !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD && !defined QBOXHD_MINI
 	if (fw->size != TDA10048_DEFAULT_FIRMWARE_SIZE) {
 		printk(KERN_ERR "%s: firmware incorrect size\n", __func__);
 		ret = -EIO;
@@ -621,7 +621,7 @@ static int tda10048_firmware_upload(struct dvb_frontend *fe)
 				break;
 			}
 		}
-#if !defined CONFIG_SH_QBOXHD_1_0 && !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD && !defined QBOXHD_MINI
 	}
 #endif
 	release_firmware(fw);
@@ -738,7 +738,7 @@ static int tda10048_get_tps(struct tda10048_state *state,
 		p->guard_interval =  GUARD_INTERVAL_1_4;
 		break;
 	}
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 	switch (val & 0x03) {
 #else
 	switch (val & 0x02) {
@@ -800,7 +800,7 @@ static int tda10048_set_frontend(struct dvb_frontend *fe,
 
 	dprintk(1, "%s(frequency=%d)\n", __func__, p->frequency);
 
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 	tda10048_writereg(state, TDA10048_CONF_C4_1,
 					tda10048_readreg(state, TDA10048_CONF_C4_1) & (~(0x01)));
 #endif
@@ -826,7 +826,7 @@ static int tda10048_set_frontend(struct dvb_frontend *fe,
 
 	/* Enable demod TPS auto detection and begin acquisition */
 	tda10048_writereg(state, TDA10048_AUTO, 0x57);
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 	/* Exit from tristate */
 	tda10048_writereg(state, TDA10048_CONF_TRISTATE1, 0x21);
 	msleep(100);	//wait to lock
@@ -850,7 +850,7 @@ static int tda10048_init(struct dvb_frontend *fe)
 	if (state->fwloaded == 0)
 		ret = tda10048_firmware_upload(fe);
 
-#if !defined CONFIG_SH_QBOXHD_1_0 && !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD && !defined QBOXHD_MINI
 	/* Set either serial or parallel */
 	tda10048_output_mode(fe, config->output_mode);
 #endif
@@ -923,7 +923,7 @@ static int tda10048_read_signal_strength(struct dvb_frontend *fe,
 
 	return 0;
 }
-#if !defined CONFIG_SH_QBOXHD_1_0 && !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD && !defined QBOXHD_MINI
 /* SNR lookup table */
 static struct snr_tab {
 	u8 val;
@@ -1063,7 +1063,7 @@ static int tda10048_read_snr(struct dvb_frontend *fe, u16 *snr)
 
 	dprintk(1, "%s()\n", __func__);
 
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 	v=tda10048_readreg(state, 0x7F);
 	*snr=v;
 	return 0;
@@ -1127,7 +1127,7 @@ static void tda10048_establish_defaults(struct dvb_frontend *fe)
 
 	/* Validate/default the config */
 	if (config->dtv6_if_freq_khz == 0) {
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 		config->dtv6_if_freq_khz = TDA10048_IF_3000;
 #else
 		config->dtv6_if_freq_khz = TDA10048_IF_4300;
@@ -1139,7 +1139,7 @@ static void tda10048_establish_defaults(struct dvb_frontend *fe)
 	}
 
 	if (config->dtv7_if_freq_khz == 0) {
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 		config->dtv7_if_freq_khz = TDA10048_IF_3500;
 #else
 		config->dtv7_if_freq_khz = TDA10048_IF_4300;
@@ -1151,7 +1151,7 @@ static void tda10048_establish_defaults(struct dvb_frontend *fe)
 	}
 
 	if (config->dtv8_if_freq_khz == 0) {
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 		config->dtv8_if_freq_khz = TDA10048_IF_4000;
 #else
 		config->dtv8_if_freq_khz = TDA10048_IF_4300;
@@ -1248,15 +1248,15 @@ static struct dvb_frontend_ops tda10048_ops = {
 	.read_signal_strength = tda10048_read_signal_strength,
 	.read_snr = tda10048_read_snr,
 	.read_ucblocks = tda10048_read_ucblocks,
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 	.sleep = tda10048_standby
 #endif
 };
 
 module_param(debug, int, 0644);
-#ifdef CONFIG_SH_QBOXHD_1_0
+#ifdef QBOXHD
 #define MOD               "-HD"
-#elif  CONFIG_SH_QBOXHD_MINI_1_0
+#elif  QBOXHD_MINI
 #define MOD               "-Mini"
 #else
 #define MOD               ""

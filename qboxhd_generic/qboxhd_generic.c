@@ -38,9 +38,9 @@
 
 #include <qboxhd_generic.h>
 
-#ifdef CONFIG_SH_QBOXHD_1_0
+#ifdef QBOXHD
 #define MOD               "-HD"
-#elif  CONFIG_SH_QBOXHD_MINI_1_0
+#elif  QBOXHD_MINI
 #define MOD               "-Mini"
 #else
 #define MOD               ""
@@ -69,7 +69,7 @@ static void reg_writeonly_l(unsigned int base_address, unsigned int reg, unsigne
 static struct cdev rst_cdev;
 
 
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 /**
  * Dummy funcs needed by stmdvb.ko
  */
@@ -181,7 +181,7 @@ rst_ioctl (struct inode *inode, struct file *file,
 			{
 				printk(" EXIT to the reset of tuner.... DATA: %d\n",data);
 				reg_writeonly_l(base_address, PIO_SET_PnOUT, 0x40);
-				#if defined CONFIG_SH_QBOXHD_MINI_1_0
+				#if defined QBOXHD_MINI
 				reg_writeonly_l(base_address, PIO_SET_PnOUT, 0x04);
 				#endif
 			}
@@ -189,7 +189,7 @@ rst_ioctl (struct inode *inode, struct file *file,
 			{
 				printk(" ENTER to the reset of tuner.... DATA: %d\n",data);
 				reg_writeonly_l(base_address, PIO_CLR_PnOUT, 0x40);
-				#if defined CONFIG_SH_QBOXHD_MINI_1_0
+				#if defined QBOXHD_MINI
 				reg_writeonly_l(base_address, PIO_CLR_PnOUT, 0x04);
 				#endif
 			}
@@ -197,7 +197,7 @@ rst_ioctl (struct inode *inode, struct file *file,
 				printk("Unknow command for IOCTL_ACTIVATION_RST ... parameter value: %d\n", data);
 			res=1;
 		break;
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 		case IOCTL_RST_TUNER_0://100
 			dprintk("IOCTL_RST_TUNER_0\n");
 			copy_from_user((void *) &data,
@@ -280,7 +280,7 @@ static int __init qboxhd_generic_init(void)
     reg_writeonly_l(base_address, PIO_SET_PnC1, 0x40);
     reg_writeonly_l(base_address, PIO_CLR_PnC2, 0x40);
 
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 	/* Set GPIO 0[2] for output (tuner 1). Datasheet page 213-217 */
     reg_writeonly_l(base_address, PIO_CLR_PnC0, 0x04);
     reg_writeonly_l(base_address, PIO_SET_PnC1, 0x04);
@@ -289,13 +289,13 @@ static int __init qboxhd_generic_init(void)
 
     /* Set it low, wait 150ms, and set it high */
     reg_writeonly_l(base_address, PIO_CLR_PnOUT, 0x40);
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
     /* Set it low, wait 150ms, and set it high */
     reg_writeonly_l(base_address, PIO_CLR_PnOUT, 0x04);
 #endif
     mdelay(150);
     reg_writeonly_l(base_address, PIO_SET_PnOUT, 0x40);
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
     /* Set it low, wait 150ms, and set it high */
     reg_writeonly_l(base_address, PIO_SET_PnOUT, 0x04);
 #endif

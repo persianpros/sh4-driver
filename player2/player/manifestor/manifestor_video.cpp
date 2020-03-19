@@ -1042,7 +1042,12 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					int wRatio = wRatioR.IntegerPart();
 					DestHeight = (DestHeight * wRatio) / pRatio;
 #else
-					Rational_t NewHeight = (DestHeight * WindowAspectRatio) / PictureAspectRatio;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+					Rational_t   NewHeight;
+					NewHeight =  DestHeight * ( WindowAspectRatio / PictureAspectRatio );
+#else
+					Rational_t   NewHeight =  (DestHeight * WindowAspectRatio) / PictureAspectRatio;
+#endif
 					DestHeight = NewHeight.IntegerPart();
 #endif
 					DestY = DestY + ((SurfaceWindow.Height - DestHeight) >> 1);
@@ -1058,7 +1063,12 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					int wRatio = wRatioR.IntegerPart();
 					DestWidth = (DestWidth * pRatio) / wRatio;
 #else
-					Rational_t NewWidth = (DestWidth * PictureAspectRatio) / WindowAspectRatio;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+					Rational_t   NewWidth; 
+					NewWidth = DestWidth * (PictureAspectRatio / WindowAspectRatio);
+#else
+					Rational_t   NewWidth = (DestWidth * PictureAspectRatio) / WindowAspectRatio;
+#endif
 					DestWidth = NewWidth.IntegerPart();
 #endif
 					DestX = DestX + ((SurfaceWindow.Width - DestWidth) >> 1);
@@ -1078,8 +1088,13 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					Rational_t wRatioR = WindowAspectRatio * 1000;
 					int wRatio = wRatioR.IntegerPart();
 					SourceWidth = (SourceWidth * wRatio) / pRatio;
+#else PictureAspectRatio;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+					Rational_t   NewWidth;
+					NewWidth = SourceWidth * ( WindowAspectRatio / PictureAspectRatio );
 #else
-					Rational_t NewWidth = (SourceWidth * WindowAspectRatio) / PictureAspectRatio;
+					Rational_t   NewWidth = (SourceWidth * WindowAspectRatio) / PictureAspectRatio;
+#endif
 					SourceWidth = NewWidth.IntegerPart();
 #endif
 					SourceX = SourceX + ((OldWidth - SourceWidth) >> 1);
@@ -1096,7 +1111,12 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					int wRatio = wRatioR.IntegerPart();
 					SourceHeight = (SourceHeight * pRatio) / wRatio;
 #else
-					Rational_t NewHeight = (SourceHeight * PictureAspectRatio) / WindowAspectRatio;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+					Rational_t   NewHeight;
+					NewHeight = SourceHeight * ( PictureAspectRatio / WindowAspectRatio );
+#else
+					Rational_t   NewHeight = (SourceHeight * PictureAspectRatio) / WindowAspectRatio;
+#endif
 					SourceHeight = NewHeight.IntegerPart();
 #endif
 					SourceY = SourceY + ((OldHeight - SourceHeight) >> 1);

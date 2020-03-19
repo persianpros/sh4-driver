@@ -92,6 +92,9 @@ void Player_Generic_c::ProcessDecodeToManifest(PlayerStream_t Stream)
 	bool LastPreManifestDiscardBuffer;
 	unsigned char SubmitInitialFrame;
 	Buffer_t InitialFrameBuffer;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	bool still_discarded = false;
+#endif
 	//
 	// Set parameters
 	//
@@ -150,8 +153,13 @@ void Player_Generic_c::ProcessDecodeToManifest(PlayerStream_t Stream)
 						}
 					}
 				Stream->Manifestor->GetDecodeBufferCount(&PossibleDecodeBuffers);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+				//Keeps original decode buffers quantity to avoid reordering frames problems
+				MaxDecodesOutOfOrder = (Stream->Playback->Direction == PlayForward) ? PossibleDecodeBuffers : (3 * PossibleDecodeBuffers) / 4;
+#else
 				MaxDecodesOutOfOrder = (Stream->Playback->Direction == PlayForward) ? (PossibleDecodeBuffers >> 1) : (3 * PossibleDecodeBuffers) / 4;
 				MaxDecodesOutOfOrder = min((PossibleDecodeBuffers - PLAYER_MINIMUM_NUMBER_OF_WORKING_DECODE_BUFFERS), MaxDecodesOutOfOrder);
+#endif
 				if (Stream->Playback->Direction == PlayForward)
 					MaxDecodesOutOfOrder = min(PLAYER_LIMIT_ON_OUT_OF_ORDER_DECODES, MaxDecodesOutOfOrder);
 				if ((LowestIndex != INVALID_INDEX) &&
@@ -377,7 +385,21 @@ void Player_Generic_c::ProcessDecodeToManifest(PlayerStream_t Stream)
 				if (Stream->DiscardingUntilMarkerFrameDtoM ||
 						Stream->Terminating ||
 						(Status != OutputTimerNoError))
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+				{
+#endif
 					DiscardBuffer = true;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+//If 2 or more audio buffers discarded, then waits for 50 ms for every discarded buffer to force resyncronization and avoid sound hole
+					if (Stream->StreamType == StreamTypeAudio)
+					{
+						//if (Stream->StreamType == StreamTypeAudio)  report( severity_error, "Discarding untimed frames..................................................................................................\n" )
+						if (still_discarded) OS_SleepMilliSeconds( 50 );
+						still_discarded = true;
+					}
+				}
+				else still_discarded = false;
+#endif
 				if ((DiscardBuffer != LastPreManifestDiscardBuffer) &&
 						(Status == OutputTimerUntimedFrame))
 				{

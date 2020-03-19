@@ -21,7 +21,7 @@
  * MACROS
  *****************************/
 
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 	#define DISPLAY_WIDTH				160     
 	#define DISPLAY_HEIGHT				128     
 #else

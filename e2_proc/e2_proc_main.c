@@ -301,6 +301,10 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "spark7162\n");
 #elif defined(FORTIS_HDBOX)
 	int len = sprintf(page, "fortis_hdbox\n");
+#elif defined(QBOXHD)
+	int len = sprintf(page, "qboxhd\n");
+#elif defined(QBOXHD_MINI)
+	int len = sprintf(page, "qboxhd_mini\n");
 #elif defined(HOMECAST5101)
 	int len = sprintf(page, "hs5101\n");
 #elif defined(OCTAGON1008)
@@ -730,6 +734,9 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/video/hdmi_colorspace_choices"                                , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/force_dvi"                                              , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/policy"                                                 , NULL, NULL, NULL, NULL, ""},
+#if defined QBOXHD || defined QBOXHD_MINI
+	{cProcEntry, "stb/video/policy2"                                                , NULL, NULL, NULL, NULL, ""},
+#endif
 	{cProcEntry, "stb/video/policy_choices"                                         , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/videomode"                                              , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/3d_mode"                                                , NULL, three_d_mode_read, three_d_mode_write, NULL, ""},

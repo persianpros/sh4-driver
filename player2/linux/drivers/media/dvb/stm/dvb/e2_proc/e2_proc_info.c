@@ -48,6 +48,10 @@ int proc_info_model_read(char *page, char **start, off_t off, int count,
 	len = sprintf(page, "spark7162\n");
 #elif defined(FORTIS_HDBOX)
 	len = sprintf(page, "fortis_hdbox\n");
+#elif defined(QBOXHD)
+	len = sprintf(page, "qboxhd\n");
+#elif defined(QBOXHD_MINI)
+	len = sprintf(page, "qboxhd_mini\n");
 #elif defined(HOMECAST5101)
 	len = sprintf(page, "hs5101\n");
 #elif defined(OCTAGON1008)

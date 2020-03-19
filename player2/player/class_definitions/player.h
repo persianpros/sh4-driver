@@ -334,6 +334,9 @@ class Player_c
 		virtual unsigned long long GetLastNativeTime(PlayerPlayback_t Playback) = 0;
 		virtual void SetLastNativeTime(PlayerPlayback_t Playback,
 									   unsigned long long Time) = 0;
+#if defined QBOXHD || defined QBOXHD_MINI
+	virtual void setTimeCtrl(bool on)=0;
+#endif
 };
 
 // ---------------------------------------------------------------------

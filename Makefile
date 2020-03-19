@@ -79,6 +79,12 @@ endif
 ifdef FORTIS_HDBOX
 CCFLAGSY += -DFORTIS_HDBOX
 endif
+ifdef QBOXHD
+CCFLAGSY += -DQBOXHD
+endif
+ifdef QBOXHD_MINI
+CCFLAGSY += -DQBOXHD_MINI
+endif
 ifdef ATEVIO7500
 CCFLAGSY += -DATEVIO7500
 endif
@@ -346,6 +352,14 @@ endif
 
 ifdef FORTIS_HDBOX
 obj-y += smartcard/
+endif
+
+ifdef QBOXHD
+obj-y += smartcard_qbox/
+endif
+
+ifdef QBOXHD_MINI
+obj-y += smartcard_qbox/
 endif
 
 ifdef IPBOX9900

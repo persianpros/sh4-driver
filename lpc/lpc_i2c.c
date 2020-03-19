@@ -1041,9 +1041,9 @@ module_param(debugl, int, 0644);
 MODULE_PARM_DESC(debug, "Turn on/off LPC debugging (default:off).");
 MODULE_PARM_DESC(debugl, "Turn on/off LPC debugging in I/O operation.");
 
-#ifdef CONFIG_SH_QBOXHD_1_0
+#ifdef QBOXHD
 #define MOD               "-HD"
-#elif  CONFIG_SH_QBOXHD_MINI_1_0
+#elif  QBOXHD_MINI
 #define MOD               "-Mini"
 #else
 #define MOD               ""

@@ -49,6 +49,12 @@ Date Modification Name
 
 #define MAX_ALLOWED_SMOOTH_REVERSE_PLAY_FAILURES 2 // After this we assume reverse play just isn't practical
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+/* Exit when there are more 11 error of header read */
+#define	MAX_H264_HEADER_ERROR	11
+static unsigned int error_h264_header = 0;
+#endif
+
 // /////////////////////////////////////////////////////////////////////////
 //
 // Locally defined structures

@@ -57,7 +57,12 @@ enum
 	FrameParserFailedToAllocateBuffer,
 
 	FrameParserReferenceListConstructionDeferred,
-	FrameParserInsufficientReferenceFrames
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	FrameParserInsufficientReferenceFrames,
+	FrameParserCodecError
+#else
+ 	FrameParserInsufficientReferenceFrames
+#endif
 };
 
 typedef PlayerStatus_t FrameParserStatus_t;

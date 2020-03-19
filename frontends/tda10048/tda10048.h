@@ -45,7 +45,7 @@ struct tda10048_config {
 #define TDA10048_INVERSION_ON  1
 	u8 inversion;
 
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
  #define TDA10048_IF_3000  3000	//for 6 MHz bw
 #endif
 

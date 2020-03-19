@@ -52,6 +52,17 @@ OS_TaskEntry(PlayerProcessParseToDecode)
 	return NULL;
 }
 
+#if defined QBOXHD || defined QBOXHD_MINI
+void Player_Generic_c::setTimeCtrl(bool on)
+{
+	//report(severity_info,"Player_Generic_c::setTimeCtrl(bool on):  on=%s <================= \n\n\n",on?"true":"false");
+	if(on)
+		timeCtrl_on=1;
+	else
+		timeCtrl_on=0;
+}
+#endif
+
 // //////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Main process code
@@ -76,6 +87,11 @@ void Player_Generic_c::ProcessParseToDecode(PlayerStream_t Stream)
 	PlayerBufferRecord_t *Table;
 	bool DiscardBuffer;
 	bool PromoteNextStreamParametersToNew;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	unsigned long long                LastSeenDecodeTime = 0;
+	unsigned long long                LastSeenTime = 0;
+        unsigned long long                action_time = 0;
+#endif
 	//
 	// Set parameters
 	//
@@ -149,6 +165,59 @@ void Player_Generic_c::ProcessParseToDecode(PlayerStream_t Stream)
 			// If we are not discarding everything, then proceed to process the buffer
 			//
 			DiscardBuffer = Stream->DiscardingUntilMarkerFramePtoD;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	if(timeCtrl_on)
+{
+			//If invalid time stamp detected, then discard buffer
+			if (ParsedFrameParameters->NormalizedPlaybackTime != INVALID_TIME)
+			{
+				unsigned long long LastSeen_tmp;
+				long long MAX_GAP_uSec;
+                                if (!action_time)   MAX_GAP_uSec = 1000000;
+                                else                MAX_GAP_uSec = 300000;
+				if (LastSeenDecodeTime != 0)
+					LastSeen_tmp = LastSeenDecodeTime + (OS_GetTimeInMicroSeconds() - LastSeenTime);
+				if (LastSeenDecodeTime != 0 &&
+					 ((ParsedFrameParameters->NormalizedPlaybackTime + MAX_GAP_uSec) < LastSeen_tmp ||
+					   ParsedFrameParameters->NormalizedPlaybackTime > (LastSeen_tmp + MAX_GAP_uSec)
+					 )
+					)
+				{
+					DiscardBuffer = true;
+                                        if (!action_time)
+                                        {
+                                            report( severity_error, "Parse to Decode Discarding 222. LastSeenDecodeTime: %lld "
+                                                                                            "NormalizedPlaybackTime: %lld LastSeenTime: %lld Now: %lld\n",
+                                                            LastSeenDecodeTime, ParsedFrameParameters->NormalizedPlaybackTime, LastSeenTime, OS_GetTimeInMicroSeconds());
+                                            report( severity_error, "Parse to Decode Discarding 222. NormalizedPlaybackTime: %016llx "
+                                                                                            "NormalizedDecodeTime: %016llx NativePlaybackTime: %016llx NativeDecodeTime: %016llx\n",
+                                                            ParsedFrameParameters->NormalizedPlaybackTime, ParsedFrameParameters->NormalizedDecodeTime,
+                                                            ParsedFrameParameters->NativePlaybackTime, ParsedFrameParameters->NativeDecodeTime);
+                                        }
+                                        if (!action_time) action_time = OS_GetTimeInMicroSeconds();
+                                        if (action_time+1000000 <= OS_GetTimeInMicroSeconds())
+                                        {
+                                            //report( severity_error, "Parse to Decode Discarding 222  EEEEEEEEEEEEENNNNNNNNNNNNNNNNNNDDDDDDDDDDD\n");
+                                            action_time = 0;
+                                            LastSeenDecodeTime = ParsedFrameParameters->NormalizedPlaybackTime;
+                                            LastSeenTime = OS_GetTimeInMicroSeconds();
+                                        }
+				}
+				else
+				{
+                                        //if (action_time) report( severity_error, "Parse to Decode Discarding 222  EEEEEEEEEEEEENNNNNNNNNNNNNNNNNNDDDDDDDDDDD\n");
+                                        action_time = 0;
+					LastSeenDecodeTime = ParsedFrameParameters->NormalizedPlaybackTime;
+					LastSeenTime = OS_GetTimeInMicroSeconds();
+				}
+			}
+	}
+    else
+    {
+		LastSeenDecodeTime = 0;
+		LastSeenTime = 0;
+    }
+#endif
 			//
 			// Handle output timing functions, await entry into the decode window,
 			// Then check for frame drop (whether due to trick mode, or because

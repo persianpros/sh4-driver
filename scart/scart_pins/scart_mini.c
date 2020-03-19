@@ -332,9 +332,9 @@ module_exit(scart_mini_exit);
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Turn on/off frontend debugging (default:off).");
 
-#ifdef CONFIG_SH_QBOXHD_1_0
+#ifdef QBOXHD
 #define MOD               "-HD"
-#elif  CONFIG_SH_QBOXHD_MINI_1_0
+#elif  QBOXHD_MINI
 #define MOD               "-Mini"
 #else
 #define MOD               ""

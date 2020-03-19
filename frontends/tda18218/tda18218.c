@@ -157,7 +157,7 @@ static int tda18218_set_params(struct dvb_frontend *fe,
 	switch (params->u.ofdm.bandwidth) {
 	case BANDWIDTH_6_MHZ:
 		LP_Fc = 0;
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 		LO_Frac = params->frequency + 3000000;
 #else
 		LO_Frac = params->frequency + 4000000;
@@ -301,7 +301,7 @@ struct dvb_frontend *tda18218_attach(struct dvb_frontend *fe,
 	static u8 def_regs[] = {
 		0xc0, 0x88, 0x00, 0x8e, 0x03, 0x00, 0x00, 0xd0, 0x00, 0x40,
 		0x00, 0x00, 0x07, 0xff, 0x84, 0x09, 0x00, 0x13, 0x00, 0x00,
-#if defined CONFIG_SH_QBOXHD_1_0 || defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD || defined QBOXHD_MINI
 		0x01, 0x84, 0x09, 0xf0, 0x19, 0x0a, 0x0e, 0x29, 0x98, 0x00, //<- maybe it works well
 #else
 		0x01, 0x84, 0x09, 0xf0, 0x19, 0x0a, 0x8e, 0x69, 0x98, 0x01,
@@ -354,9 +354,9 @@ struct dvb_frontend *tda18218_attach(struct dvb_frontend *fe,
 }
 EXPORT_SYMBOL(tda18218_attach);
 
-#ifdef CONFIG_SH_QBOXHD_1_0
+#ifdef QBOXHD
 #define MOD               "-HD"
-#elif  CONFIG_SH_QBOXHD_MINI_1_0
+#elif  QBOXHD_MINI
 #define MOD               "-Mini"
 #else
 #define MOD               ""

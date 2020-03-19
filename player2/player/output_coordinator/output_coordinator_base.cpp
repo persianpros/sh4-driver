@@ -98,6 +98,9 @@ OutputCoordinator_Base_c::OutputCoordinator_Base_c(void)
 {
 	InitializationStatus = OutputCoordinatorError;
 //
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_InitializeMutex(&SyncLock);
+#endif
 	OS_InitializeMutex(&Lock);
 	OS_InitializeEvent(&SynchronizeMayHaveCompleted);
 	StreamCount = 0;
@@ -118,6 +121,9 @@ OutputCoordinator_Base_c::~OutputCoordinator_Base_c(void)
 	Reset();
 	OS_TerminateEvent(&SynchronizeMayHaveCompleted);
 	OS_TerminateMutex(&Lock);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_TerminateMutex(&SyncLock);
+#endif
 }
 
 // /////////////////////////////////////////////////////////////////////////
@@ -224,6 +230,9 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::RegisterStream(
 	NewContext->LeastSquareFit.Reset();
 	NewContext->ManifestorLatency = INVALID_TIME;
 	NewContext->StreamOffset = (long long)INVALID_TIME;
+#if defined QBOXHD || defined QBOXHD_MINI
+	NewContext->LastSpeedChanged = false;
+#endif
 	OS_InitializeEvent(&NewContext->AbortPerformEntryIntoDecodeWindowWait);
 	//
 	// Obtain the appropriate portion of the class list for this stream
@@ -491,6 +500,9 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SetPlaybackSpeed(
 			if (ContextLoop->TimeMappingEstablished)
 			{
 				TranslateSystemTimeToPlayback(ContextLoop, Now, &ContextLoop->BaseNormalizedPlaybackTime);
+#if defined QBOXHD || defined QBOXHD_MINI
+				ContextLoop->LastSeenNormalizedPlaybackTime = ContextLoop->BaseNormalizedPlaybackTime;
+#endif
 				ContextLoop->BaseSystemTime = Now;
 				ContextLoop->BaseSystemTimeAdjusted = true;
 			}
@@ -536,6 +548,9 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::ResetTimeMapping(OutputCoord
 			ContextLoop = ContextLoop->Next)
 	{
 		ContextLoop->TimeMappingEstablished = false;
+#if defined QBOXHD || defined QBOXHD_MINI
+		ContextLoop->LastSeenNormalizedPlaybackTime = 0;
+#endif
 		OS_SetEvent(&ContextLoop->AbortPerformEntryIntoDecodeWindowWait);
 	}
 	//
@@ -649,6 +664,42 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::TranslatePlaybackTimeToSyste
 	{
 		if (!Context->TimeMappingEstablished)
 			return OutputCoordinatorMappingNotEstablished;
+#if defined QBOXHD || defined QBOXHD_MINI
+		if (Speed.IntegerPart()==1)                                                                             //Added by Duolabs
+        {
+            if (Context->LastSeenNormalizedPlaybackTime!=0 && (NormalizedPlaybackTime > Context->LastSeenNormalizedPlaybackTime))
+            {
+                if (!Context->LastSpeedChanged)
+                {
+					// If delta timestamp between last buffer and actual buffer is too big, than do a new time REBASE
+					if ((NormalizedPlaybackTime - Context->LastSeenNormalizedPlaybackTime)  > 10000000)
+                    {
+						report(severity_error, "Output::NormalizedPlaybackTime: %lld - LastSeenNormalized: %lld - "
+							"BaseNormalized: %lld - BaseSystemTime: %lld Now: %lld MasterBaseNormalized: %lld MasterBaseSystemTime: %lld\n",
+							NormalizedPlaybackTime,
+							Context->LastSeenNormalizedPlaybackTime,
+							Context->BaseNormalizedPlaybackTime,
+							Context->BaseSystemTime,
+							OS_GetTimeInMicroSeconds(),
+							MasterBaseNormalizedPlaybackTime, MasterBaseSystemTime);
+                        Speed.Print();
+						ResetTimeMapping( PlaybackContext );
+                        *SystemTime = OS_GetTimeInMicroSeconds();
+                        Context->LastSeenNormalizedPlaybackTime = 0;
+                        return OutputCoordinatorNoError;
+                    }
+                }
+            }
+            else Context->LastSpeedChanged = false;
+        }
+        if (Speed.IntegerPart()==1)
+			Context->LastSeenNormalizedPlaybackTime = NormalizedPlaybackTime;
+        else
+        {
+            Context->LastSeenNormalizedPlaybackTime = 0;
+            Context->LastSpeedChanged = true;
+        }
+#endif
 		BaseNormalizedPlaybackTime = Context->BaseNormalizedPlaybackTime;
 		BaseSystemTime = Context->BaseSystemTime;
 	}
@@ -764,13 +815,22 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 	//
 	report(severity_info, "Sync In - %d - %016llx %016llx\n", Context->StreamType, NormalizedPlaybackTime, NormalizedDecodeTime);
 	Context->InStartupDelay = true;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_LockMutex(&SyncLock);
+#endif
 	OS_LockMutex(&Lock);
 	AlternateTimeMappingExists = MasterTimeMappingEstablished &&
 								 (Context->BasedOnMasterMappingVersion != MasterTimeMappingVersion);
 	if (AlternateTimeMappingExists)
 	{
 		Now = OS_GetTimeInMicroSeconds();
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		OS_UnLockMutex(&Lock);
+#endif
 		TranslatePlaybackTimeToSystem(PlaybackContext, NormalizedPlaybackTime, &MasterMappingNow);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		OS_LockMutex(&Lock);
+#endif
 		AlternateMappingIsReasonable = ((MasterMappingNow - Now) > NEGATIVE_REASONABLE_LIMIT) ||
 									   ((MasterMappingNow - Now) < POSITIVE_REASONABLE_LIMIT);
 		if (AlternateMappingIsReasonable)
@@ -788,6 +848,9 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 			Context->InStartupDelay = false;
 			report(severity_info, "Sync out0 - %d - %016llx %016llx (%6lld)\n", Context->StreamType, MasterBaseNormalizedPlaybackTime, MasterBaseSystemTime, Context->StreamOffset);
 			OS_UnLockMutex(&Lock);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			OS_UnLockMutex(&SyncLock);
+#endif
 			return Status;
 		}
 	}
@@ -799,6 +862,9 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 	MasterTimeMappingEstablished = false;
 	MinimumStreamOffset = 0;
 	OS_UnLockMutex(&Lock);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_UnLockMutex(&SyncLock);
+#endif
 	//
 	// Before performing synchronization, we now perform the wait while
 	// sufficient data is decoded to allow smooth playback after synchronization.
@@ -839,6 +905,9 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 	//
 	// Now we need to add ourselves to the list of synchronizing streams
 	//
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_LockMutex(&SyncLock);
+#endif
 	OS_LockMutex(&Lock);
 	Context->InStartupDelay = false;
 	Context->InSynchronizeFn = true;
@@ -886,7 +955,13 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 			}
 			if (Context->StreamOffset < MinimumStreamOffset)
 				MinimumStreamOffset = Context->StreamOffset;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			OS_UnLockMutex(&Lock);
+#endif
 			Status = TranslatePlaybackTimeToSystem(Context, NormalizedPlaybackTime, SystemTime);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			OS_LockMutex(&Lock);
+#endif
 			break;
 		}
 		//
@@ -972,7 +1047,13 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 		{
 			OS_ResetEvent(&SynchronizeMayHaveCompleted);
 			OS_UnLockMutex(&Lock);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			OS_UnLockMutex(&SyncLock);
+#endif
 			OS_WaitForEvent(&SynchronizeMayHaveCompleted, SYNCHRONIZE_WAIT);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			OS_LockMutex(&SyncLock);
+#endif
 			OS_LockMutex(&Lock);
 			WaitCount++;
 		}
@@ -981,6 +1062,9 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 	Context->InSynchronizeFn = false;
 	StreamsInSynchronize--;
 	OS_UnLockMutex(&Lock);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_UnLockMutex(&SyncLock);
+#endif
 //
 	report(severity_info, "Sync out1 - %d - %016llx %016llx - %016llx (%6lld)\n", Context->StreamType, NormalizedPlaybackTime, *SystemTime, OS_GetTimeInMicroSeconds(), Context->StreamOffset);
 	return Status;

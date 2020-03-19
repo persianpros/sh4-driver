@@ -372,6 +372,14 @@ CollatorStatus_t Collator_PesVideo_c::Input(
 			//
 			// Copy over the spanning bytes
 			//
+#if defined QBOXHD || defined QBOXHD_MINI
+			if ((AccumulatedDataSize)+SpanningCount > MaximumCodedFrameSize)
+			{
+				//report( severity_error, "Collator_Base_c::Buffer Overflow 4\n" );
+				DiscardAccumulatedData();
+				return CollatorBufferOverflow;
+			}
+#endif
 			for (i = 0; i < min(SpanningCount, RemainingLength); i++)
 				BufferBase[AccumulatedDataSize + i] = RemainingData[i];
 			if (SpanningCount > RemainingLength)

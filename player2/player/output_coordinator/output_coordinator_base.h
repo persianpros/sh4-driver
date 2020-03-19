@@ -105,6 +105,10 @@ struct OutputCoordinatorContext_s
 	long long StreamOffset;
 
 	long long CurrentErrorHistory[4];
+#if defined QBOXHD || defined QBOXHD_MINI
+	unsigned long long LastSeenNormalizedPlaybackTime;
+	bool LastSpeedChanged;      
+#endif
 };
 
 // ---------------------------------------------------------------------
@@ -119,6 +123,9 @@ class OutputCoordinator_Base_c : public OutputCoordinator_c
 		// Data
 
 		OS_Mutex_t Lock;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		OS_Mutex_t SyncLock;
+#endif
 		OS_Event_t SynchronizeMayHaveCompleted;
 
 		unsigned int StreamCount;

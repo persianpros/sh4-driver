@@ -658,6 +658,9 @@ class Player_Generic_c : public Player_c
 									 unsigned int DisplayFrameIndex);
 
 		void FlushNonDecodedFrameList(PlayerStream_t Stream);
+#if defined QBOXHD || defined QBOXHD_MINI
+		int timeCtrl_on;
+#endif
 
 		PlayerStatus_t SetModuleParameters(PlayerPlayback_t Playback,
 										   PlayerStream_t Stream,
@@ -675,7 +678,9 @@ class Player_Generic_c : public Player_c
 	public:
 
 		PlayerStatus_t CheckStreamDrained(PlayerStream_t Stream);
-
+#if defined QBOXHD || defined QBOXHD_MINI
+		void setTimeCtrl(bool on);
+#endif
 		void ProcessCollateToParse(PlayerStream_t Stream);
 		void ProcessParseToDecode(PlayerStream_t Stream);
 		void ProcessDecodeToManifest(PlayerStream_t Stream);

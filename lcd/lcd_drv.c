@@ -49,7 +49,7 @@
 #include "lcd_private.h"
 
 
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 extern unsigned char lpc_set_bgr(unsigned char val);
 unsigned int lcd_id_m=0;
 #endif
@@ -59,9 +59,9 @@ unsigned int lcd_id_m=0;
  **************************************************************************/
 
 
-#ifdef CONFIG_SH_QBOXHD_1_0
+#ifdef QBOXHD
 #define MOD               "-HD"
-#elif  CONFIG_SH_QBOXHD_MINI_1_0
+#elif  QBOXHD_MINI
 #define MOD               "-Mini"
 #else
 #define MOD               ""
@@ -88,7 +88,7 @@ static struct cdev lcd_cdev;    /**< LCD character device */
 
 LCD_CONTROL_BLOCK lcd_cb;       /**< LCD Control Block */
 
-#if !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD_MINI
 enum lcd_model {
 	LCD_YM220T,
 	LCD_YLM682A
@@ -173,7 +173,7 @@ static void reg_set_rs(UINT32 rs)
         reg_writeonly_l(lcd_cb.base_address_pio5, PIO_SET_PnOUT, 0x20);
 }
 
-#if !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD_MINI
 /*****************************
  * YM220T
  *****************************/
@@ -854,7 +854,7 @@ static int device_init(void)
     reg_writeonly_l(lcd_cb.base_address_pio5, PIO_SET_PnC1, 0x20);
     reg_writeonly_l(lcd_cb.base_address_pio5, PIO_CLR_PnC2, 0x20);
 
-#if !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD_MINI
     /* Init LCD */
 	lcd_readid();
 	switch (lcd_id) {
@@ -898,7 +898,7 @@ static void device_uninit(void)
     iounmap((void *)lcd_cb.fpga_base_address);
 }
 
-#if !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD_MINI
 /**************************************************************************
  * Functions needed by the Driver File Operations
  **************************************************************************/
@@ -1031,7 +1031,7 @@ int set_pos(int x,int y)
 
 	reg_set_rs(0);
 
-#if !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD_MINI
 	switch (lcd_id) {
 		case LCD_YLM682A:
 			/* Set the X addr. When in qvga this is equivalent to Y (240 pixels) */
@@ -1073,7 +1073,7 @@ int set_pos(int x,int y)
 	return 0;
 }
 
-#if !defined CONFIG_SH_QBOXHD_MINI_1_0
+#if !defined QBOXHD_MINI
 static void write_data_function(void)
 {
     int x, y;
@@ -1202,7 +1202,7 @@ void display_rgbw(unsigned char data1, unsigned char data2)
  */
 void ctrl_brightness(unsigned int pwr)
 {
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 	unsigned char ver=0;
 	if (pwr == BRIGHTNESS_ON)
 	{
@@ -1232,7 +1232,7 @@ void ctrl_brightness(unsigned int pwr)
  */
 void reg_brightness(unsigned short value)
 {
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 	unsigned char ver=0;
 	if(value==63)
 		ver=lpc_set_bgr(32);//max backlight
@@ -1327,7 +1327,7 @@ static ssize_t lcd_write(struct file *file,
     if (len != (DISPLAY_WIDTH*DISPLAY_BYPP* DISPLAY_HEIGHT))
         return -EINVAL;
 	
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 	/* It is a temporarily work around for old enigma in QboxHD_mini */
 	msleep(3);
 #endif
@@ -1378,7 +1378,7 @@ static int lcd_ioctl(struct inode *inode,
                 err = -EINVAL;
             break;        
         case LCD_IOCTL_STANDBY: //1 /* for the moment, it is not used */ 
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 			printk("Not implemented yet\n");
 #else
             if (arg == 0 || arg == 1) {
@@ -1425,7 +1425,7 @@ static int lcd_ioctl(struct inode *inode,
             	err = -EINVAL;
             break;
 		case LCD_IOCTL_READ_ID:
-#if defined CONFIG_SH_QBOXHD_MINI_1_0
+#if defined QBOXHD_MINI
 			{
 				unsigned int id_m=0;
 #if 0
