@@ -55,7 +55,7 @@ obj-y += aotom_vip/
 endif
 
 ifdef ADB_BOX
-obj-y += adb_box_vfd/
+obj-y += adb_5800_fp/
 #obj-y += adb_box_vfd/front_bska/
 #obj-y += adb_box_vfd/front_bsla/
 endif
