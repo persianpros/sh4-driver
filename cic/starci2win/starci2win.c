@@ -478,6 +478,7 @@ void getCiSource(int slot, int* source)
 			*source = 1;
 		}
 		else
+		{
 			*source = 0;
 		}
 #endif
