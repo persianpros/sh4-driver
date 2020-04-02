@@ -110,6 +110,10 @@
  *  |               |
  *  |               ---------
  *  |
+ *  ---------- info
+ *  |           |
+ *  |           --------- model name
+ *  |
  *  ---------- fp (this is wrong used for e2 I think. on dm800 this is frontprocessor and there is another proc entry for frontend)
  *  |           |
  *  |           --------- lnb_sense1
@@ -143,6 +147,7 @@
  *  ---------- info
  *  |           |
  *  |           --------- model <- Version String of out Box
+ *  |           |
  *  |           --------- chipset <- Version String of chipset
  *  |
  *  ---------- tsmux
@@ -703,7 +708,7 @@ static int default_write_proc(struct file *file, const char __user *buf, unsigne
 struct ProcStructure_s e2Proc[] =
 {
 	{cProcEntry, "progress"                                                         , NULL, NULL, NULL, NULL, ""},
-#if defined(HL101) || defined(SPARK) || defined(SPARK7162)
+#if defined(HL101)
 	{cProcEntry, "vfd"                                                              , NULL, NULL, NULL, NULL, ""},
 #endif
 	{cProcEntry, "bus/nim_sockets"                                                  , NULL, NULL, NULL, NULL, ""},
@@ -788,10 +793,8 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/fp/led3_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
 #endif
 	{cProcEntry, "stb/fp/led_pattern_speed"                                         , NULL, NULL, default_write_proc, NULL, ""},
-#if !defined(SPARK) && !defined(SPARK7162)
 	{cProcEntry, "stb/fp/oled_brightness"                                           , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/text"                                                      , NULL, NULL, NULL, NULL, ""},
-#endif
 	{cProcEntry, "stb/fp/version"                                                   , NULL, zero_read, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/wakeup_time"                                               , NULL, wakeup_time_read, wakeup_time_write, NULL, ""},
 	{cProcEntry, "stb/fp/was_timer_wakeup"                                          , NULL, NULL, NULL, NULL, ""},
@@ -800,7 +803,20 @@ struct ProcStructure_s e2Proc[] =
 #if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7119) || defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
 	{cProcEntry, "stb/fp/resellerID"                                                , NULL, NULL, NULL, NULL, ""},
 #endif
-#if defined(HL101) || defined(SPARK) || defined(SPARK7162)
+
+#if defined(SPARK) \
+ || defined(SPARK7162)
+	{cProcEntry, "stb/fp/aotom",                                                     NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/displaytype",                                               NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/timemode",                                                  NULL, NULL, NULL, NULL, ""},
+
+//	{cProcEntry, "vfd",                                                              NULL, NULL, NULL, NULL, ""},
+//	{cProcDir,   "stb/vfd",                                                          NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/power",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/power/standbyled",                                             NULL, NULL, NULL, NULL, ""},
+#endif
+#if defined(HL101)
 	{cProcEntry, "stb/fp/aotom"                                                     , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/scroll_delay"                                             , NULL, NULL, NULL, NULL, ""},
