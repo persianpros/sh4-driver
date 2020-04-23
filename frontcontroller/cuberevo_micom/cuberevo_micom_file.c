@@ -1,4 +1,4 @@
-/*
+﻿/*
  * cuberevo_micom_file.c
  *
  * (c) 2011 konfetti
@@ -21,7 +21,7 @@
 ******************************************************************************
  *
  * This driver covers the following models:
- *
+ * 
  * CubeRevo 200HD: 4 character LED (7seg)
  * CubeRevo 250HD / AB IPbox 91HD / Vizyon revolution 800HD: 4 character LED (7seg)
  * CubeRevo Mini / AB IPbox 900HD / Vizyon revolution 810HD: 14 character dot matrix VFD (14seg)
@@ -407,7 +407,7 @@ special_char_t special2seg_14dotmatrix[] =
 //	{'?',	0x89}, // power of 3 -> c2 b3
 //	{'?',	0x8a}, // power of x
 //	{'?',	0x8b}, // 1/2 -> c2 bd
-//	{'?',	0x8c}, // 1/
+//	{'?',	0x8c}, // 1/ 
 //	{'?',	0x8d}, // square root
 //	{'?',	0x8e}, // +/- -> c2 b1
 //	{'?',	0x8f}, // paragraph
@@ -487,7 +487,7 @@ special_char_t special2seg_13grid[] =
  || defined(CUBEREVO_MINI_FTA)
 // 7 segment LED display (200HD/250HD)
 static unsigned short Char2seg_7seg[] =
-{
+{  // letters A - Z
 	~0x01 & ~0x02 & ~0x04 & ~0x10 & ~0x20 & ~0x40,
 	~0x04 & ~0x08 & ~0x10 & ~0x20 & ~0x40,
 	~0x01 & ~0x08 & ~0x10 & ~0x20,
@@ -517,7 +517,7 @@ static unsigned short Char2seg_7seg[] =
 };
 
 static unsigned short num2seg_7seg[] =
-{
+{  // digits 0-9
 	0xc0,	// 0
 	0xf9,	// 1
 	0xa4,	// 2
@@ -609,38 +609,38 @@ struct iconToInternal
 struct iconToInternal micomIcons[] =
 {
 	/*----------------- SetIcon -------  msb   lsb   segment -----*/
-	{ "ICON_STANDBY"  , ICON_STANDBY   , 0x03, 0x00, 1},
-	{ "ICON_SAT"      , ICON_SAT       , 0x02, 0x00, 1},
-	{ "ICON_REC"      , ICON_REC       , 0x00, 0x00, 0},
-	{ "ICON_TIMESHIFT", ICON_TIMESHIFT , 0x01, 0x01, 0},
-	{ "ICON_TIMESHIFT", ICON_TIMESHIFT , 0x01, 0x02, 0},
-	{ "ICON_TIMER"    , ICON_TIMER     , 0x01, 0x03, 0},
-	{ "ICON_HD"       , ICON_HD        , 0x01, 0x04, 0},
-	{ "ICON_USB"      , ICON_USB       , 0x01, 0x05, 0},
-	{ "ICON_SCRAMBLED", ICON_SCRAMBLED , 0x01, 0x06, 0}, //locked not scrambled
-	{ "ICON_DOLBY"    , ICON_DOLBY     , 0x01, 0x07, 0},
-	{ "ICON_MUTE"     , ICON_MUTE      , 0x01, 0x08, 0},
-	{ "ICON_TUNER1"   , ICON_TUNER1    , 0x01, 0x09, 0},
-	{ "ICON_TUNER2"   , ICON_TUNER2    , 0x01, 0x0a, 0},
-	{ "ICON_MP3"      , ICON_MP3       , 0x01, 0x0b, 0},
-	{ "ICON_REPEAT"   , ICON_REPEAT    , 0x01, 0x0c, 0},
-	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x00, 1},
-	{ "ICON_Play_1"   , ICON_PLAY_1    , 0x01, 0x04, 1},
-	{ "ICON_TER"      , ICON_TER       , 0x02, 0x01, 1},
-	{ "ICON_FILE"     , ICON_FILE      , 0x02, 0x02, 1},
-	{ "ICON_480i"     , ICON_480i      , 0x06, 0x04, 1},
-	{ "ICON_480i"     , ICON_480i      , 0x06, 0x03, 1},
-	{ "ICON_480p"     , ICON_480p      , 0x06, 0x04, 1},
-	{ "ICON_480p"     , ICON_480p      , 0x06, 0x02, 1},
-	{ "ICON_576i"     , ICON_576i      , 0x06, 0x01, 1},
-	{ "ICON_576i"     , ICON_576i      , 0x06, 0x00, 1},
-	{ "ICON_576p"     , ICON_576p      , 0x06, 0x01, 1},
-	{ "ICON_576p"     , ICON_576p      , 0x05, 0x04, 1},
-	{ "ICON_720p"     , ICON_720p      , 0x05, 0x03, 1},
-	{ "ICON_1080i"    , ICON_1080i     , 0x05, 0x02, 1},
-	{ "ICON_1080p"    , ICON_1080p     , 0x05, 0x01, 1},
-	{ "ICON_RADIO"    , ICON_RADIO     , 0x02, 0x04, 1},
-	{ "ICON_TV"       , ICON_TV        , 0x02, 0x03, 1}
+	{ "ICON_STANDBY",   ICON_STANDBY,    0x03, 0x00, 1 },
+	{ "ICON_SAT",       ICON_SAT,        0x02, 0x00, 1 },
+	{ "ICON_REC",       ICON_REC,        0x00, 0x00, 0 },
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT,  0x01, 0x01, 0 },
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT,  0x01, 0x02, 0 },
+	{ "ICON_TIMER",     ICON_TIMER,      0x01, 0x03, 0 },
+	{ "ICON_HD",        ICON_HD,         0x01, 0x04, 0 },
+	{ "ICON_USB",       ICON_USB,        0x01, 0x05, 0 },
+	{ "ICON_SCRAMBLED", ICON_SCRAMBLED,  0x01, 0x06, 0 }, //locked not scrambled
+	{ "ICON_DOLBY",     ICON_DOLBY,      0x01, 0x07, 0 },
+	{ "ICON_MUTE",      ICON_MUTE,       0x01, 0x08, 0 },
+	{ "ICON_TUNER1",    ICON_TUNER1,     0x01, 0x09, 0 },
+	{ "ICON_TUNER2",    ICON_TUNER2,     0x01, 0x0a, 0 },
+	{ "ICON_MP3",       ICON_MP3,        0x01, 0x0b, 0 },
+	{ "ICON_REPEAT",    ICON_REPEAT,     0x01, 0x0c, 0 },
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x00, 1 },
+	{ "ICON_Play_1",    ICON_PLAY_1,     0x01, 0x04, 1 },
+	{ "ICON_TER",       ICON_TER,        0x02, 0x01, 1 },
+	{ "ICON_FILE",      ICON_FILE,       0x02, 0x02, 1 },
+	{ "ICON_480i",      ICON_480i,       0x06, 0x04, 1 },
+	{ "ICON_480i",      ICON_480i,       0x06, 0x03, 1 },
+	{ "ICON_480p",      ICON_480p,       0x06, 0x04, 1 },
+	{ "ICON_480p",      ICON_480p,       0x06, 0x02, 1 },
+	{ "ICON_576i",      ICON_576i,       0x06, 0x01, 1 },
+	{ "ICON_576i",      ICON_576i,       0x06, 0x00, 1 },
+	{ "ICON_576p",      ICON_576p,       0x06, 0x01, 1 },
+	{ "ICON_576p",      ICON_576p,       0x05, 0x04, 1 },
+	{ "ICON_720p",      ICON_720p,       0x05, 0x03, 1 },
+	{ "ICON_1080i",     ICON_1080i,      0x05, 0x02, 1 },
+	{ "ICON_1080p",     ICON_1080p,      0x05, 0x01, 1 },
+	{ "ICON_RADIO",     ICON_RADIO,      0x02, 0x04, 1 },
+	{ "ICON_TV",        ICON_TV,         0x02, 0x03, 1 }
 };
 #elif defined(CUBEREVO_MINI) \
  ||   defined(CUBEREVO_MINI2) \
@@ -650,13 +650,13 @@ struct iconToInternal micomIcons[] =
 struct iconToInternal micom_14seg_Icons[] =
 {
 	/*------------------ SetIcon -------  msb   lsb   segment -----*/
-	{ "ICON_TIMER"     , ICON_TIMER     , 0x03, 0x00, 1},
-	{ "ICON_REC"       , ICON_REC       , 0x02, 0x00, 1},
-	{ "ICON_HD"        , ICON_HD        , 0x02, 0x04, 1},
-	{ "ICON_Play"      , ICON_PLAY      , 0x02, 0x01, 1},
-	{ "ICON_PAUSE"     , ICON_PAUSE     , 0x02, 0x02, 1},
-	{ "ICON_DOLBY"     , ICON_DOLBY     , 0x02, 0x03, 1},
-	{ "ICON_TIMESHIFT" , ICON_TIMESHIFT , 0x03, 0x01, 1},
+	{ "ICON_TIMER",      ICON_TIMER,      0x03, 0x00, 1},
+	{ "ICON_REC",        ICON_REC,        0x02, 0x00, 1},
+	{ "ICON_HD",         ICON_HD,         0x02, 0x04, 1},
+	{ "ICON_Play",       ICON_PLAY,       0x02, 0x01, 1},
+	{ "ICON_PAUSE",      ICON_PAUSE,      0x02, 0x02, 1},
+	{ "ICON_DOLBY",      ICON_DOLBY,      0x02, 0x03, 1},
+	{ "ICON_TIMESHIFT",  ICON_TIMESHIFT,  0x03, 0x01, 1},
 };
 #endif
 /* End of character and icon definitions */
@@ -677,14 +677,14 @@ static int animationDie = 0;
 
 struct iconToInternal playIcons[cNumberSymbols] =
 {
-	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x00, 1},
-	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x02, 1},
-	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x01, 1},
-	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x03, 1},
-	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x04, 1},
-	{ "ICON_Play"     , ICON_PLAY      , 0x01, 0x02, 1},
-	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x03, 1},
-	{ "ICON_Play"     , ICON_PLAY      , 0x00, 0x01, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x00, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x02, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x01, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x03, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x04, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x02, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x03, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x01, 1},
 };
 
 static void animated_play(unsigned long data)
@@ -1323,7 +1323,7 @@ int micomGetTime(unsigned char *time)
 	else
 	{
 		dprintk(1, "Time received\n");
-		dprintk(10, "FP/RTC time: %02x:%02x:%02x %02x-%02x-%02x\n",
+		dprintk(10, "FP/RTC time: %02x:%02x:%02x %02x-%02x-20%02x\n",
 			ioctl_data[2], ioctl_data[1], ioctl_data[0],
 			ioctl_data[3], ioctl_data[4], ioctl_data[5]);
 		memcpy(time, ioctl_data, 6);
@@ -1419,7 +1419,7 @@ int micomGetVersion(void)
 	else
 	{
 		char convertDate[128];
-
+		
 		dprintk(100, "0x%02x 0x%02x 0x%02x\n", ioctl_data[0], ioctl_data[1], ioctl_data[2]);
 		sprintf(convertDate, "%02x %02x %02x\n", ioctl_data[0], ioctl_data[1], ioctl_data[2]);
 		sscanf(convertDate, "%d %d %d", &micom_year, &micom_minor, &micom_major);
@@ -1454,7 +1454,7 @@ int micomGetVersion(void)
 	else
 #elif defined(CUBEREVO)
 	if ((micom_year == 2008) && (micom_minor == 3))
-	{
+	{	
 		front_seg_num    = 12;
 		num2seg          = num2seg_12dotmatrix;
 		Char2seg         = Char2seg_12dotmatrix;
@@ -1639,7 +1639,7 @@ int micomWriteString(unsigned char *aBuf, int len)
 /* The 14 character front processor cannot display accented letters.
  * The following code traces for UTF8 sequences for these and
  * replaces them with the corresponding letter without any accent.
- * This is not perfect, but at least better that the old practice
+ * This is not perfect, but at least better than the old practice
  * of replacing them with spaces.
  */
 	dprintk(50, "%s UTF8 text: [%s], len = %d\n", __func__, aBuf, len);
@@ -1732,7 +1732,7 @@ int micomWriteString(unsigned char *aBuf, int len)
 			bBuf[j] = 0x20;  // else put a space
 			j++;
 		}
-	}
+	}		
 	len = j;
 	bBuf[len] = '\0'; // terminate string
 	memcpy(aBuf, bBuf, len);
@@ -1748,7 +1748,7 @@ int micomWriteString(unsigned char *aBuf, int len)
 //	}
 
 	pos = front_seg_num - len; // get # of empty characters / trailing spaces
-#if defined(CENTERED_DISPLAY)
+#if defined(CENTERED_DISPLAY) 
 	// centered display
 	pos /= 2;
 
@@ -2446,7 +2446,7 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDLEDBRIGHTNESS:
 		{
-			break;
+			break;			
 		}
 		case VFDDRIVERINIT:
 		{
@@ -2647,3 +2647,4 @@ struct file_operations vfd_fops =
 	.release = MICOMdev_close
 };
 // vim:ts=4
+

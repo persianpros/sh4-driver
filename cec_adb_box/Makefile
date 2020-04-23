@@ -1,5 +1,5 @@
 #
-# Makefile for module fan controlling on ufs922
+# Makefile for HDMI CEC control on ADB ITI-5800
 #
 ifneq (,$(findstring 2.6.3,$(KERNELVERSION)))
 ccflags-y += $(CCFLAGSY)

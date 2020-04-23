@@ -142,6 +142,9 @@ endif
 ifdef ADB_BOX
 CCFLAGSY += -DADB_BOX
 endif
+ifdef ADB_2850
+CCFLAGSY += -DADB_2850
+endif
 ifdef IPBOX9900
 CCFLAGSY += -DIPBOX9900
 endif
@@ -206,10 +209,17 @@ endif
 
 ifdef ADB_BOX
 obj-y += smartcard_nbox/
-obj-y += adb_box_fan/
+obj-y += fan_adb_box/
 obj-y += cec_adb_box/
 obj-y += dvbt/as102/
 obj-y += dvbt/siano/
+endif
+
+ifdef ADB_2850
+obj-y += smartcard/
+obj-y += cec_adb_box/
+#obj-y += dvbt/as102/
+#obj-y += dvbt/siano/
 endif
 
 ifndef VIP2_V1
@@ -227,7 +237,7 @@ obj-y += led/
 endif
 
 ifdef UFS922
-obj-y += ufs922_fan/
+obj-y += fan_ufs922/
 endif
 
 ifdef UFC960
@@ -365,14 +375,14 @@ endif
 ifdef IPBOX9900
 obj-y += siinfo/
 obj-y += rmu/
-obj-y += ipbox99xx_fan/
+obj-y += fan_ipbox99xx/
 obj-y += smartcard/
 obj-y += dvbt/as102/
 endif
 
 ifdef IPBOX99
 obj-y += siinfo/
-obj-y += ipbox99xx_fan/
+obj-y += fan_ipbox99xx/
 obj-y += smartcard/
 obj-y += dvbt/as102/
 endif
@@ -428,7 +438,6 @@ obj-y += dvbt/siano/
 endif
 
 ifdef PACE7241
-obj-y += cec/
 obj-y += smartcard/
 obj-y += fan_pace7241/
 endif

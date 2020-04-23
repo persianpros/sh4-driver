@@ -29,13 +29,11 @@ struct stv6110x_config
 	u32	refclk;
 };
 
-#if 0
 enum tuner_mode
 {
 	TUNER_SLEEP = 1,
 	TUNER_WAKE,
 };
-#endif
 
 enum tuner_status
 {

@@ -60,6 +60,10 @@ obj-y += adb_5800_fp/
 #obj-y += adb_box_vfd/front_bsla/
 endif
 
+ifdef ADB_2850
+obj-y += adb_2850_fp/
+endif
+
 ifdef SPARK
 obj-y += aotom_spark/
 endif
@@ -190,5 +194,5 @@ endif
 endif
 
 ifdef PACE7241
-obj-y += vfd_pace7241/
+obj-y += pace_7241_fp/
 endif

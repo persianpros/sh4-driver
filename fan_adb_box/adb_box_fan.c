@@ -19,7 +19,7 @@
  *
  * Description:
  *
- * adb_box fan controller driver
+ * adb_box fan controller driver for ITI-5800 models
  *
  */
 

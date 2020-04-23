@@ -445,6 +445,27 @@ obj-m += fe-mmp.o
 #------------------------------------------------- 
 endif
 
+ifdef ADB_2850
+# DVB-T ----------------------------------
+# dip7000 + mxl111f
+fe_core-objs += adb_2850/dibx000_common.o
+fe_core-objs += adb_2850/dib0070.o
+fe_core-objs += adb_2850/dib7000p.o
+
+#fe_core-objs += adb_2850/mxl111sf-gpio.o
+fe_core-objs += adb_2850/mxl111sf-phy.o
+fe_core-objs += adb_2850/mxl111sf-demod.o
+fe_core-objs += adb_2850/mxl111sf-tuner.o
+fe_core-objs += adb_2850/mxl111sf.o
+
+# DVB-S ----------------------------------
+# stv090x + stv6100
+fe_core-objs +=	adb_2850/stv090x.o
+fe_core-objs +=	adb_2850/stv6110x.o
+fe_core-objs +=	adb_2850/core.o
+obj-m += fe_core.o
+endif
+
 ifdef VITAMIN_HD5000
 stv090x-objs += vitamin_hd5000/stv090x.o
 stv090x-objs += vitamin_hd5000/stv6110x.o
