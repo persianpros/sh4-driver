@@ -1,7 +1,7 @@
 #!/bin/sh
 
-brandcheck=`cat /etc/brand`
-modelcheck=`cat /etc/model`
+brandcheck=`cat /etc/openvision/brand`
+modelcheck=`cat /etc/openvision/model`
 
 # Create display device if not present
 if [ -e /dev/dbox/oled0 ] ; then
