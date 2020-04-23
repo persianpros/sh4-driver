@@ -358,6 +358,8 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "ipbox55\n");
 #elif defined(ADB_BOX)
 	int len = sprintf(page, "adb_box\n");
+#elif defined(ADB_2850)
+	int len = sprintf(page, "adb_2850\n");
 #elif defined(VITAMIN_HD5000)
 	int len = sprintf(page, "vitamin_hd5000\n");
 #elif defined(SAGEMCOM88)
@@ -471,7 +473,8 @@ static int info_chipset_read(char *page, char **start, off_t off, int count, int
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
  || defined(SPARK) \
- || defined(VITAMIN_HD5000)
+ || defined(VITAMIN_HD5000) \
+ || defined(ADB_2850)
 	int len = sprintf(page, "STi7111\n");
 #elif defined(SPARK7162)
 	int len = sprintf(page, "STi7162\n");
@@ -723,7 +726,7 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/info/model"                                                   , NULL, info_model_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/chipset"                                                 , NULL, info_chipset_read, NULL, NULL, ""},
 	{cProcEntry, "stb/info/boxtype"                                                 , NULL, info_model_read, NULL, NULL, ""},
-#if defined(ADB_BOX)
+#if defined(ADB_BOX) || defined(ADB_2850)
 	{cProcEntry, "stb/info/adb_variant"                                             , NULL, NULL, NULL, NULL, ""},
 #endif
 #if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7119) || defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
