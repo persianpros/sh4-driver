@@ -6761,10 +6761,10 @@ int writereg_lnb_supply(struct stv090x_state *state, char data)
 	msg.flags = 0;
 	msg.buf = &buf;
 	msg.len = 1;
-	dprintk(100, "write LNB: %s: write 0x%02x to 0x0a\n", __func__, data);
+	dprintk(100, "write LNB: %s: write 0x%02x to 0x0a\n", __FUNCTION__, data);
 	if ((ret = i2c_transfer(adapter, &msg, 1)) != 1)
 	{
-		printk("%s: writereg error(err == %i)\n", __func__, ret);
+		printk("%s: writereg error(err == %i)\n", __FUNCTION__, ret);
 		ret = -EREMOTEIO;
 	}
 	return ret;
