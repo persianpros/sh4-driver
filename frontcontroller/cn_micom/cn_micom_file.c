@@ -291,7 +291,7 @@ int mcomSetStandby(char *time)
 	dprintk(100, "%s >\n", __func__);
 
 	if (mcomGetDisplayType() == _VFD)
-		res = mcom_WriteString("Bye bye ...", strlen("Bye bye ..."));
+		res = mcom_WriteString("Standby", strlen("Standby"));
 	else
 		res = mcom_WriteString("WAIT", strlen("WAIT"));
 

@@ -34,7 +34,7 @@
 
 #include "simu_button.h"
 
-static char *button_driver_name = "TDT RC event driver";
+static char *button_driver_name = "SH4 RC event driver";
 static struct input_dev *button_dev;
 
 int button_dev_init(void)
@@ -98,6 +98,6 @@ module_exit(button_exit);
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled 1=enabled(default)");
 
-MODULE_DESCRIPTION("TDT RC event driver");
-MODULE_AUTHOR("Team Ducktales");
+MODULE_DESCRIPTION("SH4 RC event driver");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

@@ -304,5 +304,5 @@ module_param(bbgain, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(bbgain, "default=-1 (use default config = 10");
 
 MODULE_DESCRIPTION("Tunerdriver");
-MODULE_AUTHOR("Manu Abraham; adapted by TDT");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

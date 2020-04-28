@@ -1207,7 +1207,7 @@ int micomSetStandby(char *time) //expected format: YYMMDDhhmm
 
 	dprintk(100, "%s >\n", __func__);
 
-//	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
+//	res = micomWriteString("Standby", strlen("Standby"));
 
 	/* set wakeup time */
 	res = micomSetWakeUpTime(time);
@@ -1235,7 +1235,7 @@ int micomReboot(void)
 
 	dprintk(100, "%s >\n", __func__);
 
-//	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
+//	res = micomWriteString("Standby", strlen("Standby"));
 
 	memset(buffer, 0, sizeof(buffer));
 
@@ -1912,7 +1912,7 @@ int micom_init_func(void)
 	res |= micomSetBrightness(7);
 	res |= micomSetTimeMode(1);    // 24h mode
 	res |= micomSetDisplayTime(0); // mode = display text
-//	res |= micomWriteString("T.Ducktales", strlen("T.Ducktales"));
+//	res |= micomWriteString("SH4", strlen("SH4"));
 
 	/* disable all icons at startup */
 #if defined(CUBEREVO_MINI) \

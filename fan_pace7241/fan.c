@@ -157,6 +157,6 @@ module_init(init_fan_module);
 module_exit(cleanup_fan_module);
 
 MODULE_DESCRIPTION("FAN Pace HDS7241");
-MODULE_AUTHOR("Team Ducktales mod j00zek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

@@ -379,5 +379,5 @@ module_init             (fe_core_init);
 module_exit             (fe_core_exit);
 
 MODULE_DESCRIPTION      ("Tunerdriver Pace 7241");
-MODULE_AUTHOR           ("Team Ducktales mod j00zek");
+MODULE_AUTHOR           ("Open Vision developers");
 MODULE_LICENSE          ("GPL");

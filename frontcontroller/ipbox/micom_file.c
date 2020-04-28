@@ -902,7 +902,7 @@ int micomSetStandby(char *time)
 
 	dprintk(100, "%s >\n", __func__);
 
-	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
+	res = micomWriteString("Standby", strlen("Standby"));
 
 	/* set wakeup time */
 	memset(buffer, 0, 5);
@@ -969,7 +969,7 @@ int micomReboot(void)
 
 	dprintk(100, "%s >\n", __func__);
 
-	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
+	res = micomWriteString("Standby", strlen("Standby"));
 
 	memset(buffer, 0, 5);
 
@@ -1403,7 +1403,7 @@ int micom_init_func(void)
 	res |= micomSetBrightness(7);
 	res |= micomSetTimeMode(1); //24h mode
 	res |= micomSetDisplayTime(0);   //mode = display text
-	res |= micomWriteString("SH4", strlen("SH4"));
+	res |= micomWriteString("OV", strlen("OV"));
 
 	/* disable all icons at startup */
 #if !defined(CUBEREVO_250HD)

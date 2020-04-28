@@ -172,6 +172,6 @@ module_init(init_fan_module);
 module_exit(cleanup_fan_module);
 
 MODULE_DESCRIPTION("ufs922 fan controlling");
-MODULE_AUTHOR("Team Ducktales");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

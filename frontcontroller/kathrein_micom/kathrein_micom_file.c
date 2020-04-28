@@ -1277,9 +1277,9 @@ int micom_init_func(void)
 
 	msleep(10);
 //#if VFD_LENGTH < 16
-//	micomWriteString(" T D T  ", strlen(" T D T  "));
+//	micomWriteString("SH4", strlen("SH4"));
 //#else
-//	micomWriteString("Team Ducktales", strlen("Team Ducktales"));
+//	micomWriteString("SH4", strlen("SH4"));
 //#endif
 //	msleep(10);
 

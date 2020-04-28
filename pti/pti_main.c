@@ -565,7 +565,7 @@ module_init(pti_init);
 module_exit(pti_exit);
 
 MODULE_DESCRIPTION("PTI driver");
-MODULE_AUTHOR("Team Ducktales");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("NO");
 
 #ifdef UFS910

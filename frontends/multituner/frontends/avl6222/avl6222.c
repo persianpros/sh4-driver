@@ -2238,7 +2238,7 @@ MODULE_PARM_DESC(paramDebug, "Activates frontend debugging (default:0)");
 //---------------------------------------------------------------------
 
 MODULE_DESCRIPTION("Availink AVL6222 Demod");
-MODULE_AUTHOR("TDT");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_VERSION("1.0");
 MODULE_LICENSE("GPL");
 

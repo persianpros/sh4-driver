@@ -316,6 +316,6 @@ module_init(boxtype_init);
 module_exit(boxtype_exit);
 
 MODULE_DESCRIPTION("Provides the type of an STB based on STb710x");
-MODULE_AUTHOR("Team Ducktales, mod B4Team & freebox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

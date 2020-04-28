@@ -177,6 +177,6 @@ static void __exit ufs910led_exit(void)
 module_init(ufs910led_init);
 module_exit(ufs910led_exit);
 
-MODULE_AUTHOR("Team Ducktales");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_DESCRIPTION("Kathrein UFS-910 frontpanel led driver");
 MODULE_LICENSE("GPL");

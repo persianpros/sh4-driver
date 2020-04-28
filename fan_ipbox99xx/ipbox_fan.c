@@ -162,6 +162,6 @@ module_init(init_fan_module);
 module_exit(cleanup_fan_module);
 
 MODULE_DESCRIPTION("ipbox99xx fan controlling");
-MODULE_AUTHOR("Team Ducktales, mod by Sisyfos Team");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

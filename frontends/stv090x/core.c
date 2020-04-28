@@ -401,5 +401,5 @@ module_param(tuner, charp, 0);
 MODULE_PARM_DESC(tuner, "tuner type: stv6110x, sharp7306 (default stv6110x");
 
 MODULE_DESCRIPTION("Tunerdriver");
-MODULE_AUTHOR("Manu Abraham; adapted by TDT");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

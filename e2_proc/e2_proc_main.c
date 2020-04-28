@@ -1345,5 +1345,5 @@ module_init(e2_proc_init_module);
 module_exit(e2_proc_cleanup_module);
 
 MODULE_DESCRIPTION("procfs module with enigma2 support");
-MODULE_AUTHOR("Team Ducktales");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

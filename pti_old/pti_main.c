@@ -1152,6 +1152,6 @@ MODULE_PARM_DESC(videoMem, "videoMem\n");
 #else
 #endif
 
-MODULE_AUTHOR("Peter Bennett <peter.bennett@st.com>; adapted by TDT");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_DESCRIPTION("STPTI DVB Driver");
 MODULE_LICENSE("GPL");

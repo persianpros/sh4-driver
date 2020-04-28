@@ -315,6 +315,6 @@ module_init(bpamem_init);
 module_exit(bpamem_exit);
 
 MODULE_DESCRIPTION("Alloc bpa2 mem from user space");
-MODULE_AUTHOR("Team Ducktales");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

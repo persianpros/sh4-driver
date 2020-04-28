@@ -1235,7 +1235,7 @@ int nuvotonSetStandby(char *wtime)
 
 	dprintk(100, "%s >\n", __func__);
 
-//	res = nuvotonWriteString("Bye bye ...", strlen("Bye bye ..."));
+//	res = nuvotonWriteString("Standby", strlen("Standby"));
 
 	/* set wakeup time */
 	memset(buffer, 0, sizeof(buffer));
@@ -2336,7 +2336,7 @@ int nuvoton_init_func(void)
 		regs[vLoop] = 0x00;  // initialize local shadow registers
 	}
 
-//	res |= nuvotonWriteString("T.-Ducktales", strlen("T.-Ducktales"));
+//	res |= nuvotonWriteString("SH4", strlen("SH4"));
 
 #if !defined(HS7110)
 	for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX; vLoop++)

@@ -186,5 +186,5 @@ module_init(boxtype_init);
 module_exit(boxtype_exit);
 
 MODULE_DESCRIPTION("Check Sagemcom type");
-MODULE_AUTHOR("Team Ducktales mod Nemo cleaned j00zek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

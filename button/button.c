@@ -168,5 +168,5 @@ module_init(button_init);
 module_exit(button_exit);
 
 MODULE_DESCRIPTION("Kathrein UFS-910 frontpanel buttons driver");
-MODULE_AUTHOR("Team Ducktales");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

@@ -321,5 +321,5 @@ module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
 MODULE_DESCRIPTION("Tunerdriver");
-MODULE_AUTHOR("Manu Abraham; adapted by TDT");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

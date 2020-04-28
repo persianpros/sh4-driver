@@ -574,7 +574,7 @@ void __exit avs_exit(void)
 module_init(avs_init);
 module_exit(avs_exit);
 
-MODULE_AUTHOR("Team Ducktales");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_DESCRIPTION("Multiplatform A/V scart switch driver");
 MODULE_LICENSE("GPL");
 
