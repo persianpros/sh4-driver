@@ -3,7 +3,7 @@
  * adb_5800_fp.h
  *
  * (c) 20?? Freebox
- * (c) 2019 Audioniek
+ * (c) 2019-2020 Audioniek
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,22 +64,22 @@ extern short paramDebug;
 
 #define PIO_PnIN             0x10
 
-// PT6958 PIO pin definitions
-#define	PORT_STB      1  // PT6958 only
-#define PIN_STB       6
+// PT6302/6958 PIO pin definitions
+#define PORT_STB             1  // PT6958 only
+#define PIN_STB              6
 
-#define PORT_CLK      4  // shared between PT6958/6302 in case of BSLA/BZZB
-#define PIN_CLK       0
+#define PORT_CLK             4  // shared between PT6958/6302 in case of BSLA/BZZB
+#define PIN_CLK              0
 
-#define PORT_DIN      4  // shared between PT6958/6302 in case of BSLA/BZZB
-#define PIN_DIN       1  // also connected to PT6958 Dout
+#define PORT_DIN             4  // shared between PT6958/6302 in case of BSLA/BZZB
+#define PIN_DIN              1  // also connected to PT6958 Dout
 
 // PT6302 PIO pin definitions
-#define PORT_CS       1  // PT6302 only
-#define PIN_CS        2
+#define PORT_CS              1  // PT6302 only
+#define PIN_CS               2
 
-#define PORT_KEY_INT  2
-#define PIN_KEY_INT   2
+#define PORT_KEY_INT         2
+#define PIN_KEY_INT          2
 
 #define PIO_PORT_SIZE        0x1000
 #define PIO_BASE             0xb8020000
@@ -92,24 +92,24 @@ extern short paramDebug;
 #define PIO_PORT(n) \
 	(((n) * PIO_PORT_SIZE) + PIO_BASE)
 
-#define VFD_MAJOR                  147
-#define LED_DISP_SIZE              4
-#define ICON_WIDTH                 1
-#define VFD_DISP_SIZE              16 - ICON_WIDTH  // position 16 is used for icon display
+#define VFD_MAJOR            147
+#define LED_DISP_SIZE        4
+#define ICON_WIDTH           1
+#define VFD_DISP_SIZE        16 - ICON_WIDTH  // position 16 is used for icon display
 
 // Commands to the PT6958
-#define DATA_SETCMD                0x40
+#define DATA_SETCMD          0x40
 // Options for DATA_SETCMD
-#define TEST_MODE                  0x08
-#define ADDR_FIX                   0x04
-#define READ_KEYD                  0x02 
+#define TEST_MODE            0x08
+#define ADDR_FIX             0x04
+#define READ_KEYD            0x02 
 
-#define ADDR_SETCMD                0xc0
+#define ADDR_SETCMD          0xc0
 
 // Commands to the PT6302 & PT6958
-#define DISP_CTLCMD                0x80
+#define DISP_CTLCMD          0x80
 // Options for DATA_CTLCMD
-#define DISPLAY_ON                 0x08
+#define DISPLAY_ON           0x08
 
 // Commands to the PT6302
 #define PT6302_COMMAND_DCRAM_WRITE 1
@@ -140,9 +140,9 @@ extern short paramDebug;
 #define VFD_Delay                  8  // us, tDOFF for PT6302
 
 // box_variant stuff
-#define I2C_ADDR_STB0899_1         (0xd0 >> 1)  //d0 = 0x68 d2 = 69 tuner 1 demod BSLA & BSKA/BXZB
-#define I2C_ADDR_STB0899_2         (0xd2 >> 1)  //d0 = 0x68 d2 = 69 tuner 2 demod BSLA only
-#define I2C_ADDR_STV090x           (0xd0 >> 1)  //d0 = 0x68 d2 = 69 tuner 1/2 demod BZZB only
+#define I2C_ADDR_STB0899_1         (0xd0 >> 1)  //d0 = 0x68 tuner 1 demod BSLA & BSKA/BXZB
+#define I2C_ADDR_STB0899_2         (0xd2 >> 1)  //d2 = 0x69 tuner 2 demod BSLA only
+#define I2C_ADDR_STV090x           (0xd0 >> 1)  //d0 = 0x68 tuner 1/2 demod BZZB only
 #define I2C_BUS                    0
 
 #define STB0899_NCOARSE            0xf1b3

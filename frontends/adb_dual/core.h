@@ -1,5 +1,15 @@
-#ifndef __CORE_DVB__
-#define __CORE_DVB__
+#ifndef __CORE_H__
+#define __CORE_H__
+
+extern short paramDebug;
+#define TAGDEBUG "[adb_5800_fp] "
+
+#ifndef dprintk
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level)) printk(TAGDEBUG x); \
+} while (0)
+#endif
 
 #include "dvb_frontend.h"
 #include "dvbdev.h"
@@ -32,15 +42,15 @@
 
 struct core_config
 {
-	struct i2c_adapter *i2c_adap;  /* i2c bus of the tuner */
-	u8                 i2c_addr;  /* i2c address of the tuner */
-	u8                 i2c_addr_lnb_supply;  /* i2c address of the lnb_supply */
-	u8                 vertical;  /* i2c value */
-	u8                 horizontal;  /* i2c value */
-	struct stpio_pin   *lnb_enable;
-	struct stpio_pin   *lnb_vsel;  // 13/18V select pin
-	struct stpio_pin   *tuner_reset_pin;
-	u8                 tuner_reset_act; /* active state of the pin */
+	struct i2c_adapter	*i2c_adap; /* i2c bus of the tuner */
+	u8			i2c_addr; /* i2c address of the tuner */
+	u8			i2c_addr_lnb_supply; /* i2c address of the lnb_supply */
+	u8			vertical; /* i2c value */
+	u8			horizontal; /* i2c value */
+	struct stpio_pin	*lnb_enable;
+	struct stpio_pin	*lnb_vsel;	// 13/18V select pin
+	struct stpio_pin	*tuner_reset_pin;
+	u8			tuner_reset_act; /* active state of the pin */
 
 };
 
@@ -101,8 +111,8 @@ struct core
 
 	spinlock_t debilock;
 
-	struct dvb_adapter  *dvb_adapter;
-	struct dvb_frontend *frontend[MAX_TUNERS_PER_ADAPTER];
+	struct dvb_adapter 	*dvb_adapter;
+	struct dvb_frontend	*frontend[MAX_TUNERS_PER_ADAPTER];
 	int (*read_fe_status)(struct dvb_frontend *fe, fe_status_t *status);
 	int fe_synced;
 
@@ -110,4 +120,4 @@ struct core
 };
 extern void fe_core_register_frontend(struct dvb_adapter *dvb_adap);
 
-#endif
+#endif  // __CORE_H__

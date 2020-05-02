@@ -70,6 +70,7 @@
  * 20191028 Audioniek       VFDSETLED in mode 0 added.
  * 20191103 Audioniek       Debug icon handling and reverse text in VFDSETLED in
  *                          VFDDISPLAYCHARS.
+ * 20200425 Audioniek       Fix PT6302 UTF8 support.
  *
  ****************************************************************************************/
 #include <asm/io.h>
@@ -99,10 +100,10 @@ int box_variant = 0;     // 1=BSKA, 2=BSLA, 3=BXZB, 4=BZZB, 5=cable, 0=unknown
 int display_type;        // active display: 0=LED, 1=VFD, 2=both
 int led_brightness = 5;  // default LED brightness
 // LED states
-char ICON1 = 0;  // power LED
-char ICON2 = 0;  // timer / record
-char ICON3 = 0;  // at
-char ICON4 = 0;  // alert
+char led1 = 0;  // power LED
+char led2 = 0;  // timer / record
+char led3 = 0;  // at
+char led4 = 0;  // alert
 
 spinlock_t mr_lock = SPIN_LOCK_UNLOCKED;
 
@@ -208,41 +209,41 @@ extern tIconState icon_state;
  * segment g is bit 0 -> 01000000 (0x40)
  * segment h is bit 7 -> 10000000 (0x80)
  */
-static const unsigned char seven_seg[256] =
+static const unsigned char seven_seg[128] =
 {
-	0x2e,  //0x00, icon play
-	0x8f,  //0x01, icon stop
-	0xe4,  //0x02, icon pause
-	0xdd,  //0x03, icon ff
-	0xdc,  //0x04, icon rewind
-	0x10,  //0x05,
-	0x10,  //0x06,
-	0x10,  //0x07,
-	0x10,  //0x08,
-	0x10,  //0x09,
-	0x10,  //0x0a,
-	0x10,  //0x0b,
-	0x10,  //0x0c,
-	0x10,  //0x0d,
-	0x10,  //0x0e,
-	0x10,  //0x0f,
+	0x00,  //0x00,
+	0x00,  //0x01,
+	0x00,  //0x02,
+	0x00,  //0x03,
+	0x00,  //0x04,
+	0x00,  //0x05,
+	0x00,  //0x06,
+	0x00,  //0x07,
+	0x00,  //0x08,
+	0x00,  //0x09,
+	0x00,  //0x0a,
+	0x00,  //0x0b,
+	0x00,  //0x0c,
+	0x00,  //0x0d,
+	0x00,  //0x0e,
+	0x00,  //0x0f,
 
-	0x10,  //0x10,
-	0x10,  //0x11,
-	0x10,  //0x12,
-	0x10,  //0x13,
-	0x10,  //0x14,
-	0x10,  //0x15,
-	0x10,  //0x16,
-	0x10,  //0x17,
-	0x10,  //0x18,
-	0x10,  //0x19,
-	0x10,  //0x1a,
-	0x10,  //0x1b,
-	0x10,  //0x1c,
-	0x10,  //0x1d,
-	0x10,  //0x1e,
-	0x10,  //0x1f,
+	0x00,  //0x10,
+	0x00,  //0x11,
+	0x00,  //0x12,
+	0x00,  //0x13,
+	0x00,  //0x14,
+	0x00,  //0x15,
+	0x00,  //0x16,
+	0x00,  //0x17,
+	0x00,  //0x18,
+	0x00,  //0x19,
+	0x00,  //0x1a,
+	0x00,  //0x1b,
+	0x00,  //0x1c,
+	0x00,  //0x1d,
+	0x00,  //0x1e,
+	0x00,  //0x1f,
 
 	0x00,  //0x20, <space>
 	0x86,  //0x21, !
@@ -533,7 +534,7 @@ pt_init_fail:
  * Read one byte from the PT6958 (button data)
  *
  */
-static unsigned char pt6958_ReadByte(void)
+static unsigned char pt6958_read_byte(void)
 {
 	unsigned char i;
 	unsigned char data_in = 0;
@@ -554,14 +555,16 @@ static unsigned char pt6958_ReadByte(void)
 
 /****************************************************
  *
- * Write one command byte to the PT6958
+ * Write one byte to the PT6958 or PT6302
  *
+ * Note: which of the two chips depend on the CS
+ *       previously set.
  */
-static void pt6xxx_WriteCmd(unsigned char Value)
+static void pt6xxx_send_byte(unsigned char Value)
 {
 	unsigned char i;
 
-	dprintk(160, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 	for (i = 0; i < 8; i++)  // 8 bits in a byte, LSB first
 	{
 		stpio_set_pin(pt6xxx_din, Value & 0x01);  // write bit
@@ -570,8 +573,8 @@ static void pt6xxx_WriteCmd(unsigned char Value)
 		stpio_set_pin(pt6xxx_clk, 1);  // clock pin
 		udelay(VFD_Delay);
 		Value >>= 1;  // get next bit
-	dprintk(160, "%s <\n", __func__);
 	}
+//	dprintk(150, "%s <\n", __func__);
 }
 
 /****************************************************
@@ -579,45 +582,45 @@ static void pt6xxx_WriteCmd(unsigned char Value)
  * Write one byte to the PT6302
  *
  */
-static void pt6302_WriteByte(unsigned char Value)
+static void pt6302_send_byte(unsigned char Value)
 {
 	stpio_set_pin(pt6302_cs, 0);  // set chip select
-	pt6xxx_WriteCmd(Value);
+	pt6xxx_send_byte(Value);
 	stpio_set_pin(pt6302_cs, 1);  // deselect
 	udelay(VFD_Delay);
 }
 
 /****************************************************
  *
- * Write one data byte to the PT6958
+ * Write one byte to the PT6958
  *
  */
-static void pt6958_WriteByte(unsigned char byte)
+static void pt6958_send_byte(unsigned char byte)
 {
-	stpio_set_pin(pt6958_stb, 0);  // set strobe low
-	pt6xxx_WriteCmd(byte);  // send byte
-	stpio_set_pin(pt6958_stb, 1);  // and raise strobe
+	stpio_set_pin(pt6958_stb, 0);  // select PT6958
+	pt6xxx_send_byte(byte);  // send byte
+	stpio_set_pin(pt6958_stb, 1);  // and deselect PT6958
 	udelay(LED_Delay);
 }
 
 /****************************************************
  *
- * Write len data bytes to the PT6958
+ * Write len bytes to the PT6958
  *
  */
 static void pt6958_WriteData(unsigned char *data, unsigned int len)
 {
 	unsigned char i;
 
-	dprintk(150, "%s >\n", __func__);
-	stpio_set_pin(pt6958_stb, 0);  // set strobe low
+//	dprintk(150, "%s >\n", __func__);
+	stpio_set_pin(pt6958_stb, 0);  // select PT6958
 	for (i = 0; i < len; i++)
 	{
-		pt6xxx_WriteCmd(data[i]);
+		pt6xxx_send_byte(data[i]);
 	}
-	stpio_set_pin(pt6958_stb, 1);  // set strobe high
+	stpio_set_pin(pt6958_stb, 1);  // and deselect PT6958
 	udelay(LED_Delay);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 }
 
 /****************************************************
@@ -629,16 +632,16 @@ static void pt6302_WriteData(unsigned char *data, unsigned int len)
 {
 	unsigned char i;
 
-	dprintk(150, "%s >\n", __func__);
-	stpio_set_pin(pt6302_cs, 0);  // set chip select low
+//	dprintk(150, "%s >\n", __func__);
+	stpio_set_pin(pt6302_cs, 0);  // select PT6302
 
 	for (i = 0; i < len; i++)
 	{
-		pt6xxx_WriteCmd(data[i]);
+		pt6xxx_send_byte(data[i]);
 	}
-	stpio_set_pin(pt6302_cs, 1);  // set chip select high
+	stpio_set_pin(pt6302_cs, 1);  // and deselect PT6302
 	udelay(VFD_Delay);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 }
 
 
@@ -659,10 +662,10 @@ void ReadKey(void)
 	spin_lock(&mr_lock);
 
 	stpio_set_pin(pt6958_stb, 0);  // set strobe low (selects PT6958)
-	pt6xxx_WriteCmd(DATA_SETCMD + READ_KEYD);  // send command 01000010b -> Read key data
-	key_group1 = pt6958_ReadByte();  // Get SG1/KS1 (b0..3), SG2/KS2 (b4..7)
-	key_group2 = pt6958_ReadByte();  // Get SG3/KS3 (b0..3), SG4/KS4 (b4..7)
-//	key_group3 = pt6958_ReadByte();  // Get SG5/KS5, SG6/KS6  // not needed
+	pt6xxx_send_byte(DATA_SETCMD + READ_KEYD);  // send command 01000010b -> Read key data
+	key_group1 = pt6958_read_byte();  // Get SG1/KS1 (b0..3), SG2/KS2 (b4..7)
+	key_group2 = pt6958_read_byte();  // Get SG3/KS3 (b0..3), SG4/KS4 (b4..7)
+//	key_group3 = pt6958_read_byte();  // Get SG5/KS5, SG6/KS6  // not needed
 	stpio_set_pin(pt6958_stb, 1);  // set strobe high
 	udelay(LED_Delay);
 
@@ -677,7 +680,7 @@ void ReadKey(void)
  * Directly sets display segments and LEDs: DIG1 - DIG4
  * are segment data, not display characters.
  * 
- * Note: also updates the LEDs (ICON1 through ICON4)
+ * Note: also updates the LEDs (led1 through led4)
  *
  */
 static void PT6958_Show(unsigned char DIG1, unsigned char DIG2, unsigned char DIG3, unsigned char DIG4,
@@ -686,28 +689,28 @@ static void PT6958_Show(unsigned char DIG1, unsigned char DIG2, unsigned char DI
 	dprintk(150, "%s >\n", __func__);
 	spin_lock(&mr_lock);
 
-	pt6958_WriteByte(DATA_SETCMD + 0);  // Set test mode off, increment address and write data display mode (CMD = 01xx0000b)
+	pt6958_send_byte(DATA_SETCMD + 0);  // Set test mode off, increment address and write data display mode (CMD = 01xx0000b)
 	udelay(LED_Delay);
 
 	stpio_set_pin(pt6958_stb, 0);  // drop strobe (latches command)
 
-	pt6xxx_WriteCmd(ADDR_SETCMD + 0);  // Command 2 address set, (start from 0)   11xx0000b
+	pt6xxx_send_byte(ADDR_SETCMD + 0);  // Command 2 address set, (start from 0)   11xx0000b
 	// handle decimal point
 	DIG1 += (DOT1 == 1 ? 0x80 : 0);  // add to digit data
-	pt6xxx_WriteCmd(DIG1);
-	pt6xxx_WriteCmd(ICON1);
+	pt6xxx_send_byte(DIG1);
+	pt6xxx_send_byte(led1);
 
 	DIG2 += (DOT2 == 1 ? 0x80 : 0);  // handle decimal point
-	pt6xxx_WriteCmd(DIG2);
-	pt6xxx_WriteCmd(ICON2);
+	pt6xxx_send_byte(DIG2);
+	pt6xxx_send_byte(led2);
 
 	DIG3 += (DOT3 == 1 ? 0x80 : 0);  // handle decimal point
-	pt6xxx_WriteCmd(DIG3);
-	pt6xxx_WriteCmd(ICON3);
+	pt6xxx_send_byte(DIG3);
+	pt6xxx_send_byte(led3);
 
 	DIG4 += (DOT4 == 1 ? 0x80 : 0);  // handle decimal point
-	pt6xxx_WriteCmd(DIG4);
-	pt6xxx_WriteCmd(ICON4);
+	pt6xxx_send_byte(DIG4);
+	pt6xxx_send_byte(led4);
 
 	stpio_set_pin(pt6958_stb, 1);
 	udelay(LED_Delay);
@@ -756,9 +759,8 @@ int pt6958_utf8conv(unsigned char *text, unsigned char len)
 			kbuf[wlen] = seven_seg[text[i]];  // get segment pattern
 			wlen++;
 		}
-		else if (text[i] < 0xE0)
+		else if (text[i] < 0xe0)
 		{
-			dprintk(100, "UTF_Char_Table = 0x%02x", text[i]);
 			switch (text[i])
 			{
 				case 0xc2:
@@ -978,73 +980,75 @@ int pt6958_ShowBuf(unsigned char *data, unsigned char len, int utf8_flag)
 
 /******************************************************
  *
- * Set LEDs through a string of length 5 (deprecated)
+ * Set LEDs (deprecated)
  *
  */
 static void pt6958_set_icon(unsigned char *kbuf, unsigned char len)
 {
-	unsigned char pos = 0, ico = 0;
+	unsigned char pos = 0, on = 0;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 	spin_lock(&mr_lock);
 
 	if (len == 5)
 	{
 		pos = kbuf[0];  // 1st character is position 1 = power LED, 
-		ico = kbuf[4];  // last character is state
+		on  = kbuf[4];  // last character is state
+		on  = (on == 0 ? 0 : 1);  // normalize on value
 
 		switch (pos)
 		{
-			case 1:
+			case 1:  // led power, red
 			{
-				ICON1 = ico;  // led power, red
-				pos = ADDR_SETCMD + 1;
+				led1 = on;
+//				pos = 1;
 				break;
 			}
 			case 2:  // led power, green
 			{
-				if (ico == 1)
+				if (on == 1)
 				{
-					ICON1 = 2;  // select green
-					ico = 2;
+					led1 = 2;  // select green
+					on = 2;
 				}
 				else
 				{
-					ICON1 = 0;
-					ico = 0;
+					led1 = 0;
+//					on = 0;
 				}
-				pos = ADDR_SETCMD + 1;
+				pos = 1;
 				break;
 			}
 			case 3:  // timer LED
 			{
-				ICON2 = ico;
-				pos = ADDR_SETCMD + 3;
+				led2 = on;
+//				pos = 3;
 				break;
 			}
 			case 4:  // @ LED
 			{
-				ICON3 = ico;
-				pos = ADDR_SETCMD + 5;
+				led3 = on;
+				pos = 5;
 				break;
 			}
 			case 5:  // alert LED
 			{
-				ICON4 = ico;  // save state
-				pos = ADDR_SETCMD + 7;  // get address command
+				led4 = on;  // save state
+				pos = 7;  // get address command offset
 				break;
 			}
 		}
-		udelay(VFD_Delay);
+		pt6958_send_byte(DATA_SETCMD + ADDR_FIX);  // Set command, normal mode, fixed address, write date to display mode 01xx0100b
+		udelay(LED_Delay);
 
-		stpio_set_pin(pt6958_stb, 0);  // set strobe low
-		pt6xxx_WriteCmd(pos);  // set position (command 11xx????b)
-		pt6xxx_WriteCmd(ico);  // set state (on or off)
-		stpio_set_pin(pt6958_stb, 1);  // set strobe high
+		stpio_set_pin(pt6958_stb, 0);  // select PT6958
+		pt6xxx_send_byte(ADDR_SETCMD + pos);  // set position (11xx????b)
+		pt6xxx_send_byte(on);  // set state (on or off)
+		stpio_set_pin(pt6958_stb, 1);  // and deselect PT6958
 		udelay(LED_Delay);
 	}
 	spin_unlock(&mr_lock);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 }
 
 /******************************************************
@@ -1065,7 +1069,7 @@ void pt6958_set_led(int led_nr, int level)
 					dprintk(1, "Illegal LED state value; must be 0..3, default to off\n");
 					level = 0;
 				}
-				ICON1 = level;
+				led1 = level;
 				break;
 		}
 		case 2:  // timer/rec LED
@@ -1077,17 +1081,17 @@ void pt6958_set_led(int led_nr, int level)
 			{
 				case 2:  // timer/rec LED
 				{
-					ICON2 = level;
+					led2 = level;
 					break;
 				}
 				case 3:  // at LED
 				{
-					ICON3 = level;
+					led3 = level;
 					break;
 				}
 				case 4:  // alert LED
 				{
-					ICON4 = level;
+					led4 = level;
 					break;
 				}
 			}
@@ -1095,10 +1099,10 @@ void pt6958_set_led(int led_nr, int level)
 		}
 	}
 	udelay(LED_Delay);
-	stpio_set_pin(pt6958_stb, 0);  // set strobe low
-	pt6xxx_WriteCmd(ADDR_SETCMD + (led_nr * 2) - 1);  // set position (command 11xx????b)
-	pt6xxx_WriteCmd(level);  // set state
-	stpio_set_pin(pt6958_stb, 1);  // set strobe high
+	stpio_set_pin(pt6958_stb, 0);  // select PT6958
+	pt6xxx_send_byte(ADDR_SETCMD + (led_nr * 2) - 1);  // set position (command 11xx????b)
+	pt6xxx_send_byte(level);  // set state
+	stpio_set_pin(pt6958_stb, 1);  // and deselect PT6958
 	udelay(LED_Delay);
 		
 	dprintk(150, "%s <\n", __func__);
@@ -1113,27 +1117,27 @@ static void pt6958_setup(void)
 {
 	unsigned char i;
 
-	dprintk(150, "%s >\n", __func__);
-	pt6958_WriteByte(DATA_SETCMD);  // Command 1, increment address, normal mode
+//	dprintk(150, "%s >\n", __func__);
+	pt6958_send_byte(DATA_SETCMD);  // Command 1, increment address, normal mode
 	udelay(LED_Delay);
 
-	stpio_set_pin(pt6958_stb, 0);  // set strobe low
-	pt6xxx_WriteCmd(ADDR_SETCMD);  // Command 2, RAM address = 0
+	stpio_set_pin(pt6958_stb, 0);  // select PT6958
+	pt6xxx_send_byte(ADDR_SETCMD);  // Command 2, RAM address = 0
 	for (i = 0; i < 10; i++)  // 10 bytes
 	{
-		pt6xxx_WriteCmd(0);  // clear display RAM (all segments off)
+		pt6xxx_send_byte(0);  // clear display RAM (all segments off)
 	}
-	stpio_set_pin(pt6958_stb, 1);  // set strobe high
+	stpio_set_pin(pt6958_stb, 1);  // and deselect PT6958
 	udelay(LED_Delay);
-	dprintk(10, "Switch LED display on\n");
-	pt6958_WriteByte(DISP_CTLCMD + DISPLAY_ON + led_brightness);  // Command 3, display control, (Display ON), brightness: 10xx1BBBb
+//	dprintk(10, "Switch LED display on\n");
+	pt6958_send_byte(DISP_CTLCMD + DISPLAY_ON + led_brightness);  // Command 3, display control, (Display ON), brightness: 10xx1BBBb
 
-	ICON1 = 2;  // power LED green
-	ICON2 = 0;  // timer/rec LED off
-	ICON3 = 0;  // @ LED off
-	ICON4 = 0;  // alert LED off
+	led1 = 2;  // power LED green
+	led2 = 0;  // timer/rec LED off
+	led3 = 0;  // @ LED off
+	led4 = 0;  // alert LED off
 	PT6958_Show(0x40, 0x40, 0x40, 0x40, 0, 0, 0, 0);  // display ----, periods off, power LED green
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 }
 
 /******************************************************
@@ -1154,7 +1158,7 @@ void pt6958_set_brightness(int level)
 	{
 		level = 7;
 	}
-	pt6958_WriteByte(DISP_CTLCMD + DISPLAY_ON + level);  // Command 3, display control, Display ON, brightness level; 10xx1???b
+	pt6958_send_byte(DISP_CTLCMD + DISPLAY_ON + level);  // Command 3, display control, Display ON, brightness level; 10xx1???b
 	led_brightness = level;
 	spin_unlock(&mr_lock);
 	dprintk(150, "%s <\n", __func__);
@@ -1171,7 +1175,7 @@ static void pt6958_set_light(int onoff)
 	spin_lock(&mr_lock);
 
 //	dprintk(10, "Switch LED display %s\n", onoff == 0 ? "off" : "on");
-	pt6958_WriteByte(DISP_CTLCMD + (onoff ? DISPLAY_ON + led_brightness : 0));
+	pt6958_send_byte(DISP_CTLCMD + (onoff ? DISPLAY_ON + led_brightness : 0));
 	spin_unlock(&mr_lock);
 	dprintk(150, "%s <\n", __func__);
 }
@@ -1202,7 +1206,7 @@ int pt6302_write_dcram(unsigned char addr, unsigned char *data, unsigned char le
 	dprintk(150, "%s >\n", __func__);
 	if (len == 0)  // if length is zero,
 	{
-		dprintk(1, "%s < (len =  0)\n", __func__);
+//		dprintk(1, "%s < (len =  0)\n", __func__);
 		return 0; // do nothing
 	}
 	if (addr > 15)
@@ -1220,16 +1224,18 @@ int pt6302_write_dcram(unsigned char addr, unsigned char *data, unsigned char le
 	// assemble command
 	cmd.dcram.cmd  = PT6302_COMMAND_DCRAM_WRITE;
 	cmd.dcram.addr = (addr & 0x0f);  // get address (= character position, 0 = rightmost!)
+
 	wdata[0] = cmd.all;
+//	dprintk(1, "wdata[0] = 0x%02x\n", wdata[0]);
 
 	for (i = 0; i < len; i++)
 	{
 		wdata[i + 1] = data[i];
 	}
 	pt6302_WriteData(wdata, 1 + len);
-	
+
 	spin_unlock(&mr_lock);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1252,7 +1258,7 @@ int pt6302_write_adram(unsigned char addr, unsigned char *data, unsigned char le
 	uint8_t          wdata[20] = {0x0};
 	int              i = 0;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	spin_lock(&mr_lock);
 
@@ -1260,9 +1266,10 @@ int pt6302_write_adram(unsigned char addr, unsigned char *data, unsigned char le
 	cmd.adram.addr = (addr & 0xf);
 
 	wdata[0] = cmd.all;
-	if (len > 16 - addr)
+//	dprintk(1, "wdata[0] = 0x%02x\n", wdata[0]);
+	if (len > VFD_DISP_SIZE - addr)
 	{
-		len = 16 - addr;
+		len = VFD_DISP_SIZE - addr;
 	}
 	for (i = 0; i < len; i++)
 	{
@@ -1270,7 +1277,7 @@ int pt6302_write_adram(unsigned char addr, unsigned char *data, unsigned char le
 	}
 	pt6302_WriteData(wdata, len + 1);
 	spin_unlock(&mr_lock);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1316,7 +1323,7 @@ int pt6302_write_cgram(unsigned char addr, unsigned char *data, unsigned char le
 	}
 	pt6302_WriteData(wdata, len * 5 + 1);
 	spin_unlock(&mr_lock);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1335,7 +1342,7 @@ int pt6302_utf8conv(unsigned char *text, unsigned char len)
 	unsigned char kbuf[64];
 	unsigned char *UTF_Char_Table = NULL;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(120, "%s >\n", __func__);
 
 	wlen = 0;  // input index
 	i = 0;  // output index
@@ -1348,12 +1355,12 @@ int pt6302_utf8conv(unsigned char *text, unsigned char len)
 		{
 			break;  // stop processing
 		}
-		else if (text[i] >= 0x20 || text[i] < 0x80)  // if normal ASCII, but not a control character
+		else if (text[i] >= 0x20 && text[i] < 0x80)  // if normal ASCII, but not a control character
 		{
 			kbuf[wlen] = text[i];
 			wlen++;
 		}
-		else if (text[i] < 0xE0)
+		else if (text[i] < 0xe0)
 		{
 			switch (text[i])
 			{
@@ -1384,6 +1391,7 @@ int pt6302_utf8conv(unsigned char *text, unsigned char len)
 					UTF_Char_Table = PT6302_UTF_C5;
 					break;
 				}
+#if 0  // Cyrillic currently not supported
 				case 0xd0:
 				{
 					UTF_Char_Table = PT6302_UTF_D0;
@@ -1394,6 +1402,7 @@ int pt6302_utf8conv(unsigned char *text, unsigned char len)
 					UTF_Char_Table = PT6302_UTF_D1;
 					break;
 				}
+#endif
 				default:
 				{
 					UTF_Char_Table = NULL;
@@ -1432,7 +1441,7 @@ int pt6302_utf8conv(unsigned char *text, unsigned char len)
 	{
 		text[i] = kbuf[i];
 	}
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(120, "%s <\n", __func__);
 	return wlen;
 }
 
@@ -1527,7 +1536,7 @@ void pt6302_set_brightness(int level)
 {
 	pt6302_command_t cmd;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	spin_lock(&mr_lock);
 
@@ -1542,9 +1551,9 @@ void pt6302_set_brightness(int level)
 	cmd.duty.cmd  = PT6302_COMMAND_SET_DUTY;
 	cmd.duty.duty = level;
 
-	pt6302_WriteByte(cmd.all);
+	pt6302_send_byte(cmd.all);
 	spin_unlock(&mr_lock);
-	dprintk(150,"%s <\n", __func__);
+//	dprintk(150,"%s <\n", __func__);
 }
 
 /*********************************************************
@@ -1558,7 +1567,7 @@ static void pt6302_set_digits(int num)
 {
 	pt6302_command_t cmd;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	spin_lock(&mr_lock);
 
@@ -1575,9 +1584,9 @@ static void pt6302_set_digits(int num)
 	cmd.digits.cmd    = PT6302_COMMAND_SET_DIGITS;
 	cmd.digits.digits = num;
 
-	pt6302_WriteByte(cmd.all);
+	pt6302_send_byte(cmd.all);
 	spin_unlock(&mr_lock);
-	dprintk(150,"%s <\n", __func__);
+//	dprintk(150,"%s <\n", __func__);
 }
 
 /******************************************************
@@ -1589,7 +1598,7 @@ static void pt6302_set_light(int onoff)
 {
 	pt6302_command_t cmd;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	spin_lock(&mr_lock);
 
@@ -1600,9 +1609,9 @@ static void pt6302_set_light(int onoff)
 //	dprintk(10, "Switch VFD display %s\n", onoff == PT6302_LIGHT_NORMAL ? "on" : "off");
 	cmd.light.cmd   = PT6302_COMMAND_SET_LIGHT;
 	cmd.light.onoff = onoff;
-	pt6302_WriteByte(cmd.all);
+	pt6302_send_byte(cmd.all);
 	spin_unlock(&mr_lock);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 }
 
 /******************************************************
@@ -1614,7 +1623,7 @@ static void pt6302_set_port(int port1, int port2)
 {
 	pt6302_command_t cmd;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	spin_lock(&mr_lock);
 
@@ -1622,9 +1631,9 @@ static void pt6302_set_port(int port1, int port2)
 	cmd.port.port1 = (port1) ? 1 : 0;
 	cmd.port.port2 = (port2) ? 1 : 0;
 
-	pt6302_WriteByte(cmd.all);
+	pt6302_send_byte(cmd.all);
 	spin_unlock(&mr_lock);
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 }
 
 /******************************************************
@@ -1635,7 +1644,7 @@ static void pt6302_set_port(int port1, int port2)
  */
 void pt6302_setup(void)
 {
-	unsigned char buf[40] = {0x00};  // init for ADRAM & CGRAM
+	unsigned char buf[16] = { 0x00 };  // init for ADRAM & CGRAM
 	int ret;
 
 	dprintk(150, "%s >\n", __func__);
@@ -1649,10 +1658,10 @@ void pt6302_setup(void)
 	pt6302_write_adram(0x00, buf, 16);  // clear ADRAM
 	dprintk(10, "Clearing VFD icons\n");
 	ret = pt6302_write_cgram(0x00, buf, 8);  // clear CGRAM
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 }
 
-/****************************************
+/******************************************************
  *
  * Icon handling (VFD only)
  *
@@ -2207,11 +2216,12 @@ static int vfd_text_thread(void *arg)
 	int len = data->length;
 	int off = 0;
 	int ret = 0;
+	int i;
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
+	data->data[len] = 0;  // terminate string
 	len = pt6302_utf8conv(data->data, data->length);
-
 	memset(buf, 0x20, sizeof(buf));
 
 	if (len > VFD_DISP_SIZE)
@@ -2224,7 +2234,6 @@ static int vfd_text_thread(void *arg)
 	else
 	{
 		memcpy(buf, data->data, len);
-//		buf[len] = 0;
 		buf[len + VFD_DISP_SIZE] = 0;
 	}
 	vfd_text_thread_status = THREAD_STATUS_RUNNING;
@@ -2254,7 +2263,7 @@ static int vfd_text_thread(void *arg)
 					vfd_text_thread_status = THREAD_STATUS_STOPPED;
 					return 0;
 				}
-				msleep(50);
+				msleep(25);
 			}
 			// advance to next character
 			b++;
@@ -2269,13 +2278,13 @@ static int vfd_text_thread(void *arg)
 		clear_display();
 	}
 	vfd_text_thread_status = THREAD_STATUS_STOPPED;
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
 static int run_text_thread(struct vfd_ioctl_data *draw_data)
 {
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	if (display_type != 1)
 	{
@@ -2353,7 +2362,7 @@ static int run_text_thread(struct vfd_ioctl_data *draw_data)
 		}
 		up(&vfd_text_thread_sem);
 	}
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -2362,7 +2371,7 @@ int fp5800_WriteText(char *buf, size_t len)
 	int res = 0;
 	struct vfd_ioctl_data data;
 
-	dprintk(150, "%s > (len %d)\n", __func__, len);
+//	dprintk(150, "%s > (len %d)\n", __func__, len);
 	if (len > sizeof(data.data))  // do not display more than 64 characters
 	{
 		data.length = sizeof(data.data);
@@ -2384,7 +2393,7 @@ int fp5800_WriteText(char *buf, size_t len)
 	memcpy(data.data, buf, data.length);
 	res = run_text_thread(&data);
 
-	dprintk(150, "%s < res = %d\n", __func__, res);
+//	dprintk(150, "%s < res = %d\n", __func__, res);
 	return res;
 }
 
@@ -2467,7 +2476,7 @@ static ssize_t vfd_read(struct file *filp, char *buf, size_t len, loff_t *off)
 
 static int vfd_open(struct inode *inode, struct file *file)
 {
-	dprintk(150,"%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	if (down_interruptible(&(fp.sem)))
 	{
@@ -2482,15 +2491,15 @@ static int vfd_open(struct inode *inode, struct file *file)
 	}
 	fp.opencount++;
 	up(&(fp.sem));
-	dprintk(150,"%s <\n", __func__);
+//	dprintk(150,"%s <\n", __func__);
 	return 0;
 }
 
 static int vfd_close(struct inode *inode, struct file *file)
 {
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 	fp.opencount = 0;
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -2511,7 +2520,7 @@ static int vfd_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 	int on;
 	unsigned char clear[1] = {0x00};
 
-	dprintk(150, "%s >\n", __func__);
+//	dprintk(150, "%s >\n", __func__);
 
 	switch (cmd)
 	{
@@ -2907,7 +2916,7 @@ icon_exit:
 			break;
 		}
 	}
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(150, "%s <\n", __func__);
 	return ret;
 }
 

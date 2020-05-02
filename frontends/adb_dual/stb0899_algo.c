@@ -77,7 +77,7 @@ static u32 stb0899_set_srate(struct stb0899_state *state, u32 master_clk, u32 sr
 	u32 tmp;
 	u8 sfr[3];
 
-	dprintk(state->verbose, FE_DEBUG, 1, "-->");
+	dprintk(50, "%s >\n", __func__);
 	/*
 	 * in order to have the maximum precision, the symbol rate entered into
 	 * the chip is computed as the closest value of the "true value".
@@ -193,18 +193,18 @@ static enum stb0899_status stb0899_check_tmg(struct stb0899_state *state)
 		if ((lock > 48) && (abs(timing) >= 110))
 		{
 			internal->status = ANALOGCARRIER;
-			dprintk(state->verbose, FE_DEBUG, 1, "-->ANALOG Carrier !");
+			dprintk(20, "--> ANALOG Carrier\n");
 		}
 		else
 		{
 			internal->status = TIMINGOK;
-			dprintk(state->verbose, FE_DEBUG, 1, "------->TIMING OK !");
+			dprintk(20, "-------> TIMING OK\n");
 		}
 	}
 	else
 	{
 		internal->status = NOTIMING;
-		dprintk(state->verbose, FE_DEBUG, 1, "-->NO TIMING !");
+		dprintk(20, "--> NO TIMING\n");
 	}
 	return internal->status;
 }
@@ -226,15 +226,13 @@ static enum stb0899_status stb0899_search_tmg(struct stb0899_state *state)
 	derot_limit = (internal->sub_range / 2L) / internal->mclk;
 	derot_step = internal->derot_step * 4;
 
-	dprintk(state->verbose, FE_DEBUG, 1, "limit = %d, step = %d, mclk = %d",
-		derot_limit, derot_step, internal->mclk);
+	dprintk(20, "limit = %d, step = %d, mclk = %d\n", derot_limit, derot_step, internal->mclk);
 
 	while ((stb0899_check_tmg(state) != TIMINGOK) && next_loop)
 	{
 		derot_freq += index * internal->direction * derot_step;	/* next derot zig zag position */
 
-		dprintk(state->verbose, FE_DEBUG, 1, "index = %d, derot_freq = %d, limit = %d, direction = %d, step = %d",
-		index, derot_freq, derot_limit, internal->direction, derot_step);
+		dprintk(20, "index = %d, derot_freq = %d, limit = %d, direction = %d, step = %d\n", index, derot_freq, derot_limit, internal->direction, derot_step);
 
 		if (abs(derot_freq) > derot_limit)
 		{
@@ -254,7 +252,7 @@ static enum stb0899_status stb0899_search_tmg(struct stb0899_state *state)
 	{
 		stb0899_read_regs(state, STB0899_CFRM, cfr, 2);  /* get derotator frequency */
 		internal->derot_freq = state->config->inversion * MAKEWORD16(cfr[0], cfr[1]);
-		dprintk(state->verbose, FE_DEBUG, 1, "------->TIMING OK ! Derot Freq = %d", internal->derot_freq);
+		dprintk(20, "------->TIMING OK ! Derot Freq = %d\n", internal->derot_freq);
 	}
 	return internal->status;
 }
@@ -275,16 +273,16 @@ static enum stb0899_status stb0899_check_carrier(struct stb0899_state *state)
 	stb0899_write_reg(state, STB0899_CFD, reg);
 
 	reg = stb0899_read_reg(state, STB0899_DSTATUS);
-	dprintk(state->verbose, FE_DEBUG, 1, "--------------------> STB0899_DSTATUS=[0x%02x]", reg);
+	dprintk(20, "--------------------> STB0899_DSTATUS = [0x%02x]\n", reg);
 	if (STB0899_GETFIELD(CARRIER_FOUND, reg))
 	{
 		internal->status = CARRIEROK;
-		dprintk(state->verbose, FE_DEBUG, 1, "-------------> CARRIEROK !");
+		dprintk(20, "-------------> CARRIER OK\n");
 	}
 	else
 	{
 		internal->status = NOCARRIER;
-		dprintk(state->verbose, FE_DEBUG, 1, "-------------> NOCARRIER !");
+		dprintk(20, "-------------> NOCARRIER\n");
 	}
 	return internal->status;
 }
@@ -310,8 +308,7 @@ static enum stb0899_status stb0899_search_carrier(struct stb0899_state *state)
 	last_derot_freq = internal->derot_freq;
 	base_freq = internal->derot_freq;
 
-	dprintk(state->verbose, FE_DEBUG, 1, "freq = %d, limit = %d, step = %d, mclk = %d",
-		derot_freq, derot_limit, derot_step, internal->mclk);
+	dprintk(20, "freq = %d, limit = %d, step = %d, mclk = %d\n", derot_freq, derot_limit, derot_step, internal->mclk);
 
 	reg = stb0899_read_reg(state, STB0899_CFD);
 	STB0899_SETFIELD_VAL(CFD_ON, reg, 1);
@@ -319,14 +316,13 @@ static enum stb0899_status stb0899_search_carrier(struct stb0899_state *state)
 
 	do
 	{
-		dprintk(state->verbose, FE_DEBUG, 1, "Derot Freq=%d, mclk=%d", derot_freq, internal->mclk);
+		dprintk(20, "Derot Freq = %d, mclk = %d\n", derot_freq, internal->mclk);
 		if (stb0899_check_carrier(state) == NOCARRIER)
 		{
 			last_derot_freq = derot_freq;
-			derot_freq += index * internal->direction * derot_step;  /* next zig zag derotator position */
+			derot_freq += index * internal->direction * derot_step; /* next zig zag derotator position	*/
 
-			dprintk(state->verbose, FE_DEBUG, 1, "index = %d, derot_freq = %d, limit = %d, step = %d",
-				index, derot_freq, derot_limit, derot_step);
+			dprintk(20, "index = %d, derot_freq = %d, limit = %d, step = %d\n", index, derot_freq, derot_limit, derot_step);
 
 			// Alex: should limit based on initial base freq
 			if (derot_freq > base_freq + derot_limit
@@ -354,7 +350,7 @@ static enum stb0899_status stb0899_search_carrier(struct stb0899_state *state)
 	{
 		stb0899_read_regs(state, STB0899_CFRM, cfr, 2);  /* get derotator frequency */
 		internal->derot_freq = state->config->inversion * MAKEWORD16(cfr[0], cfr[1]);
-		dprintk(state->verbose, FE_DEBUG, 1, "----> CARRIER OK !, Derot Freq=%d", internal->derot_freq);
+		dprintk(20, "----> CARRIER OK, Derot Freq = %d\n", internal->derot_freq);
 	}
 	else
 	{
@@ -429,7 +425,7 @@ static enum stb0899_status stb0899_check_data(struct stb0899_state *state)
 	if (lock)
 	{  /* DATA LOCK indicator */
 		internal->status = DATAOK;
-		dprintk(state->verbose, FE_DEBUG, 1, "-----------------> DATA OK !");
+		dprintk(20, "-----------------> DATA OK\n");
 	}
 	return internal->status;
 }
@@ -453,18 +449,16 @@ static enum stb0899_status stb0899_search_data(struct stb0899_state *state)
 	derot_freq = internal->derot_freq;
 	base_freq = internal->derot_freq;
 
-	dprintk(state->verbose, FE_DEBUG, 1, "limit = %d, step = %d, mclk = %d",
-		derot_limit, derot_step, internal->mclk);
+	dprintk(20, "limit = %d, step = %d, mclk = %d\n", derot_limit, derot_step, internal->mclk);
 
 	do
 	{
 		if ((internal->status != CARRIEROK)
 		||  (stb0899_check_data(state) != DATAOK))
 		{
-			derot_freq += index * internal->direction * derot_step;	/* next zig zag derotator position */
+			derot_freq += index * internal->direction * derot_step;  /* next zig zag derotator position */
 
-			dprintk(state->verbose, FE_DEBUG, 1, "index = %d, derot_freq = %d, limit = %d, direction = %d, step = %d",
-				index, derot_freq, derot_limit, internal->direction, derot_step);
+			dprintk(20, "index = %d, derot_freq = %d, limit = %d, direction = %d, step = %d\n", index, derot_freq, derot_limit, internal->direction, derot_step);
 
 			// Alex: should limit based on initial base freq
 			if (derot_freq > base_freq + derot_limit
@@ -474,7 +468,7 @@ static enum stb0899_status stb0899_search_data(struct stb0899_state *state)
 			}
 			if (next_loop)
 			{
-				dprintk(state->verbose, FE_DEBUG, 1, "Derot freq=%d, mclk=%d", derot_freq, internal->mclk);
+				dprintk(20, "Derot freq = %d, mclk = %d\n", derot_freq, internal->mclk);
 				reg = stb0899_read_reg(state, STB0899_CFD);
 				STB0899_SETFIELD_VAL(CFD_ON, reg, 1);
 				stb0899_write_reg(state, STB0899_CFD, reg);
@@ -495,7 +489,7 @@ static enum stb0899_status stb0899_search_data(struct stb0899_state *state)
 	{
 		stb0899_read_regs(state, STB0899_CFRM, cfr, 2);  /* get derotator frequency */
 		internal->derot_freq = state->config->inversion * MAKEWORD16(cfr[0], cfr[1]);
-		dprintk(state->verbose, FE_DEBUG, 1, "------> DATAOK ! Derot Freq=%d", internal->derot_freq);
+		dprintk(20, "------> DATAOK, Derot Freq = %d\n", internal->derot_freq);
 	}
 	return internal->status;
 }
@@ -518,12 +512,12 @@ static enum stb0899_status stb0899_check_range(struct stb0899_state *state)
 	&&  (tp_freq <= params->freq + range_offst))
 	{
 		internal->status = RANGEOK;
-		dprintk(state->verbose, FE_DEBUG, 1, "----> RANGEOK !");
+		dprintk(20, "----> RANGEOK\n");
 	}
 	else
 	{
 		internal->status = OUTOFRANGE;
-		dprintk(state->verbose, FE_DEBUG, 1, "----> OUT OF RANGE !");
+		dprintk(1, "----> OUT OF RANGE\n");
 	}
 	return internal->status;
 }
@@ -617,7 +611,7 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 		stb0899_write_reg(state, STB0899_BCLC, bclc);
 		clnI = 3;
 	}
-	dprintk(state->verbose, FE_DEBUG, 1, "Set the timing loop to acquisition");
+	dprintk(20, "Set the timing loop to acquisition\n");
 	/* Set the timing loop to acquisition */
 	stb0899_write_reg(state, STB0899_RTC, 0x46);
 	stb0899_write_reg(state, STB0899_CFD, 0xee);
@@ -628,18 +622,17 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 	 * querying status while acquiring causes the
 	 * acquisition to go bad and hence no locks.
 	 */
-	dprintk(state->verbose, FE_DEBUG, 1, "Derot Percent=%d Srate=%d mclk=%d",
-		internal->derot_percent, params->srate, internal->mclk);
+	dprintk(20, "Derot Percent=%d Srate=%d mclk=%d\n", internal->derot_percent, params->srate, internal->mclk);
 
 	/* Initial calculations */
 	internal->derot_step = internal->derot_percent * (params->srate / 1000L) / internal->mclk;  /* DerotStep/1000 * Fsymbol */
 
-	dprintk(state->verbose, FE_DEBUG, 1, "Derot step=%d", internal->derot_step);
+	dprintk(20, "Derot step=%d\n", internal->derot_step);
 
 	internal->t_derot = stb0899_calc_derot_time(params->srate);
 	internal->t_data = 500;
 
-	dprintk(state->verbose, FE_DEBUG, 1, "RESET stream merger");
+	dprintk(20, "RESET stream merger\n");
 	/* RESET Stream merger */
 	reg = stb0899_read_reg(state, STB0899_TSTRES);
 	STB0899_SETFIELD_VAL(FRESRS, reg, 1);
@@ -675,7 +668,7 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 		stb0899_i2c_gate_ctrl(&state->frontend, 1);
 
 		/* Move tuner to frequency */
-		dprintk(state->verbose, FE_DEBUG, 1, "Tuner set frequency");
+		dprintk(20, "Tuner set frequency\n");
 		if (state->config->tuner_set_frequency)
 		{
 			state->config->tuner_set_frequency(&state->frontend, internal->freq);
@@ -685,7 +678,7 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 			state->config->tuner_get_frequency(&state->frontend, &internal->freq);
 		}
 		msleep(internal->t_agc1 + internal->t_agc2 + internal->t_derot);  /* AGC1, AGC2 and timing loop */
-		dprintk(state->verbose, FE_DEBUG, 1, "current derot freq=%d", internal->derot_freq);
+		dprintk(20, "current derot freq=%d\n", internal->derot_freq);
 		internal->status = AGC1OK;
 
 		/* There is signal in the band */
@@ -706,26 +699,26 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 		}
 		if (internal->status == TIMINGOK)
 		{
-			dprintk(state->verbose, FE_DEBUG, 1, "TIMING OK ! Derot freq=%d, mclk=%d", internal->derot_freq, internal->mclk);
+			dprintk(20, "TIMING OK, Derot freq = %d, mclk = %d\n", internal->derot_freq, internal->mclk);
 
 			if (stb0899_search_carrier(state) == CARRIEROK)
 			{  /* Search for carrier */
-				dprintk(state->verbose, FE_DEBUG, 1, "CARRIER OK ! Derot freq=%d, mclk=%d", internal->derot_freq, internal->mclk);
+				dprintk(20, "CARRIER OK, Derot freq = %d, mclk = %d\n", internal->derot_freq, internal->mclk);
 
 				if (stb0899_search_data(state) == DATAOK)
 				{  /* Check for data */
-					dprintk(state->verbose, FE_DEBUG, 1, "DATA OK ! Derot freq=%d, mclk=%d", internal->derot_freq, internal->mclk);
+					dprintk(20, "DATA OK, Derot freq = %d, mclk = %d\n", internal->derot_freq, internal->mclk);
 
 					if (stb0899_check_range(state) == RANGEOK)
 					{
-						dprintk(state->verbose, FE_DEBUG, 1, "RANGE OK ! derot freq=%d, mclk=%d", internal->derot_freq, internal->mclk);
+						dprintk(20, "RANGE OK, Derot freq = %d, mclk = %d\n", internal->derot_freq, internal->mclk);
 
 						internal->freq = params->freq + ((internal->derot_freq *internal->mclk) / 1000);
 						reg = stb0899_read_reg(state, STB0899_PLPARM);
 						internal->fecrate = STB0899_GETFIELD(VITCURPUN, reg);
-						dprintk(state->verbose, FE_DEBUG, 1, "freq=%d, internal resultant freq=%d", params->freq, internal->freq);
+						dprintk(20, "Freq = %d, internal resultant freq = %d\n", params->freq, internal->freq);
 
-						dprintk(state->verbose, FE_DEBUG, 1, "internal puncture rate=%d", internal->fecrate);
+						dprintk(20, "Internal puncture rate = %d\n", internal->fecrate);
 					}
 				}
 			}
@@ -743,7 +736,7 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 	/* if locked and range ok, set Kdiv */
 	if (internal->status == RANGEOK)
 	{
-		dprintk(state->verbose, FE_DEBUG, 1, "Locked & Range OK !");
+		dprintk(20, "Locked & Range OK\n");
 		stb0899_write_reg(state, STB0899_EQON, 0x41);  /* Equalizer OFF while acquiring */
 		stb0899_write_reg(state, STB0899_VITSYNC, 0x39);  /* SN to b'11 for acquisition */
 
@@ -798,7 +791,7 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 			}
 			default:
 			{
-				dprintk(state->verbose, FE_DEBUG, 1, "Unsupported Puncture Rate");
+				dprintk(1, "Unsupported Puncture Rate\n");
 				break;
 			}
 		}
@@ -943,7 +936,7 @@ static void stb0899_dvbs2_set_srate(struct stb0899_state *state)
 	u32 correction, freq_adj, band_lim, decim_cntrl, reg;
 	u8 anti_alias;
 
-	/*set decimation to 1 */
+	/* set decimation to 1 */
 	dec_ratio = (internal->master_clk * 2) / (5 * internal->srate);
 	dec_ratio = (dec_ratio == 0) ? 1 : dec_ratio;
 	dec_rate = Log2Int(dec_ratio);
@@ -963,7 +956,7 @@ static void stb0899_dvbs2_set_srate(struct stb0899_state *state)
 	}
 	else
 	{
-		band_lim = 0;	/* band limit signal going into btr block */
+		band_lim = 0;  /* band limit signal going into btr block */
 	}
 	decim_cntrl = ((win_sel << 3) & 0x18) + ((band_lim << 5) & 0x20) + (dec_rate & 0x7);
 	stb0899_write_s2reg(state, STB0899_S2DEMOD, STB0899_BASE_DECIM_CNTRL, STB0899_OFF0_DECIM_CNTRL, decim_cntrl);
@@ -1022,7 +1015,7 @@ static void stb0899_dvbs2_set_btr_loopbw(struct stb0899_state *state)
 	{
 		K = sym_peak / K;
 		wn = (4 * zeta * zeta) + 1000000;
-		wn = (2 * (loopbw_percent * 1000) * 40 * zeta) / wn;  /* wn =wn 10^-8 */
+		wn = (2 * (loopbw_percent * 1000) * 40 * zeta) / wn;  /* wn = wn 10^-8 */
 
 		k_indirect = (wn * wn) / K;
 		k_indirect = k_indirect;           /* kindirect = kindirect 10^-6 */
@@ -1034,7 +1027,7 @@ static void stb0899_dvbs2_set_btr_loopbw(struct stb0899_state *state)
 		k_btr1 = k_direct / (1 << k_direct_shift);
 		k_btr1 /= 10000;
 
-		k_indirect_shift = Log2Int(k_indirect + 15) - 20 /*- 2 */;
+		k_indirect_shift = Log2Int(k_indirect + 15) - 20 /* - 2 */;
 		k_btr0_rshft = (-1 * k_indirect_shift) + config->btr_gain_shift_offset;
 		k_btr0 = k_indirect * (1 << (-k_indirect_shift));
 		k_btr0 /= 1000000;
@@ -1069,12 +1062,12 @@ static void stb0899_dvbs2_set_carr_freq(struct stb0899_state *state, s32 carr_fr
 	s32 crl_nom_freq;
 	u32 reg;
 
-	dprintk(state->verbose, FE_DEBUG, 1, "carr_freq = %d, master_clk = %d", carr_freq, master_clk);
+	dprintk(20, "carr_freq = %d, master_clk = %d\n", carr_freq, master_clk);
 
 	crl_nom_freq = (1 << config->crl_nco_bits) / master_clk;
 	crl_nom_freq *= carr_freq;
 
-	dprintk(state->verbose, FE_DEBUG, 1, "crl_nom_freq = %d", crl_nom_freq);
+	dprintk(20, "crl_nom_freq = %d\n", crl_nom_freq);
 
 	reg = STB0899_READ_S2REG(STB0899_S2DEMOD, CRL_NOM_FREQ);
 	STB0899_SETFIELD_VAL(CRL_NOM_FREQ, reg, crl_nom_freq);
@@ -1218,13 +1211,13 @@ static enum stb0899_status stb0899_dvbs2_get_dmd_status(struct stb0899_state *st
 	do
 	{
 		reg = STB0899_READ_S2REG(STB0899_S2DEMOD, DMD_STATUS);
-		dprintk(state->verbose, FE_DEBUG, 1, "DMD_STATUS=[0x%02x]", reg);
+		dprintk(20, "DMD_STATUS=[0x%02x]\n", reg);
 		if (STB0899_GETFIELD(IF_AGC_LOCK, reg))
 		{
-			dprintk(state->verbose, FE_DEBUG, 1, "------------->IF AGC LOCKED !");
+			dprintk(20, "-------------> IF AGC LOCKED\n");
 		}
 		reg = STB0899_READ_S2REG(STB0899_S2DEMOD, DMD_STAT2);
-		dprintk(state->verbose, FE_DEBUG, 1, "----------->DMD STAT2=[0x%02x]", reg);
+		dprintk(20, "-----------> DMD STAT2 = [0x%02x]\n", reg);
 		uwp = STB0899_GETFIELD(UWP_LOCK, reg);
 		csm = STB0899_GETFIELD(CSM_LOCK, reg);
 		if (uwp && csm)
@@ -1238,7 +1231,7 @@ static enum stb0899_status stb0899_dvbs2_get_dmd_status(struct stb0899_state *st
 
 	if (lock)
 	{
-		dprintk(state->verbose, FE_DEBUG, 1, "----------------> DVB-S2 LOCK !");
+		dprintk(20, "----------------> DVB-S2 LOCK\n");
 		return DVBS2_DEMOD_LOCK;
 	}
 	else
@@ -1259,7 +1252,7 @@ static int stb0899_dvbs2_get_data_lock(struct stb0899_state *state, int timeout)
 	while ((!lock) && (time < timeout))
 	{
 		reg = stb0899_read_reg(state, STB0899_CFGPDELSTATUS1);
-		dprintk(state->verbose, FE_DEBUG, 1, "---------> CFGPDELSTATUS=[0x%02x]", reg);
+		dprintk(20, "---------> CFGPDELSTATUS = [0x%02x]\n", reg);
 		lock = STB0899_GETFIELD(CFGPDELSTATUS_LOCK, reg);
 		time++;
 	}
@@ -1274,7 +1267,7 @@ static enum stb0899_status stb0899_dvbs2_get_fec_status(struct stb0899_state *st
 {
 	int time = 0, Locked;
 
-	dprintk(state->verbose, FE_DEBUG, 1, "timeout = %d", timeout);
+	dprintk(20, "timeout = %d\n", timeout);
 
 	do
 	{
@@ -1286,7 +1279,7 @@ static enum stb0899_status stb0899_dvbs2_get_fec_status(struct stb0899_state *st
 
 	if (Locked)
 	{
-		dprintk(state->verbose, FE_DEBUG, 1, "---------->DVB-S2 FEC LOCK !");
+		dprintk(20, "----------> DVB-S2 FEC LOCK\n");
 		return DVBS2_FEC_LOCK;
 	}
 	else
@@ -1329,82 +1322,82 @@ static void stb0899_dvbs2_init_csm(struct stb0899_state *state, int pilots, enum
 		{
 			case STB0899_QPSK_12:
 			{
-				gamma_acq = 25;
-				gamma_rho_acq = 2700;
-				gamma_trk = 12;
-				gamma_rho_trk = 180;
+				gamma_acq      = 25;
+				gamma_rho_acq  = 2700;
+				gamma_trk      = 12;
+				gamma_rho_trk  = 180;
 				lock_count_thr = 8;
 				break;
 			}
 			case STB0899_QPSK_35:
 			{
-				gamma_acq = 38;
-				gamma_rho_acq = 7182;
-				gamma_trk = 14;
-				gamma_rho_trk = 308;
+				gamma_acq      = 38;
+				gamma_rho_acq  = 7182;
+				gamma_trk      = 14;
+				gamma_rho_trk  = 308;
 				lock_count_thr = 8;
 				break;
 			}
 			case STB0899_QPSK_23:
 			{
-				gamma_acq = 42;
-				gamma_rho_acq = 9408;
-				gamma_trk = 17;
-				gamma_rho_trk = 476;
+				gamma_acq      = 42;
+				gamma_rho_acq  = 9408;
+				gamma_trk      = 17;
+				gamma_rho_trk  = 476;
 				lock_count_thr = 8;
 				break;
 			}
 			case STB0899_QPSK_34:
 			{
-				gamma_acq = 53;
-				gamma_rho_acq = 16642;
-				gamma_trk = 19;
-				gamma_rho_trk = 646;
+				gamma_acq      = 53;
+				gamma_rho_acq  = 16642;
+				gamma_trk      = 19;
+				gamma_rho_trk  = 646;
 				lock_count_thr = 8;
 				break;
 			}
 			case STB0899_QPSK_45:
 			{
-				gamma_acq = 53;
-				gamma_rho_acq = 17119;
-				gamma_trk = 22;
-				gamma_rho_trk = 880;
+				gamma_acq      = 53;
+				gamma_rho_acq  = 17119;
+				gamma_trk      = 22;
+				gamma_rho_trk  = 880;
 				lock_count_thr = 8;
 				break;
 			}
 			case STB0899_QPSK_56:
 			{
-				gamma_acq = 55;
-				gamma_rho_acq = 19250;
-				gamma_trk = 23;
-				gamma_rho_trk = 989;
+				gamma_acq      = 55;
+				gamma_rho_acq  = 19250;
+				gamma_trk      = 23;
+				gamma_rho_trk  = 989;
 				lock_count_thr = 8;
 				break;
 			}
 			case STB0899_QPSK_89:
 			{
-				gamma_acq = 60;
-				gamma_rho_acq = 24240;
-				gamma_trk = 24;
-				gamma_rho_trk = 1176;
+				gamma_acq      = 60;
+				gamma_rho_acq  = 24240;
+				gamma_trk      = 24;
+				gamma_rho_trk  = 1176;
 				lock_count_thr = 8;
 				break;
 			}
 			case STB0899_QPSK_910:
 			{
-				gamma_acq = 66;
-				gamma_rho_acq = 29634;
-				gamma_trk = 24;
-				gamma_rho_trk = 1176;
+				gamma_acq      = 66;
+				gamma_rho_acq  = 29634;
+				gamma_trk      = 24;
+				gamma_rho_trk  = 1176;
 				lock_count_thr = 8;
 				break;
 			}
 			default:
 			{
-				gamma_acq = 66;
-				gamma_rho_acq = 29634;
-				gamma_trk = 24;
-				gamma_rho_trk = 1176;
+				gamma_acq      = 66;
+				gamma_rho_acq  = 29634;
+				gamma_trk      = 24;
+				gamma_rho_trk  = 1176;
 				lock_count_thr = 8;
 				break;
 			}
@@ -1485,40 +1478,40 @@ enum stb0899_status stb0899_dvbs2_algo(struct stb0899_state *state)
 
 	if (internal->srate <= 2000000)
 	{
-		searchTime = 5000;	/* 5000 ms max time to lock UWP and CSM, SYMB <= 2Mbs */
+		searchTime  = 5000;	/* 5000 ms max time to lock UWP and CSM, SYMB <= 2Mbs */
 		FecLockTime = 350;	/* 350  ms max time to lock FEC, SYMB <= 2Mbs         */
 	}
 	else if (internal->srate <= 5000000)
 	{
-		searchTime = 2500;	/* 2500 ms max time to lock UWP and CSM, 2Mbs < SYMB <= 5Mbs */
+		searchTime  = 2500;	/* 2500 ms max time to lock UWP and CSM, 2Mbs < SYMB <= 5Mbs */
 		FecLockTime = 170;	/* 170  ms max time to lock FEC, 2Mbs< SYMB <= 5Mbs          */
 	}
 	else if (internal->srate <= 10000000)
 	{
-		searchTime = 1500;	/* 1500 ms max time to lock UWP and CSM, 5Mbs <SYMB <= 10Mbs */
+		searchTime  = 1500;	/* 1500 ms max time to lock UWP and CSM, 5Mbs <SYMB <= 10Mbs */
 		FecLockTime = 80;	/* 80  ms max time to lock FEC, 5Mbs< SYMB <= 10Mbs          */
 	}
 	else if (internal->srate <= 15000000)
 	{
-		searchTime = 500;	/* 500 ms max time to lock UWP and CSM, 10Mbs <SYMB <= 15Mbs */
+		searchTime  = 500;	/* 500 ms max time to lock UWP and CSM, 10Mbs <SYMB <= 15Mbs */
 		FecLockTime = 50;	/* 50  ms max time to lock FEC, 10Mbs< SYMB <= 15Mbs         */
 	}
 	else if (internal->srate <= 20000000)
 	{
-		searchTime = 300;	/* 300 ms max time to lock UWP and CSM, 15Mbs < SYMB <= 20Mbs */
+		searchTime  = 300;	/* 300 ms max time to lock UWP and CSM, 15Mbs < SYMB <= 20Mbs */
 		FecLockTime = 30;	/* 50  ms max time to lock FEC, 15Mbs< SYMB <= 20Mbs          */
 	}
 	else if (internal->srate <= 25000000)
 	{
-		searchTime = 250;	/* 250 ms max time to lock UWP and CSM, 20 Mbs < SYMB <= 25Mbs */
+		searchTime  = 250;	/* 250 ms max time to lock UWP and CSM, 20 Mbs < SYMB <= 25Mbs */
 		FecLockTime = 25;	/* 25 ms max time to lock FEC, 20Mbs< SYMB <= 25Mbs            */
 	}
 	else
 	{
-		searchTime = 150;	/* 150 ms max time to lock UWP and CSM, SYMB > 25Mbs */
+		searchTime  = 150;	/* 150 ms max time to lock UWP and CSM, SYMB > 25Mbs */
 		FecLockTime = 20;	/* 20 ms max time to lock FEC, 20Mbs< SYMB <= 25Mbs  */
 	}
-	dprintk(state->verbose, FE_DEBUG, 1, "srate = %d, searchTime = %d, FecLockTime = %d", internal->srate, searchTime, FecLockTime);
+	dprintk(20, "srate = %d, searchTime = %d, FecLockTime = %d\n", internal->srate, searchTime, FecLockTime);
 
 	/* Maintain Stream Merger in reset during acquisition */
 	reg = stb0899_read_reg(state, STB0899_TSTRES);
@@ -1580,7 +1573,7 @@ enum stb0899_status stb0899_dvbs2_algo(struct stb0899_state *state)
 
 	if (internal->status == DVBS2_DEMOD_LOCK)
 	{
-		dprintk(state->verbose, FE_DEBUG, 1, "------------> DVB-S2 DEMOD LOCK !");
+		dprintk(20, "------------> DVB-S2 DEMOD LOCK\n");
 		i = 0;
 		/* Demod Locked, check FEC status */
 		internal->status = stb0899_dvbs2_get_fec_status(state, FecLockTime);
@@ -1645,7 +1638,7 @@ enum stb0899_status stb0899_dvbs2_algo(struct stb0899_state *state)
 	}
 	if (internal->status == DVBS2_FEC_LOCK)
 	{
-		dprintk(state->verbose, FE_DEBUG, 1, "----------------> DVB-S2 FEC Lock !");
+		dprintk(20, "----------------> DVB-S2 FEC Lock\n");
 		reg = STB0899_READ_S2REG(STB0899_S2DEMOD, UWP_STAT2);
 		modcod = STB0899_GETFIELD(UWP_DECODE_MOD, reg) >> 2;
 		pilots = STB0899_GETFIELD(UWP_DECODE_MOD, reg) & 0x01;
