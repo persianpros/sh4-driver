@@ -3,6 +3,19 @@
 brandcheck=`cat /etc/openvision/brand`
 modelcheck=`cat /etc/openvision/model`
 
+# Load coprocessor firmware
+if [ $brandcheck == "forever" ]; then
+	/usr/bin/ustslave /dev/st231-0 /boot/companion_h205_video_Ax.bin
+	/usr/bin/ustslave /dev/st231-0 /boot/companion_h205_video_Bx.bin
+	/usr/bin/ustslave /dev/st231-1 /boot/companion_h205_audio.bin
+else
+	/usr/bin/ustslave /dev/st231-0 /boot/video.elf
+	/usr/bin/ustslave /dev/st231-1 /boot/audio.elf
+fi
+
+# Run sysv init
+exec /sbin/init
+
 # Create display device if not present
 if [ -e /dev/dbox/oled0 ] ; then
 	ln -s /dev/dbox/oled0 /dev/vfd
