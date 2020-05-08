@@ -18,11 +18,82 @@ if [ $# -eq 1 ]; then
        echo "end standby..."
        #enable hdmi
        stfbcontrol he
-       #clear display
-       fp_control -c
+       if [ $modelcheck == "spark" ]; then
+          fp_control -c #everthing off
+          #handle red led
+          redled=`cat /etc/enigma2/settings | grep vfdicon.dstandbyredledon | cut -d "=" -f2`
+          if [ "$redled"=="true" ]; then
+             fp_control -l 0 1
+          else
+             fp_control -l 0 0
+          fi
+          fp_control -e
+          echo "0" > /proc/progress
+          halt -d -f -i -h
+          #halt -d -f -i -p -h
+       fi
+       if [ $modelcheck == "spark7162" ]; then
+          fp_control -sst
+          fp_control -tm 1
+          fp_control -e
+          #handle red led
+          redled=`cat /etc/enigma2/settings | grep vfdicon.dstandbyredledon | cut -d "=" -f2`
+          if [ "$redled"=="true" ]; then
+             fp_control -l 0 1
+          else
+             fp_control -l 0 0
+          fi
+          echo "0" > /proc/progress
+          halt -d -f -i -h
+          #halt -d -f -i -p -h
+       fi
        if [ $brandcheck == "cuberevo" ]; then
-          fp_control -i 1 0
-          fp_control -dt 0	
+          fp_control -l 0 0
+          fp_control -dt 0
+          fp_control -e
+          echo "0" > /proc/progress
+       fi
+       if [ $brandcheck == "ipbox" ]; then
+          #mkdir -p /dev/dbox
+          #mknod /dev/dbox/vfd c 147 0
+          vfdctl cleardisplay #clear text in display
+          vfdctl standby
+          vfdctl deep #halt display to deep standby
+       fi
+       if [ $brandcheck == "fortis" ] || [ $brandcheck == "hs" ] || [ $modelcheck == "octagon1008" ]; then
+          fp_control -sst
+          fp_control -e
+       fi
+       if [ $brandcheck == "atemio" ] || [ $modelcheck == "vitamin_hd5000" ]; then
+          fp_control -e
+       fi
+       if [ $modelcheck == "adb_box" ]; then
+          fp_control -l 1 1
+          echo "OFF" > /dev/vfd
+          halt -d -f -n -i -h
+          #halt -d -f -n -i -p -h
+       fi
+       if [ $modelcheck == "hl101" ] || [ $modelcheck == "vip2_v1" ]; then
+          halt -d -f -n -i -h
+          #halt -d -f -n -i -p -h
+       fi
+       if [ $modelcheck == "tf7700" ]; then
+          tffpctl --brightness 5
+          tffpctl --cleardisplay
+          tffpctl --poweroff
+       fi
+       if [ $modelcheck == "ufs912" ] || [ $modelcheck == "ufs913" ]; then
+          #green green off
+          fp_control -l 2 0
+          #green red on
+          fp_control -l 3 1
+          #led brightness
+          fp_control -led 5
+          fp_control -e
+       fi
+       if [ $modelcheck == "ufs910" ] || [ $modelcheck == "ufs922" ] || [ $modelcheck == "ufc960" ]; then
+          fp_control -e
+          echo "0" > /proc/progress
        fi
        pid=`pidof fp_control`
        echo pid = $pid
