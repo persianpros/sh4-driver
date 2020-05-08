@@ -1,23 +1,29 @@
-/*
-	STB0899 Multistandard Frontend driver
-	Copyright (C) Manu Abraham (abraham.manu@gmail.com)
-
-	Copyright (C) ST Microelectronics
-
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+/*****************************************************************************************
+ *
+ * STB0899 Multistandard Frontend driver
+ * Copyright (C) Manu Abraham (abraham.manu@gmail.com)
+ *
+ * Copyright (C) ST Microelectronics
+ *
+ * Customized for adb_box, bska & bxzb models
+ *
+ * LNB power controller is an Intersil/Renesas ISL6423
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ ****************************************************************************************/
 
 #ifndef __STB0899_PRIV_H
 #define __STB0899_PRIV_H
@@ -135,73 +141,73 @@ enum stb0899_fec
 
 struct stb0899_params
 {
-	u32               freq;   /* Frequency */
-	u32               srate;  /* Symbol rate */
+	u32	              freq;   /* Frequency */
+	u32	              srate;  /* Symbol rate */
 	enum fe_code_rate fecrate;
 };
 
 struct stb0899_internal
 {
 	u32                    master_clk;
-	u32                    freq;             /* Demod internal Frequency             */
-	u32                    srate;            /* Demod internal Symbol rate           */
-	enum stb0899_fec       fecrate;          /* Demod internal FEC rate              */
-	s32                    srch_range;       /* Demod internal Search Range          */
-	s32                    sub_range;        /* Demod current sub range (Hz)         */
-	s32                    tuner_step;       /* Tuner step (Hz)                      */
-	s32                    tuner_offst;      /* Relative offset to carrier (Hz)      */
-	u32                    tuner_bw;         /* Current bandwidth of the tuner (Hz)  */
+	u32                    freq;            /* Demod internal Frequency             */
+	u32                    srate;           /* Demod internal Symbol rate           */
+	enum stb0899_fec       fecrate;         /* Demod internal FEC rate              */
+	s32                    srch_range;      /* Demod internal Search Range          */
+	s32                    sub_range;       /* Demod current sub range (Hz)         */
+	s32                    tuner_step;      /* Tuner step (Hz)                      */
+	s32                    tuner_offst;     /* Relative offset to carrier (Hz)      */
+	u32                    tuner_bw;        /* Current bandwidth of the tuner (Hz)  */
 
-	s32                    mclk;             /* Masterclock Divider factor (binary)  */
-	s32                    rolloff;          /* Current RollOff of the filter (x100) */
+	s32                    mclk;            /* Masterclock Divider factor (binary)  */
+	s32                    rolloff;         /* Current RollOff of the filter (x100) */
 
-	s16                    derot_freq;       /* Current derotator frequency (Hz)     */
+	s16                    derot_freq;      /* Current derotator frequency (Hz)     */
 	s16                    derot_percent;
 
-	s16                    direction;        /* Current derotator search direction   */
-	s16                    derot_step;       /* Derotator step (binary value)        */
-	s16                    t_derot;          /* Derotator time constant (ms)         */
-	s16                    t_data;           /* Data recovery time constant (ms)     */
-	s16                    sub_dir;          /* Direction of the next sub range      */
+	s16                    direction;       /* Current derotator search direction   */
+	s16                    derot_step;      /* Derotator step (binary value)        */
+	s16                    t_derot;         /* Derotator time constant (ms)         */
+	s16                    t_data;          /* Data recovery time constant (ms)     */
+	s16                    sub_dir;         /* Direction of the next sub range      */
 
-	s16                    t_agc1;           /* Agc1 time constant (ms)              */
-	s16                    t_agc2;           /* Agc2 time constant (ms)              */
+	s16                    t_agc1;          /* Agc1 time constant (ms)              */
+	s16                    t_agc2;          /* Agc2 time constant (ms)              */
 
-	u32                    lock;             /* Demod internal lock state            */
-	enum stb0899_status    status;           /* Demod internal status                */
+	u32                    lock;            /* Demod internal lock state            */
+	enum stb0899_status    status;          /* Demod internal status                */
 
 	/* DVB-S2 */
-	s32                    agc_gain;         /* RF AGC Gain                          */
-	s32                    center_freq;      /* Nominal carrier frequency            */
-	s32                    av_frame_coarse;  /* Coarse carrier freq search frames    */
-	s32                    av_frame_fine;    /* Fine carrier freq search frames      */
+	s32                    agc_gain;		/* RF AGC Gain                          */
+	s32                    center_freq;		/* Nominal carrier frequency            */
+	s32                    av_frame_coarse;	/* Coarse carrier freq search frames    */
+	s32                    av_frame_fine;   /* Fine carrier freq search frames      */
 
-	s16                    step_size;		 /* Carrier frequency search step size   */
+	s16                    step_size;		/* Carrier frequency search step size   */
 
 	enum stb0899_alpha     rrc_alpha;
 	enum stb0899_inversion inversion;
 	enum stb0899_modcod    modcod;
-	u8                     pilots;			 /* Pilots found                         */
+	u8                     pilots;			/* Pilots found                         */
 
 	enum stb0899_frame     frame_length;
-	u8                     v_status;         /* VSTATUS                              */
-	u8                     err_ctrl;		 /* ERRCTRLn                             */
+	u8                     v_status;		/* VSTATUS                              */
+	u8                     err_ctrl;		/* ERRCTRLn                             */
 };
 
 struct stb0899_state
 {
 	struct i2c_adapter      *i2c;
 	struct stb0899_config   *config;
-	struct dvb_frontend	    frontend;
-	u32                     *verbose;  /* Cached module verbosity level */
+	struct dvb_frontend     frontend;
+	u32                     *verbose; /* Cached module verbosity level */
 
-	struct stb0899_internal internal;  /* Device internal parameters    */
+	struct stb0899_internal internal; /* Device internal parameters    */
 
 	/*	cached params from API	*/
 	enum fe_delivery_system delsys;
 	struct stb0899_params   params;
 
-	u32                     rx_freq;   /* DiSEqC 2.0 receiver freq      */
+	u32                     rx_freq;  /* DiSEqC 2.0 receiver freq      */
 	struct mutex            search_lock;
 };
 
@@ -217,7 +223,7 @@ extern int stb0899_i2c_gate_ctrl(struct dvb_frontend *fe, int enable);
 extern int _stb0899_write_s2reg(struct stb0899_state *state, u32 stb0899_i2cdev, u32 stb0899_base_addr, u16 stb0899_reg_offset, u32 stb0899_data);
 #endif
 
-#define STB0899_READ_S2REG(DEVICE, REG) (_stb0899_read_s2reg(state, DEVICE, STB0899_BASE_##REG, STB0899_OFF0_##REG))
+#define STB0899_READ_S2REG(DEVICE, REG)          (_stb0899_read_s2reg(state, DEVICE, STB0899_BASE_##REG, STB0899_OFF0_##REG))
 //#define STB0899_WRITE_S2REG(DEVICE, REG, DATA) (_stb0899_write_s2reg(state, DEVICE, STB0899_BASE_##REG, STB0899_OFF0_##REG, DATA))
 
 /* stb0899_algo.c */

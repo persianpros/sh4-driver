@@ -1,6 +1,16 @@
 #ifndef __CORE_DVB__
 #define __CORE_DVB__
 
+//extern short paramDebug;
+#define TAGDEBUG "[adb_single] "
+
+#ifndef dprintk
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level)) printk(TAGDEBUG x); \
+} while (0)
+#endif
+
 #include "dvb_frontend.h"
 #include "dvbdev.h"
 #include "demux.h"

@@ -36,6 +36,12 @@
  *                          procfs parts.
  * 20190813 Audioniek       /proc/stb/lcd/symbol_circle added.
  * 20190813 Audioniek       /proc/stb/fan/fan_ctrl added.
+ * 20200504 Audioniek       Removed dual display capability.
+ * 20200504 Audioniek       /proc/stb/fan/fan always reports 0 on BSKA/BXZB.
+ * 20200504 Audioniek       /proc/stb/lcd/symbol_circle always reports 0 on
+ *                          BSKA/BXZB.
+ * 20200505 Audioniek       Fix handling of BZZB with box_variant; boxvariant
+ *                          values changed so that bit 1 signals dual tuner.
  * 
  ****************************************************************************/
 
@@ -103,8 +109,8 @@ extern void pt6958_set_led(int led_nr, int level);
 //extern static int rtc_time2tm(char *uTime, struct rtc_time *tm);
 
 /* Globals */
-extern int display_led;  // display type is LED
-extern int display_vfd;  // display type is VFD
+extern int box_variant;   // 0=BSKA, 1=BSLA, 2=BXZB, 3=BZZB, 4=cable, -1=unknown
+extern int display_type;  // active display: 0=LED, 1=VFD, 2=both
 static int progress = 0;
 static int symbol_circle = 0;
 static int old_icon_state;
@@ -113,7 +119,6 @@ static u32 led1_pattern = 0;
 static u32 led2_pattern = 0;
 static u32 led3_pattern = 0;
 static int led_pattern_speed = 20;
-extern int box_variant;
 extern unsigned long fan_registers;
 extern struct stpio_pin* fan_pin;
 extern tIconState spinner_state;
@@ -183,62 +188,69 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 		sscanf(myString, "%d", &symbol_circle);
 		kfree(myString);
 
-		if (symbol_circle != 0)
-		{  // spinner on
-			if (symbol_circle > 255)
-			{
-				symbol_circle = 255;  // set maximum value
+		if (display_type)
+		{
+			if (symbol_circle != 0)
+			{  // spinner on
+				if (symbol_circle > 255)
+				{
+					symbol_circle = 255;  // set maximum value
+				}
+				if (spinner_state.state == 0)  // if spinner not active
+				{
+					if (icon_state.state != 0)
+					{  // stop icon thread if active
+						old_icon_state = icon_state.state;
+//						dprintk(50, "%s Stop icon thread\n", __func__);
+						i = 0;
+						icon_state.state = 0;
+						do
+						{
+							msleep(250);
+							i++;
+						}
+						while (icon_state.status != THREAD_STATUS_HALTED && i < 20);  //time out of 5 seconds
+//						dprintk(50, "%s Icon thread stopped\n", __func__);
+					}
+					if (symbol_circle == 1)  // handle special value 1
+					{
+						spinner_state.period = 250;  //set standard speed
+					}
+					else
+					{
+						spinner_state.period = symbol_circle * 10;  //set user specified speed
+					}
+					spinner_state.state = 1;
+					lastdata.icon_state[ICON_SPINNER] = 1;
+					up(&spinner_state.sem);
+				}
 			}
-			if (spinner_state.state == 0)  // if spinner not active
-			{
-				if (icon_state.state != 0)
-				{  // stop icon thread if active
-					old_icon_state = icon_state.state;
-//					dprintk(50, "%s Stop icon thread\n", __func__);
+			else
+			{  // spinner off
+				if (spinner_state.state != 0)
+				{
+					spinner_state.state = 0;
+					lastdata.icon_state[ICON_SPINNER] = 0;
+//					dprintk(50, "%s Stop spinner thread\n", __func__);
 					i = 0;
-					icon_state.state = 0;
 					do
 					{
 						msleep(250);
 						i++;
 					}
-					while (icon_state.status != THREAD_STATUS_HALTED && i < 20);  //time out of 5 seconds
-//					dprintk(50, "%s Icon thread stopped\n", __func__);
+					while (spinner_state.status != THREAD_STATUS_HALTED && i < 20);  //time out of 20 seconds
+//					dprintk(50, "%s Spinner thread stopped\n", __func__);
 				}
-				if (symbol_circle == 1)  // handle special value 1
+				if (old_icon_state != 0)  // restart icon thread when it was active
 				{
-					spinner_state.period = 250;  //set standard speed
+					icon_state.state = old_icon_state;
+					up(&icon_state.sem);
 				}
-				else
-				{
-					spinner_state.period = symbol_circle * 10;  //set user specified speed
-				}
-				spinner_state.state = 1;
-				lastdata.icon_state[ICON_SPINNER] = 1;
-				up(&spinner_state.sem);
 			}
 		}
 		else
-		{  // spinner off
-			if (spinner_state.state != 0)
-			{
-				spinner_state.state = 0;
-				lastdata.icon_state[ICON_SPINNER] = 0;
-//				dprintk(50, "%s Stop spinner thread\n", __func__);
-				i = 0;
-				do
-				{
-					msleep(250);
-					i++;
-				}
-				while (spinner_state.status != THREAD_STATUS_HALTED && i < 20);  //time out of 20 seconds
-//				dprintk(50, "%s Spinner thread stopped\n", __func__);
-			}
-			if (old_icon_state != 0)  // restart icon thread when it was active
-			{
-				icon_state.state = old_icon_state;
-				up(&icon_state.sem);
-			}
+		{
+			symbol_circle = 0;
 		}
 		/* always return count to avoid endless loop */
 		ret = count;
@@ -272,11 +284,11 @@ static int text_write(struct file *file, const char __user *buf, unsigned long c
 		ret = -EFAULT;
 		if (copy_from_user(page, buf, count) == 0)
 		{
-			if (display_vfd == 1)
+			if (display_type)
 			{
 				ret = pt6302_write_dcram(0, page, count);
 			}
-			if (display_led == 1)
+			else
 			{
 				ret = pt6958_ShowBuf(page, count, 0);
 			}
@@ -763,11 +775,11 @@ static int oled_brightness_write(struct file *file, const char __user *buf, unsi
 			page[count - 1] = '\0';
 
 			level = simple_strtol(page, NULL, 10);
-			if (display_vfd == 1)
+			if (display_type)
 			{
 				pt6302_set_brightness((int)level);
 			}
-			if (display_led == 1)
+			else
 			{
 				pt6958_set_brightness((int)level);
 			}
@@ -786,32 +798,31 @@ static int adb_variant_read(char *page, char **start, off_t off, int count, int 
 	{
 		switch (box_variant)
 		{
-			case 1:
+			case 0:
 			{
 				len = sprintf(page, "%s\n", "bska");
 				break;
 			}
-			case 2:
+			case 1:
 			{
 				len = sprintf(page, "%s\n", "bsla");
 				break;
 			}
-			case 3:
+			case 2:
 			{
 				len = sprintf(page, "%s\n", "bxzb");
 				break;
 			}
-			case 4:
+			case 3:
 			{
 				len = sprintf(page, "%s\n", "bzzb");
 				break;
 			}
-			case 5:
+			case 4:
 			{
 				len = sprintf(page, "%s\n", "cable");
 				break;
 			}
-			case 0:
 			default:
 			{
 				len = sprintf(page, "%s\n", "unknown");
@@ -843,8 +854,11 @@ int fan_ctrl_write(struct file *file, const char __user *buf, unsigned long coun
 			{
 				value = 255;
 			}
-//			dprintk(50, "%s Fan value: %d\n", __func__, value);
-			ctrl_outl(value, fan_registers + 0x04);
+			if (box_variant & 0x01)  // BSLA or BZZB
+			{
+//				dprintk(50, "%s Fan value: %d\n", __func__, value);
+				ctrl_outl(value, fan_registers + 0x04);
+			}
 			ret = count;
 		}
 		free_page((unsigned long)page);
@@ -861,7 +875,14 @@ int fan_ctrl_read(char *page, char **start, off_t off, int count, int *eof, void
 
 	if (NULL != page)
 	{
-		value = ctrl_inl(fan_registers + 0x4);
+		if (box_variant & 0x01)  // BSLA or BZZB
+		{
+			value = ctrl_inl(fan_registers + 0x4);
+		}
+		else
+		{
+			value = 0;  // on BSKA and BXZB always return zero
+		}
 		len = sprintf(page, "%d\n", value);
 	}
 	return len;
@@ -903,7 +924,7 @@ void create_proc_fp(void)
 {
 	int i;
 
-	for (i = 0; i < sizeof(fp_procs)/sizeof(fp_procs[0]); i++)
+	for (i = 0; i < sizeof(fp_procs) / sizeof(fp_procs[0]); i++)
 	{
 		install_e2_procs(fp_procs[i].name, fp_procs[i].read_proc, fp_procs[i].write_proc, NULL);
 	}
@@ -913,7 +934,7 @@ void remove_proc_fp(void)
 {
 	int i;
 
-	for (i = sizeof(fp_procs)/sizeof(fp_procs[0]) - 1; i >= 0; i--)
+	for (i = sizeof(fp_procs) / sizeof(fp_procs[0]) - 1; i >= 0; i--)
 	{
 		remove_e2_procs(fp_procs[i].name, fp_procs[i].read_proc, fp_procs[i].write_proc);
 	}

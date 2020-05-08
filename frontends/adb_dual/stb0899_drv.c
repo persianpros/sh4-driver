@@ -271,7 +271,7 @@ static struct stb0899_tab stb0899_est_tab[] =
 };
 /*******************************************************
  *
- * DiSEqC PWN by freebox@lamerek.com
+ * DiSEqC PWM by freebox@lamerek.com
  *
  */
 unsigned long pwm_registers;
@@ -306,7 +306,7 @@ static volatile unsigned char pwm_diseqc_buf2_pos = 0;
 
 static irqreturn_t pwm_diseqc_irq(int irq, void *dev_id)
 {
-	writel(0x001, PWM_INT_ACK);
+	writel(0x01, PWM_INT_ACK);
 
 	if (pwm_diseqc_buf1_len == 0)
 	{
@@ -319,7 +319,7 @@ static irqreturn_t pwm_diseqc_irq(int irq, void *dev_id)
 	if ((pwm_diseqc_buf1_len == 0)
 	&&  (pwm_diseqc_buf2_len == 0))
 	{
-		writel(0x000, PWM_INT_EN);
+		writel(0x00, PWM_INT_EN);
 		return IRQ_HANDLED;
 	}
 	if (pwm_diseqc_buf1_len > 0)
@@ -332,8 +332,8 @@ static irqreturn_t pwm_diseqc_irq(int irq, void *dev_id)
 		{
 			stpio_set_pin(pin_tx_diseqc1, 0);
 		}
-		pwm_diseqc_buf1_pos = pwm_diseqc_buf1_pos + 1;
-		pwm_diseqc_buf1_len = pwm_diseqc_buf1_len - 1;
+		pwm_diseqc_buf1_pos++;
+		pwm_diseqc_buf1_len--;
 	}
 	if (pwm_diseqc_buf2_len > 0)
 	{
@@ -345,8 +345,8 @@ static irqreturn_t pwm_diseqc_irq(int irq, void *dev_id)
 		{
 			stpio_set_pin(pin_tx_diseqc2, 0);
 		}
-		pwm_diseqc_buf2_pos = pwm_diseqc_buf2_pos + 1;
-		pwm_diseqc_buf2_len = pwm_diseqc_buf2_len - 1;
+		pwm_diseqc_buf2_pos++;
+		pwm_diseqc_buf2_len--;
 	}
 	return IRQ_HANDLED;
 }
@@ -405,7 +405,7 @@ static int pwm_send_diseqc1_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t bur
 	pwm_diseqc_buf1_len = 0;
 
 	// adding an empty interruption for the counter overflow time
-	pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+	pwm_diseqc_buf1_len++;
 	pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 
 	switch (burst)
@@ -415,14 +415,14 @@ static int pwm_send_diseqc1_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t bur
 			dprintk(20, "%s Tone = A\n", __func__);
 			for (i = 0; i < 8; i++)
 			{
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
 			}
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
 			break;
 		}
@@ -431,19 +431,19 @@ static int pwm_send_diseqc1_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t bur
 			dprintk(20, "%s Tone = B\n", __func__);
 			for (i = 0; i < 8; i++)
 			{
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 			}
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
 			break;
 		}
 	}
-	pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+	pwm_diseqc_buf1_len++;
 	pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 	writel(0x01, PWM_INT_EN);
 
@@ -466,7 +466,7 @@ static int pwm_send_diseqc2_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t bur
 	pwm_diseqc_buf2_len = 0;
 
 	// adding an empty interruption for the counter overflow time
-	pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+	pwm_diseqc_buf2_len++;
 	pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 
 	switch (burst)
@@ -476,14 +476,14 @@ static int pwm_send_diseqc2_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t bur
 			dprintk(20, "%s Tone = A\n", __func__);
 			for (i = 0; i < 8; i++)
 			{
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
 			}
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
 			break;
 		}
@@ -492,19 +492,19 @@ static int pwm_send_diseqc2_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t bur
 			dprintk(20, "%s Tone = B\n", __func__);
 			for (i = 0; i < 8; i++)
 			{
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 			}
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
 			break;
 		}
 	}
-	pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+	pwm_diseqc_buf2_len++;
 	pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 	writel(0x01, PWM_INT_EN);
 
@@ -543,21 +543,21 @@ static int pwm_diseqc1_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_maste
 			{
 				//DiSEqC 1
 				parity = parity + 1;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 			}
 			else
 			{
 				//DiSEqC 0
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+				pwm_diseqc_buf1_len++;
 				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 			}
 			byte = byte << 1;
@@ -565,25 +565,25 @@ static int pwm_diseqc1_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_maste
 		if ((parity & 1) == 1)
 		{
 			//DiSEqC 0
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 		}
 		else
 		{
 			//DiSEqC 1
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-			pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+			pwm_diseqc_buf1_len++;
 			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 		}
 	}
-	pwm_diseqc_buf1_len = pwm_diseqc_buf1_len + 1;
+	pwm_diseqc_buf1_len++;
 	pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
 	writel(0x01, PWM_INT_EN);
 
@@ -623,21 +623,21 @@ static int pwm_diseqc2_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_maste
 			{
 				//DiSEqC 1
 				parity = parity + 1;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 			}
 			else
 			{
 				//DiSEqC 0
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+				pwm_diseqc_buf2_len++;
 				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 			}
 			byte = byte << 1;
@@ -645,25 +645,25 @@ static int pwm_diseqc2_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_maste
 		if ((parity & 1) == 1)
 		{
 			//DiSEqC 0
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 		}
 		else
 		{
 			//DiSEqC 1
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-			pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+			pwm_diseqc_buf2_len++;
 			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 		}
 	}
-	pwm_diseqc_buf2_len = pwm_diseqc_buf2_len + 1;
+	pwm_diseqc_buf2_len++;
 	pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
 	writel(0x01, PWM_INT_EN);
 
@@ -2944,7 +2944,7 @@ static struct dvb_frontend_ops stb0899_ops_1 =
 {
 	.info =
 	{
-		.name                = "STB0899 Multistandard A",
+		.name                = "STB0899/STB6100 A",
 		.type                = FE_QPSK, /* with old API */
 		.frequency_min       = 950000,
 		.frequency_max       = 2150000,
@@ -2986,10 +2986,9 @@ static struct dvb_frontend_ops stb0899_ops_1 =
 
 static struct dvb_frontend_ops stb0899_ops_2 =
 {
-
 	.info =
 	{
-		.name                = "STB0899 Multistandard B",
+		.name                = "STB0899/STB6100 B",
 		.type                = FE_QPSK, /* with old API */
 		.frequency_min       = 950000,
 		.frequency_max       = 2150000,

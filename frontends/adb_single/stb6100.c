@@ -1,10 +1,11 @@
-/*
+/************************************************************************
+ *
  * STB6100 Silicon Tuner
  * Copyright (C) Manu Abraham (abraham.manu@gmail.com)
  *
  * Copyright (C) ST Microelectronics
  *
- * Version for ADB ITI-5800S(X), BSKA, BSLA & BXZB models
+ * Version for ADB ITI-5800S, BSKA & BXZB models
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +20,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+ *
+ ************************************************************************/
 
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -35,10 +37,10 @@
 
 static unsigned int verbose = 1;
 
-#define FE_ERROR  0
-#define FE_NOTICE 1
-#define FE_INFO   2
-#define FE_DEBUG  3
+//#define FE_ERROR  0
+//#define FE_NOTICE 1
+//#define FE_INFO   2
+//#define FE_DEBUG  3
 
 extern short paramDebug;
 #if defined TAGDEBUG
@@ -147,19 +149,18 @@ static int stb6100_read_regs(struct stb6100_state *state, u8 regs[])
 
 	if (unlikely(rc != 1))
 	{
-		dprintk(1, "Read (0x%x) err, rc=[%d]\n", state->config->tuner_address, rc);
+		dprintk(1, "Read (0x%x) err, rc = [%d]\n", state->config->tuner_address, rc);
 		return -EREMOTEIO;
 	}
-	if (unlikely(verbose > FE_DEBUG))
+	if (paramDebug > 19)
 	{
 		int i;
 
-		printk("    Read from 0x%02x\n", state->config->tuner_address);
+		printk(TAGDEBUG"Read from 0x%02x\n", state->config->tuner_address);
 		for (i = 0; i < STB6100_NUMREGS; i++)
 		{
-			printk("        %s: 0x%02x", stb6100_regnames[i], regs[i]);
+			printk("   %s: 0x%02x\n", stb6100_regnames[i], regs[i]);
 		}
-		printk("\n");
 	}
 	return 0;
 }
@@ -169,9 +170,9 @@ static int stb6100_read_reg(struct stb6100_state *state, u8 reg)
 	u8 regs[STB6100_NUMREGS];
 	int rc;
 
-	if (unlikely(reg >= STB6100_NUMREGS))
+	if (reg >= STB6100_NUMREGS)
 	{
-		dprintk(1, "Invalid register offset 0x%x\n", reg);
+		dprintk(1, "Invalid register offset 0x%04x\n", reg);
 		return -EINVAL;
 	}
 	if ((rc = stb6100_read_regs(state, regs)) < 0)
@@ -201,22 +202,21 @@ static int stb6100_write_reg_range(struct stb6100_state *state, u8 buf[], int st
 	memcpy(&cmdbuf[1], buf, len);
 	cmdbuf[0] = start;
 
-	if (unlikely(verbose > FE_DEBUG))
+	if (unlikely(paramDebug > 19))
 	{
 		int i;
 
-		printk("    Write @ 0x%02x: [%d:%d]\n", state->config->tuner_address, start, len);
+		printk(TAGDEBUG"Write @ 0x%02x: [%d:%d]\n", state->config->tuner_address, start, len);
 		for (i = 0; i < len; i++)
 		{
-			printk("        %s: 0x%02x", stb6100_regnames[start + i], buf[i]);
+			printk("    %s: 0x%02x\n", stb6100_regnames[start + i], buf[i]);
 		}
-		printk("\n");
 	}
 	rc = i2c_transfer(state->i2c, &msg, 1);
 
 	if (unlikely(rc != 1))
 	{
-		dprintk(1, "(0x%x) write err [%d:%d], rc=[%d]\n", (unsigned int)state->config->tuner_address, start, len,	rc);
+		dprintk(1, "(0x%x) write err [%d:%d], rc = [%d]\n", (unsigned int)state->config->tuner_address, start, len,	rc);
 		return -EREMOTEIO;
 	}
 	return 0;
@@ -277,7 +277,7 @@ static int stb6100_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 	state->status.bandwidth = (f + 5) * 2000;  /* x2 for ZIF */
 
 	*bandwidth = state->bandwidth = state->status.bandwidth * 1000;
-	dprintk(50, "bandwidth = %u Hz\n", state->bandwidth);
+	dprintk(50, "Bandwidth = %u Hz\n", state->bandwidth);
 	if (fe->ops.i2c_gate_ctrl)
 	{
 		fe->ops.i2c_gate_ctrl(fe, 0);
@@ -357,8 +357,7 @@ static int stb6100_get_frequency(struct dvb_frontend *fe, u32 *frequency)
 	fvco = (nfrac * state->reference >> (9 - psd2)) + (nint * state->reference << psd2);
 	*frequency = state->frequency = fvco >> (odiv + 1);
 
-	dprintk(1, "Frequency = %u kHz, odiv = %u, psd2 = %u, fxtal = %u kHz, fvco = %u kHz, N(I) = %u, N(F) = %u\n",
-		state->frequency, odiv, psd2, state->reference,	fvco, nint, nfrac);
+	dprintk(1, "Frequency = %u kHz, odiv = %u, psd2 = %u, fxtal = %u kHz, fvco = %u kHz, N(I) = %u, N(F) = %u\n", state->frequency, odiv, psd2, state->reference,	fvco, nint, nfrac);
 	if (fe->ops.i2c_gate_ctrl)
 	{
 		fe->ops.i2c_gate_ctrl(fe, 0);
@@ -622,7 +621,7 @@ static int stb6100_set_params(struct dvb_frontend *fe, struct dvb_frontend_param
 	}
 	if (fe->ops.set_property && fe->ops.get_property)
 	{
-		dprintk(50, "Get Frontend parameters\n");
+		dprintk(20, "Get Frontend parameters");
 		frequency = c->frequency;
 		srate = c->symbol_rate;
 	}
@@ -655,8 +654,8 @@ static struct dvb_tuner_ops stb6100_ops =
 	.sleep              = stb6100_sleep,
 	.get_status         = stb6100_get_status,
 #if 0
-	.get_state          = stb6100_get_state,
-	.set_state          = stb6100_set_state,
+	.get_state          = NULL  // stb6100_get_state,
+	.set_state          = NULL  // stb6100_set_state,
 #endif
 	.set_frequency      = stb6100_set_frequency,
 	.set_bandwidth      = stb6100_set_bandwidth,
@@ -682,7 +681,7 @@ struct dvb_frontend *stb6100_attach(struct dvb_frontend *fe, struct stb6100_conf
 	fe->tuner_priv    = state;
 	fe->ops.tuner_ops = stb6100_ops;
 
-	dprintk(50, "%s: Attaching STB6100 \n", __func__);
+	dprintk(50, "%s: Attaching STB6100\n", __func__);
 	return fe;
 
 error:

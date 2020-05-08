@@ -18,12 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  *
- * Front panel driver for ADB ITI-5800SX, BSKA and BXZB models;
+ * Front panel driver for ADB ITI-5800S, BSKA and BXZB models;
  * Button and display driver.
  *
- * Devices:
+ * Device:
  *  - /dev/vfd (vfd ioctls and read/write function)
- *  - /dev/rc  (reading of key events)
  *
  ****************************************************************************************
  *
@@ -36,6 +35,7 @@
  * 20200419 Audioniek       More legible front panel font.
  * 20200419 Audioniek       Removed code for quotes, periods and colons.
  * 20200420 Audioniek       /dev/vfd scroll texts longer than 4 once.
+ * 20200430 Audioniek       Reading /dev/vfd added.
  * 2020???? Audioniek       procfs added.
  *
  ****************************************************************************************/
@@ -82,16 +82,12 @@ short paramDebug = 0;
 
 // LED states
 static char led1 = 0;  // power LED
-static char led2 = 0;  // record
+static char led2 = 0;  // timer
 static char led3 = 0;  // at
 static char led4 = 0;  // alert
 int led_brightness = 5;  // default LED brightness
 
 static char button_reset = 0;
-
-static struct workqueue_struct *wq;
-
-//#define IO_Delay    5
 
 static unsigned char key_group1, key_group2;
 static unsigned int  key_front = 0;
@@ -117,7 +113,7 @@ struct saved_data_s lastdata;
  */
 static void pt6958_free_pio_pins(void)
 {
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	if (pt6958_stb)
 	{
 		stpio_set_pin(pt6958_stb, 1);  // deselect PT6958
@@ -134,7 +130,7 @@ static void pt6958_free_pio_pins(void)
 	{
 		stpio_free_pin(pt6958_stb);
 	}
-//	dprintk(150, "%s < PT6958 PIO pins freed\n", __func__);
+//	dprintk(100, "%s < PT6958 PIO pins freed\n", __func__);
 };
 
 /******************************************************
@@ -144,7 +140,7 @@ static void pt6958_free_pio_pins(void)
  */
 static unsigned char pt6958_init(void)
 {
-//	dprintk(150, "%s > Initialize PT6958 PIO pins\n", __func__);
+//	dprintk(100, "%s > Initialize PT6958 PIO pins\n", __func__);
 
 // Strobe
 //	dprintk(100, "Request STPIO %d,%d for PT6958 STB\n", PORT_STB, PIN_STB);
@@ -174,7 +170,7 @@ static unsigned char pt6958_init(void)
 	stpio_set_pin(pt6958_clk, 1);
 	stpio_set_pin(pt6958_din, 1);
 	dprintk(10, "PT6958 PIO pins allocated\n");
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 	return 1;
 
 pt_init_fail:
@@ -199,7 +195,7 @@ static unsigned char pt6958_read_byte(void)
 	unsigned char i;
 	unsigned char data_in = 0;
 
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	for (i = 0; i < 8; i++)  // 8 bits in a byte, LSB first
 	{
 		stpio_set_pin(pt6958_din, 1);  // data = 1 (key will pull down the pin if pressed)
@@ -209,7 +205,7 @@ static unsigned char pt6958_read_byte(void)
 		udelay(IO_Delay);
 		data_in = (data_in >> 1) | (stpio_get_pin(pt6958_din) > 0 ? 0x80 : 0);
 	}
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 	return data_in;
 }
 
@@ -222,7 +218,7 @@ static void pt6958_send_byte(unsigned char byte)
 {
 	unsigned char i;
 
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	for (i = 0; i < 8; i++)  // 8 bits in a byte, LSB first
 	{
 		stpio_set_pin(pt6958_din, byte & 0x01);  // write bit
@@ -232,7 +228,7 @@ static void pt6958_send_byte(unsigned char byte)
 		udelay(IO_Delay);
 		byte >>= 1;  // get next bit
 	}
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 /****************************************************
@@ -242,12 +238,12 @@ static void pt6958_send_byte(unsigned char byte)
  */
 static void pt6958_send_cmd(unsigned char Value)
 {
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	stpio_set_pin(pt6958_stb, 0);  // set strobe low
 	pt6958_send_byte(Value);  // send byte Value
 	stpio_set_pin(pt6958_stb, 1);  // and raise strobe
 	udelay(IO_Delay);
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 /****************************************************
@@ -259,7 +255,7 @@ static void PT6958_WriteData(unsigned char *data, unsigned int len)
 {
 	unsigned char i;
 
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	stpio_set_pin(pt6958_stb, 0);  // set strobe low
 
 	for (i = 0; i < len; i++)
@@ -268,7 +264,7 @@ static void PT6958_WriteData(unsigned char *data, unsigned int len)
 	}
 	stpio_set_pin(pt6958_stb, 1);  // set strobe high
 	udelay(IO_Delay);
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 /****************************************************
@@ -278,7 +274,7 @@ static void PT6958_WriteData(unsigned char *data, unsigned int len)
  */
 static void ReadKey(void)
 {
-	dprintk(150, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	spin_lock(&mr_lock);
 
 	stpio_set_pin(pt6958_stb, 0);  // set strobe low
@@ -290,50 +286,12 @@ static void ReadKey(void)
 	udelay(IO_Delay);
 
 	spin_unlock(&mr_lock);
-	dprintk(150, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 }
 
 /******************************************************
  *
- * Set text and dots on LED display, also set LEDs
- *
- */
-#if 0
-static void PT6958_Show(unsigned char DIG1, unsigned char DIG2, unsigned char DIG3, unsigned char DIG4, unsigned char DOT1, unsigned char DOT2, unsigned char DOT3, unsigned char DOT4)
-{
-	spin_lock(&mr_lock);
-
-	pt6958_send_cmd(DATA_SETCMD + 0); // Set test mode off, increment address and write data display mode  01xx0000b
-	udelay(IO_Delay);
-
-	stpio_set_pin(pt6958_stb, 0);  // set strobe (latches command)
-
-	pt6958_send_byte(ADDR_SETCMD + 0); // Command 2 address set, (start from 0)   11xx0000b
-	DIG1 += (DOT1 == 1 ? 0x80 : 0);  // if decimal point set, add to digit data
-	pt6958_send_byte(DIG1);
-	pt6958_send_byte(led1);  // power led: 00-off, 01-red, 02-green, 03-orange
-
-	DIG2 += (DOT2 == 1 ? 0x80 : 0);  // if decimal point set, add to digit data
-	pt6958_send_byte(DIG2);
-	pt6958_send_byte(led2);  // timer led
-
-	DIG3 += (DOT3 == 1 ? 0x80 : 0);  // if decimal point set, add to digit data
-	pt6958_send_byte(DIG3);
-	pt6958_send_byte(led3);  // mail led (@)
-
-	DIG4 += (DOT4 == 1 ? 0x80 : 0);  // if decimal point set, add to digit data
-	pt6958_send_byte(DIG4);
-	pt6958_send_byte(led4);  // alert led
-
-	stpio_set_pin(pt6958_stb, 1);
-	udelay(IO_Delay);
-
-	spin_unlock(&mr_lock);
-}
-#else
-/******************************************************
- *
- * Set text and dots on LED display
+ * Set text on LED display, also set LEDs
  *
  * Note: does not scroll, only displays the first 4
  * characters. For scrolling, use /dev/vfd.
@@ -366,7 +324,6 @@ static void PT6958_Show(unsigned char digit1, unsigned char digit2, unsigned cha
 
 	spin_unlock(&mr_lock);
 }
-#endif
 
 /******************************************************
  *
@@ -375,13 +332,11 @@ static void PT6958_Show(unsigned char digit1, unsigned char digit2, unsigned cha
  * Accepts any string length; string may hold UTF8
  * coded characters. Only first four printable
  * characters are shown.
- * Periods, single quotes and semicolons are enhanced
- * by setting the periods in the display.
+ *
  */
 static int pt6958_write_text(unsigned char *data, unsigned char len)
 {
-	unsigned char z1, z2, z3, z4, k1, k2, k3, k4;
-	unsigned char kbuf[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	unsigned char kbuf[8] = { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20 };
 	int i = 0;
 	int wlen = 0;
 	unsigned char *UTF_Char_Table = NULL;
@@ -392,35 +347,27 @@ static int pt6958_write_text(unsigned char *data, unsigned char len)
 		data[len - 1] = '\0';
 		len--;
 	}
-//	dprintk(10, "%s > LED text: [%s] (len = %d)\n", __func__, data, len);
-
-	/* save last string written to fp */
-	memcpy(&lastdata.data, data, len);
 
 	while ((i < len) && (wlen < 8))
 	{
 		if (data[i] == '\n' || data[i] == 0)
 		{
-//			dprintk(10, "[%s] BREAK CHAR detected (0x%X)\n", __func__, data[i]);
 //			ignore line feeds and nulls
 			break;
 		}
 		else if (data[i] < 0x20)
 		{
-//			dprintk(10, "[%s] NON_PRINTABLE_CHAR '0x%X'\n", __func__, data[i]);
 //			skip non printable control characters
 			i++;
 		}
 		else if (data[i] < 0x80)  // normal ASCII
 		{
 			kbuf[wlen] = data[i];
-//			dprintk(10, "[%s] ANSI_Char_Table '0x%X'\n", __func__, data[i]);
 			wlen++;
 		}
 		/* handle UTF-8 characters */
-		else if (data[i] < 0xE0)
+		else if (data[i] < 0xe0)
 		{
-//			dprintk(10, "[%s] UTF_Char_Table= ", __func__);
 			switch (data[i])
 			{
 				case 0xc2:
@@ -443,7 +390,7 @@ static int pt6958_write_text(unsigned char *data, unsigned char len)
 					UTF_Char_Table = PT6958_UTF_C5;
 					break;
 				}
-#if 0 //cyrillic currently not supported
+#if 0  // cyrillic currently not supported
 				case 0xd0:
 				{
 					UTF_Char_Table = PT6958_UTF_D0;
@@ -463,7 +410,6 @@ static int pt6958_write_text(unsigned char *data, unsigned char len)
 			i++;  // skip UTF lead in
 			if (UTF_Char_Table)
 			{
-//				dprintk(10, "[%s] UTF_Char = 0x%X, index = %i\n", __func__, UTF_Char_Table[data[i] & 0x3f], i);
 				kbuf[wlen] = UTF_Char_Table[data[i] & 0x3f];
 				wlen++;
 			}
@@ -478,7 +424,7 @@ static int pt6958_write_text(unsigned char *data, unsigned char len)
 			{
 				i += 3;
 			}
-			else if (data[i] < 0xfC)
+			else if (data[i] < 0xfc)
 			{
 				i += 4;
 			}
@@ -489,66 +435,8 @@ static int pt6958_write_text(unsigned char *data, unsigned char len)
 		}
 		i++;
 	}
-	/* end */
-	z1 = z2 = z3 = z4 = 0x20;  // set non used positions to space (blank)
-
-// determine the decimal points: if character is period, single quote or colon, replace it by a decimal point
-#if 0
-	k1 = k2 = k3 = k4 = 0; // clear decimal point flags
-	if ((wlen >= 2) && (data[1] == '.' || data[1] == 0x27 || data[1] == ':'))
-	{
-		k1 = 1;  // flag period at position 1
-	}
-	if ((wlen >= 3) && (data[2] == '.' || data[2] == 0x27 || data[2] == ':'))
-	{
-		k2 = 1;  // flag period at position 2
-	}
-	if ((wlen >= 4) && (data[3] == '.' || data[3] == 0x27 || data[3] == ':'))
-	{
-		k3 = 1;  // flag period at position 3
-	}
-	if ((wlen >= 5) && (data[4] == '.' || data[4] == 0x27 || data[4] == ':'))
-	{
-		k4 = 1;  // flag period at position 4
-	}
-// assigning segment data
-	if (wlen >= 1)
-	{
-		z1 = ROM[data[0]];
-	}
-	if (wlen >= 2)
-	{
-		z2 = ROM[data[1 + k1]];
-	}
-	if (wlen >= 3)
-	{
-		z3 = ROM[data[2 + k1 + k2]];
-	}
-	if (wlen >= 4)
-	{
-		z4 = ROM[data[3 + k1 + k2 + k3]];
-	}
-	PT6958_Show(z1, z2, z3, z4, k1, k2, k3, k4); // display text & decimal points
-#else
-	if (wlen >= 1)
-	{
-		z1 = ROM[data[0]];
-	}
-	if (wlen >= 2)
-	{
-		z2 = ROM[data[1]];
-	}
-	if (wlen >= 3)
-	{
-		z3 = ROM[data[2]];
-	}
-	if (wlen >= 4)
-	{
-		z4 = ROM[data[3]];
-	}
-	PT6958_Show(z1, z2, z3, z4); // display text
-#endif
-//	dprintk(150, "%s <\n", __func__);
+	PT6958_Show(ROM[kbuf[0]], ROM[kbuf[1]], ROM[kbuf[2]], ROM[kbuf[3]]);  // display text
+//	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -561,13 +449,13 @@ static void pt6958_set_led(unsigned char *kbuf, unsigned char len)
 {
 	unsigned char pos = 0, on = 0;
 
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	spin_lock(&mr_lock);
 
 	if (len == 5)
 	{
-		pos = kbuf[0];  // 1st character is position 1 = power LED, 
-		on  = kbuf[4];  // last character is state
+		pos = kbuf[0];  // LED#, 
+		on  = kbuf[4];  // state
 		on  = (on == 0 ? 0 : 1);  // normalize on value
 
 		switch (pos)
@@ -587,7 +475,6 @@ static void pt6958_set_led(unsigned char *kbuf, unsigned char len)
 			case 3:  // timer LED
 			{
 				led2 = on;
-//				pos = 3;
 				break;
 			}
 			case 4:  // @ LED
@@ -606,14 +493,14 @@ static void pt6958_set_led(unsigned char *kbuf, unsigned char len)
 		pt6958_send_cmd(DATA_SETCMD + ADDR_FIX);  // Set command, normal mode, fixed address, write date to display mode 01xx0100b
 		udelay(IO_Delay);
 
-		stpio_set_pin(pt6958_stb, 0);  // set strobe low
+		stpio_set_pin(pt6958_stb, 0);  // select PT6958
 		pt6958_send_byte(ADDR_SETCMD + pos);  // set position (11xx????b)
 		pt6958_send_byte(on);  // set state (on or off)
-		stpio_set_pin(pt6958_stb, 1);  // set strobe high
+		stpio_set_pin(pt6958_stb, 1);  // de select PT6958
 		udelay(IO_Delay);
 	}
 	spin_unlock(&mr_lock);
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 /****************************************************
@@ -625,7 +512,7 @@ static void pt6958_setup(void)
 {
 	unsigned char i;
 
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	pt6958_send_cmd(DATA_SETCMD);  // Command 1, increment address, normal mode
 	udelay(IO_Delay);
 
@@ -640,12 +527,11 @@ static void pt6958_setup(void)
 	pt6958_send_cmd(DISP_CTLCMD + DISPLAY_ON + led_brightness);  // Command 3, display control, (Display ON), brightness 11/16 10xx1100b
 
 	led1 = 2;  // power LED green
-	led2 = 0;  // rec LED off
+	led2 = 0;  // timer LED off
 	led3 = 0;  // @ LED off
 	led4 = 0;  // alert LED off
-//	PT6958_Show(0x40, 0x40, 0x40, 0x40, 0, 0, 0, 0);  // display ----, periods off, power LED green
 	PT6958_Show(0x40, 0x40, 0x40, 0x40);  // display ----, power LED green
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 /******************************************************
@@ -655,7 +541,7 @@ static void pt6958_setup(void)
  */
 static void pt6958_set_brightness(int level)
 {
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	spin_lock(&mr_lock);
 
 	if (level < 0)
@@ -669,7 +555,7 @@ static void pt6958_set_brightness(int level)
 	pt6958_send_cmd(DISP_CTLCMD + DISPLAY_ON + level);  // Command 3, display control, Display ON, brightness level;  // Command 3, display control, (Display ON) 10xx1???b
 	led_brightness = level;
 	spin_unlock(&mr_lock);
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 /******************************************************
@@ -679,13 +565,13 @@ static void pt6958_set_brightness(int level)
  */
 static void pt6958_set_light(int onoff)
 {
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	spin_lock(&mr_lock);
 
 	pt6958_send_cmd(DISP_CTLCMD + (onoff ? DISPLAY_ON + 4 : 0));
 
 	spin_unlock(&mr_lock);
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 
@@ -719,74 +605,27 @@ static void button_delay(unsigned long dummy)
  */
 irqreturn_t fpanel_irq_handler(void *dev1, void *dev2)
 {
+//	dprintk(100, "%s >\n", __func__);
+
 	disable_irq(FPANEL_PORT2_IRQ);
 
 	if ((stpio_get_pin(key_int) == 1) && (key_front == 0))
 	{
 		ReadKey();
 		key_front = 0;
-/* keygroup1: columns KS1 and KS2, bits 0 & 4 = row K1, bits 1 & 5 = row K2, bits 2 & 6 = row K3, bit s3 & 7 = row K4
- * keygroup2: columns KS3 and KS4, bits 0 & 4 = row K1, bits 1 & 5 = row K2, bits 2 & 6 = row K3, bits 3 & 7 = row K4 */
-#if 0
-		if (key_group2 == 0) // no key on KS3 / KS4
-		{
-			switch (key_group1) // get KS1 / KS2
-			{
-				case 64:  //  KS2 row K3
-				{
-					key_front = KEY_RIGHT;  // right
-					break;
-				}
-				case 32:  // KS2 row K2
-				{
-					key_front = KEY_MENU;
-//					key_front = KEY_EPG;  // epg
-					break;
-				}
-				case 16: // KS2 row K1
-				{
-					key_front = KEY_UP;  // up
-					break;
-				}
-				case 4:  // KS1 row K3
-				{
-					key_front = KEY_HOME;  // res
-					break;
-				}
-				case 2:  // KS1 row K2
-				{
-					key_front = KEY_OK;  // ok
-					break;
-				}
-				case 1: // KS1 row K1
-				{
-					key_front = KEY_POWER;  // pwr
-					break;
-				}
-			}
-			else
-			{
-			switch (key_group2)
-			{
-				case 4:  // KS3 row K3
-				{
-					key_front = KEY_EPG;  // epg
-//					key_front = KEY_RECORD;  // record
-					break;
-				}
-				case 2:  // KS3 row K2
-				{
-					key_front = KEY_LEFT;  // left
-					break;
-				}
-				case 1:  // KS3 row K1
-				{
-					key_front = KEY_DOWN;  // down
-					break;
-				}
-			}
-		}
-#else
+/* keygroup1:
+ *    columns KS1 and KS2,
+ *        bits 0 & 4 = row K1,
+ *        bits 1 & 5 = row K2,
+ *        bits 2 & 6 = row K3,
+ *        bit s3 & 7 = row K4
+ * keygroup2:
+ *    columns KS3 and KS4,
+ *        bits 0 & 4 = row K1,
+ *        bits 1 & 5 = row K2,
+ *        bits 2 & 6 = row K3,
+ *        bits 3 & 7 = row K4
+ */
 		if ((key_group1 == 32) && (key_group2 == 0))
 		{
 			key_front = KEY_MENU;  // MENU (bska/bxzb)
@@ -825,7 +664,6 @@ irqreturn_t fpanel_irq_handler(void *dev1, void *dev2)
 		{
 			key_front = KEY_POWER;  // power
 		}
-#endif
 		if (key_front > 0)
 		{
 			if (key_front == KEY_HOME)  // emergency reboot: press RES 5 times
@@ -843,7 +681,7 @@ irqreturn_t fpanel_irq_handler(void *dev1, void *dev2)
 			}
 			input_report_key(button_dev, key_front, 1);
 			input_sync(button_dev);
-			dprintk(10, "%s Key: %d (%s)\n", __func__, key_front);
+			dprintk(10, "%s Key: %d\n", __func__, key_front);
 			init_timer(&button_timer);
 			button_timer.function = button_delay;
 			mod_timer(&button_timer, jiffies + buttoninterval);
@@ -857,111 +695,21 @@ irqreturn_t fpanel_irq_handler(void *dev1, void *dev2)
 	{
 		enable_irq(FPANEL_PORT2_IRQ);
 	}
-	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 	return IRQ_HANDLED;
 }
 
-//----------------------------------------------------------------------------------
-// handle queue
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
-void button_bad_polling(void)
-#else
-void button_bad_polling(struct work_struct *ignored)
-#endif
-{
-//	dprintk(150, "%s >\n", __func__);
-
-	while (bad_polling == 1)
-	{
-		msleep(10);
-		if (stpio_get_pin(key_int) == 1)
-		{
-			ReadKey();
-			key_front = 0;
-			if ((key_group1 == 32) && (key_group2 == 0))
-			{
-				key_front = KEY_MENU;  // MENU (bska/bxzb)
-//				key_front = KEY_EPG;  // epg (bsla/bzzb)
-			}
-			if ((key_group1 == 00) && (key_group2 == 4))
-			{
-				key_front = KEY_EPG;  // epg (bska/bxzb)
-//				key_front = KEY_REC;  // epg (bsla/bzzb)
-			}
-			if ((key_group1 == 04) && (key_group2 == 0))
-			{
-				key_front = KEY_HOME;  // RES
-			}
-			if ((key_group1 == 16) && (key_group2 == 0))
-			{
-				key_front = KEY_UP;  // up
-			}
-			if ((key_group1 == 00) && (key_group2 == 1))
-			{
-				key_front = KEY_DOWN;  // down
-			}
-			if ((key_group1 == 64) && (key_group2 == 0))
-			{
-				key_front = KEY_RIGHT;  // right
-			}
-			if ((key_group1 == 00) && (key_group2 == 2))
-			{
-				key_front = KEY_LEFT;  // left
-			}
-			if ((key_group1 == 02) && (key_group2 == 0))
-			{
-				key_front = KEY_OK;  // ok
-			}
-			if ((key_group1 == 01) && (key_group2 == 0))
-			{
-				key_front = KEY_POWER;  // pwr
-			}
-			if (key_front > 0)
-			{
-				if (key_front == KEY_HOME)
-				{
-					button_reset++;
-					if (button_reset > 4)  // emergency reboot: press res 5 times
-					{
-						dprintk(10, "!!! Restart system !!!\n");
-						button_reset = 0;
-						kernel_restart(NULL);
-					}
-				}
-				else
-				{
-					button_reset = 0;
-				}
-				input_report_key(button_dev, key_front, 1);
-				input_sync(button_dev);
-				dprintk(10, "Key: %d (%s)\n", key_front, __func__);
-				msleep(250);
-				input_report_key(button_dev, key_front, 0);
-				input_sync(button_dev);
-			}
-		}
-	}  // while
-//	dprintk(150, "%s <\n", __func__);
-}
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
-static DECLARE_WORK(button_obj, button_bad_polling, NULL);
-#else
-static DECLARE_WORK(button_obj, button_bad_polling);
-#endif
-
 static int button_input_open(struct input_dev *dev)
 {
-	dprintk(150, "%s >\n", __func__);
-	dprintk(150, "%s <\n", __func__);
+	dprintk(100, "%s >\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
 static void button_input_close(struct input_dev *dev)
 {
-	dprintk(150, "%s >\n", __func__);
-	dprintk(150, "%s <\n", __func__);
+	dprintk(100, "%s >\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 }
 
 /****************************************
@@ -973,7 +721,7 @@ static int led_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 {
 	struct led_ioctl_data leddata;
 
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	switch (cmd)
 	{
 		case VFDDISPLAYCHARS:
@@ -1012,13 +760,17 @@ static int led_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 			pt6958_setup();
 			break;
 		}
+		case VFDSETMODE:
+		{
+			break;  // VFDSETMODE is recognized, but not supported
+		}
 		default:
 		{
 			dprintk(1, "Unknown IOCTL %08x\n", cmd);
 			break;
 		}
 	}
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1045,6 +797,16 @@ static ssize_t led_write(struct file *filp, const char *buf, size_t len, loff_t 
 	int slen;
 	unsigned char scroll_buf[65 + LED_DISP_SIZE];
 
+//	if (buf[len - 1] == '\n')
+//	{
+//		len--;
+//	}
+	/* save last string written to fp */
+	memcpy(lastdata.data, buf, len);
+	lastdata.data[len] = 0;  // terminate string
+	lastdata.length = len;
+	dprintk(50, "Last display string: [%s], length = %d\n", lastdata.data, lastdata.length);
+
 	if (len == 0)
 	{
 		ret |= clear_display();
@@ -1066,7 +828,7 @@ static ssize_t led_write(struct file *filp, const char *buf, size_t len, loff_t 
 				msleep(500);
 			}				
 		}
-		ret != pt6958_write_text((unsigned char *)buf, LED_DISP_SIZE);
+		ret |= pt6958_write_text((unsigned char *)buf, LED_DISP_SIZE);
 	}
 	if (ret < 0)
 	{
@@ -1083,17 +845,11 @@ static ssize_t led_write(struct file *filp, const char *buf, size_t len, loff_t 
  * Read string from LED display (/dev/vfd)
  *
  */
-static ssize_t led_read(struct file *filp, char *buf, size_t len, loff_t *off)
-#if 1
-{
-	// TODO: return current display string
-	return len;
-}
-#else
+static ssize_t led_read(struct file *file, char *buf, size_t len, loff_t *off)
 {
 	int minor, vLoop;
 
-//	dprintk(100, "%s > (len %d, offs %d)\n", __func__, len, (int)*off);
+//	dprintk(150, "%s > (len %d, offs %d)\n", __func__, len, (int)*off);
 
 	if (len == 0)
 	{
@@ -1103,7 +859,7 @@ static ssize_t led_read(struct file *filp, char *buf, size_t len, loff_t *off)
 	minor = -1;
 	for (vLoop = 0; vLoop < LASTMINOR; vLoop++)
 	{
-		if (FrontPanelOpen[vLoop].fp == filp)
+		if (FrontPanelOpen[vLoop].fp == file)
 		{
 			minor = vLoop;
 		}
@@ -1115,7 +871,7 @@ static ssize_t led_read(struct file *filp, char *buf, size_t len, loff_t *off)
 		return -EUSERS;
 	}
 
-//	dprintk(100, "minor = %d\n", minor);
+	dprintk(100, "minor = %d\n", minor);
 #if 0
 	if (minor == FRONTPANEL_MINOR_RC)
 	{
@@ -1145,16 +901,16 @@ static ssize_t led_read(struct file *filp, char *buf, size_t len, loff_t *off)
 #endif
 
 	/* copy the current display string to the user */
-	if (down_interruptible(&FrontPanelOpen[minor].sem))
-	{
-		dprintk(1, "%s return erestartsys<\n", __func__);
-		return -ERESTARTSYS;
-	}
+//	if (down_interruptible(&FrontPanelOpen[minor].sem))
+//	{
+//		dprintk(1, "%s return ERESTARTSYS <\n", __func__);
+//		return -ERESTARTSYS;
+//	}
 
 	if (FrontPanelOpen[minor].read == lastdata.length)
 	{
 		FrontPanelOpen[minor].read = 0;
-		up(&FrontPanelOpen[minor].sem);
+//		up(&FrontPanelOpen[minor].sem);
 		dprintk(1, "%s < return 0\n", __func__);
 		return 0;
 	}
@@ -1172,28 +928,37 @@ static ssize_t led_read(struct file *filp, char *buf, size_t len, loff_t *off)
 
 	FrontPanelOpen[minor].read = len;
 	copy_to_user(buf, lastdata.data, len);
-	up(&FrontPanelOpen[minor].sem);
-	dprintk(100, "%s < (len %d)\n", __func__, len);
+//	up(&FrontPanelOpen[minor].sem);
+//	dprintk(150, "%s < (len %d)\n", __func__, len);
 	return len;
 }
-#endif
 
 static int led_open(struct inode *inode, struct file *file)
 {
+	int minor;
+
 //	dprintk(150, "%s >\n", __func__);
 
+	/* needed! otherwise a racecondition can occur */
 	if (down_interruptible(&(led.sem)))
 	{
-		dprintk(1, "Interrupted while waiting for semaphore\n");
 		return -ERESTARTSYS;
 	}
-	if (led.opencount > 0)
+
+	minor = MINOR(inode->i_rdev);
+
+//	dprintk(100, "open minor %d\n", minor);
+
+	if (FrontPanelOpen[minor].fp != NULL)
 	{
-		dprintk(1, "Device already opened\n");
+		printk("[front_bska] dev_open: EUSER opening minor\n");
 		up(&(led.sem));
 		return -EUSERS;
 	}
-	led.opencount++;
+
+	FrontPanelOpen[minor].fp = file;
+	FrontPanelOpen[minor].read = 0;
+
 	up(&(led.sem));
 //	dprintk(150, "%s <\n", __func__);
 	return 0;
@@ -1201,8 +966,19 @@ static int led_open(struct inode *inode, struct file *file)
 
 static int led_close(struct inode *inode, struct file *file)
 {
+	int minor;
+
 //	dprintk(150, "%s >\n", __func__);
-	led.opencount = 0;
+	minor = MINOR(inode->i_rdev);
+//	dprintk(20, "close minor %d\n", minor);
+
+	if (FrontPanelOpen[minor].fp == NULL)
+	{
+		printk("[front_bska] dev_close: EUSER opening minor\n");
+		return -EUSERS;
+	}
+	FrontPanelOpen[minor].fp = NULL;
+	FrontPanelOpen[minor].read = 0;
 //	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
@@ -1220,12 +996,12 @@ static struct file_operations led_fops =
 //static void __exit led_module_exit(void)
 static void led_module_exit(void)
 {
-//	dprintk(150, "%s >\n", __func__);
+//	dprintk(100, "%s >\n", __func__);
 	unregister_chrdev(LED_MAJOR, "led");
 	stpio_free_irq(key_int);
 	pt6958_free_pio_pins();
 	input_unregister_device(button_dev);
-//	dprintk(150, "%s <\n", __func__);
+//	dprintk(100, "%s <\n", __func__);
 }
 
 static int __init led_module_init(void)
@@ -1262,7 +1038,7 @@ static int __init led_module_init(void)
 	}
 	stpio_set_pin(key_int, 1);
 
-	dprintk(150, "stpio_flagged_request_irq IRQ_TYPE_LEVEL_LOW\n");
+	dprintk(100, "stpio_flagged_request_irq IRQ_TYPE_LEVEL_LOW\n");
 //	dprintk(10, "> stpio_flagged_request_irq IRQ_TYPE_LEVEL_LOW\n");
 	stpio_flagged_request_irq(key_int, 0, (void *)fpanel_irq_handler, NULL, (long unsigned int)NULL);
 //	dprintk(10, "< stpio_flagged_request_irq IRQ_TYPE_LEVEL_LOW\n");

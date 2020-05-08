@@ -2,7 +2,7 @@
 #define __CORE_H__
 
 extern short paramDebug;
-#define TAGDEBUG "[adb_5800_fp] "
+#define TAGDEBUG "[adb_dual] "
 
 #ifndef dprintk
 #define dprintk(level, x...) do \
@@ -42,29 +42,24 @@ extern short paramDebug;
 
 struct core_config
 {
-	struct i2c_adapter	*i2c_adap; /* i2c bus of the tuner */
-	u8			i2c_addr; /* i2c address of the tuner */
-	u8			i2c_addr_lnb_supply; /* i2c address of the lnb_supply */
-	u8			vertical; /* i2c value */
-	u8			horizontal; /* i2c value */
-	struct stpio_pin	*lnb_enable;
-	struct stpio_pin	*lnb_vsel;	// 13/18V select pin
-	struct stpio_pin	*tuner_reset_pin;
-	u8			tuner_reset_act; /* active state of the pin */
-
+	struct i2c_adapter *i2c_adap; /* i2c bus of the tuner */
+	u8                 i2c_addr; /* i2c address of the tuner */
+	u8                 i2c_addr_lnb_supply; /* i2c address of the lnb_supply */
+	u8                 vertical; /* i2c value */
+	u8                 horizontal; /* i2c value */
+	struct stpio_pin   *lnb_enable;
+	struct stpio_pin   *lnb_vsel;	// 13/18V select pin
+	struct stpio_pin   *tuner_reset_pin;
+	u8                 tuner_reset_act; /* active state of the pin */
 };
 
 struct fe_core_state
 {
-	struct dvb_frontend_ops 		ops;
-	struct dvb_frontend 			frontend;
-
-	const struct core_config 		*config;
-
-	int					thread_id;
-
-	int				       	not_responding;
-
+	struct dvb_frontend_ops  ops;
+	struct dvb_frontend      frontend;
+	const struct core_config *config;
+	int                      thread_id;
+	int                      not_responding;
 };
 
 struct core_info
@@ -76,48 +71,50 @@ struct core_info
 /* place to store all the necessary device information */
 struct core
 {
-
 	/* devices */
-	struct dvb_device dvb_dev;
-	struct dvb_net dvb_net;
+	struct dvb_device     dvb_dev;
+	struct dvb_net        dvb_net;
 
-	struct core_info *card;
+	struct core_info      *card;
 
-	unsigned char *grabbing;
+	unsigned char         *grabbing;
 
 	struct tasklet_struct fidb_tasklet;
 	struct tasklet_struct vpe_tasklet;
 
-	struct dmxdev dmxdev;
-	struct dvb_demux demux;
+	struct dmxdev         dmxdev;
+	struct dvb_demux      demux;
 
-	struct dmx_frontend hw_frontend;
-	struct dmx_frontend mem_frontend;
+	struct dmx_frontend   hw_frontend;
+	struct dmx_frontend   mem_frontend;
 
-	int ci_present;
-	int video_port;
+	int                   ci_present;
+	int                   video_port;
 
-	u32 buffer_width;
-	u32 buffer_height;
-	u32 buffer_size;
-	u32 buffer_warning_threshold;
-	u32 buffer_warnings;
-	unsigned long buffer_warning_time;
+	u32                   buffer_width;
+	u32                   buffer_height;
+	u32                   buffer_size;
+	u32                   buffer_warning_threshold;
+	u32                   buffer_warnings;
+	unsigned long         buffer_warning_time;
 
-	u32 ttbp;
-	int feeding;
+	u32                   ttbp;
+	int                   feeding;
 
-	spinlock_t feedlock;
+	spinlock_t            feedlock;
 
-	spinlock_t debilock;
+	spinlock_t            debilock;
 
-	struct dvb_adapter 	*dvb_adapter;
-	struct dvb_frontend	*frontend[MAX_TUNERS_PER_ADAPTER];
-	int (*read_fe_status)(struct dvb_frontend *fe, fe_status_t *status);
-	int fe_synced;
+	struct dvb_adapter 	  *dvb_adapter;
+	struct dvb_frontend	  *frontend[MAX_TUNERS_PER_ADAPTER];
 
-	void *priv;
+	int                   (*read_fe_status)(struct dvb_frontend *fe, fe_status_t *status);
+	int                   fe_synced;
+
+	void                  *priv;
 };
+
 extern void fe_core_register_frontend(struct dvb_adapter *dvb_adap);
 
 #endif  // __CORE_H__
+// vim:ts=4

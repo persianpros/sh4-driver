@@ -60,15 +60,16 @@ struct saved_data_s
 
 extern struct saved_data_s lastdata;
 
-//#define FRONTPANEL_MINOR_RC   1
-#define LASTMINOR          2
-#define LED_MAJOR          147
+#define FRONTPANEL_MINOR_RC  1
+#define LASTMINOR            2
+#define LED_MAJOR            147
+extern tFrontPanelOpen FrontPanelOpen[LASTMINOR];
 
-#define PIO_PORT_SIZE      0x1000
-#define PIO_BASE           0xb8020000
-#define STPIO_SET_OFFSET   0x04
-#define STPIO_CLEAR_OFFSET 0x08
-#define STPIO_POUT_OFFSET  0x00
+#define PIO_PORT_SIZE        0x1000
+#define PIO_BASE             0xb8020000
+#define STPIO_SET_OFFSET     0x04
+#define STPIO_CLEAR_OFFSET   0x08
+#define STPIO_POUT_OFFSET    0x00
 
 #define STPIO_SET_PIN(PIO_ADDR, PIN, V) \
 	writel(1 << PIN, PIO_ADDR + STPIO_POUT_OFFSET + ((V) ? STPIO_SET_OFFSET : STPIO_CLEAR_OFFSET))
@@ -82,6 +83,7 @@ extern struct saved_data_s lastdata;
 #define VFDDRIVERINIT        0xc0425a08
 #define VFDICONDISPLAYONOFF  0xc0425a0a
 #define VFDSETLED            0xc0425afe
+#define VFDSETMODE           0xc0425aff  // switch to vfd mode for one IOCTL
 
 // PT6958 PIO pin definitions
 

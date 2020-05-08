@@ -830,9 +830,7 @@ static struct stv090x_short_frame_crloop stv090x_s2_short_crl_cut30[] =
 
 /****************************************************
  *
- * DiSEqC PWM by freebox@lamerek.com
- *
- * CAUTION:
+ * diseqc pwm by freebox@lamerek.com
  *
  */
 unsigned long pwm_registers;
@@ -867,7 +865,7 @@ static volatile unsigned char pwm_diseqc_buf2_pos = 0;
 
 static irqreturn_t pwm_diseqc_irq(int irq, void *dev_id)
 {
-	writel(0x01, PWM_INT_ACK);
+	writel(0x001, PWM_INT_ACK);
 
 	if (pwm_diseqc_buf1_len == 0)
 	{
@@ -1955,9 +1953,9 @@ err:
 
 static int stv090x_activate_modcod(struct stv090x_state *state)
 {
-	u32 matype, modcod, f_mod, index;
-
 	dprintk(100, "%s >\n", __func__);
+
+	u32 matype, modcod, f_mod, index;
 
 	if (state->internal->dev_ver <= 0x11)
 	{
@@ -2676,7 +2674,7 @@ static int stv090x_start_search(struct stv090x_state *state)
 			/* konfetti comment: hmmmmmmmmmm the above if clause checks for
 			 * >= 0x20 and here we check against <= ... interesting ;)
 			 */
-			if (state->internal->dev_ver <= 0x20)  // so only true if exactly 20...
+			if (state->dev_ver <= 0x20)  // only true if exactly 20...
 			{
 				/* Cut 2 */
 				if (STV090x_WRITE_DEMOD(state, CARFREQ, 0x39) < 0)
@@ -7401,7 +7399,7 @@ static struct dvb_frontend_ops stv090x_ops_1 =
 {
 	.info =
 	{
-		.name                = "STV0900/STB6100 A",
+		.name                = "STV090x Multistandard A",
 		.type                = FE_QPSK,
 		.frequency_min       = 950000,
 		.frequency_max       = 2150000,
@@ -7441,7 +7439,7 @@ static struct dvb_frontend_ops stv090x_ops_2 =
 {
 	.info =
 	{
-		.name                = "STV0900/STB6100 B",
+		.name                = "STV090x Multistandard B",
 		.type                = FE_QPSK,
 		.frequency_min       = 950000,
 		.frequency_max       = 2150000,

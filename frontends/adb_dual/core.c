@@ -15,9 +15,6 @@
 #include <linux/proc_fs.h>
 #include <pvr_config.h>
 
-//#define I2C_ADDR_STB0899 (0xd0 >> 1)  // d0 -> 0x68
-//#define I2C_ADDR_STB6100 (0xc0 >> 1)  // c0 -> 0x60
-
 #define I2C_ADDR_STB0899_1 (0xd0 >> 1)  // d0 -> 0x68
 #define I2C_ADDR_STB6100_1 (0xc0 >> 1)  // c0 -> 0x60
 
@@ -611,7 +608,6 @@ static struct stb6100_config stb6100_config_2 =
 static struct dvb_frontend *frontend_init(struct core_config *cfg, int i)
 {
 	struct dvb_frontend *frontend = NULL;
-//	int ad;
 
 	dprintk(50, "%s >\n", __func__);
 
@@ -619,7 +615,7 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int i)
 	{
 		return NULL;
 	}
-	dprintk(20,"Attaching STB0899(%d)\n", i);
+	dprintk(20,"Attaching STB0899_(%d)\n", i);
 	if (i == 0)
 	{
 		frontend = dvb_attach(stb0899_attach, &stb0899_config_1, cfg->i2c_adap);
@@ -656,8 +652,6 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int i)
 		dprintk(1, "%s: Error attaching STB0899\n", __func__);
 		goto error_out;
 	}
-//	stb0899_config.lnb_enable = cfg->lnb_enable;  // TODO: present in single
-//	stb0899_config.lnb_vsel   = cfg->lnb_vsel;  // TODO: present in single
 	return frontend;
 
 error_out:

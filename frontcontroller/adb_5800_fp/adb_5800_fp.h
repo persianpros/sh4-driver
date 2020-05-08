@@ -1,4 +1,4 @@
-/****************************************************************************************
+/*****************************************************************************
  *
  * adb_5800_fp.h
  *
@@ -26,7 +26,7 @@
  * Devices:
  *  - /dev/vfd (vfd ioctls and read/write function)
  *
- ****************************************************************************************/
+ *****************************************************************************/
 #if !defined ADB_5800_FP_H
 #define ADB_5800_FP_H
 
@@ -140,9 +140,9 @@ extern short paramDebug;
 #define VFD_Delay                  8  // us, tDOFF for PT6302
 
 // box_variant stuff
-#define I2C_ADDR_STB0899_1         (0xd0 >> 1)  //d0 = 0x68 tuner 1 demod BSLA & BSKA/BXZB
-#define I2C_ADDR_STB0899_2         (0xd2 >> 1)  //d2 = 0x69 tuner 2 demod BSLA only
-#define I2C_ADDR_STV090x           (0xd0 >> 1)  //d0 = 0x68 tuner 1/2 demod BZZB only
+#define I2C_ADDR_STB0899_1         (0xd0 >> 1)  // d0 = 0x68 tuner 1 demod BSLA & BSKA/BXZB
+#define I2C_ADDR_STB0899_2         (0xd2 >> 1)  // d2 = 0x69 tuner 2 demod BSLA only
+#define I2C_ADDR_STV090x           (0xd0 >> 1)  // d0 = 0x68 tuner 1/2 demod BZZB only
 #define I2C_BUS                    0
 
 #define STB0899_NCOARSE            0xf1b3
@@ -333,7 +333,6 @@ struct iconToInternal
 };
 
 int icon_thread(void *arg);
-
 
 // struct to store current values
 struct saved_data_s

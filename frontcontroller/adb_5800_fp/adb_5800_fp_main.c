@@ -50,6 +50,7 @@
  * 20190814 Audioniek       Display all icons added.
  * 20190903 Audioniek       Separate text display threads for VFD and LED.
  * 20191103 Audioniek       Fix bug in handling ICON_MAX in icon thread.
+ * 20200504 Audioniek       Removed dual display capability.
  *
  ****************************************************************************************/
 #include <asm/io.h>
@@ -95,6 +96,10 @@ struct stpio_pin* fan_pin;
 
 tIconState spinner_state;
 tIconState icon_state;
+
+// Global variables (defined in adb_5800_fp_file.c)
+extern int box_variant;   // 1=BSKA, 2=BSLA, 3=BXZB, 4=BZZB, 5=cable, 0=unknown
+extern int display_type;  // active display: 0=LED, 1=VFD, 2=both
 
 /******************************************************
  *
@@ -626,8 +631,10 @@ static int __init fp_module_init(void)
 	}
 
 	// fan driver
-	init_fan_module();
-
+	if (box_variant & 0x02)  // BSLA or BZZB
+	{
+		init_fan_module();
+	}
 	// button driver
 	dprintk(50, "Request STPIO %d,%d for key interrupt\n", PORT_KEY_INT, PIN_KEY_INT);
 	key_int = stpio_request_pin(PORT_KEY_INT, PIN_KEY_INT, "Key_int_front", STPIO_IN);
@@ -672,11 +679,9 @@ static int __init fp_module_init(void)
 		goto fp_module_init_fail;
 	}
 
-	sema_init(&led_text_thread_sem, 1);  // initialize LED text write semaphore
-	sema_init(&vfd_text_thread_sem, 1);  // initialize VFD text write semaphore
-
-	if (display_type > 0)  // VFD
+	if (display_type)  // VFD
 	{
+		sema_init(&vfd_text_thread_sem, 1);  // initialize VFD text write semaphore
 		spinner_state.state = 0;
 		spinner_state.period = 0;
 		spinner_state.status = THREAD_STATUS_STOPPED;
@@ -689,6 +694,10 @@ static int __init fp_module_init(void)
 		icon_state.task = kthread_run(icon_thread, (void *)ICON_MIN, "icon_thread");
 		lastdata.icon_count = 0;
 		memset(lastdata.icon_list, 0, sizeof(lastdata.icon_list));
+	}
+	else
+	{
+		sema_init(&led_text_thread_sem, 1);  // initialize LED text write semaphore
 	}
 
 	create_proc_fp();

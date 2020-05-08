@@ -1,4 +1,4 @@
-/****************************************************************************************
+/*****************************************************************************
  *
  * adb_5800_fp_file.c
  *
@@ -26,7 +26,7 @@
  * Devices:
  *  - /dev/vfd (vfd ioctls and read/write function)
  *
- ****************************************************************************************
+ *****************************************************************************
  *
  * Changes
  *
@@ -71,6 +71,9 @@
  * 20191103 Audioniek       Debug icon handling and reverse text in VFDSETLED in
  *                          VFDDISPLAYCHARS.
  * 20200425 Audioniek       Fix PT6302 UTF8 support.
+ * 20200504 Audioniek       Removed dual display capability.
+ * 20200505 Audioniek       Fix handling of BZZB with box_variant; boxvariant
+ *                          values changed so that bit 1 signals dual tuner.
  *
  ****************************************************************************************/
 #include <asm/io.h>
@@ -96,8 +99,8 @@
 #include "adb_5800_fp.h"
 
 // Global variables
-int box_variant = 0;     // 1=BSKA, 2=BSLA, 3=BXZB, 4=BZZB, 5=cable, 0=unknown
-int display_type;        // active display: 0=LED, 1=VFD, 2=both
+int box_variant = 0;     // 0=BSKA, 1=BSLA, 2=BXZB, 3=BZZB, 4=cable, other=unknown
+int display_type;        // active display: 0=LED, 1=VFD
 int led_brightness = 5;  // default LED brightness
 // LED states
 char led1 = 0;  // power LED
@@ -171,7 +174,7 @@ extern int rec_key;      // module parameter: front panel keyboard layout
 extern int key_layout;   // active front panel key layout: 0=MENU/EPG/RES, 1=EPG/REC/RES
 extern unsigned char key_group1, key_group2;
 extern unsigned long fan_registers;
-extern struct stpio_pin* fan_pin;
+extern struct stpio_pin *fan_pin;
 extern tIconState spinner_state;
 extern tIconState icon_state;
 
@@ -400,30 +403,30 @@ static const unsigned char seven_seg[128] =
 struct iconToInternal vfdIcons[] =
 {
 	/*- Name ---------- icon# ---------- data0 data1 data2 data3 data4-----*/
-	{ "ICON_MIN",       ICON_MIN,       {0x00, 0x00, 0x00, 0x00, 0x00}},  // 00 (also used for clearing)
-	{ "ICON_REC",       ICON_REC,       {0x1c, 0x3e, 0x3e, 0x3e, 0x1c}},  // 01
-	{ "ICON_TIMESHIFT", ICON_TIMESHIFT, {0x01, 0x3f, 0x01, 0x2c, 0x34}},  // 02
-	{ "ICON_TIMER",     ICON_TIMER,     {0x3e, 0x49, 0x4f, 0x41, 0x3e}},  // 03
-	{ "ICON_HD",        ICON_HD,        {0x3e, 0x08, 0x3e, 0x22, 0x1c}},  // 04
-	{ "ICON_USB",       ICON_USB,       {0x08, 0x0c, 0x1a, 0x2a, 0x28}},  // 05
-	{ "ICON_SCRAMBLED", ICON_SCRAMBLED, {0x3c, 0x26, 0x25, 0x26, 0x3c}},  // 06
-	{ "ICON_DOLBY",     ICON_DOLBY,     {0x3e, 0x22, 0x1c, 0x22, 0x3e}},  // 07
-	{ "ICON_MUTE",      ICON_MUTE,      {0x1e, 0x12, 0x1e, 0x21, 0x3f}},  // 08
-	{ "ICON_TUNER1",    ICON_TUNER1,    {0x01, 0x3f, 0x01, 0x04, 0x3e}},  // 09
-	{ "ICON_TUNER2",    ICON_TUNER2,    {0x01, 0x3f, 0x01, 0x34, 0x2c}},  // 10
-	{ "ICON_MP3",       ICON_MP3,       {0x77, 0x37, 0x00, 0x49, 0x77}},  // 11
-	{ "ICON_REPEAT",    ICON_REPEAT,    {0x14, 0x34, 0x14, 0x16, 0x14}},  // 12
-	{ "ICON_PLAY",      ICON_PLAY,      {0x00, 0x7f, 0x3e, 0x1c, 0x08}},  // 13
-	{ "ICON_STOP",      ICON_STOP,      {0x3e, 0x3e, 0x3e, 0x3e, 0x3e}},  // 14
-	{ "ICON_PAUSE",     ICON_PAUSE,     {0x3e, 0x3e, 0x00, 0x3e, 0x3e}},  // 15
-	{ "ICON_REWIND",    ICON_REWIND,    {0x08, 0x1c, 0x08, 0x1c, 0x00}},  // 16
-	{ "ICON_FF",        ICON_FF,        {0x00, 0x1c, 0x08, 0x1c, 0x08}},  // 17
-	{ "ICON_STEP_BACK", ICON_STEP_BACK, {0x08, 0x1c, 0x3e, 0x00, 0x3e}},  // 18
-	{ "ICON_STEP_FWD",  ICON_STEP_FWD,  {0x3e, 0x00, 0x3e, 0x1c, 0x08}},  // 19 
-	{ "ICON_TV",        ICON_TV,        {0x01, 0x3f, 0x1d, 0x20, 0x1c}},  // 20
-	{ "ICON_RADIO",     ICON_RADIO,     {0x78, 0x4a, 0x4c, 0x4a, 0x79}},  // 21
-	{ "ICON_MAX",       ICON_MAX,       {0x00, 0x00, 0x00, 0x00, 0x00}},  // 22
-	{ "ICON_SPINNER",   ICON_SPINNER,   {0x00, 0x00, 0x00, 0x00, 0x00}}   // 23
+	{ "ICON_MIN",       ICON_MIN,       { 0x00, 0x00, 0x00, 0x00, 0x00 } },  // 00 (also used for clearing)
+	{ "ICON_REC",       ICON_REC,       { 0x1c, 0x3e, 0x3e, 0x3e, 0x1c } },  // 01
+	{ "ICON_TIMESHIFT", ICON_TIMESHIFT, { 0x01, 0x3f, 0x01, 0x2c, 0x34 } },  // 02
+	{ "ICON_TIMER",     ICON_TIMER,     { 0x3e, 0x49, 0x4f, 0x41, 0x3e } },  // 03
+	{ "ICON_HD",        ICON_HD,        { 0x3e, 0x08, 0x3e, 0x22, 0x1c } },  // 04
+	{ "ICON_USB",       ICON_USB,       { 0x08, 0x0c, 0x1a, 0x2a, 0x28 } },  // 05
+	{ "ICON_SCRAMBLED", ICON_SCRAMBLED, { 0x3c, 0x26, 0x25, 0x26, 0x3c } },  // 06
+	{ "ICON_DOLBY",     ICON_DOLBY,     { 0x3e, 0x22, 0x1c, 0x22, 0x3e } },  // 07
+	{ "ICON_MUTE",      ICON_MUTE,      { 0x1e, 0x12, 0x1e, 0x21, 0x3f } },  // 08
+	{ "ICON_TUNER1",    ICON_TUNER1,    { 0x01, 0x3f, 0x01, 0x04, 0x3e } },  // 09
+	{ "ICON_TUNER2",    ICON_TUNER2,    { 0x01, 0x3f, 0x01, 0x34, 0x2c } },  // 10
+	{ "ICON_MP3",       ICON_MP3,       { 0x77, 0x37, 0x00, 0x49, 0x77 } },  // 11
+	{ "ICON_REPEAT",    ICON_REPEAT,    { 0x14, 0x34, 0x14, 0x16, 0x14 } },  // 12
+	{ "ICON_PLAY",      ICON_PLAY,      { 0x00, 0x7f, 0x3e, 0x1c, 0x08 } },  // 13
+	{ "ICON_STOP",      ICON_STOP,      { 0x3e, 0x3e, 0x3e, 0x3e, 0x3e } },  // 14
+	{ "ICON_PAUSE",     ICON_PAUSE,     { 0x3e, 0x3e, 0x00, 0x3e, 0x3e } },  // 15
+	{ "ICON_REWIND",    ICON_REWIND,    { 0x08, 0x1c, 0x08, 0x1c, 0x00 } },  // 16
+	{ "ICON_FF",        ICON_FF,        { 0x00, 0x1c, 0x08, 0x1c, 0x08 } },  // 17
+	{ "ICON_STEP_BACK", ICON_STEP_BACK, { 0x08, 0x1c, 0x3e, 0x00, 0x3e } },  // 18
+	{ "ICON_STEP_FWD",  ICON_STEP_FWD,  { 0x3e, 0x00, 0x3e, 0x1c, 0x08 } },  // 19 
+	{ "ICON_TV",        ICON_TV,        { 0x01, 0x3f, 0x1d, 0x20, 0x1c } },  // 20
+	{ "ICON_RADIO",     ICON_RADIO,     { 0x78, 0x4a, 0x4c, 0x4a, 0x79 } },  // 21
+	{ "ICON_MAX",       ICON_MAX,       { 0x00, 0x00, 0x00, 0x00, 0x00 } },  // 22
+	{ "ICON_SPINNER",   ICON_SPINNER,   { 0x00, 0x00, 0x00, 0x00, 0x00 } }   // 23
 };
 // End of character and icon definitions
 
@@ -442,9 +445,12 @@ struct iconToInternal vfdIcons[] =
 void pt6xxx_free_pio_pins(void)
 {
 	dprintk(150, "%s >\n", __func__);
-	if (pt6302_cs)
+	if ((box_variant & 0x01) || (display_vfd == 1)) // true if BSLA or BZZB or VFD forced
 	{
-		stpio_set_pin(pt6302_cs, 1);  // deselect PT6302
+		if (pt6302_cs)
+		{
+			stpio_set_pin(pt6302_cs, 1);  // deselect PT6302
+		}
 	}
 	if (pt6958_stb)
 	{
@@ -462,11 +468,14 @@ void pt6xxx_free_pio_pins(void)
 	{
 		stpio_free_pin(pt6958_stb);
 	}
-	if (pt6302_cs)
+	if ((box_variant & 0x01) || (display_vfd == 1))
 	{
-		stpio_free_pin(pt6302_cs);
+		if (pt6302_cs)
+		{
+			stpio_free_pin(pt6302_cs);
+		}
 	}
-	dprintk(150, "%s < PT6958 & PT6302 PIO pins freed\n", __func__);
+	dprintk(150, "%s < PT6958%s PIO pins freed\n", __func__, (display_type ? " & PT6302" : ""));
 };
 
 /******************************************************
@@ -476,15 +485,18 @@ void pt6xxx_free_pio_pins(void)
  */
 static unsigned char pt6xxx_init_pio_pins(void)
 {
-	dprintk(150, "Initialize PT6302 & PT6958 PIO pins\n");
+	dprintk(150, "Initialize PT6958%s PIO pins\n", (display_type ? " & PT6302" : ""));
 
+	if ((box_variant & 0x01) || (display_vfd == 1))
 // PT6302 Chip select
-	dprintk(50, "Request STPIO %d,%d for PT6302 CS\n", PORT_CS, PIN_CS);
-	pt6302_cs = stpio_request_pin(PORT_CS, PIN_CS, "PT6302_CS", STPIO_OUT);
-	if (pt6302_cs == NULL)
 	{
-		dprintk(1, "Request for STPIO cs failed; abort\n");
-		goto pt_init_fail;
+		dprintk(50, "Request STPIO %d,%d for PT6302 CS\n", PORT_CS, PIN_CS);
+		pt6302_cs = stpio_request_pin(PORT_CS, PIN_CS, "PT6302_CS", STPIO_OUT);
+		if (pt6302_cs == NULL)
+		{
+			dprintk(1, "Request for STPIO cs failed; abort\n");
+			goto pt_init_fail;
+		}
 	}
 // PT6958 Strobe
 	dprintk(50, "Request STPIO %d,%d for PT6958 STB\n", PORT_STB, PIN_STB);
@@ -495,7 +507,7 @@ static unsigned char pt6xxx_init_pio_pins(void)
 		goto pt_init_fail;
 	}
 // PT6302 & PT6958 Clock
-	dprintk(50, "Request STPIO %d,%d for PT6302/PT6958 CLK\n", PORT_CLK, PIN_CLK);
+	dprintk(50, "Request STPIO %d,%d for %sPT6958 CLK\n", PORT_CLK, PIN_CLK, (display_type ? "PT6302/" : ""));
 	pt6xxx_clk = stpio_request_pin(PORT_CLK, PIN_CLK, "PT6958_CLK", STPIO_OUT);
 	if (pt6xxx_clk == NULL)
 	{
@@ -503,14 +515,18 @@ static unsigned char pt6xxx_init_pio_pins(void)
 		goto pt_init_fail;
 	}
 // PT6302 & PT6958 Data in
-	dprintk(50, "Request STPIO %d,%d for PT6302/PT6958 Din\n", PORT_DIN, PIN_DIN);
+	dprintk(50, "Request STPIO %d,%d for %sPT6958 Din\n", PORT_DIN, PIN_DIN, (display_type ? "PT6302/" : ""));
 	pt6xxx_din = stpio_request_pin(PORT_DIN, PIN_DIN, "PT6958_DIN", STPIO_BIDIR);
 	if (pt6xxx_din == NULL)
 	{
 		dprintk(1, "Request for DIN STPIO failed; abort\n");
 		goto pt_init_fail;
 	}
-	stpio_set_pin(pt6302_cs, 1);  // set all involved PIO pins high
+  // set all involved PIO pins high
+	if ((box_variant & 0x01) || (display_vfd == 1))
+	{
+		stpio_set_pin(pt6302_cs, 1);
+	}
 	stpio_set_pin(pt6958_stb, 1);
 	stpio_set_pin(pt6xxx_clk, 1);
 	stpio_set_pin(pt6xxx_din, 1);
@@ -519,7 +535,7 @@ static unsigned char pt6xxx_init_pio_pins(void)
 
 pt_init_fail:
 	pt6xxx_free_pio_pins();
-	dprintk(1, "%s < Error initializing PT6302 & PT6958 PIO pins\n", __func__);
+	dprintk(1, "%s < Error initializing PT6958%s PIO pins\n", __func__, (display_type ? " & PT6302" : ""));
 	return 0;
 };
 
@@ -557,8 +573,8 @@ static unsigned char pt6958_read_byte(void)
  *
  * Write one byte to the PT6958 or PT6302
  *
- * Note: which of the two chips depend on the CS
- *       previously set.
+ * Note: which of the two chips is written to depends
+ *       on the CS previously set.
  */
 static void pt6xxx_send_byte(unsigned char Value)
 {
@@ -1001,7 +1017,6 @@ static void pt6958_set_icon(unsigned char *kbuf, unsigned char len)
 			case 1:  // led power, red
 			{
 				led1 = on;
-//				pos = 1;
 				break;
 			}
 			case 2:  // led power, green
@@ -1014,7 +1029,6 @@ static void pt6958_set_icon(unsigned char *kbuf, unsigned char len)
 				else
 				{
 					led1 = 0;
-//					on = 0;
 				}
 				pos = 1;
 				break;
@@ -1022,7 +1036,6 @@ static void pt6958_set_icon(unsigned char *kbuf, unsigned char len)
 			case 3:  // timer LED
 			{
 				led2 = on;
-//				pos = 3;
 				break;
 			}
 			case 4:  // @ LED
@@ -1857,7 +1870,9 @@ int stb0899_read_reg_box_variant(unsigned int reg, unsigned char nr)
  *       only distinguishing feature
  *       between models, due to the "A20
  *       tied to logic 1" patch on the
- *       mainboard.
+ *       mainboard, rendering the serial
+ *       number in the NOR flash
+ *       unreachable.
  */
 void get_box_variant(void)
 {
@@ -1869,7 +1884,7 @@ void get_box_variant(void)
 	ret = stv6412_box_variant();
 	if (ret != 1)
 	{
-		box_variant = 3;  // no STV6412 --> BXZB model
+		box_variant = 2;  // no STV6412 --> BXZB model
 		dprintk(50, "BXZB model detected\n");
 	}
 	else
@@ -1878,7 +1893,7 @@ void get_box_variant(void)
 		ret = stb0899_read_reg_box_variant(STB0899_NCOARSE, I2C_ADDR_STB0899_2);  // read DIV from demodulator2
 		if (ret != -1)  // if read OK --> 2nd STV0899 demod present --> must be a BSLA
 		{
-			box_variant = 2;  // BSLA model
+			box_variant = 1;  // BSLA model
 			dprintk(50, "BSLA model detected\n");
 		}
 		else  // check demodulator type
@@ -1888,12 +1903,12 @@ void get_box_variant(void)
 			ret = stb0899_read_reg_box_variant(STB0899_DEV_ID, I2C_ADDR_STB0899_1);
 			if (ret > 0x30)  // if response greater than 0x30 --> STB0899 demodulator
 			{
-				box_variant = 1; // STB0899 demodulator --> BSKA model
+				box_variant = 0; // STB0899 demodulator --> BSKA model
 				dprintk(50, "BSKA model detected\n");
 			}
 			else if (ret > 0)
 			{
-				box_variant = 4;  // STV0900 demodulator --> BZZB model
+				box_variant = 3;  // STV0900 demodulator --> BZZB model
 				dprintk(50, "BZZB model detected\n");
 			}
 			else
@@ -1906,7 +1921,7 @@ void get_box_variant(void)
 //				}
 //				else
 //				{
-					box_variant = 0;
+					box_variant = 0;  // default to BSKA model
 					dprintk(1, "CAUTION: ITI-5800 variant cannot be determined; is tuner installed?\n");
 //				}
 			}
@@ -1929,43 +1944,25 @@ int adb_5800_fp_init_func(void)
 	dprintk(150, "%s >\n", __func__);
 	dprintk(10, "ADB ITI-5800S(X) front panel driver initializing\n");
 
-	dprintk(50, "Probe PT6958 + PT6302\n");
-	if (pt6xxx_init_pio_pins() == 0)
-	{
-		dprintk(1, "Unable to initialize PIO pins; abort\n");
-		goto fp_init_fail;
-	}
-	pt6958_setup();
-	pt6302_setup();
-
-	sema_init(&(fp.sem), 1);
-	fp.opencount = 0;
-
-	get_box_variant();  // determine box variant
-
 	// normalize module parameter values
 	display_vfd = (display_vfd > 0 ? 1 : (display_vfd < 0 ? -1 : 0));
 	display_led = (display_led > 0 ? 1 : (display_led < 0 ? -1 : 0));
 	rec_key = (rec_key > 0 ? 1 : (rec_key < 0 ? -1 : 0));
 
+	dprintk(50, "Determine box variant\n");
+	get_box_variant();  // determine box variant
+
 	// process module parameters and apply defaults
 	switch (box_variant)
 	{
-		case 1:  // BSKA
-		case 3:  // BXZB
+		case 0:  // BSKA
+		case 2:  // BXZB
 		{
 			switch (display_led)
 			{
 				case -1: // led not specified (LED default on)
 				{
-					if (display_vfd == 1)
-					{
-						display_type = 2;  // both
-					}
-					else
-					{
-						display_type = 0;  // LED only
-					}
+					display_type = ((display_vfd == 1) ? 1 : 0);
 					break;
 				}
 				case 0: // led specifically off
@@ -1976,7 +1973,7 @@ int adb_5800_fp_init_func(void)
 					}
 					else
 					{
-						dprintk(1, "Defaulting to LED only\n");
+						dprintk(1, "display_vfd not specified, defaulting to LED only\n");
 						display_type = 0;
 					}
 					break;
@@ -1985,12 +1982,9 @@ int adb_5800_fp_init_func(void)
 				{
 					if (display_vfd == 1)
 					{
-						display_type = 2;  // Both
+						dprintk(1, "Error: dual display not supported, defaulting to LED\n");
 					}
-					else
-					{
-						display_type = 0;  // LED only
-					}
+					display_type = 0;  // LED only
 					break;
 				}
 			}
@@ -2005,21 +1999,14 @@ int adb_5800_fp_init_func(void)
 			}
 			break;
 		}
-		case 2:  // BSLA
-		case 4:  // BZZB
+		case 1:  // BSLA
+		case 3:  // BZZB
 		{
 			switch (display_vfd)
 			{
 				case -1: // vfd not specified (VFD default on)
 				{
-					if (display_led == 1)
-					{
-						display_type = 2;  // both
-					}
-					else
-					{
-						display_type = 1;  // VFD only
-					}
+					display_type = ((display_led == 1) ? 0 : 1);
 					break;
 				}
 				case 0: // vfd specifically off
@@ -2030,7 +2017,7 @@ int adb_5800_fp_init_func(void)
 					}
 					else
 					{
-						dprintk(1, "Defaulting to VFD only\n");
+						dprintk(1, "display_led not specified, defaulting to VFD only\n");
 						display_type = 1;
 					}
 					break;
@@ -2039,12 +2026,9 @@ int adb_5800_fp_init_func(void)
 				{
 					if (display_led == 1)
 					{
-						display_type = 2;  // Both
+						dprintk(1, "Error: dual display not supported, defaulting to VFD\n");
 					}
-					else
-					{
-						display_type = 1;  // VFD only
-					}
+					display_type = 1;  // VFD only
 					break;
 				}
 			}
@@ -2061,13 +2045,14 @@ int adb_5800_fp_init_func(void)
 		}
 		default:
 		{
-			// Receiver variant unknown, enable both displays & EPG/REC/RES key layout
-			display_type = 2;
-			key_layout = 1;
+			// Receiver variant unknown, default to LED display and MENU/EPG/RES key layout
+			display_type = 0;
+			key_layout = 0;
 			break;
 		}
 	}
 
+#if 0
 	switch (display_type)
 	{
 		case 0:
@@ -2087,10 +2072,27 @@ int adb_5800_fp_init_func(void)
 		}
 	}
 	dprintk(50, "Text display is %s\n", dsp_string);
-	dprintk(50, "Front panel key layout: %s\n", (key_layout == 0 ? "MENU/EPG/RES" : "EPG/REC/RES"));
+#else
+	dprintk(50, "Front panel type is %s\n", ((display_type) ? "VFD" : "LED"));
+#endif
+	dprintk(50, "Front panel key layout: %s\n", ((key_layout) ? "EPG/REC/RES" : "MENU/EPG/RES"));
+
+	dprintk(50, "Probe PT6958%s\n", (display_type ? " + PT6302" : ""));
+	if (pt6xxx_init_pio_pins() == 0)
+	{
+		dprintk(1, "Unable to initialize PIO pins; abort\n");
+		goto fp_init_fail;
+	}
+	pt6958_setup();
+	if (display_type)
+	{
+		pt6302_setup();
+	}
+	sema_init(&(fp.sem), 1);
+	fp.opencount = 0;
 
 	// clear displayed icon list
-	if (display_type > 0)
+	if (display_type)
 	{
 		for (i = 0; i < 8; i++)
 		{
@@ -2128,11 +2130,11 @@ void clear_display(void)
 	dprintk(100, "%s >\n", __func__);
 
 	memset(bBuf, ' ', sizeof(bBuf));
-	if (display_type > 0)
+	if (display_type)
 	{
 		ret |= pt6302_write_text(0, bBuf, VFD_DISP_SIZE, 0);
 	}
-	if (display_type != 1)
+	else
 	{
 		ret |= pt6958_ShowBuf(bBuf, LED_DISP_SIZE, 0);
 	}
@@ -2286,7 +2288,44 @@ static int run_text_thread(struct vfd_ioctl_data *draw_data)
 {
 //	dprintk(150, "%s >\n", __func__);
 
-	if (display_type != 1)
+	if (display_type)
+	{
+		if (down_interruptible(&vfd_text_thread_sem))
+		{
+			return -ERESTARTSYS;
+		}
+
+		// return if there is already a draw task running for the same VFD text
+		if ((vfd_text_thread_status != THREAD_STATUS_STOPPED)
+		&& vfd_text_task
+		&& (last_vfd_draw_data.length == draw_data->length)
+		&& !memcmp(&last_vfd_draw_data.data, draw_data->data, draw_data->length))
+		{
+			up(&vfd_text_thread_sem);
+			return 0;
+		}
+		memcpy(&last_vfd_draw_data, draw_data, sizeof(struct vfd_ioctl_data));
+	
+		// stop existing thread, if any
+		if ((vfd_text_thread_status != THREAD_STATUS_STOPPED) && vfd_text_task)
+		{
+			kthread_stop(vfd_text_task);
+			while ((vfd_text_thread_status != THREAD_STATUS_STOPPED))
+			{
+				msleep(1);
+			}
+		}
+		vfd_text_thread_status = THREAD_STATUS_INIT;
+		vfd_text_task = kthread_run(vfd_text_thread, draw_data, "vfd_text_thread");
+
+		// wait until thread has copied the argument
+		while (vfd_text_thread_status == THREAD_STATUS_INIT)
+		{
+			msleep(1);
+		}
+		up(&vfd_text_thread_sem);
+	}
+	else
 	{
 		if (down_interruptible(&led_text_thread_sem))
 		{
@@ -2325,43 +2364,6 @@ static int run_text_thread(struct vfd_ioctl_data *draw_data)
 		up(&led_text_thread_sem);
 	}
 
-	if (display_type > 0)
-	{
-		if (down_interruptible(&vfd_text_thread_sem))
-		{
-			return -ERESTARTSYS;
-		}
-
-		// return if there is already a draw task running for the same VFD text
-		if ((vfd_text_thread_status != THREAD_STATUS_STOPPED)
-		&& vfd_text_task
-		&& (last_vfd_draw_data.length == draw_data->length)
-		&& !memcmp(&last_vfd_draw_data.data, draw_data->data, draw_data->length))
-		{
-			up(&vfd_text_thread_sem);
-			return 0;
-		}
-		memcpy(&last_vfd_draw_data, draw_data, sizeof(struct vfd_ioctl_data));
-	
-		// stop existing thread, if any
-		if ((vfd_text_thread_status != THREAD_STATUS_STOPPED) && vfd_text_task)
-		{
-			kthread_stop(vfd_text_task);
-			while ((vfd_text_thread_status != THREAD_STATUS_STOPPED))
-			{
-				msleep(1);
-			}
-		}
-		vfd_text_thread_status = THREAD_STATUS_INIT;
-		vfd_text_task = kthread_run(vfd_text_thread, draw_data, "vfd_text_thread");
-
-		// wait until thread has copied the argument
-		while (vfd_text_thread_status == THREAD_STATUS_INIT)
-		{
-			msleep(1);
-		}
-		up(&vfd_text_thread_sem);
-	}
 //	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
@@ -2518,7 +2520,7 @@ static int vfd_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 	int ret = 0;
 	int icon_nr;
 	int on;
-	unsigned char clear[1] = {0x00};
+	unsigned char clear[1] = { 0x00 };
 
 //	dprintk(150, "%s >\n", __func__);
 
@@ -2560,11 +2562,11 @@ static int vfd_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 			{
 				level = 7;
 			}
-			if (display_type > 0)  // set VFD brightness
+			if (display_type)  // set VFD brightness
 			{
 				pt6302_set_brightness(level);
 			}
-			if (display_type == 0)  // set LED brightness only if LED text display only
+			else  // set LED brightness
 			{
 				pt6958_set_brightness(level);
 			}
@@ -2582,7 +2584,7 @@ static int vfd_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 			{
 				level = 7;
 			}
-			if (display_type > 0)
+			if (display_type)
 			{
 				pt6958_set_brightness(level);
 				// do not set VFD text display
@@ -2602,243 +2604,250 @@ static int vfd_ioctl(struct inode *inode, struct file *file, unsigned int cmd, u
 		}
 		case VFDICONDISPLAYONOFF:
 		{
-			int locked = 0;
-
-			icon_nr = (mode == 0 ? vfddata.data[0] : adb_box_fp->u.icon.icon_nr);
-			on = (mode == 0 ? vfddata.data[4] : adb_box_fp->u.icon.on);
-
-			if (icon_nr < ICON_MIN + 1 || icon_nr > ICON_SPINNER)
+			if (display_type)
 			{
-				dprintk(1, "Error: illegal icon number %d (mode %d)\n", icon_nr, mode);
-				goto icon_exit;
-			}
-//			dprintk(10, "%s Set icon %s (%d) to %s (mode %d)\n", __func__, vfdIcons[icon_nr].name, icon_nr, (on ? "on" : "off"), mode);
+				int locked = 0;
 
-			if (locked)
-			{
-				dprintk(1, "Locked!\n");
-				goto icon_exit;
-			}
-			locked = 1;
+				icon_nr = (mode == 0 ? vfddata.data[0] : adb_box_fp->u.icon.icon_nr);
+				on = (mode == 0 ? vfddata.data[4] : adb_box_fp->u.icon.on);
 
-			// Part one: translate E2 icon numbers to own icon numbers (vfd mode only)
-			if (mode == 0)  // vfd mode
-			{
+				if (icon_nr < ICON_MIN + 1 || icon_nr > ICON_SPINNER)
+				{
+					dprintk(1, "Error: illegal icon number %d (mode %d)\n", icon_nr, mode);
+					goto icon_exit;
+				}
+//				dprintk(10, "%s Set icon %s (%d) to %s (mode %d)\n", __func__, vfdIcons[icon_nr].name, icon_nr, (on ? "on" : "off"), mode);
+
+				if (locked)
+				{
+					dprintk(1, "Locked!\n");
+					goto icon_exit;
+				}
+				locked = 1;
+
+				// Part one: translate E2 icon numbers to own icon numbers (vfd mode only)
+				if (mode == 0)  // vfd mode
+				{
+					switch (icon_nr)
+					{
+						case 0x13:  // crypted
+						{
+							icon_nr = ICON_SCRAMBLED;
+							break;
+						}
+						case 0x17:  // dolby
+						{
+							icon_nr = ICON_DOLBY;
+							break;
+						}
+						case 0x15:  // MP3
+						{
+							icon_nr = ICON_MP3;
+							break;
+						}
+						case 0x11:  // HD
+						{
+							icon_nr = ICON_HD;
+							break;
+						}
+						case 0x1e:  // record
+						{
+							icon_nr = ICON_REC;
+							break;
+						}
+						case 0x1a:  // seekable (play)
+						{
+							icon_nr = ICON_PLAY;
+							break;
+						}
+						default:
+						{
+							break;
+						}
+					}
+				}
+				// Part two: decide wether one icon, all or spinner
 				switch (icon_nr)
 				{
-					case 0x13:  // crypted
+					case ICON_SPINNER:
 					{
-						icon_nr = ICON_SCRAMBLED;
-						break;
-					}
-					case 0x17:  // dolby
-					{
-						icon_nr = ICON_DOLBY;
-						break;
-					}
-					case 0x15:  // MP3
-					{
-						icon_nr = ICON_MP3;
-						break;
-					}
-					case 0x11:  // HD
-					{
-						icon_nr = ICON_HD;
-						break;
-					}
-					case 0x1e:  // record
-					{
-						icon_nr = ICON_REC;
-						break;
-					}
-					case 0x1a:  // seekable (play)
-					{
-						icon_nr = ICON_PLAY;
-						break;
-					}
-					default:
-					{
-						break;
-					}
-				}
-			}
-			// Part two: decide wether one icon, all or spinner
-			switch (icon_nr)
-			{
-				case ICON_SPINNER:
-				{
-					ret = 0;
-					if (on)
-					{
-						lastdata.icon_state[ICON_SPINNER] = 1;
-						spinner_state.state = 1;
-						if (icon_state.state == 1)
+						ret = 0;
+						if (on)
 						{
-//							dprintk(50, "%s Stop icon thread\n", __func__);
-							icon_state.state = 0;
-							i = 0;
-							do
+							lastdata.icon_state[ICON_SPINNER] = 1;
+							spinner_state.state = 1;
+							if (icon_state.state == 1)
 							{
-								msleep(250);
-								i++;
+//								dprintk(50, "%s Stop icon thread\n", __func__);
+								icon_state.state = 0;
+								i = 0;
+								do
+								{
+									msleep(250);
+									i++;
+								}
+								while (icon_state.status != THREAD_STATUS_HALTED && i < 5);
+								if (i == 5)
+								{
+									dprintk(1, "%s Time out stopping icon thread!\n", __func__);
+								}
+//								dprintk(1, "%s Icon thread stopped\n", __func__);
 							}
-							while (icon_state.status != THREAD_STATUS_HALTED && i < 5);
-							if (i == 5)
+							if (on == 1)  // handle default
 							{
-								dprintk(1, "%s Time out stopping icon thread!\n", __func__);
+								on = 25;  // full cycle takes 16 * 250 ms = 4 sec
 							}
-//							dprintk(1, "%s Icon thread stopped\n", __func__);
+							spinner_state.period = on * 10;
+							up(&spinner_state.sem);
 						}
-						if (on == 1)  // handle default
+						else
 						{
-							on = 25;  // full cycle takes 16 * 250 ms = 4 sec
+							if (spinner_state.state == 1)
+							{
+								spinner_state.state = 0;
+//								dprintk(50, "%s Stop spinner\n", __func__);
+								spinner_state.state = 0;
+								i = 0;
+								do
+								{
+									msleep(250);
+									i++;
+								}
+								while (spinner_state.status != THREAD_STATUS_HALTED && i < 20);
+								if (i == 20)
+								{
+									dprintk(1, "%s Time out stopping spinner thread!\n", __func__);
+								}
+//								dprintk(50, "%s Spinner stopped (%d icons to recover)\n", __func__, lastdata.icon_count);
+							}
+							lastdata.icon_state[ICON_SPINNER] = 0;  // flag spinner off
+							if (lastdata.icon_count > 1)
+							{
+								// reload PT6302 icon patterns
+								for (i = 0; i < lastdata.icon_count; i++)
+								{
+//									dprintk(50, "%s Reload pixel data for icon %d\n", __func__, lastdata.icon_list[i]);
+									ret |= pt6302_write_cgram(i, vfdIcons[lastdata.icon_list[i]].pixeldata, 1);
+								}
+//								dprintk(50, "%s Restart icon thread\n", __func__);
+								icon_state.state = 1;
+								up(&icon_state.sem);
+							}
+							else if (lastdata.icon_count == 1)
+							{
+								// get icon number and set icon back on
+								i = 0;
+								while (lastdata.icon_state[i] == 0 && i < ICON_MAX)
+								{
+									i++;
+								}
+								lastdata.icon_count--;  // pt6302_set_icon will increment it back to 1
+//								dprintk(50, "%s Restore icon %d\n", __func__, i);
+								ret |= pt6302_set_icon(i, 1);
+							}
 						}
-						spinner_state.period = on * 10;
-						up(&spinner_state.sem);
-					}
-					else
+						break;
+					}  // ICON_SPINNER
+					case ICON_MAX:
 					{
-						if (spinner_state.state == 1)
+						if (on > 1 || on < 0)
 						{
-							spinner_state.state = 0;
-//							dprintk(50, "%s Stop spinner\n", __func__);
-							spinner_state.state = 0;
-							i = 0;
-							do
-							{
-								msleep(250);
-								i++;
-							}
-							while (spinner_state.status != THREAD_STATUS_HALTED && i < 20);
-							if (i == 20)
-							{
-								dprintk(1, "%s Time out stopping spinner thread!\n", __func__);
-							}
-//							dprintk(50, "%s Spinner stopped (%d icons to recover)\n", __func__, lastdata.icon_count);
+							dprintk(1, "Illegal state for icon %d\n", ICON_MAX);
 						}
-						lastdata.icon_state[ICON_SPINNER] = 0;  // flag spinner off
-						if (lastdata.icon_count > 1)
+						if (on)
 						{
-							// reload PT6302 icon patterns
-							for (i = 0; i < lastdata.icon_count; i++)
+							lastdata.icon_state[ICON_MAX] = 1;
+							if (spinner_state.state == 1)  // switch spinner off if on
 							{
-//								dprintk(50, "%s Reload pixel data for icon %d\n", __func__, lastdata.icon_list[i]);
-								ret |= pt6302_write_cgram(i, vfdIcons[lastdata.icon_list[i]].pixeldata, 1);
+//								dprintk(50, "%s Stop spinner\n", __func__);
+								spinner_state.state = 0;
+								do
+								{
+									msleep(250);
+								}
+								while (spinner_state.status != THREAD_STATUS_HALTED);
+//								dprintk(50, "%s Spinner stopped\n", __func__);
 							}
-//							dprintk(50, "%s Restart icon thread\n", __func__);
-							icon_state.state = 1;
-							up(&icon_state.sem);
+							if (icon_state.state != 1)
+							{
+//								dprintk(50, "%s Start icon thread\n", __func__);
+								icon_state.state = 1;
+								up(&icon_state.sem);
+							}
+	
 						}
-						else if (lastdata.icon_count == 1)
+						else  // all icons off
 						{
-							// get icon number and set icon back on
-							i = 0;
-							while (lastdata.icon_state[i] == 0 && i < ICON_MAX)
-							{
-								i++;
+							{  // stop thread and clear all icons
+//								dprintk(50, "%s Stop icon thread\n", __func__);
+								icon_state.state = 0;
+								i = 0;
+								do
+								{
+									msleep(250);
+									i++;
+								}
+								while (icon_state.status != THREAD_STATUS_HALTED && i < 128);
+								if (i == 128)
+								{
+									dprintk(1, "%s Time out stopping icon thread!\n", __func__);
+								}
+//								dprintk(50, "%s Icon thread stopped\n", __func__);
+								
+								lastdata.icon_count = 0;
+								for (i = ICON_MIN + 1; i < ICON_SPINNER; i++) // include spinner
+								{
+									lastdata.icon_state[i] = 0;
+								}
+								// clear PT6302 CGRAM and icon list
+								for (i = 0; i < 8; i++)
+								{
+									ret |= pt6302_write_cgram(i, vfdIcons[ICON_MIN].pixeldata, 1);
+									lastdata.icon_list[i] = 0;
+								}
 							}
-							lastdata.icon_count--;  // pt6302_set_icon will increment it back to 1
-//							dprintk(50, "%s Restore icon %d\n", __func__, i);
-							ret |= pt6302_set_icon(i, 1);
 						}
+						break;
 					}
-					break;
-				}
-				case ICON_MAX:
-				{
-					if (on > 1 || on < 0)
+					default:  // (re)set a single icon
 					{
-						dprintk(1, "Illegal state for icon %d\n", ICON_MAX);
-					}
-					if (on)
-					{
-						lastdata.icon_state[ICON_MAX] = 1;
-						if (spinner_state.state == 1)  // switch spinner off if on
+						if (on > 1 || on < 0)
 						{
-//							dprintk(50, "%s Stop spinner\n", __func__);
-							spinner_state.state = 0;
-							do
-							{
-								msleep(250);
-							}
-							while (spinner_state.status != THREAD_STATUS_HALTED);
-//							dprintk(50, "%s Spinner stopped\n", __func__);
+							dprintk(1, "Illegal state for icon %d\n", icon_nr);
 						}
-						if (icon_state.state != 1)
+						ret |= pt6302_set_icon(icon_nr, on);
+						if (((icon_state.state == 0) && on) && lastdata.icon_count > 1)  // if no icon thread yet but > 1 icons on
 						{
 //							dprintk(50, "%s Start icon thread\n", __func__);
 							icon_state.state = 1;
 							up(&icon_state.sem);
 						}
-
-					}
-					else  // all icons off
-					{
-						{  // stop thread and clear all icons
-//							dprintk(50, "%s Stop icon thread\n", __func__);
-							icon_state.state = 0;
+						if (lastdata.icon_count < 2 && icon_state.state == 1)
+						{
+							icon_state.state = 0;  // stop icon thread
+//							dprintk(50, "%s Stopping icon thread\n", __func__);
 							i = 0;
 							do
 							{
 								msleep(250);
 								i++;
 							}
-							while (icon_state.status != THREAD_STATUS_HALTED && i < 128);
-							if (i == 128)
+							while (icon_state.status != THREAD_STATUS_HALTED && i < 120);
+							if (i == 120)
 							{
 								dprintk(1, "%s Time out stopping icon thread!\n", __func__);
 							}
 //							dprintk(50, "%s Icon thread stopped\n", __func__);
-							
-							lastdata.icon_count = 0;
-							for (i = ICON_MIN + 1; i < ICON_SPINNER; i++) // include spinner
-							{
-								lastdata.icon_state[i] = 0;
-							}
-							// clear PT6302 CGRAM and icon list
-							for (i = 0; i < 8; i++)
-							{
-								ret |= pt6302_write_cgram(i, vfdIcons[ICON_MIN].pixeldata, 1);
-								lastdata.icon_list[i] = 0;
-							}
 						}
+						break;
 					}
-					break;
 				}
-				default:  // (re)set a single icon
-				{
-					if (on > 1 || on < 0)
-					{
-						dprintk(1, "Illegal state for icon %d\n", icon_nr);
-					}
-					ret |= pt6302_set_icon(icon_nr, on);
-					if (((icon_state.state == 0) && on) && lastdata.icon_count > 1)  // if no icon thread yet but > 1 icons on
-					{
-//						dprintk(50, "%s Start icon thread\n", __func__);
-						icon_state.state = 1;
-						up(&icon_state.sem);
-					}
-					if (lastdata.icon_count < 2 && icon_state.state == 1)
-					{
-						icon_state.state = 0;  // stop icon thread
-//						dprintk(50, "%s Stopping icon thread\n", __func__);
-						i = 0;
-						do
-						{
-							msleep(250);
-							i++;
-						}
-						while (icon_state.status != THREAD_STATUS_HALTED && i < 120);
-						if (i == 120)
-						{
-							dprintk(1, "%s Time out stopping icon thread!\n", __func__);
-						}
-//						dprintk(50, "%s Icon thread stopped\n", __func__);
-					}
-					break;
-				}
+				locked = 0;
 			}
-			locked = 0;
+			else  // LED display
+			{
+				ret = 0;
+			}
 icon_exit:
 			mode = 0;
 			break;
@@ -2857,7 +2866,7 @@ icon_exit:
 		{
 			if (mode == 0)
 			{
-				if (display_type > 0)
+				if (display_type)
 				{
 					unsigned char out[VFD_DISP_SIZE + 1];
 					int wlen;
@@ -2871,7 +2880,7 @@ icon_exit:
 					}
 					ret |= pt6302_write_dcram(ICON_WIDTH, out, VFD_DISP_SIZE);
 				}
-				if (display_type != 1)
+				else
 				{
 					ret |= pt6958_ShowBuf(vfddata.data, vfddata.length, 0);
 				}
@@ -2884,7 +2893,7 @@ icon_exit:
 		}
 		case VFDDISPLAYWRITEONOFF:
 		{
-			if (display_type > 0)
+			if (display_type)
 			{
 				pt6302_set_light(adb_box_fp->u.light.onoff == 0 ? PT6302_LIGHT_OFF : PT6302_LIGHT_NORMAL);
 			}
@@ -2894,12 +2903,20 @@ icon_exit:
 		}
 		case VFDSETFAN:
 		{
-			if (adb_box_fp->u.fan.speed > 255)
+			if (box_variant & 0x01)  // BSLA or BZZB
 			{
-				adb_box_fp->u.fan.speed = 255;
+				if (adb_box_fp->u.fan.speed > 255)
+				{
+					adb_box_fp->u.fan.speed = 255;
+				}
+//				dprintk(10, "Set fan speed to: %d\n", adb_box_fp->u.fan.speed);
+				ctrl_outl(adb_box_fp->u.fan.speed, fan_registers + 0x04);
+				ret = 0;
 			}
-//			dprintk(10, "Set fan speed to: %d\n", adb_box_fp->u.fan.speed);
-			ctrl_outl(adb_box_fp->u.fan.speed, fan_registers + 0x04);
+			else
+			{
+				ret = -1;
+			}
 			mode = 0;
 			break;
 		}

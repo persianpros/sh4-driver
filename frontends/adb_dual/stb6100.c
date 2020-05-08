@@ -154,12 +154,15 @@ static int stb6100_read_regs(struct stb6100_state *state, u8 regs[])
 	{
 		int i;
 
-		printk("    Read from 0x%02x\n", state->config->tuner_address);
-		for (i = 0; i < STB6100_NUMREGS; i++)
+		if (paramDebug >= 20)
 		{
-			printk("        %s: 0x%02x", stb6100_regnames[i], regs[i]);
+			printk("    Read from 0x%02x\n", state->config->tuner_address);
+			for (i = 0; i < STB6100_NUMREGS; i++)
+			{
+				printk("        %s: 0x%02x", stb6100_regnames[i], regs[i]);
+			}
+			printk("\n");
 		}
-		printk("\n");
 	}
 	return 0;
 }
@@ -205,12 +208,15 @@ static int stb6100_write_reg_range(struct stb6100_state *state, u8 buf[], int st
 	{
 		int i;
 
-		printk("    Write @ 0x%02x: [%d:%d]\n", state->config->tuner_address, start, len);
-		for (i = 0; i < len; i++)
+		if (paramDebug >= 20)
 		{
-			printk("        %s: 0x%02x", stb6100_regnames[start + i], buf[i]);
+			printk("    Write @ 0x%02x: [%d:%d]\n", state->config->tuner_address, start, len);
+			for (i = 0; i < len; i++)
+			{
+				printk("        %s: 0x%02x", stb6100_regnames[start + i], buf[i]);
+			}
+			printk("\n");
 		}
-		printk("\n");
 	}
 	rc = i2c_transfer(state->i2c, &msg, 1);
 

@@ -287,7 +287,7 @@ static int policy_ply = (video_displayformat_t) VIDEO_LETTER_BOX;
 
 #if defined(ADB_BOX)
 static int video_switch = 0;
-static int video_switch_type = 0; //default 0 / 0-bska/bsla 1-bxzb
+static int video_switch_type = 0; //default 0, 0-bska/bsla/bzzb 1-bxzb
 #endif
 
 int proc_video_policy_get(void)
@@ -394,7 +394,9 @@ int proc_video_switch_type_write(struct file *file, const char __user *buf, unsi
 	{
 		ret = -EFAULT;
 		if (copy_from_user(page, buf, count))
+		{
 			goto out;
+		}
 		myString = (char *) kmalloc(count + 1, GFP_KERNEL);
 		strncpy(myString, page, count);
 		myString[count] = '\0';
@@ -404,16 +406,18 @@ int proc_video_switch_type_write(struct file *file, const char __user *buf, unsi
 			myString[count - 1] = '\0';
 			count--;
 		}
-		printk(KERN_DEBUG "proc_video_switch_type_write >> %s\n", myString);
-		if ((strncmp("bska", myString, count) == 0) || (strncmp("bsla", myString, count) == 0))
+		printk("[player2] %s > %s\n", __func__, myString);
+		if ((strncmp("bska", myString, count) == 0)
+		||  (strncmp("bsla", myString, count) == 0)
+		||  (strncmp("bzzb", myString, count) == 0))
 		{
 			video_switch_type = 0;
-			printk(KERN_DEBUG "!!!! video_switch_type=0 !!!!\n");
+			printk("[player2] %s %s -> video_switch_type = 0\n", __func__, myString);
 		}
 		else if (strncmp("bxzb", myString, count) == 0)
 		{
 			video_switch_type = 1;
-			printk(KERN_DEBUG "!!!! video_switch_type=1 !!!!\n");
+			printk("[player2] %s %s -> video_switch_type = 1\n, __func__"), myString;
 		}
 		ret = mlen;
 		kfree(myString);

@@ -415,10 +415,10 @@ endif
 ifdef ADB_BOX
 # Single ----------------------------------
 # stb0899
-fe-core-objs += adb/stb0899_algo.o
-fe-core-objs += adb/stb0899_drv.o
-fe-core-objs += adb/stb6100.o
-fe-core-objs += adb/core.o
+fe-core-objs += adb_single/stb0899_algo.o
+fe-core-objs += adb_single/stb0899_drv.o
+fe-core-objs += adb_single/stb6100.o
+fe-core-objs += adb_single/core.o
 obj-m += fe-core.o
 
 # Dual -------------------------------------

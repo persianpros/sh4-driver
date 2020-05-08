@@ -33,7 +33,7 @@
 
 #if 1
 extern int paramDebug;
-#define TAGDEBUG "[adb_stv090x] "
+#define TAGDEBUG "[adb_stv0900] "
 
 #define dprintk(level, x...) do \
 	{ \
