@@ -29,8 +29,7 @@ if [ $# -eq 1 ]; then
           fi
           fp_control -e
           echo "0" > /proc/progress
-          halt -d -f -i -h
-          #halt -d -f -i -p -h
+          halt
        fi
        if [ $modelcheck == "spark7162" ]; then
           fp_control -sst
@@ -44,8 +43,7 @@ if [ $# -eq 1 ]; then
              fp_control -l 0 0
           fi
           echo "0" > /proc/progress
-          halt -d -f -i -h
-          #halt -d -f -i -p -h
+          halt
        fi
        if [ $brandcheck == "cuberevo" ]; then
           fp_control -l 0 0
@@ -70,12 +68,10 @@ if [ $# -eq 1 ]; then
        if [ $modelcheck == "adb_box" ]; then
           fp_control -l 1 1
           echo "OFF" > /dev/vfd
-          halt -d -f -n -i -h
-          #halt -d -f -n -i -p -h
+          halt
        fi
        if [ $modelcheck == "hl101" ] || [ $modelcheck == "vip2_v1" ]; then
-          halt -d -f -n -i -h
-          #halt -d -f -n -i -p -h
+          halt
        fi
        if [ $modelcheck == "tf7700" ]; then
           tffpctl --brightness 5
