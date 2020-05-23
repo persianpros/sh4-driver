@@ -70,9 +70,6 @@ if [ $# -eq 1 ]; then
           echo "OFF" > /dev/vfd
           halt
        fi
-       if [ $modelcheck == "hl101" ] || [ $modelcheck == "vip2_v1" ]; then
-          halt
-       fi
        if [ $modelcheck == "tf7700" ]; then
           tffpctl --brightness 5
           tffpctl --cleardisplay
