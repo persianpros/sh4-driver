@@ -685,6 +685,6 @@ module_param(box_type, int, 0444);
 MODULE_PARM_DESC(box_type, "boxtype 0=adb2850(default) 1=adb2849");
 
 MODULE_DESCRIPTION ("ADB ITI-2849/2850/2851S(T) frontend driver");
-MODULE_AUTHOR      ("TDT (mod plfreebox@gmail.com)");
+MODULE_AUTHOR      ("Open Vision developers");
 MODULE_LICENSE     ("GPL");
 // vim:ts=4

@@ -244,6 +244,6 @@ module_init(fe_core_init);
 module_exit(fe_core_exit);
 
 MODULE_DESCRIPTION("STV0297_MT2060_Frontend_core");
-MODULE_AUTHOR("-=Mario=-");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

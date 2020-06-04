@@ -320,6 +320,6 @@ module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled (default), >1=enabled (level_");
 
 MODULE_DESCRIPTION("STV0900 Frontend core");
-MODULE_AUTHOR("Team Ducktales, mod B4Team & freebox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

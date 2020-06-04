@@ -63,7 +63,7 @@ int direct_asc_read_version(void)
 
 //FIXME: clarify if this works for all cubes
 
-	//write the getmicom request
+	// write the getmicom request
 	memset(buffer, 0, sizeof(buffer));
 
 	buffer[0] = 0xA5;
@@ -73,7 +73,7 @@ int direct_asc_read_version(void)
 		serial_putc(buffer[i]);
 	}
 
-	//now read from the fp
+	// now read from the fp
 	i = 20000;
 	while (i)
 	{
@@ -114,7 +114,7 @@ void serial_init(void)
 	// Configure the asc input/output settings
 	*(unsigned int *)(ASCXBaseAddress + ASC_INT_EN)   = 0x00000000;
 	*(unsigned int *)(ASCXBaseAddress + ASC_CTRL)     = 0x00000589;
-	*(unsigned int *)(ASCXBaseAddress + ASC_TIMEOUT)  = 0x00000014; //10
+	*(unsigned int *)(ASCXBaseAddress + ASC_TIMEOUT)  = 0x00000014;  // 10
 	*(unsigned int *)(ASCXBaseAddress + ASC_BAUDRATE) = 0x0000028a;
 	*(unsigned int *)(ASCXBaseAddress + ASC_TX_RST)   = 0;
 	*(unsigned int *)(ASCXBaseAddress + ASC_RX_RST)   = 0;
@@ -122,19 +122,19 @@ void serial_init(void)
 	/* not sure how to determine the baudrate ... */
 	if (direct_asc_read_version() == 0)
 	{
-		printk("1. micom at baudrate not detected ...\n");
+		dprintk(1, "front panel not detected at baudrate 0x028a...\n");
 
 		// Configure the asc input/output settings
 		*(unsigned int *)(ASCXBaseAddress + ASC_INT_EN)   = 0x00000000;
 		*(unsigned int *)(ASCXBaseAddress + ASC_CTRL)     = 0x00000589;
-		*(unsigned int *)(ASCXBaseAddress + ASC_TIMEOUT)  = 0x00000014; //10
+		*(unsigned int *)(ASCXBaseAddress + ASC_TIMEOUT)  = 0x00000014;  // 10
 		*(unsigned int *)(ASCXBaseAddress + ASC_BAUDRATE) = 0x21c;
 		*(unsigned int *)(ASCXBaseAddress + ASC_TX_RST)   = 0;
 		*(unsigned int *)(ASCXBaseAddress + ASC_RX_RST)   = 0;
 
 		if (direct_asc_read_version() == 0)
 		{
-			printk("2. micom at baudrate not detected :( :( :(\n");
+			dprintk(1, "front panel not detected at baudrate 0x21c :( :( :(\n");
 		}
 	}
 }

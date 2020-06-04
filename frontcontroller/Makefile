@@ -56,8 +56,8 @@ endif
 
 ifdef ADB_BOX
 obj-y += adb_5800_fp/
-#obj-y += adb_box_fp/front_bska/
-#obj-y += adb_box_fp/front_bsla/
+obj-y += adb_box_fp/front_bska/
+obj-y += adb_box_fp/front_bsla/
 endif
 
 ifdef ADB_2850
@@ -161,21 +161,21 @@ obj-y += ipbox55/
 endif
 
 ifdef CUBEREVO
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI2
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_250HD
 obj-y += ipbox/
 else ifdef CUBEREVO_9500HD
 obj-y += ipbox/
 else ifdef CUBEREVO_2000HD
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI_FTA
 obj-y += ipbox/
 else ifdef CUBEREVO_3000HD
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 endif
 
 ifdef VITAMIN_HD5000

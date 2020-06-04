@@ -5,7 +5,7 @@
 
 extern short paramDebug;
 
-#define TAGDEBUG "[micom] "
+#define TAGDEBUG "[cuberevo_micom] "
 
 #ifndef dprintk
 #define dprintk(level, x...) do { \
@@ -44,12 +44,12 @@ extern tFrontPanelOpen FrontPanelOpen[LASTMINOR];
 /* IOCTL numbers -> hacky! */
 #define VFDDISPLAYCHARS      0xc0425a00
 #define VFDBRIGHTNESS        0xc0425a03
-#define VFDPWRLED            0xc0425a04 /* obsolete, use VFDSETLED (0xc0425afe) */
+#define VFDPWRLED            0xc0425a04  /* obsolete, use VFDSETLED (0xc0425afe) */
 #define VFDDISPLAYWRITEONOFF 0xc0425a05
 #define VFDDRIVERINIT        0xc0425a08
 #define VFDICONDISPLAYONOFF  0xc0425a0a
 // comment next line to leave VFDTEST capabilities out
-#define VFDTEST              0xc0425af0 // added by audioniek
+#define VFDTEST              0xc0425af0  // added by audioniek
 #define VFDCLEARICONS	     0xc0425af6
 #define VFDSETRF             0xc0425af7
 #define VFDSETFAN            0xc0425af8

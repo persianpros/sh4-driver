@@ -1,4 +1,5 @@
-#if defined(CUBEREVO_MINI) \
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_MINI) \
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_3000HD)

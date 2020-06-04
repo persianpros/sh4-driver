@@ -26,8 +26,9 @@
  * CubeRevo 250HD / AB IPbox 91HD / Vizyon revolution 800HD: 4 character LED (7seg)
  * CubeRevo Mini / AB IPbox 900HD / Vizyon revolution 810HD: 14 character dot matrix VFD (14seg)
  * CubeRevo Mini II / AB IPbox 910HD / Vizyon revolution 820HD PVR: 14 character dot matrix VFD (14seg)
- * CubeRevo / AB IPbox 9000HD / Vizyon revolution 8000HD PVR: 12 character dot matrix VFD (12grid)
- * CubeRevo 9500HD: 13 character dot matrix VFD (13grid)
+ * Early CubeRevo / AB IPbox 9000HD / Vizyon revolution 8000HD PVR: 13 character 14 segment VFD (13grid)
+ * Late CubeRevo / AB IPbox 9000HD / Vizyon revolution 8000HD PVR: 12 character dot matrix VFD (12grid)
+ * CubeRevo 9500HD: 13 character 14 segment VFD (13grid)??
  *
 ******************************************************************************
  *
@@ -46,6 +47,9 @@
  * 20190304 Audioniek       UTF8 support on Mini/Mini II/2000HD/3000HD added.
  * 20190306 Audioniek       Fix scrolling problem.
  * 20190308 Audioniek       Fix scrolling problem.
+ * 20200524 Audioniek       UTF8 support on 13grid added.
+ * 20200524 Audioniek       Full ASCII display icluding lower case on
+ *                          13grid added.
  */
 
 #include <asm/io.h>
@@ -68,7 +72,8 @@
 
 #include "cuberevo_micom.h"
 #include "cuberevo_micom_asc.h"
-#if defined(CUBEREVO_MINI) \
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_MINI) \
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_3000HD)
@@ -112,7 +117,7 @@ int micom_major, micom_minor, micom_year;
 #define VFD_GETRAM               0xA3
 #define VFD_GETDATETIME          0xA4
 #define VFD_GETMICOM             0xA5
-#define VFD_GETWAKEUP            0xA6 /* wakeup time */
+#define VFD_GETWAKEUP            0xA6  /* wakeup time */
 #define VFD_SETWAKEUPDATE        0xC0
 #define VFD_SETWAKEUPTIME        0xC1
 #define VFD_SETDATETIME          0xC2
@@ -164,7 +169,8 @@ static int special2seg_size;
  *
  ***************************************************************************/
 #if defined(CUBEREVO)
-// 12 character dot matrix (CubeRevo)
+// 12 character dot matrix (Late CubeRevo)
+// NOTE: tables are ASCII value minus 0x10 and can be calculated
 unsigned short num2seg_12dotmatrix[] =
 {
 	0x20,	// 0
@@ -288,51 +294,164 @@ unsigned short LowerChar2seg_14dotmatrix[] =
 	0x6a,	// z
 };
 
-// 13 grid
+/*******************************************
+ *
+ * 13 grid (Early CubeRevo and all 9500HD)
+ *
+ * The 13 position VFD has 13 identical
+ * 14 segment characters with each a 
+ * decimal point.
+ * There are no colons or icons.
+ *
+ * Character layout:
+ *
+ *    aaaaaaaaa
+ *   fj   i   kb
+ *   f j  i  k b
+ *   f  j i k  b
+ *   f   jik   b
+ *    gggg hhhh
+ *   e   mln   c
+ *   e  m l n  c
+ *   e m  l  n c
+ *   em   l   nc
+ *    ddddddddd  p
+ *
+ * bit = 1 -> segment on
+ * bit = 0 -> segment off
+ *
+ * segment a is lo byte, bit 0 (  1, +0x0001)
+ * segment b is lo byte, bit 1 (  2, +0x0002)
+ * segment k is lo byte, bit 2 (  4, +0x0004)
+ * segment i is lo byte, bit 3 (  8, +0x0008)
+ * segment j is lo byte, bit 4 ( 16, +0x0010)
+ * segment f is lo byte, bit 5 ( 32, +0x0020)
+ * segment g is lo byte, bit 6 ( 64, +0x0040)
+ * segment h is lo byte, bit 7 (128, +0x0080)
+ *
+ * segment c is hi byte, bit 0 (  1, +0x0100)
+ * segment n is hi byte, bit 1 (  2, +0x0200)
+ * segment l is hi byte, bit 2 (  4, +0x0400)
+ * segment m is hi byte, bit 3 (  8, +0x0800)
+ * segment e is hi byte, bit 4 ( 16, +0x1000)
+ * segment d is hi byte, bit 5 ( 32, +0x2000)
+ * segment p is hi byte, bit 6 ( 64, +0x4000, decimal point)
+ * segment g is hi byte, bit 7 (128, +0x8000, unused)
+ *
+ * Character tables are 16 bit words,
+ * representing segment patterns.
+ */
 unsigned short num2seg_13grid[] =
 {
-	0x3123,	// 0
-	0x0408,	// 1
-	0x30c3,	// 2
-	0x21c3,	// 3
-	0x01e2,	// 4
-	0x21e1,	// 5
-	0x31e1,	// 6
-	0x0123,	// 7
-	0x31e3,	// 8
-	0x21e3,	// 9
+	0x3123,  // 0
+	0x0408,  // 1
+	0x30c3,  // 2
+	0x21c3,  // 3
+	0x01e2,  // 4
+	0x21e1,  // 5
+	0x31e1,  // 6
+	0x0123,  // 7
+	0x31e3,  // 8
+	0x21e3,  // 9
 };
 
 unsigned short Char2seg_13grid[] =
 {
-	0x11e3,	// A
-	0x25cb,	// B
-	0x3021,	// C
-	0x250b,	// D
-	0x30e1,	// E
-	0x10e1,	// F
-	0x31a1,	// G
-	0x11e2,	// H
-	0x2409,	// I
-	0x0809,	// J
-	0x1264,	// K
-	0x3020,	// L
-	0x1136,	// M
-	0x1332,	// N
-	0x3123,	// O
-	0x10e3,	// P
-	0x3323,	// Q
-	0x12e3,	// R
-	0x21e1,	// S
-	0x0409,	// T
-	0x3122,	// U
-	0x1824,	// V
-	0x1b22,	// W
-	0x0a14,	// X
-	0x04e2,	// Y
-	0x2805,	// Z
+	0x11e3,  // A
+	0x25cb,  // B
+	0x3021,  // C
+	0x250b,  // D
+	0x30e1,  // E
+	0x10e1,  // F
+	0x31a1,  // G
+	0x11e2,  // H
+	0x2409,  // I
+	0x3002,  // J
+	0x1264,  // K
+	0x3020,  // L
+	0x11c0,  // M
+	0x13c0,  // N
+	0x3123,  // O
+	0x10e3,  // P
+	0x3323,  // Q
+	0x12e3,  // R
+	0x21e1,  // S
+	0x0409,  // T
+	0x3122,  // U
+	0x1824,  // V
+	0x1b22,  // W
+	0x0a14,  // X
+	0x04e2,  // Y
+	0x2805,  // Z
 };
 
+unsigned short LowerChar2seg_13grid[] =
+{
+	0x31c3,  // a
+	0x31e0,  // b
+	0x30c0,  // c
+	0x31c2,  // d
+	0x30e3,  // e
+	0x10e1,  // f
+	0x21e3,  // g
+	0x11e0,  // h
+	0x0400,  // i
+	0x3102,  // j
+	0x12e0,  // k
+	0x0408,  // l
+	0x15c0,  // m
+	0x11c0,  // n
+	0x31c0,  // o
+	0x10e3,  // p
+	0x01e3,  // q
+	0x10c0,  // r
+	0x21e1,  // s
+	0x3060,  // t
+	0x3100,  // u
+	0x1800,  // v
+	0x3500,  // w
+	0x0a14,  // x
+	0x0814,  // y
+	0x2805,  // z
+};
+
+special_char_t special2seg_13grid[] =
+{
+	{ '!',  0x4408 },  // 0x21 !
+	{ 0x22, 0x0022 },  // 0x22 "
+	{ '#',  0x04c8 },  // 0x23 #
+	{ '$',  0x25e9 },  // 0x24 $
+	{ '%',  0x0924 },  // 0x25 %
+	{ '&',  0x00c0 },  // 0x26 &
+	{ 0x27, 0x0020 },  // 0x27 ' 
+	{ '(',  0x0204 },  // 0x28 (
+	{ ')',  0x0810 },  // 0x29 )
+	{ '*',  0x0edc },  // 0x2a *
+	{ '+',  0x04c8 },  // 0x2b +
+	{ ',',  0x0800 },  // 0x2c ,
+	{ '-',  0x00c0 },  // 0x2d -
+	{ '.',  0x4000 },  // 0x2e .
+	{ '/',  0x0800 },  // 0x2f /
+	{ ':',  0x0408 },  // 0x3a :
+	{ ';',  0x0810 },  // 0x3b ;
+	{ '<',  0x0204 },  // 0x3c <
+	{ '=',  0x20c0 },  // 0x3d =
+	{ '>',  0x0810 },  // 0x3e >
+	{ '?',  0x0425 },  // 0x3f ?
+	{ '@',  0x30e3 },  // 0x40 @ 
+	{ '[',  0x3021 },  // 0x5b [
+	{ '\'', 0x0210 },  // 0x5c backslash
+	{ ']',  0x2103 },  // 0x5d ]
+	{ '^',  0x0023 },  // 0x5e ^
+	{ '_',  0x2000 },  // 0x5f _
+	{ '`',  0x0010 },  // 0x60 `
+	{ '{',  0x0244 },  // 0x7b {
+	{ '|',  0x0408 },  // 0x7c |
+	{ '}',  0x0890 },  // 0x7d }
+	{ '~',  0x40c0 },  // 0x7e ~
+	{ 0x7f, 0x3fff },  // 0x7f DEL
+	{ ' ',  0x0000 },  // space (EOT)
+};
 #if defined(CUBEREVO_MINI) \
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_2000HD) \
@@ -341,147 +460,140 @@ unsigned short Char2seg_13grid[] =
 // non-alphanumeric
 special_char_t special2seg_14dotmatrix[] =
 { // table is largely ASCII minus 0x10
-	{' ',	0x10}, // ->> ASCII - 0x10
-	{'!',	0x11},
-	{'"',	0x12},
-	{'#',	0x13},
-	{'$',	0x14},
-	{'%',	0x15},
-	{'&',	0x16},
-	{'#',	0x17},
-	{'(',	0x18},
-	{')',	0x19},
-	{'*',	0x1a},
-	{'+',	0x1b},
-	{',',	0x1c},
-	{'-',	0x1d},
-	{'.',	0x1e},
-	{'/',	0x1f},
-//	{'0',	0x20},
-//	{'1',	0x21},
-//	{'2',	0x22},
-//	{'3',	0x23},
-//	{'4',	0x24},
-//	{'5',	0x25},
-//	{'6',	0x26},
-//	{'7',	0x27},
-//	{'8',	0x28},
-//	{'9',	0x29},
-//	{':',	0x2a},
-//	{';',	0x2b},
-	{'<',	0x2c},
-	{'=',	0x2d},
-	{'>',	0x2e},
-	{'?',	0x2f},
-	{'@',	0x30},
-//	{'A',	0x31}
+	{ ' ',	0x10 }, // ->> ASCII - 0x10
+	{ '!',	0x11 },
+	{ '"',	0x12 },
+	{ '#',	0x13 },
+	{ '$',	0x14 },
+	{ '%',	0x15 },
+	{ '&',	0x16 },
+	{ '#',	0x17 },
+	{ '(',	0x18 },
+	{ ')',	0x19 },
+	{ '*',	0x1a },
+	{ '+',	0x1b },
+	{ ',',	0x1c },
+	{ '-',	0x1d },
+	{ '.',	0x1e },
+	{ '/',	0x1f },
+//	{ '0',	0x20 },
+//	{ '1',	0x21 },
+//	{ '2',	0x22 },
+//	{ '3',	0x23 },
+//	{ '4',	0x24 },
+//	{ '5',	0x25 },
+//	{ '6',	0x26 },
+//	{ '7',	0x27 },
+//	{ '8',	0x28 },
+//	{ '9',	0x29 },
+//	{ ':',	0x2a },
+//	{ ';',	0x2b },
+	{ '<',	0x2c },
+	{ '=',	0x2d },
+	{ '>',	0x2e },
+	{ '?',	0x2f },
+	{ '@',	0x30 },
+//	{ 'A',	0x31 }
+//	     |       
+//	{ 'Z',	0x4a },
+	{ '[',	0x4b },
+//	{ '?',	0x4c }, // yen sign -> c2 a5
+	{ '^',	0x4d },
+	{ ']',	0x4e },
+	{ '_',	0x4f },
+//	{ '`',	0x50 }, // back quote
+//	{ 'a',	0x51 },
 //	     |
-//	{'Z',	0x4a},
-	{'[',	0x4b},
-//	{'?',	0x4c}, // yen sign -> c2 a5
-	{'^',	0x4d},
-	{']',	0x4e},
-	{'_',	0x4f},
-//	{'`',	0x50}, // back quote
-//	{'a',	0x51},
-//	     |
-//	{'z',	0x6a},
-	{'{',	0x6b},
-	{'|',	0x6c},
-	{'}',	0x6d},
-	{'~',	0x6e},
-	{0x7f,	0x6f}, //DEL, full block // end of ASCII - 0x10
-//  {'?',	0x70}, // large alpha
+//	{ 'z',	0x6a },
+	{ '{',	0x6b },
+	{ '|',	0x6c },
+	{ '}',	0x6d },
+	{ '~',	0x6e },
+	{ 0x7f,	0x6f }, //DEL, full block // end of ASCII - 0x10
+//	{ '?',  0x70 }, // large alpha
 //       |
-//	{'?',	0x7e}, // large omega
-//	{'?',	0x7f}, // large epsilon
-//	{'?',	0x80}, // pound sign -> c2 a3
-//	{'?',	0x81}, // paragraph -> c2 a7
-//	{'?',	0x82}, // large IE diacritic
-//	{'?',	0x83}, // large IR diacritic
-//	{'?',	0x84}, // integral sign
-//	{'?',	0x85}, // invert x
-//	{'?',	0x86}, // A accent dot
-//	{'?',	0x87}, // power of -1
-//	{'?',	0x88}, // power of 2 -> c2 b2
-//	{'?',	0x89}, // power of 3 -> c2 b3
-//	{'?',	0x8a}, // power of x
-//	{'?',	0x8b}, // 1/2 -> c2 bd
-//	{'?',	0x8c}, // 1/ 
-//	{'?',	0x8d}, // square root
-//	{'?',	0x8e}, // +/- -> c2 b1
-//	{'?',	0x8f}, // paragraph
-	{'\'',	0x90},
-//	{'?',	0x91}, // katakana
+//	{ '?',	0x7e }, // large omega
+//	{ '?',	0x7f }, // large epsilon
+//	{ '?',	0x80 }, // pound sign -> c2 a3
+//	{ '?',	0x81 }, // paragraph -> c2 a7
+//	{ '?',	0x82 }, // large IE diacritic
+//	{ '?',	0x83 }, // large IR diacritic
+//	{ '?',	0x84 }, // integral sign
+//	{ '?',	0x85 }, // invert x
+//	{ '?',	0x86 }, // A accent dot
+//	{ '?',	0x87 }, // power of -1
+//	{ '?',	0x88 }, // power of 2 -> c2 b2
+//	{ '?',	0x89 }, // power of 3 -> c2 b3
+//	{ '?',	0x8a }, // power of x
+//	{ '?',	0x8b }, // 1/2 -> c2 bd
+//	{ '?',	0x8c }, // 1/ 
+//	{ '?',	0x8d }, // square root
+//	{ '?',	0x8e }, // +/- -> c2 b1
+//	{ '?',	0x8f }, // paragraph
+	{ '\'',	0x90 },
+//	{ '?',	0x91 }, // katakana
 //	     |
-//	{'?',	0xce}, // katakana
-//	{'?',	0xcf}, // degree sign -> c2 b0
-//	{'?',	0xd0}, // arrow up
-//	{'?',	0xd1}, // arrow down
-//	{'?',	0xd2}, // arrow left
-//	{'?',	0xd3}, // arrow right
-//	{'?',	0xd4}, // arrow top left
-//	{'?',	0xd5}, // arrow top right
-//	{'?',	0xd6}, // arrow bottom right
-//	{'?',	0xd7}, // arrow bottom left
-//	{'?',	0xd8}, // left end measurement
-//	{'?',	0xd9}, // right end measurement
-//	{'?',	0xda}, // superscript mu
-//	{'?',	0xdb}, // inverted superscript mu
-//	{'?',	0xdc}, // fat <
-//	{'?',	0xdd}, // fat >
-//	{'?',	0xde}, // three dots up
-//	{'?',	0xdf}, // three dots down
-//	{'?',	0xe0}, // smaller or equal than
-//	{'?',	0xe1}, // greater or equal than
-//	{'?',	0xe2}, // unequal sign ->
-//	{'?',	0xe3}, // equal sign with dots
-//	{'?',	0xe4}, // two vertical bars
-//	{'?',	0xe5}, // single vertical bar
-//	{'?',	0xe6}, // inverted T
-//	{'?',	0xe7}, // infinite sign
-//	{'?',	0xe8}, // infinite sign open
-//	{'?',	0xe9}, // inverted tilde
-//	{'?',	0xea}, // AC symbol
-//	{'?',	0xeb}, // three horizontal lines
-//	{'?',	0xec}, // Ground symbol inverted
-//	{'?',	0xed}, // buzzer
-//	{'?',	0xee}, // collapsed 8
-//	{'?',	0xef}, // small 1
-//	{'?',	0xf0}, // small 2
-//	{'?',	0xf1}, // small 3
-//	{'?',	0xf2}, // small 4
-//	{'?',	0xf3}, // small 5
-//	{'?',	0xf4}, // small 6
-//	{'?',	0xf5}, // small 7
-//	{'?',	0xf6}, // small 8
-//	{'?',	0xf7}, // small 9
-//	{'?',	0xf8}, // small 10
-//	{'?',	0xf9}, // small 11
-//	{'?',	0xfa}, // small 12
-//	{'?',	0xfb}, // small 13
-//	{'?',	0xfc}, // small 14
-//	{'?',	0xfd}, // small 15
-//	{'?',	0xfe}, // small 16
-//	{'?',	0xff}, // space
+//	{ '?',	0xce }, // katakana
+//	{ '?',	0xcf }, // degree sign -> c2 b0
+//	{ '?',	0xd0 }, // arrow up
+//	{ '?',	0xd1 }, // arrow down
+//	{ '?',	0xd2 }, // arrow left
+//	{ '?',	0xd3 }, // arrow right
+//	{ '?',	0xd4 }, // arrow top left
+//	{ '?',	0xd5 }, // arrow top right
+//	{ '?',	0xd6 }, // arrow bottom right
+//	{ '?',	0xd7 }, // arrow bottom left
+//	{ '?',	0xd8 }, // left end measurement
+//	{ '?',	0xd9 }, // right end measurement
+//	{ '?',	0xda }, // superscript mu
+//	{ '?',	0xdb }, // inverted superscript mu
+//	{ '?',	0xdc }, // fat <
+//	{ '?',	0xdd }, // fat >
+//	{ '?',	0xde }, // three dots up
+//	{ '?',	0xdf }, // three dots down
+//	{ '?',	0xe0 }, // smaller or equal than
+//	{ '?',	0xe1 }, // greater or equal than
+//	{ '?',	0xe2 }, // unequal sign ->
+//	{ '?',	0xe3 }, // equal sign with dots
+//	{ '?',	0xe4 }, // two vertical bars
+//	{ '?',	0xe5 }, // single vertical bar
+//	{ '?',	0xe6 }, // inverted T
+//	{ '?',	0xe7 }, // infinite sign
+//	{ '?',	0xe8 }, // infinite sign open
+//	{ '?',	0xe9 }, // inverted tilde
+//	{ '?',	0xea }, // AC symbol
+//	{ '?',	0xeb }, // three horizontal lines
+//	{ '?',	0xec }, // Ground symbol inverted
+//	{ '?',	0xed }, // buzzer
+//	{ '?',	0xee }, // collapsed 8
+//	{ '?',	0xef }, // small 1
+//	{ '?',	0xf0 }, // small 2
+//	{ '?',	0xf1 }, // small 3
+//	{ '?',	0xf2 }, // small 4
+//	{ '?',	0xf3 }, // small 5
+//	{ '?',	0xf4 }, // small 6
+//	{ '?',	0xf5 }, // small 7
+//	{ '?',	0xf6 }, // small 8
+//	{ '?',	0xf7 }, // small 9
+//	{ '?',	0xf8 }, // small 10
+//	{ '?',	0xf9 }, // small 11
+//	{ '?',	0xfa }, // small 12
+//	{ '?',	0xfb }, // small 13
+//	{ '?',	0xfc }, // small 14
+//	{ '?',	0xfd }, // small 15
+//	{ '?',	0xfe }, // small 16
+//	{ '?',	0xff }, // space
 
 };
 #elif defined(CUBEREVO)
 special_char_t special2seg_12dotmatrix[] =
-{
-	{'-',   0x1d},
-	{'\'',  0x90},
-	{'.',   0x1e},
-	{' ',   0x10},
+{ // table is largely ASCII minus 0x10
+	{ '-',   0x1d },
+	{ '\'',  0x90 },
+	{ '.',   0x1e },
+	{ ' ',   0x10 },
 };
 #endif
-special_char_t special2seg_13grid[] =
-{
-	{'-',   0x00c0},
-	{'\'',  0x0004},
-	{'.',   0x4000},
-	{' ',   0x0000},
-};
 
 #if defined(CUBEREVO_250HD) \
  || defined(CUBEREVO_MINI_FTA)
@@ -532,10 +644,10 @@ static unsigned short num2seg_7seg[] =
 
 special_char_t special2seg_7seg[] =
 {
-	{'-',	0xbf},
-	{'_',	0xf7},
-	{'.',	0x7f},
-	{' ',	0xff},
+	{ '-',	0xbf },
+	{ '_',	0xf7 },
+	{ '.',	0x7f },
+	{ ' ',	0xff },
 };
 #endif
 
@@ -650,20 +762,20 @@ struct iconToInternal micomIcons[] =
 struct iconToInternal micom_14seg_Icons[] =
 {
 	/*------------------ SetIcon -------  msb   lsb   segment -----*/
-	{ "ICON_TIMER",      ICON_TIMER,      0x03, 0x00, 1},
-	{ "ICON_REC",        ICON_REC,        0x02, 0x00, 1},
-	{ "ICON_HD",         ICON_HD,         0x02, 0x04, 1},
-	{ "ICON_Play",       ICON_PLAY,       0x02, 0x01, 1},
-	{ "ICON_PAUSE",      ICON_PAUSE,      0x02, 0x02, 1},
-	{ "ICON_DOLBY",      ICON_DOLBY,      0x02, 0x03, 1},
-	{ "ICON_TIMESHIFT",  ICON_TIMESHIFT,  0x03, 0x01, 1},
+	{ "ICON_TIMER",      ICON_TIMER,      0x03, 0x00, 1 },
+	{ "ICON_REC",        ICON_REC,        0x02, 0x00, 1 },
+	{ "ICON_HD",         ICON_HD,         0x02, 0x04, 1 },
+	{ "ICON_Play",       ICON_PLAY,       0x02, 0x01, 1 },
+	{ "ICON_PAUSE",      ICON_PAUSE,      0x02, 0x02, 1 },
+	{ "ICON_DOLBY",      ICON_DOLBY,      0x02, 0x03, 1 },
+	{ "ICON_TIMESHIFT",  ICON_TIMESHIFT,  0x03, 0x01, 1 },
 };
 #endif
 /* End of character and icon definitions */
 
 /***************************************************************************************
  *
- * Code for play display on IPbox9000HD / CubeRevo.
+ * Code for play display on Late IPbox9000HD / CubeRevo.
  *
  */
 #if defined(CUBEREVO)
@@ -677,14 +789,14 @@ static int animationDie = 0;
 
 struct iconToInternal playIcons[cNumberSymbols] =
 {
-	{ "ICON_Play",      ICON_PLAY,       0x00, 0x00, 1},
-	{ "ICON_Play",      ICON_PLAY,       0x00, 0x02, 1},
-	{ "ICON_Play",      ICON_PLAY,       0x01, 0x01, 1},
-	{ "ICON_Play",      ICON_PLAY,       0x01, 0x03, 1},
-	{ "ICON_Play",      ICON_PLAY,       0x01, 0x04, 1},
-	{ "ICON_Play",      ICON_PLAY,       0x01, 0x02, 1},
-	{ "ICON_Play",      ICON_PLAY,       0x00, 0x03, 1},
-	{ "ICON_Play",      ICON_PLAY,       0x00, 0x01, 1},
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x00, 1 },
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x02, 1 },
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x01, 1 },
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x03, 1 },
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x04, 1 },
+	{ "ICON_Play",      ICON_PLAY,       0x01, 0x02, 1 },
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x03, 1 },
+	{ "ICON_Play",      ICON_PLAY,       0x00, 0x01, 1 },
 };
 
 static void animated_play(unsigned long data)
@@ -1025,7 +1137,7 @@ int micomSetIcon(int which, int on)
 	unsigned char buffer[5];
 	int  vLoop, res = 0;
 
-	if (front_seg_num == 13 || front_seg_num == 4) //no icons
+	if (front_seg_num == 13 || front_seg_num == 4) // no icons
 	{
 		return res;
 	}
@@ -1058,7 +1170,7 @@ int micomSetIcon(int which, int on)
 			break;
 		}
 	}
-#elif defined(CUBEREVO) // IPbox 9000HD, handle play icon
+#elif defined(CUBEREVO) // Late IPbox 9000HD, handle play icon
 	if ((which == ICON_PLAY) && (on))
 	{
 		/* display circle */
@@ -1207,7 +1319,7 @@ int micomSetStandby(char *time) //expected format: YYMMDDhhmm
 
 	dprintk(100, "%s >\n", __func__);
 
-//	res = micomWriteString("Standby", strlen("Standby"));
+//	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
 
 	/* set wakeup time */
 	res = micomSetWakeUpTime(time);
@@ -1235,7 +1347,7 @@ int micomReboot(void)
 
 	dprintk(100, "%s >\n", __func__);
 
-//	res = micomWriteString("Standby", strlen("Standby"));
+//	res = micomWriteString("Bye bye ...", strlen("Bye bye ..."));
 
 	memset(buffer, 0, sizeof(buffer));
 
@@ -1468,7 +1580,7 @@ int micomGetVersion(void)
 		front_seg_num    = 13;
 		num2seg          = num2seg_13grid;
 		Char2seg         = Char2seg_13grid;
-		LowerChar2seg    = NULL;
+		LowerChar2seg    = LowerChar2seg_13grid;
 		special2seg      = special2seg_13grid;
 		special2seg_size = ARRAY_SIZE(special2seg_13grid);
 	}
@@ -1636,17 +1748,17 @@ int micomWriteString(unsigned char *aBuf, int len)
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_3000HD)
-/* The 14 character front processor cannot display accented letters.
- * The following code traces for UTF8 sequences for these and
- * replaces them with the corresponding letter without any accent.
- * This is not perfect, but at least better than the old practice
- * of replacing them with spaces.
- */
+	/* The 14 character front processor cannot display accented letters.
+	 * The following code traces for UTF8 sequences for these and
+	 * replaces them with the corresponding letter without any accent.
+	 * This is not perfect, but at least better than the old practice
+	 * of replacing them with spaces.
+	 */
 	dprintk(50, "%s UTF8 text: [%s], len = %d\n", __func__, aBuf, len);
 	memset(bBuf, ' ', sizeof(bBuf));
 	j = 0;
 
-	// process aBuff byte by byte
+	// process aBuf byte by byte
 	for (i = 0; i < len; i++)
 	{
 		if (aBuf[i] == 0x5c) // handle backslash
@@ -1704,12 +1816,6 @@ int micomWriteString(unsigned char *aBuf, int len)
 					i++; //skip character
 				}
 			}
-//			else
-//			{
-//				sprintf(&bBuf[j], "%02x", aBuf[i - 1]);
-//				j += 2;
-//				bBuf[j] = (aBuf[i] & 0x3f) | 0x40;
-//			}
 		}
 		else
 		{
@@ -1737,6 +1843,104 @@ int micomWriteString(unsigned char *aBuf, int len)
 	bBuf[len] = '\0'; // terminate string
 	memcpy(aBuf, bBuf, len);
 	dprintk(50, "%s Non-UTF8 text: [%s], len = %d\n", __func__, bBuf, len);
+#elif defined(CUBEREVO)
+	if (front_seg_num == 13)
+	{
+		/* The 13 character front processor cannot display accented letters.
+		 * The following routine traces for UTF8 sequences for these and
+		 * replaces them with the corresponding letter without any accent.
+		 * This is not perfect, but at least better than the old practice
+		 * of replacing them with spaces.
+		 */
+		dprintk(50, "%s UTF8 text: [%s], len = %d\n", __func__, aBuf, len);
+		memset(bBuf, ' ', sizeof(bBuf));
+		j = 0;
+
+		// process aBuf byte by byte
+		for (i = 0; i < len; i++)
+		{
+			if (aBuf[i] < 0x80)
+			{
+				bBuf[j] = aBuf[i];
+				j++;
+			}
+			else if (aBuf[i] < 0xd0) // if between 0x80 and 0xcf
+			{
+				switch (aBuf[i])
+				{
+					case 0xc2:
+					{
+						UTF_Char_Table = UTF_C2;
+						break;
+					}
+					case 0xc3:
+					{
+						UTF_Char_Table = UTF_C3;
+						break;
+					}
+					case 0xc4:
+					{
+						UTF_Char_Table = UTF_C4;
+						break;
+					}
+					case 0xc5:
+					{
+						UTF_Char_Table = UTF_C5;
+						break;
+					}
+					default:
+					{
+						dprintk(1, "%s Unsupported extension 0x%02x found\n", __func__, aBuf[i]);
+						UTF_Char_Table = NULL;
+					}
+				}
+				i++; // skip lead in byte
+				if (UTF_Char_Table) // if an applicable table there
+				{
+					if (UTF_Char_Table[aBuf[i] & 0x3f] != 0) // if character is printable
+					{
+						bBuf[j] = UTF_Char_Table[aBuf[i] & 0x3f]; // get character from table
+						dprintk(50, "%s character from table: %c\n", __func__, bBuf[j]);
+						j++;
+					}
+					else
+					{
+						dprintk(1, "%s UTF8 character is unprintable, ignore.\n", __func__);
+						i++; //skip character
+					}
+				}
+			}
+			else
+			{
+				if (aBuf[i] < 0xf0) // if between 0xe0 and 0xef
+				{
+					i += 2; // skip 2 bytes
+				}
+				else if (aBuf[i] < 0xf8) // if between 0xf0 and 0xf7
+				{
+					i += 3; // skip 3 bytes
+				}
+				else if (aBuf[i] < 0xfc) // if between 0xf8 and 0xfb
+				{
+					i += 4; // skip 4 bytes
+				}
+				else // if between 0xfc and 0xff
+				{
+					i += 5; // skip 5 bytes
+				}
+				bBuf[j] = 0x20;  // else put a space
+				j++;
+			}
+		}		
+		len = j;
+		bBuf[len] = '\0'; // terminate string
+		memcpy(aBuf, bBuf, len);
+		dprintk(50, "%s Non-UTF8 text: [%s], len = %d\n", __func__, bBuf, len);
+	}
+	else 
+	{
+		// TODO: insert UTF8 processing for 12seg
+	}
 #endif
 	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = VFD_SETCLEARTEXT;
@@ -1811,7 +2015,7 @@ int micomWriteString(unsigned char *aBuf, int len)
 			}
 			case 'a' ... 'z': // lower case letter
 			{
-				if (LowerChar2seg == NULL) // and no table defined
+				if (LowerChar2seg == NULL) // and no table defined (LED models)
 				{
 					data = Char2seg[ch - 'a']; // get uppercase letter from table
 				}
@@ -1842,7 +2046,6 @@ int micomWriteString(unsigned char *aBuf, int len)
 				}
 				else
 				{
-					// insert UTF-8 support here
 					dprintk(1, "%s ignore unprintable character \'%c\'\n", __func__, ch);
 					data = space; // and print a space
 				}
@@ -1912,7 +2115,7 @@ int micom_init_func(void)
 	res |= micomSetBrightness(7);
 	res |= micomSetTimeMode(1);    // 24h mode
 	res |= micomSetDisplayTime(0); // mode = display text
-//	res |= micomWriteString("SH4", strlen("SH4"));
+//	res |= micomWriteString("T.Ducktales", strlen("T.Ducktales"));
 
 	/* disable all icons at startup */
 #if defined(CUBEREVO_MINI) \
