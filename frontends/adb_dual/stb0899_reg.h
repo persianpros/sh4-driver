@@ -1,102 +1,102 @@
 /*
-	STB0899 Multistandard Frontend driver
-	Copyright (C) Manu Abraham (abraham.manu@gmail.com)
-
-	Copyright (C) ST Microelectronics
-
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+ * STB0899 Multistandard Frontend driver
+ * Copyright (C) Manu Abraham (abraham.manu@gmail.com)
+ *
+ * Copyright (C) ST Microelectronics
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #ifndef __STB0899_REG_H
 #define __STB0899_REG_H
 
 /*	S1	*/
-#define STB0899_DEV_ID				0xf000
-#define STB0899_CHIP_ID				(0x0f << 4)
-#define STB0899_OFFST_CHIP_ID			4
-#define STB0899_WIDTH_CHIP_ID			4
-#define STB0899_CHIP_REL			(0x0f << 0)
-#define STB0899_OFFST_CHIP_REL			0
-#define STB0899_WIDTH_CHIP_REL			4
+#define STB0899_DEV_ID                     0xf000
+#define STB0899_CHIP_ID                    (0x0f << 4)
+#define STB0899_OFFST_CHIP_ID              4
+#define STB0899_WIDTH_CHIP_ID              4
+#define STB0899_CHIP_REL                   (0x0f << 0)
+#define STB0899_OFFST_CHIP_REL             0
+#define STB0899_WIDTH_CHIP_REL             4
 
-#define STB0899_DEMOD				0xf40e
-#define STB0899_MODECOEFF			(0x01 << 0)
-#define STB0899_OFFST_MODECOEFF			0
-#define STB0899_WIDTH_MODECOEFF			1
+#define STB0899_DEMOD                      0xf40e
+#define STB0899_MODECOEFF                  (0x01 << 0)
+#define STB0899_OFFST_MODECOEFF            0
+#define STB0899_WIDTH_MODECOEFF            1
 
-#define STB0899_RCOMPC				0xf410
-#define STB0899_AGC1CN				0xf412
-#define STB0899_AGC1REF				0xf413
-#define STB0899_RTC				0xf417
-#define STB0899_TMGCFG				0xf418
-#define STB0899_AGC2REF				0xf419
-#define STB0899_TLSR				0xf41a
+#define STB0899_RCOMPC                     0xf410
+#define STB0899_AGC1CN                     0xf412
+#define STB0899_AGC1REF                    0xf413
+#define STB0899_RTC                        0xf417
+#define STB0899_TMGCFG                     0xf418
+#define STB0899_AGC2REF                    0xf419
+#define STB0899_TLSR                       0xf41a
 
-#define STB0899_CFD				0xf41b
-#define STB0899_CFD_ON				(0x01 << 7)
-#define STB0899_OFFST_CFD_ON			7
-#define STB0899_WIDTH_CFD_ON			1
+#define STB0899_CFD                        0xf41b
+#define STB0899_CFD_ON                     (0x01 << 7)
+#define STB0899_OFFST_CFD_ON               7
+#define STB0899_WIDTH_CFD_ON               1
 
-#define STB0899_ACLC				0xf41c
+#define STB0899_ACLC                       0xf41c
 
-#define STB0899_BCLC				0xf41d
-#define STB0899_OFFST_ALGO			6
-#define STB0899_WIDTH_ALGO_QPSK2		2
-#define STB0899_ALGO_QPSK2			(2 << 6)
-#define STB0899_ALGO_QPSK1			(1 << 6)
-#define STB0899_ALGO_BPSK			(0 << 6)
-#define STB0899_OFFST_BETA			0
-#define STB0899_WIDTH_BETA			6
+#define STB0899_BCLC                       0xf41d
+#define STB0899_OFFST_ALGO                 6
+#define STB0899_WIDTH_ALGO_QPSK2           2
+#define STB0899_ALGO_QPSK2                 (2 << 6)
+#define STB0899_ALGO_QPSK1                 (1 << 6)
+#define STB0899_ALGO_BPSK                  (0 << 6)
+#define STB0899_OFFST_BETA                 0
+#define STB0899_WIDTH_BETA                 6
 
-#define STB0899_EQON				0xf41e
-#define STB0899_LDT				0xf41f
-#define STB0899_LDT2				0xf420
-#define STB0899_EQUALREF			0xf425
-#define STB0899_TMGRAMP				0xf426
-#define STB0899_TMGTHD				0xf427
-#define STB0899_IDCCOMP				0xf428
-#define STB0899_QDCCOMP				0xf429
-#define STB0899_POWERI				0xf42a
-#define STB0899_POWERQ				0xf42b
-#define STB0899_RCOMP				0xf42c
+#define STB0899_EQON                       0xf41e
+#define STB0899_LDT                        0xf41f
+#define STB0899_LDT2                       0xf420
+#define STB0899_EQUALREF                   0xf425
+#define STB0899_TMGRAMP                    0xf426
+#define STB0899_TMGTHD                     0xf427
+#define STB0899_IDCCOMP                    0xf428
+#define STB0899_QDCCOMP                    0xf429
+#define STB0899_POWERI                     0xf42a
+#define STB0899_POWERQ                     0xf42b
+#define STB0899_RCOMP                      0xf42c
 
-#define STB0899_AGCIQIN				0xf42e
-#define STB0899_AGCIQVALUE			(0xff << 0)
-#define STB0899_OFFST_AGCIQVALUE		0
-#define STB0899_WIDTH_AGCIQVALUE		8
+#define STB0899_AGCIQIN                    0xf42e
+#define STB0899_AGCIQVALUE                 (0xff << 0)
+#define STB0899_OFFST_AGCIQVALUE           0
+#define STB0899_WIDTH_AGCIQVALUE           8
 
-#define STB0899_AGC2I1				0xf436
-#define STB0899_AGC2I2				0xf437
+#define STB0899_AGC2I1                     0xf436
+#define STB0899_AGC2I2                     0xf437
 
-#define STB0899_TLIR				0xf438
-#define STB0899_TLIR_TMG_LOCK_IND		(0xff << 0)
-#define STB0899_OFFST_TLIR_TMG_LOCK_IND		0
-#define STB0899_WIDTH_TLIR_TMG_LOCK_IND		8
+#define STB0899_TLIR                       0xf438
+#define STB0899_TLIR_TMG_LOCK_IND          (0xff << 0)
+#define STB0899_OFFST_TLIR_TMG_LOCK_IND    0
+#define STB0899_WIDTH_TLIR_TMG_LOCK_IND    8
 
-#define STB0899_RTF				0xf439
-#define STB0899_RTF_TIMING_LOOP_FREQ		(0xff << 0)
-#define STB0899_OFFST_RTF_TIMING_LOOP_FREQ	0
-#define STB0899_WIDTH_RTF_TIMING_LOOP_FREQ	8
+#define STB0899_RTF                        0xf439
+#define STB0899_RTF_TIMING_LOOP_FREQ       (0xff << 0)
+#define STB0899_OFFST_RTF_TIMING_LOOP_FREQ 0
+#define STB0899_WIDTH_RTF_TIMING_LOOP_FREQ 8
 
-#define STB0899_DSTATUS				0xf43a
-#define STB0899_CARRIER_FOUND			(0x01 << 7)
-#define STB0899_OFFST_CARRIER_FOUND		7
-#define STB0899_WIDTH_CARRIER_FOUND		1
-#define STB0899_TMG_LOCK			(0x01 << 6)
-#define STB0899_OFFST_TMG_LOCK			6
-#define STB0899_WIDTH_TMG_LOCK			1
+#define STB0899_DSTATUS                    0xf43a
+#define STB0899_CARRIER_FOUND              (0x01 << 7)
+#define STB0899_OFFST_CARRIER_FOUND        7
+#define STB0899_WIDTH_CARRIER_FOUND        1
+#define STB0899_TMG_LOCK                   (0x01 << 6)
+#define STB0899_OFFST_TMG_LOCK             6
+#define STB0899_WIDTH_TMG_LOCK             1
 #define STB0899_DEMOD_LOCK			(0x01 << 5)
 #define STB0899_OFFST_DEMOD_LOCK		5
 #define STB0899_WIDTH_DEMOD_LOCK		1

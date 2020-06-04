@@ -2,7 +2,6 @@
 #define __CORE_H__
 
 extern short paramDebug;
-#define TAGDEBUG "[adb_dual] "
 
 #ifndef dprintk
 #define dprintk(level, x...) do \
@@ -27,9 +26,9 @@ extern short paramDebug;
 #include <linux/mutex.h>
 #include <linux/version.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
-#  include <linux/stpio.h>
+#include <linux/stpio.h>
 #else
-#  include <linux/stm/pio.h>
+#include <linux/stm/pio.h>
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
@@ -37,7 +36,7 @@ extern short paramDebug;
 #include <linux/mutex.h>
 #endif
 
-#define MAX_DVB_ADAPTERS 4
+#define MAX_DVB_ADAPTERS       4
 #define MAX_TUNERS_PER_ADAPTER 4
 
 struct core_config
@@ -65,7 +64,7 @@ struct fe_core_state
 struct core_info
 {
 	char *name;
-	int type;
+	int  type;
 };
 
 /* place to store all the necessary device information */
@@ -105,9 +104,8 @@ struct core
 
 	spinlock_t            debilock;
 
-	struct dvb_adapter 	  *dvb_adapter;
-	struct dvb_frontend	  *frontend[MAX_TUNERS_PER_ADAPTER];
-
+	struct dvb_adapter    *dvb_adapter;
+	struct dvb_frontend   *frontend[MAX_TUNERS_PER_ADAPTER];
 	int                   (*read_fe_status)(struct dvb_frontend *fe, fe_status_t *status);
 	int                   fe_synced;
 

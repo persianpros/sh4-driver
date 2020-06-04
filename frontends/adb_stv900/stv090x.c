@@ -4,8 +4,10 @@
  *
  * Copyright (C) ST Microelectronics
  *
- * Version for:
- * ADB ITI-5800SX BZZB; tuner = STB6100
+ * Version for: ADB ITI-5800SX BZZB
+ *
+ * Tuners are two STM STB6100's, directly connected to the I2C bus.
+ * LNB power controller is an Intersil/Renesas ISL6422
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,22 +16,35 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+ *
+ *************************************************************************
+ *
+ * Changes
+ *
+ * Date     By              Description
+ * -----------------------------------------------------------------------
+ * 20?????? STM             Original generic version.
+ * 201????? B4T/Freebox?    Adpated for use on ADB ITI-5800SX.
+ * 20200505 Audioniek       Debug output via standard dprintk
+ *                          with paramDebug.
+ * 20200513 Audioniek       Fix PWM DiSEqC.
+ *
+ *************************************************************************/
 #if !defined(ADB_BOX)
 #warning: Wrong receiver model!
 #endif
 
-#include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/string.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/string.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
@@ -44,16 +59,663 @@
 #include "stv090x_priv.h"
 #include "core.h"
 
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[stv0900] "
+
+// Defines for ISL6422 LNB power controller >?<
+#define ISL6422_SR1     0x00  // register address
+#define ISL6422_SR2     0x20  // register address
+#define ISL6422_SR3     0x40  // register address
+#define ISL6422_SR4     0x60  // register address
+#define ISL6422_SR5     0x80  // register address
+#define ISL6422_SR6     0xA0  // register address
+#define ISL6422_SR7     0xC0  // register address
+#define ISL6422_SR8     0xE0  // register address
+
+/* SR1  Status register, tuner 1 */
+#define ISL6422_OTF     0x10  // Over tempature (RO)
+#define ISL6422_CABF    0x08  // Cable fault (RO)
+#define ISL6422_OUVF    0x04  // Over and Under Voltage Fault status (RO)
+#define ISL6422_OLF     0x02  // Over Load Fault status (RO)
+#define ISL6422_BCF     0x01  // Backward Current Fault (RO)
+
+/* SR2  Tone register, tuner 1 */
+#define ISL6422_ENT     0x10  // enable tone, modulation: 0=EXTM1 pin, 1=on
+#define ISL6422_MSEL    0x08  // 1 = external 22kHz, 0 = internal
+#define ISL6422_TTH     0x04  // Decoder Tx threshold, 1 = 400mV min, 0 = 200mV max.
+
+/* SR3  Command register, tuner 1 */
+#define ISL6422_DCL     0x10  // Dynamic current limit (1=off)
+#define ISL6422_VSPEN   0x08  // VSPEN pin enable (0=disabled)
+#define ISL6422_IOUT800 0x07  // Iout max
+#define ISL6422_IOUT635 0x06
+#define ISL6422_IOUT515 0x05
+#define ISL6422_IOUT350 0x04
+#define ISL6422_IOUT275 0x00
+
+/* SR4  Control register, tuner 1 */
+#define ISL6422_EN      0x10  // PWM and Linear for channel 1 (0 = disabled, voltage off)
+#define ISL6422_VTOP    0x02  // These two bits set
+#define ISL6422_VBOT    0x01  // LNB voltage as follows:
+#define ISL6422_13V     0x00
+#define ISL6422_14V     0x01
+#define ISL6422_18V     0x02
+#define ISL6422_19V     0x03
+
+#if 0  // Tuner 2 registers 5 through 8 are the same as for tuner 1:
+/* SR5  Status register, tuner 2 */
+#define ISL6422_CABF2   0x08  // Cable fault (RO)
+#define ISL6422_OUVF2   0x04  // Over and Under Voltage Fault status (RO)
+#define ISL6422_OLF2    0x02  // Over Load Fault status (RO)
+#define ISL6422_BCF2    0x01  // Backward Current Fault (RO)
+
+/* SR6  Tone register, tuner 2 */
+#define ISL6422_ENT2    0x10  // enable tone, modulation: 0=EXTM2 pin, 1=on
+#define ISL6422_MSEL2   0x08  // 1 = external 22kHz, 0 = internal
+#define ISL6422_TTH2    0x04  // Decoder Tx threshold, 1 = 400mV min, 0 = 200mV max.
+
+/* SR7  Command register, tuner 2 */
+#define ISL6422_DCL2    0x10  // Dynamic current limit (1=off)
+#define ISL6422_VSPEN2  0x08  // VSPEN pin enable (0=disabled)
+#define ISL6422_IOUT800 0x07  // Iout max
+#define ISL6422_IOUT635 0x06
+#define ISL6422_IOUT515 0x05
+#define ISL6422_IOUT350 0x04
+#define ISL6422_IOUT275 0x00
+
+/* SR8  Control register, tuner 2 */
+#define ISL6422_EN2     0x10  // PWM and Linear for channel 1 (0 = disabled, voltage off)
+#define ISL6422_VTOP2   0x02  // These two bits set
+#define ISL6422_VBOT2   0x01  // LNB voltage as follows:
+#define ISL6422_13V2    0x00
+#define ISL6422_14V2    0x01
+#define ISL6422_18V2    0x02
+#define ISL6422_19V2    0x03
+#endif
+
+//static unsigned char isl6405_init_sr1 = 0;
+//static unsigned char isl6405_vol_sr1 = 0;
+//static unsigned char isl6405_tone_sr1 = 0;
+
+//static unsigned char isl6405_init_sr2 = 0;
+//static unsigned char isl6405_vol_sr2 = 0;
+//static unsigned char isl6405_tone_sr2 = 0;
+
+// PWM DiSEqC
+static struct stpio_pin *pio_diseqrx1;  // not used?
+static struct stpio_pin *pio_diseqrx2;  // not used?
+
 static unsigned int test = 0;
 static unsigned int verbose = 0;
 
 static unsigned char bzzb_init = 0;
 
-static struct stpio_pin *pio_diseqrx1;
-static struct stpio_pin *pio_diseqrx2;
-
 struct mutex demod_lock;
 struct mutex tuner_lock;
+
+/****************************************************
+ *
+ * DiSEqC PWM by freebox@lamerek.com
+ *
+ * Debugged and partially rewritten, as timing
+ * was seriously off.
+ *
+ */
+unsigned long pwm_registers;
+
+#define PWM0_VAL         ( pwm_registers + 0x00 )
+#define PWM1_VAL         ( pwm_registers + 0x04 )
+#define PWM0_CPT_VAL     ( pwm_registers + 0x10 )
+#define PWM1_CPT_VAL     ( pwm_registers + 0x14 )
+#define PWM0_CMP_VAL     ( pwm_registers + 0x20 )
+#define PWM1_CMP_VAL     ( pwm_registers + 0x24 )
+#define PWM0_CPT_EDGE    ( pwm_registers + 0x30 )
+#define PWM1_CPT_EDGE    ( pwm_registers + 0x34 )
+#define PWM0_CMP_OUT_VAL ( pwm_registers + 0x40 )
+#define PWM1_CMP_OUT_VAL ( pwm_registers + 0x44 )
+#define PWM_CTRL         ( pwm_registers + 0x50 )
+#define PWM_INT_EN       ( pwm_registers + 0x54 )
+#define PWM_INT_STA      ( pwm_registers + 0x58 )
+#define PWM_INT_ACK      ( pwm_registers + 0x5C )
+#define PWM_CNT PWM      ( pwm_registers + 0x60 )
+#define PWM_CPT_CMP_CNT  ( pwm_registers + 0x64 )
+#define PWM_CTRL_PWM_EN  0x200
+#define DISEQC_BITS      276  // maximum number bits to send (8 bytes), includes room for 2x 15ms wait time
+#define DISEQC_SILENCE   1    // set to 30 for local inserted DiSEqC silences, to 1 for external
+
+struct stpio_pin *pin_tx_diseqc1;  // 22kHz modulation pin for tuner 1 (PIO 5.5) 
+struct stpio_pin *pin_tx_diseqc2;  // 22kHz modulation pin for tuner 2 (PIO 2.5) 
+
+static volatile unsigned char pwm_diseqc_buf1[276];
+static volatile unsigned char pwm_diseqc_buf1_len = 0;
+static volatile unsigned char pwm_diseqc_buf1_pos = 0;
+
+static volatile unsigned char pwm_diseqc_buf2[276];
+static volatile unsigned char pwm_diseqc_buf2_len = 0;
+static volatile unsigned char pwm_diseqc_buf2_pos = 0;
+
+/*******************************************************
+ *
+ * PWM DiSEqC interrupt handler
+ *
+ * Send one bit from either DiSEqC buffer to the tuners.
+ *
+ * Interrupt occurs once every 500us, the time for one
+ * bit to last (equals about 9 22kHz cycles).
+ */
+static irqreturn_t pwm_diseqc_irq(int irq, void *dev_id)
+{
+	writel(0x01, PWM_INT_ACK);
+
+	if (pwm_diseqc_buf1_len == 0)
+	{
+		stpio_set_pin(pin_tx_diseqc1, 0);
+	}
+	if (pwm_diseqc_buf2_len == 0)
+	{
+		stpio_set_pin(pin_tx_diseqc2, 0);
+	}
+	if ((pwm_diseqc_buf1_len == 0)
+	&&  (pwm_diseqc_buf2_len == 0))
+	{
+		writel(0x00, PWM_INT_EN);
+		return IRQ_HANDLED;
+	}
+	if (pwm_diseqc_buf1_len > 0)
+	{
+		if (pwm_diseqc_buf1[pwm_diseqc_buf1_pos] == 1)
+		{
+			stpio_set_pin(pin_tx_diseqc1, 1);
+		}
+		else
+		{
+			stpio_set_pin(pin_tx_diseqc1, 0);
+		}
+		pwm_diseqc_buf1_pos++;
+		pwm_diseqc_buf1_len--;
+	}
+	if (pwm_diseqc_buf2_len > 0)
+	{
+		if (pwm_diseqc_buf2[pwm_diseqc_buf2_pos] == 1)
+		{
+			stpio_set_pin(pin_tx_diseqc2, 1);
+		}
+		else
+		{
+			stpio_set_pin(pin_tx_diseqc2, 0);
+		}
+		pwm_diseqc_buf2_pos++;
+		pwm_diseqc_buf2_len--;
+	}
+	return IRQ_HANDLED;
+}
+
+/*******************************************************
+ *
+ * Wait for DiSEqC idle, tuner 1.
+ *
+ */
+static int pwm_wait_diseqc1_idle(int timeout)
+{
+	unsigned long start = jiffies;
+
+	dprintk(200, "%s >\n", __func__);
+	while (1)
+	{
+		if (pwm_diseqc_buf1_len == 0)
+		{
+			break;
+		}
+		if (jiffies - start > timeout)
+		{
+			return -ETIMEDOUT;
+		}
+		msleep(1);
+	}
+	return 0;
+}
+
+/*******************************************************
+ *
+ * Wait for DiSEqC idle, tuner 2.
+ *
+ */
+static int pwm_wait_diseqc2_idle(int timeout)
+{
+	unsigned long start = jiffies;
+
+	dprintk(200, "%s >\n", __func__);
+	while (1)
+	{
+		if (pwm_diseqc_buf2_len == 0)
+		{
+			break;
+		}
+		if (jiffies - start > timeout)
+		{
+			return -ETIMEDOUT;
+		}
+		msleep(1);
+	}
+	return 0;
+}
+
+/*******************************************************
+ *
+ * Send tone A or B, tuner 1.
+ *
+ */
+static int pwm_send_diseqc1_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t burst)
+{
+	int i;
+
+	dprintk(200, "%s >\n", __func__);
+
+	if (pwm_wait_diseqc1_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	pwm_diseqc_buf1_pos = 1;
+	pwm_diseqc_buf1_len = 0;
+
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf1_len++;
+		pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
+	}
+
+	switch (burst)
+	{
+		case SEC_MINI_A:
+		{
+			dprintk(20, "%s Tone = A (tuner 1)\n", __func__);
+			for (i = 0; i < 8; i++)
+			{
+				pwm_diseqc_buf1_len++;
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
+				pwm_diseqc_buf1_len++;
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
+				pwm_diseqc_buf1_len++;
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
+			}
+			pwm_diseqc_buf1_len++;
+			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
+			break;
+		}
+		case SEC_MINI_B:
+		{
+			dprintk(20, "%s Tone = B (tuner 1)\n", __func__);
+			for (i = 0; i < 8; i++)
+			{
+				pwm_diseqc_buf1_len++;
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
+				pwm_diseqc_buf1_len++;
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
+				pwm_diseqc_buf1_len++;
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
+			}
+			pwm_diseqc_buf1_len++;
+			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
+			break;
+		}
+	}
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf1_len++;
+		pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
+	}
+
+	writel(0x01, PWM_INT_EN);  // enable PWM interrupt
+
+	if (pwm_wait_diseqc1_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	dprintk(200, "%s < (0)\n", __func__);
+	return 0;
+}
+
+/*******************************************************
+ *
+ * Send tone A or B, tuner 2.
+ *
+ */
+static int pwm_send_diseqc2_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t burst)
+{
+	int i;
+
+	dprintk(200, "%s >\n", __func__);
+
+	if (pwm_wait_diseqc2_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	pwm_diseqc_buf2_pos = 1;
+	pwm_diseqc_buf2_len = 0;
+
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf2_len++;
+		pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+	}
+
+	switch (burst)
+	{
+		case SEC_MINI_A:
+		{
+			dprintk(20, "%s Tone = A (tuner 2)\n", __func__);
+			for (i = 0; i < 8; i++)
+			{
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+			}
+			pwm_diseqc_buf2_len++;
+			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+			break;
+		}
+		case SEC_MINI_B:
+		{
+			dprintk(20, "%s Tone = B (tuner 2)\n", __func__);
+			for (i = 0; i < 8; i++)
+			{
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+			}
+			pwm_diseqc_buf2_len++;
+			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+			break;
+		}
+	}
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf2_len++;
+		pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+	}
+
+	writel(0x01, PWM_INT_EN);  // enable PWM interrupt
+
+	if (pwm_wait_diseqc2_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	dprintk(200, "%s < (0)\n", __func__);
+	return 0;
+}
+
+/*******************************************************
+ *
+ * Send a DiSEqC message to tuner 1.
+ *
+ */
+static int pwm_diseqc1_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *m)
+{
+	int i, j;
+	unsigned char byte, parity;
+
+	dprintk(200, "%s > msg_len = %x\n", __func__, m->msg_len);
+
+	if (pwm_wait_diseqc1_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	pwm_diseqc_buf1_pos = 1;
+	pwm_diseqc_buf1_len = 0;
+
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf1_len++;
+		pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
+	}
+
+	for (j = 0; j < m->msg_len; j++)
+	{
+		byte = m->msg[j];
+		parity = 0;
+
+ 		dprintk(20, "Tuner A: Send DiSEqC byte 0x%02x\n", m->msg[j]);
+
+		for (i = 0; i < 8; i++)  // bit counter
+		{
+			pwm_diseqc_buf1_len++;
+			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;  // start bit
+
+			if ((byte & 0x80) == 0x80)
+			{
+				// DiSEqC bit is 1
+				parity++;  // adapt parity
+				pwm_diseqc_buf1_len++;  // bit count
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;  // set a zero
+			}
+			else
+			{
+				// DiSEqC bit is 0
+				pwm_diseqc_buf1_len++;  // bit count
+				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;  // set a one
+			}
+			pwm_diseqc_buf1_len++;
+			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;  // stop bit
+			byte = byte << 1;  // get next bit
+		}
+
+		// send parity bit
+		pwm_diseqc_buf1_len++;  // bit count
+		pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;  // start bit
+		if ((parity & 1) == 1)
+		{
+			// parity is odd
+			pwm_diseqc_buf1_len++;
+			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
+		}
+		else
+		{
+			// parity is even
+			pwm_diseqc_buf1_len++;
+			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
+		}
+		pwm_diseqc_buf1_len++;  // bit count
+		pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;  // stop bit
+	}
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf1_len++;
+		pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
+	}
+
+	writel(0x01, PWM_INT_EN);  // enable DiSEqC interrupt
+
+	if (pwm_wait_diseqc1_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	dprintk(200, "%s < (0)\n", __func__);
+	return 0;
+}
+
+/*******************************************************
+ *
+ * Send a DiSEqC message to tuner 2.
+ *
+ */
+static int pwm_diseqc2_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *m)
+{
+	int i, j;
+	unsigned char byte, parity;
+
+	dprintk(200, "%s > msg_len = %x\n", __func__, m->msg_len);
+
+	if (pwm_wait_diseqc2_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	pwm_diseqc_buf2_pos = 1;
+	pwm_diseqc_buf2_len = 0;
+
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf2_len++;
+		pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+	}
+
+	for (j = 0; j < m->msg_len; j++)
+	{
+		byte = m->msg[j];
+		parity = 0;
+
+ 		dprintk(20, "Tuner B: Send DiSEqC byte 0x%02x\n", m->msg[j]);
+		for (i = 0; i < 8; i++)
+		{
+			pwm_diseqc_buf2_len++;
+			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;  // start bit
+			if ((byte & 0x80) == 0x80)
+			{
+				// DiSEqC bit is 1
+				parity++;
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+			}
+			else
+			{
+				// DiSEqC bit is 0
+				pwm_diseqc_buf2_len++;
+				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+			}
+			pwm_diseqc_buf2_len++;
+			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0; // stop bit
+			byte = byte << 1;
+		}
+
+		// send parity bit
+		pwm_diseqc_buf2_len++;
+		pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+		if ((parity & 1) == 1)
+		{
+			// parity is odd
+			pwm_diseqc_buf2_len++;
+			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
+		}
+		else
+		{
+			// parity is even
+			pwm_diseqc_buf2_len++;
+			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+		}
+		pwm_diseqc_buf2_len++;
+		pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+	}
+//	Send a silence of DISEQC_SILENCE/2 ms in
+//  the form of DISEQC_SILENCE zero(es).
+	for (i = 0; i < DISEQC_SILENCE; i++)
+	{
+		pwm_diseqc_buf2_len++;
+		pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
+	}
+
+	writel(0x01, PWM_INT_EN);
+
+	if (pwm_wait_diseqc2_idle(100) < 0)
+	{
+		dprintk(1, "%s < (timeout)\n", __func__);
+		return -ETIMEDOUT;
+	}
+	dprintk(200, "%s < (0)\n", __func__);
+	return 0;
+}
+
+/*******************************************************
+ *
+ * Initialize PWM DiSEqC.
+ *
+ */
+int pwm_diseqc_init(void)
+{
+	int reg;
+
+	dprintk(100, "PWM DiSEqC Init\n");
+	pwm_registers = (unsigned long)ioremap(0x18010000, 0x100);  // STM PWM
+
+	pin_tx_diseqc1 = stpio_request_pin(5, 5, "pin_tx_diseqc1", STPIO_OUT);  // connected to ISL6422 EXTM1
+	if (pin_tx_diseqc1 == NULL)
+	{
+		dprintk(1, "%s ERROR: Request PIO pin(5,5) failed\n", __func__);
+		goto err;
+	}
+	stpio_set_pin(pin_tx_diseqc1, 0);
+
+	pin_tx_diseqc2 = stpio_request_pin(2, 5, "pin_tx_diseqc2", STPIO_OUT);  // connected to ISL6422 EXTM2
+	if (pin_tx_diseqc2 == NULL)
+	{
+		dprintk(1, "%s ERROR: Request PIO pin(2,5) failed\n", __func__);
+		goto err;
+	}
+	stpio_set_pin(pin_tx_diseqc2, 0);
+
+	dprintk(50, "PWM DiSEqC PIO pins allocated and set\n");
+
+	if (request_irq(126, pwm_diseqc_irq, IRQF_DISABLED, "DiSEqC_PWM", NULL))
+	{
+		dprintk(1, "%s ERROR: Request IRQ PWM failed\n");
+		goto err;
+	}
+	dprintk(50, "PWM DiSEqC interrupt request successful\n");
+
+	// Calculate PWM_CTRL register value (for 500 us periodic interrupt)
+	reg = 143;  // CAUTION: determined emperically
+	reg = (reg & 0x0f) + ((reg & 0xf0) << (11 - 4)) + PWM_CTRL_PWM_EN;
+	dprintk(150, "Calculated PWM_CTRL value: 0x%04x\n", reg);
+	writel(reg, PWM_CTRL);  // generating an interrupt every 500us
+	writel(0x00, PWM0_VAL);
+	writel(0x00, PWM_INT_EN);
+
+#if DIV_FACTOR > 0
+	div = 0;  // initialize interrupt counter
+#endif
+	pwm_diseqc_buf1_pos = 1;
+	pwm_diseqc_buf1_len = 0;
+
+	pwm_diseqc_buf2_pos = 1;
+	pwm_diseqc_buf2_len = 0;
+
+	dprintk(100, "PWM DiSEqC Init completed succesfully\n");
+	return 0;
+
+err:
+	iounmap((void *)pwm_registers);
+	return -ENODEV;
+}
+// end of DiSEqC code
+
+// ---------------------------------------------------------------
 
 /* internal params node */
 struct stv090x_dev
@@ -787,17 +1449,6 @@ static struct stv090x_long_frame_crloop	stv090x_s2_lowqpsk_crl_cut30[] =
 	{ STV090x_QPSK_25,  0x1c, 0x3c,  0x1b, 0x3c,  0x3a,  0x1c,   0x3a,  0x3b,   0x3a,  0x2b }
 };
 
-#if 0
-/* Cut 1.2 & 2.0 Short Frame Tracking CR Loop */
-static struct stv090x_short_frame_crloop stv090x_s2_short_crl[] =
-{
-	/* MODCOD         2M_cut1.2 2M_cut2.0 5M_cut1.2 5M_cut2.0 10M_cut1.2 10M_cut2.0 20M_cut1.2 20M_cut2.0 30M_cut1.2 30M_cut2.0 */
-	{ STV090x_QPSK,   0x3c,     0x2f,     0x2b,     0x2e,     0x0b,      0x0e,      0x3a,      0x0e,      0x2a,      0x3d },
-	{ STV090x_8PSK,   0x0b,     0x3e,     0x2a,     0x0e,     0x0a,      0x2d,      0x19,      0x0d,      0x09,      0x3c },
-	{ STV090x_16APSK, 0x1b,     0x1e,     0x1b,     0x1e,     0x1b,      0x1e,      0x3a,      0x3d,      0x2a,      0x2d },
-	{ STV090x_32APSK, 0x1b,     0x1e,     0x1b,     0x1e,     0x1b,      0x1e,      0x3a,      0x3d,      0x2a,      0x2d }
-};
-#else
 /* Cut 1.2 Short Frame Tracking CR Loop */
 static struct stv090x_short_frame_crloop stv090x_s2_short_crl[] =
 {
@@ -807,7 +1458,7 @@ static struct stv090x_short_frame_crloop stv090x_s2_short_crl[] =
 	{ STV090x_16APSK, 0x1b, 0x1b, 0x1b, 0x3a, 0x2a },
 	{ STV090x_32APSK, 0x1b, 0x1b, 0x1b, 0x3a, 0x2a }
 };
-#endif
+
 /* Cut 2.0 Short Frame Tracking CR Loop */
 static struct stv090x_short_frame_crloop stv090x_s2_short_crl_cut20[] =
 {
@@ -827,464 +1478,6 @@ static struct stv090x_short_frame_crloop stv090x_s2_short_crl_cut30[] =
 	{ STV090x_16APSK, 0x1B, 0x1B, 0x1B, 0x3A, 0x2A },
 	{ STV090x_32APSK, 0x1B, 0x1B, 0x1B, 0x3A, 0x2A }
 };
-
-/****************************************************
- *
- * DiSEqC PWM by freebox@lamerek.com
- *
- * CAUTION:
- *
- */
-unsigned long pwm_registers;
-
-#define PWM0_VAL         (pwm_registers + 0x00)
-#define PWM1_VAL         (pwm_registers + 0x04)
-#define PWM0_CPT_VAL     (pwm_registers + 0x10)
-#define PWM1_CPT_VAL     (pwm_registers + 0x14)
-#define PWM0_CMP_VAL     (pwm_registers + 0x20)
-#define PWM1_CMP_VAL     (pwm_registers + 0x24)
-#define PWM0_CPT_EDGE    (pwm_registers + 0x30)
-#define PWM1_CPT_EDGE    (pwm_registers + 0x34)
-#define PWM0_CMP_OUT_VAL (pwm_registers + 0x40)
-#define PWM1_CMP_OUT_VAL (pwm_registers + 0x44)
-#define PWM_CTRL         (pwm_registers + 0x50)
-#define PWM_INT_EN       (pwm_registers + 0x54)
-#define PWM_INT_STA      (pwm_registers + 0x58)
-#define PWM_INT_ACK      (pwm_registers + 0x5C)
-#define PWM_CNT PWM      (pwm_registers + 0x60)
-#define PWM_CPT_CMP_CNT  (pwm_registers + 0x64)
-
-struct stpio_pin *pin_tx_diseqc1;
-struct stpio_pin *pin_tx_diseqc2;
-
-static volatile unsigned char pwm_diseqc_buf1[200];
-static volatile unsigned char pwm_diseqc_buf1_len = 0;
-static volatile unsigned char pwm_diseqc_buf1_pos = 0;
-
-static volatile unsigned char pwm_diseqc_buf2[200];
-static volatile unsigned char pwm_diseqc_buf2_len = 0;
-static volatile unsigned char pwm_diseqc_buf2_pos = 0;
-
-static irqreturn_t pwm_diseqc_irq(int irq, void *dev_id)
-{
-	writel(0x01, PWM_INT_ACK);
-
-	if (pwm_diseqc_buf1_len == 0)
-	{
-		stpio_set_pin(pin_tx_diseqc1, 0);
-	}
-	if (pwm_diseqc_buf2_len == 0)
-	{
-		stpio_set_pin(pin_tx_diseqc2, 0);
-	}
-	if ((pwm_diseqc_buf1_len == 0)
-	&&  (pwm_diseqc_buf2_len == 0))
-	{
-		writel(0x000, PWM_INT_EN);
-		return IRQ_HANDLED;
-	}
-	if (pwm_diseqc_buf1_len > 0)
-	{
-		if (pwm_diseqc_buf1[pwm_diseqc_buf1_pos] == 1)
-		{
-			stpio_set_pin(pin_tx_diseqc1, 1);
-		}
-		else
-		{
-			stpio_set_pin(pin_tx_diseqc1, 0);
-		}
-		pwm_diseqc_buf1_pos++;
-		pwm_diseqc_buf1_len--;
-	}
-	if (pwm_diseqc_buf2_len > 0)
-	{
-		if (pwm_diseqc_buf2[pwm_diseqc_buf2_pos] == 1)
-		{
-			stpio_set_pin(pin_tx_diseqc2, 1);
-		}
-		else
-		{
-			stpio_set_pin(pin_tx_diseqc2, 0);
-		}
-		pwm_diseqc_buf2_pos++;
-		pwm_diseqc_buf2_len--;
-	}
-	return IRQ_HANDLED;
-}
-
-static int pwm_wait_diseqc1_idle(int timeout)
-{
-	unsigned long start = jiffies;
-	int status;
-
-	while (1)
-	{
-		if (pwm_diseqc_buf1_len == 0)
-		{
-			break;
-		}
-		if (jiffies - start > timeout)
-		{
-			dprintk(1, "%s: Timeout on DiSEqC idle (tuner 1)!\n", __func__);
-			return -ETIMEDOUT;
-		}
-		msleep(10);
-	};
-	return 0;
-}
-
-static int pwm_wait_diseqc2_idle(int timeout)
-{
-	unsigned long start = jiffies;
-	int status;
-
-	while (1)
-	{
-		if (pwm_diseqc_buf2_len == 0)
-		{
-			break;
-		}
-		if (jiffies - start > timeout)
-		{
-			dprintk(1, "%s: Timeout on DiSEqC idle (tuner 2)!\n", __func__);
-			return -ETIMEDOUT;
-		}
-		msleep(10);
-	};
-	return 0;
-}
-
-static int pwm_send_diseqc1_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t burst)
-{
-	int i, j;
-
-	if (pwm_wait_diseqc1_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	pwm_diseqc_buf1_pos = 1;
-	pwm_diseqc_buf1_len = 0;
-
-	// adding an empty overflow for the counter overflow time
-	pwm_diseqc_buf1_len++;
-	pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-
-	switch (burst)
-	{
-		case SEC_MINI_A:
-		{
-			dprintk(10, "%s Tone = A\n", __func__);
-			for (i = 0; i < 8; i++)
-			{
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			}
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			break;
-		}
-		case SEC_MINI_B:
-		{
-			dprintk(10, "%s Tone = B\n", __func__);
-			for (i = 0; i < 8; i++)
-			{
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-			}
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			break;
-		}
-	}
-	pwm_diseqc_buf1_len++;
-	pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-	writel(0x001, PWM_INT_EN);
-
-	if (pwm_wait_diseqc1_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	return 0;
-}
-
-static int pwm_send_diseqc2_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t burst)
-{
-	int i, j;
-
-	if (pwm_wait_diseqc2_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	pwm_diseqc_buf2_pos = 1;
-	pwm_diseqc_buf2_len = 0;
-
-	// adding an empty overflow for the counter overflow time
-	pwm_diseqc_buf2_len++;
-	pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-
-	switch (burst)
-	{
-		case SEC_MINI_A:
-		{
-			dprintk(10, "%s Tone = A\n", __func__);
-			for (i = 0; i < 8; i++)
-			{
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			}
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			break;
-		}
-		case SEC_MINI_B:
-		{
-			dprintk(10, "%s Tone = B\n", __func__);
-			for (i = 0; i < 8; i++)
-			{
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-			}
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			break;
-		}
-	}
-	pwm_diseqc_buf2_len++;
-	pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-	writel(0x001, PWM_INT_EN);
-
-	if (pwm_wait_diseqc2_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	return 0;
-}
-
-static int pwm_diseqc1_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *m)
-{
-	int i, j;
-
-	dprintk(50, "%s > (msg_len = %d)\n", __func__, m->msg_len);
-
-	if (pwm_wait_diseqc1_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	pwm_diseqc_buf1_pos = 1;
-	pwm_diseqc_buf1_len = 0;
-
-	// adding an empty overflow for the counter overflow time
-	pwm_diseqc_buf1_len++;
-	pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-
-	for (j = 0; j < m->msg_len; j++)
-	{
-		unsigned char byte = m->msg[j];
-		unsigned char parity = 0;
-		for (i = 0; i < 8; i++)
-		{
-			if ((byte & 128) == 128)
-			{
-				//diseqc 1
-				parity = parity + 1;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-			}
-			else
-			{
-				//diseqc 0
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-				pwm_diseqc_buf1_len++;
-				pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-			}
-			byte = byte << 1;
-		}
-		if ((parity & 1) == 1)
-		{
-			//diseqc 0
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-		}
-		else
-		{
-			//diseqc 1
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 1;
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-			pwm_diseqc_buf1_len++;
-			pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-		}
-	}
-	pwm_diseqc_buf1_len++;
-	pwm_diseqc_buf1[pwm_diseqc_buf1_len] = 0;
-	writel(0x001, PWM_INT_EN);
-
-	if (pwm_wait_diseqc1_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	return 0;
-}
-
-static int pwm_diseqc2_send_msg(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *m)
-{
-	int i, j;
-
-	dprintk(50, "%s > (msg_len = %d)\n", __func__, m->msg_len);
-
-	if (pwm_wait_diseqc2_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	pwm_diseqc_buf2_pos = 1;
-	pwm_diseqc_buf2_len = 0;
-
-	// adding an empty overflow for the counter overflow time
-	pwm_diseqc_buf2_len++;
-	pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-
-	for (j = 0; j < m->msg_len; j++)
-	{
-		unsigned char byte = m->msg[j];
-		unsigned char parity = 0;
-		for (i = 0; i < 8; i++)
-		{
-			if ((byte & 128) == 128)
-			{
-				//diseqc 1
-				parity++;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-			}
-			else
-			{
-				//diseqc 0
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-				pwm_diseqc_buf2_len++;
-				pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-			}
-			byte = byte << 1;
-		}
-		if ((parity & 1) == 1)
-		{
-			//diseqc 0
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-		}
-		else
-		{
-			//diseqc 1
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 1;
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-			pwm_diseqc_buf2_len++;
-			pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-		}
-	}
-	pwm_diseqc_buf2_len++;
-	pwm_diseqc_buf2[pwm_diseqc_buf2_len] = 0;
-	writel(0x001, PWM_INT_EN);
-
-	if (pwm_wait_diseqc2_idle(100) < 0)
-	{
-		return -ETIMEDOUT;
-	}
-	return 0;
-}
-
-int pwm_diseqc_init(void)
-{
-	dprintk(100, "%s >\n", __func__);
-	pwm_registers = (unsigned long)ioremap(0x18010000, 0x100);
-
-	pin_tx_diseqc1 = stpio_request_pin(5, 5, "pin_tx_diseqc1", STPIO_OUT);
-	if (pin_tx_diseqc1 == NULL)
-	{
-		dprintk(1, "%s FAIL: request STPIO pin 5, 5\n", __func__);
-		goto err;
-	}
-	stpio_set_pin(pin_tx_diseqc1, 0);
-
-	pin_tx_diseqc2 = stpio_request_pin(2, 5, "pin_tx_diseqc2", STPIO_OUT);
-	if (pin_tx_diseqc2 == NULL)
-	{
-		dprintk(1, "%s FAIL: request STPIO pin 2, 5\n", __func__);
-		goto err;
-	}
-	stpio_set_pin(pin_tx_diseqc2, 0);
-
-	if (request_irq(126, pwm_diseqc_irq , IRQF_DISABLED , "timer_pwm", NULL))
-	{
-		dprintk(1, "%s FAIL: request irq pwm\n", __func__);
-		goto err;
-	}
-	// 500us = 2000hz
-	// 27000000 / 2000 / 256 = 52
-	// 100us = 10000hz
-	// 27000000 / 10000 = 2700 / 10
-	// reg = 52;  // 500us
-	// reg = 10;  // 100us
-	// reg = 52;
-	// reg = (reg & 0x0f) + ((reg & 0xf0) << (11 - 4)) + PWM_CTRL_PWM_EN;
-	// debug("reg div = 0x%x\n", reg);
-	writel(0x1a04, PWM_CTRL);  // generating an interrupt every 500us
-	writel(0x000, PWM0_VAL);
-	writel(0x000, PWM_INT_EN);
-
-	pwm_diseqc_buf1_pos = 1;
-	pwm_diseqc_buf1_len = 0;
-
-	pwm_diseqc_buf2_pos = 1;
-	pwm_diseqc_buf2_len = 0;
-
-	dprintk(50, "PWM Diseqc Init: OK\n");
-	return 0;
-
-err:
-	iounmap((void *)pwm_registers);
-	return -ENODEV;
-}
-// diseqc end
 
 static inline s32 comp2(s32 __x, s32 __width)
 {
@@ -1373,21 +1566,13 @@ static int stv090x_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	struct stv090x_state *state = fe->demodulator_priv;
 	u32 reg;
 
-	if (state->demod == STV090x_DEMODULATOR_0)
-	{
-		dprintk(50, "STV090x_DEMODULATOR_0 gate\n");
-	}
-	else
-	{
-		dprintk(50, "STV090x_DEMODULATOR_1 gate\n");
-	}
+//	dprintk(50, "STV090x_DEMODULATOR_%1d gate\n", (state->demod == STV090x_DEMODULATOR_0) ? 0 : 1);
 
 	if (enable)
 	{
 		mutex_lock(&tuner_lock);
 	}
 	if (STV090x_WRITE_DEMOD(state, I2CRPT, 0xc0) < 0)
-	//if (STV090x_WRITE_DEMOD(state, I2CRPT, reg) < 0)
 	{
 		goto err;
 	}
@@ -1395,25 +1580,21 @@ static int stv090x_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	{
 		mutex_unlock(&tuner_lock);
 	}
-	return 0;
+	return 0;  // tuners are directly connected to I2C bus
 
 #if 0
 	if (enable)
 	{
 		dprintk(5, "Enable\n");
 
-		//STV090x_SETFIELD_Px(reg, I2CT_ON_FIELD, 1);
 		if (STV090x_WRITE_DEMOD(state, I2CRPT, 0xc0) < 0)
-		//if (STV090x_WRITE_DEMOD(state, I2CRPT, reg) < 0)
 		{
 			goto err;
 		}
 		else
 		{
 			dprintk(5, "Disable\n");
-			//STV090x_SETFIELD_Px(reg, I2CT_ON_FIELD, 0);
 			if ((STV090x_WRITE_DEMOD(state, I2CRPT, 0x40)) < 0)
-			//if ((STV090x_WRITE_DEMOD(state, I2CRPT, reg)) < 0)
 			{
 				goto err;
 			}
@@ -1424,6 +1605,7 @@ static int stv090x_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 		}
 		return 0;
 #endif
+
 err:
 	dprintk(1, "%s I/O error\n", __func__);
 	mutex_unlock(&tuner_lock);
@@ -3005,7 +3187,7 @@ static u32 stv090x_srate_srch_coarse(struct stv090x_state *state)
 	}
 	else
 	{
-		if (STV090x_WRITE_DEMOD(state, CARFREQ, 0xed) < 0)//@
+		if (STV090x_WRITE_DEMOD(state, CARFREQ, 0xed) < 0)
 		{
 			goto err;
 		}
@@ -3654,7 +3836,7 @@ static int stv090x_get_coldlock(struct stv090x_state *state, s32 timeout_dmd)
 		}
 		else
 		{
-			//note: state->srate < 10000000
+			// note: state->srate < 10000000
 			if (state->srate <= 4000000)
 			{
 				car_step = 1000;
@@ -3740,7 +3922,7 @@ static int stv090x_get_coldlock(struct stv090x_state *state, s32 timeout_dmd)
 					}
 					else
 					{
-						dprintk(50, "Tuner unlocked\n");
+						dprintk(20, "Tuner unlocked\n");
 					}
 					if (stv090x_i2c_gate_ctrl(fe, 0) < 0)
 					{
@@ -3894,12 +4076,12 @@ static int stv090x_chk_signal(struct stv090x_state *state)
 	if ((agc2 > 0x2000) || (offst_car > 2 * car_max) || (offst_car < -2 * car_max))
 	{
 		no_signal = 1;
-		dprintk(10, "No Signal\n");
+		dprintk(20, "No Signal\n");
 	}
 	else
 	{
 		no_signal = 0;
-		dprintk(10, "Found Signal\n");
+		dprintk(50, "Found Signal\n");
 	}
 	dprintk(100, "%s no_signal %d>\n", __func__, no_signal);
 	return no_signal;
@@ -4179,14 +4361,14 @@ static int stv090x_sw_algo(struct stv090x_state *state)
 				}
 			}
 		}
-		dprintk(100, "%s: no_signal  = %d\n", __func__, no_signal);
-		dprintk(100, "%s: lock       = %d\n", __func__, lock);
-		dprintk(100, "%s: trials     = %d\n", __func__, trials);
+		dprintk(20, "%s: no_signal  = %d\n", __func__, no_signal);
+		dprintk(20, "%s: lock       = %d\n", __func__, lock);
+		dprintk(20, "%s: trials     = %d\n", __func__, trials);
 	}
 	while ((!lock)
 	&&     (trials < 2)
 	&&     (!no_signal));
-	dprintk(100, "%s lock %d<\n", __func__, lock);
+	dprintk(50, "%s lock %d<\n", __func__, lock);
 	return lock;
 
 err:
@@ -6091,78 +6273,31 @@ static int stv090x_set_tone(struct dvb_frontend *fe, fe_sec_tone_mode_t tone)
 	int ret;
 	u8 b;
 	struct i2c_msg msg = { .addr = 0x08, .flags = 0, .buf = &b, .len = 1 };
+	int tuner;
 
-	if (state->demod == STV090x_DEMODULATOR_0)
-	{
-		dprintk(50, "STV090x_DEMODULATOR_0 set_tone: ");
-	}
-	else
-	{
-		dprintk(50, "STV090x_DEMODULATOR_1 set_tone: ");
-	}
-	//reg = STV090x_READ_DEMOD(state, DISTXCTL);
+	tuner = (state->demod == STV090x_DEMODULATOR_0 ? 0 : 1);
+
 	switch (tone)
 	{
 		case SEC_TONE_ON:
 		{
-			dprintk(50, "TONE_ON\n");
-			if (state->demod == STV090x_DEMODULATOR_0)
+			dprintk(50, "Set tone on (tuner %1d)\n", tuner);
+			b = (tuner == 0 ? ISL6422_SR2 : ISL6422_SR6) + ISL6422_ENT + ISL6422_TTH; // c=ext22khz 4=int22khz extmod
+			ret = i2c_transfer(state->i2c, &msg, 1);
+			if (ret != 1)
 			{
-				b = 0x34; //int 22khz enable SR2
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s Error: ISL6422 SR2\n", __func__);
-				}
+				dprintk(1, "%s ISL6422: Error switching tone on (tuner %1d)\n", __func__, tuner);
 			}
-			else
-			{
-				b = 0xb4; //int 22khz enable SR6
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s Error: ISL6422 SR6\n", __func__);
-				}
-			}
-#if 0
-			STV090x_SETFIELD_Px(reg, DISTX_MODE_FIELD, 0);
-			STV090x_SETFIELD_Px(reg, DISEQC_RESET_FIELD, 1);
-			if (STV090x_WRITE_DEMOD(state, DISTXCTL, reg) < 0)
-			{
-				goto err;
-			}
-			STV090x_SETFIELD_Px(reg, DISEQC_RESET_FIELD, 0);
-			if (STV090x_WRITE_DEMOD(state, DISTXCTL, reg) < 0)
-			{
-				goto err;
-			}
-#endif
 			break;
 		}
 		case SEC_TONE_OFF:
 		{
-			dprintk(50, "TONE_OFF\n");
-			if (state->demod == STV090x_DEMODULATOR_0)
+			dprintk(50, "Set tone off (tuner %1d)\n", tuner);
+			b = (tuner == 0 ? ISL6422_SR2 : ISL6422_SR6) + ISL6422_TTH; // c=ext22khz 4=int22khz extmod
+			ret = i2c_transfer(state->i2c, &msg, 1);
+			if (ret != 1)
 			{
-				//if (BoxDiseqc==PWM)
-				b = 0x24; //2c-ext22khz 24-int22khz extmod
-				//else
-				//b=0x2c;//2c-ext22khz 24-int22khz extmod SR2
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s Error: ISL6422 SR2\n", __func__);
-				}
-			}
-			else
-			{
-				//b=0xac;//ac-ext22khz a4-int22khz extmod SR6	stm
-				b = 0xa4; //ac-ext22khz a4-int22khz extmod SR6	pwm
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s Error: ISL6422 SR6\n", __func__);
-				}
+				dprintk(1, "%s ISL6422: Error switching tone off (tuner %1d)\n", __func__, tuner);
 			}
 			break;
 		}
@@ -6173,114 +6308,55 @@ static int stv090x_set_tone(struct dvb_frontend *fe, fe_sec_tone_mode_t tone)
 	}
 	return 0;
 
+#if 0
 err:
-	dprintk(1, "I/O error\n");
+	dprintk(1, "%s: I/O error\n", __func__);
 	return -1;
+#endif
 }
-
-//isl6422 - start bzzb 16 24 4d 60 96 a4
-// 16 - sr1
-// 24 - sr2 - int22khz ext_mod
-// 4d - sr3 - 515mA lnb1
-// 60 - sr4 - out 0V
-// 96 - sr5 -
-// a4 - sr6 -
-
-// dc - sr7 - 515mA lnb2
-
-// a4 dd f2
-// a4 cd f2
-
-//f2 - 13v lnb2
-//e0 - 0v lnb2
-//f1 - 18v lnb2
-
-enum { VOLTAGE_13 = 1, VOLTAGE_18  = 0 };
-enum { VOLTAGE_ON = 1, VOLTAGE_OFF = 0 };
 
 static int stv090x_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 {
 	struct stv090x_state *state = fe->demodulator_priv;
 	u8 b;
 	int ret;
-	struct i2c_msg msg = { .addr = 0x08, .flags = 0, .buf = &b, .len = 1 };
+	struct i2c_msg msg = { .addr = 0x08, .flags = 0, .buf = &b, .len = 1 };  // ISL6422
+	int tuner;
 
-	if (state->demod == STV090x_DEMODULATOR_0)
-	{
-		dprintk(50, "STV090x_DEMODULATOR_0 set_voltage: ");
-	}
-	else
-	{
-		dprintk(50, "STV090x_DEMODULATOR_1 set_voltage: ");
-	}
+	tuner = (state->demod == STV090x_DEMODULATOR_0) ? 0 : 1;
+
 	switch (voltage)
 	{
 		case SEC_VOLTAGE_13:
 		{
-			dprintk(50, "SEC_VOLTAGE_13\n");
-			if (state->demod == STV090x_DEMODULATOR_0)
+			dprintk(50, "Set voltage 13V (POL=V, tuner %1d)\n", tuner);
+			b = (tuner == 0 ? ISL6422_SR4 : ISL6422_SR8) + ISL6422_EN + ISL6422_13V;
+			ret = i2c_transfer(state->i2c, &msg, 1);
+			if (ret != 1)
 			{
-				b = 0x71;
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s SEC_VOLTAGE_13 Error ISL6422\n", __func__);
-				}
-			}
-			else
-			{
-				b = 0xf1;
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s SEC_VOLTAGE_13 Error ISL6422\n", __func__);
-				}
+				dprintk(1, "%s ISL6422: Error setting voltage to 13V (tuner %1d)\n", __func__, tuner);
 			}
 			break;
 		}
 		case SEC_VOLTAGE_18:
 		{
-			dprintk(1, "SEC_VOLTAGE_18\n");
-			if (state->demod == STV090x_DEMODULATOR_0)
+			dprintk(50, "Set voltage 18V (POL=H, tuner %1d)\n", tuner);
+			b = (tuner == 0 ? ISL6422_SR4 : ISL6422_SR8) + ISL6422_EN + ISL6422_18V;
+			ret = i2c_transfer(state->i2c, &msg, 1);
+			if (ret != 1)
 			{
-				b = 0x72;
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s SEC_VOLTAGE_18 Error ISL6422\n", __func__);
-				}
-			}
-			else
-			{
-				b = 0xf2;
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s SEC_VOLTAGE_18 Error ISL6422\n", __func__);
-				}
+				dprintk(1, "%s ISL6422: Error setting voltage to 18V (tuner %1d)\n", __func__, tuner);
 			}
 			break;
 		}
 		case SEC_VOLTAGE_OFF:
 		{
-			dprintk(50, "SEC_VOLTAGE_OFF\n");
-			if (state->demod == STV090x_DEMODULATOR_0)
+			dprintk(50, "Set voltage off (tuner %1d)\n", tuner);
+			b = (tuner == 0 ? ISL6422_SR4 : ISL6422_SR8);
+			ret = i2c_transfer(state->i2c, &msg, 1);
+			if (ret != 1)
 			{
-				b = 0x60;
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s SEC_VOLTAGE_OFF Error ISL6422\n", __func__);
-				}
-			}
-			else
-			{
-				b = 0xe0;
-				ret = i2c_transfer(state->i2c, &msg, 1);
-				if (ret != 1)
-				{
-					dprintk(1, "%s SEC_VOLTAGE_OFF Error ISL6422\n", __func__);
-				}
+				dprintk(1, "%s ISL6422: Error setting voltage off (tuner %1d)\n", __func__, tuner);
 			}
 			break;
 		}
@@ -6382,65 +6458,6 @@ static int stv090x_send_diseqc_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 		pwm_send_diseqc2_burst(fe, burst);
 	}
 	return 0;
-#if 0  // never executed
-	reg = STV090x_READ_DEMOD(state, DISTXCTL);
-
-	if (burst == SEC_MINI_A)
-	{
-		mode = (state->config->diseqc_envelope_mode) ? 5 : 3;
-		value = 0x00;
-	}
-	else
-	{
-		mode = (state->config->diseqc_envelope_mode) ? 4 : 2;
-		value = 0xFF;
-	}
-	STV090x_SETFIELD_Px(reg, DISTX_MODE_FIELD, mode);
-	STV090x_SETFIELD_Px(reg, DISEQC_RESET_FIELD, 1);
-	if (STV090x_WRITE_DEMOD(state, DISTXCTL, reg) < 0)
-	{
-		goto err;
-	}
-	STV090x_SETFIELD_Px(reg, DISEQC_RESET_FIELD, 0);
-	if (STV090x_WRITE_DEMOD(state, DISTXCTL, reg) < 0)
-	{
-		goto err;
-	}
-	STV090x_SETFIELD_Px(reg, DIS_PRECHARGE_FIELD, 1);
-	if (STV090x_WRITE_DEMOD(state, DISTXCTL, reg) < 0)
-	{
-		goto err;
-	}
-	while (fifo_full)
-	{
-		reg = STV090x_READ_DEMOD(state, DISTXSTATUS);
-		fifo_full = STV090x_GETFIELD_Px(reg, FIFO_FULL_FIELD);
-	}
-	if (STV090x_WRITE_DEMOD(state, DISTXDATA, value) < 0)
-	{
-		goto err;
-	}
-	reg = STV090x_READ_DEMOD(state, DISTXCTL);
-	STV090x_SETFIELD_Px(reg, DIS_PRECHARGE_FIELD, 0);
-	if (STV090x_WRITE_DEMOD(state, DISTXCTL, reg) < 0)
-	{
-		goto err;
-	}
-	i = 0;
-
-	while ((!idle) && (i < 10))
-	{
-		reg = STV090x_READ_DEMOD(state, DISTXSTATUS);
-		idle = STV090x_GETFIELD_Px(reg, TX_IDLE_FIELD);
-		msleep(10);
-		i++;
-	}
-	return 0;
-
-err:
-	dprintk(1, "I/O error\n");
-	return -1;
-#endif
 }
 
 static int stv090x_recv_slave_reply(struct dvb_frontend *fe, struct dvb_diseqc_slave_reply *reply)
@@ -6713,8 +6730,8 @@ static int stv090x_set_mclk(struct stv090x_state *state, u32 mclk, u32 clk)
 	clk_sel = ((STV090x_GETFIELD(reg, SELX1RATIO_FIELD) == 1) ? 4 : 6);
 	div = ((clk_sel * mclk) / config->xtal) - 1;
 
-	//printk("reg:%08x clk_sel:%d mclk:%d xtal:%d div:%d\n",reg,clk_sel,mclk,config->xtal,div);
-	//printk("div:%08x\n",div);
+	//dprintk(50, "reg: %08x clk_sel: %d mclk: %d xtal: %d div: %d\n", reg, clk_sel, mclk, config->xtal,div);
+	//dprintk(50, "div: %08x\n", div);
 
 	reg = stv090x_read_reg(state, STV090x_NCOARSE);
 
@@ -7126,61 +7143,65 @@ static int stv090x_init(struct dvb_frontend *fe)
 
 	u8 b;
 	int ret;
-	struct i2c_msg msg = { .addr = 0x08, .flags = 0, .buf = &b, .len = 1 };
+	struct i2c_msg msg = { .addr = 0x08, .flags = 0, .buf = &b, .len = 1 };  // ISL6422
 
 	dprintk(100, "%s >\n", __func__);
 
 	if (bzzb_init == 0)
 	{
-		pio_diseqrx1 = stpio_request_pin(5, 4, "pio_diseqrx1", STPIO_IN);
-		pio_diseqrx2 = stpio_request_pin(3, 4, "pio_diseqrx2", STPIO_IN);
-
 		bzzb_init = 1;
-		dprintk(50, "ISL6422 Config\n");
-		b = 0x10; //0x16;	//status
+
+		dprintk(20, "Setup PWM DiSEqC return PIO pins\n");
+		pio_diseqrx1 = stpio_request_pin(5, 4, "pio_diseqrx1", STPIO_IN);  // not used?
+		pio_diseqrx2 = stpio_request_pin(3, 4, "pio_diseqrx2", STPIO_IN);  // not used?
+
+		dprintk(50, "Initialize ISL6422 LNB power controller\n");
+		b = ISL6422_SR1 + ISL6422_OTF; // all other bits zero -> dynamic limiting off, normal operation
 		ret = i2c_transfer(state->i2c, &msg, 1);
 		if (ret != 1)
 		{
-			dprintk(1, "%s Error:ISL6422 SR1\n", __func__);
+			dprintk(1, "Error setting ISL6422 dynamic limit off / LNB1 power on\n");
 		}
 
 //		b = 0x2c;  // 0x24-int22khz extmod 2c-ext22khz  stm
-		b = 0x24;  // 0x24-int22khz extmod 2c-ext22khz  pwm
+		b = ISL6422_SR2 + ISL6422_TTH;  // 0x24; threshold 400mV, pin ETM1 22 kHz modulation
 		ret = i2c_transfer(state->i2c, &msg, 1);
 		if (ret != 1)
 		{
-			dprintk(1, "%s Error:ISL6422 SR2\n", __func__);
+			dprintk(1, "Error setting ISL6422 22kHz register tuner 1\n");
 		}
 
-		b = 0x4d; //515ma
+		b = ISL6422_SR3 + ISL6422_IOUT515 + ISL6422_VSPEN;  // 0x4d: 515mA, ELVTOP H/W pin Disabled
 		ret = i2c_transfer(state->i2c, &msg, 1);
 		if (ret != 1)
 		{
-			dprintk(1, "%s Error:ISL6422 SR3\n", __func__);
+			dprintk(1, "Error setting ISL6422 current limit tuner 1\n");
 		}
-		b = 0x80; //0x96;	//status
+		b = ISL6422_SR5;
 		ret = i2c_transfer(state->i2c, &msg, 1);
 		if (ret != 1)
 		{
-			dprintk(1, "%s Error:ISL6422 SR5\n", __func__);
+			dprintk(1, "Error setting ISL6422 LNB2 power on\n");
 		}
 
 //		b = 0xac;  //0xa4-int22khz extmod ac-ext22khz	stm
-		b = 0xa4;  //0xa4-int22khz extmod ac-ext22khz	pwm
+		b = ISL6422_SR6 + ISL6422_TTH;  //0xa4; threshold 400mV, pin ETM2 22kHz modulation
 		ret = i2c_transfer(state->i2c, &msg, 1);
 		if (ret != 1)
 		{
-			dprintk(1, "%s Error:ISL6422 SR6\n", __func__);
+			dprintk(1, "Error setting ISL6422 22kHz register tuner 2\n");
 		}
 
-		b = 0xcd; //515mA
+		b = ISL6422_SR7 + ISL6422_IOUT515 + ISL6422_VSPEN;  // 0xcd: 515mA, ELVTOP H/W pin Disabled
 		ret = i2c_transfer(state->i2c, &msg, 1);
 		if (ret != 1)
 		{
-			dprintk(1, "%s Error:ISL6422 SR7\n", __func__);
+			dprintk(1, "Error setting ISL6422 current limit tuner 2\n");
 		}
-		pwm_diseqc_init();
+
+		pwm_diseqc_init();  // initialize PWM DiSEqC
 	}
+
 	if (state->internal->mclk == 0)
 	{
 		stv090x_set_mclk(state, 135000000, config->xtal);  /* 135 Mhz */
@@ -7364,7 +7385,7 @@ static int stv090x_setup(struct dvb_frontend *fe)
 	}
 	else if (state->internal->dev_ver > 0x30)
 	{
-		/* we shouldn't bail out from here */
+		/* we should not bail out from here */
 		dprintk(1, "s INFO: Cut 0x%02x; probably incomplete support!\n", __func__, state->internal->dev_ver);
 	}
 	/* ADC1 range */

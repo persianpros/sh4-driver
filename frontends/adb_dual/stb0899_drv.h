@@ -26,18 +26,14 @@
 #include <linux/module.h>
 #include <linux/version.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
-#  include <linux/stpio.h>
+#include <linux/stpio.h>
 #else
-#  include <linux/stm/pio.h>
+#include <linux/stm/pio.h>
 #endif
 
 #include "dvb_frontend.h"
 
 extern short paramDebug;
-#if defined TAGDEBUG
-#undef TAGDEBUG
-#endif
-#define TAGDEBUG "[stb0899] "
 
 #ifndef dprintk
 #define dprintk(level, x...) do \
@@ -102,8 +98,8 @@ enum stb0899_inversion
 
 /*
  * Post process output configuration control
- * 1. POWER ON/OFF		(index 0)
- * 2. FE_HAS_LOCK/LOCK_LOSS	(index 1)
+ * 1. POWER ON/OFF          (index 0)
+ * 2. FE_HAS_LOCK/LOCK_LOSS (index 1)
  *
  * @gpio  = one of the above listed GPIO's (set to 0 to ignore this entry)
  * @level = output state: pulled up or low

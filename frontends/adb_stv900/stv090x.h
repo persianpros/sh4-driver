@@ -31,17 +31,17 @@
 #  include <linux/stm/pio.h>
 #endif
 
-#if 1
-extern int paramDebug;
+extern short paramDebug;
 #define TAGDEBUG "[adb_stv0900] "
 
+#if !defined dprintk
 #define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (level <= paramDebug)) \
 	{ \
-		if ((paramDebug) && (level <= paramDebug)) \
-		{ \
-			printk(TAGDEBUG x); \
-		} \
-	} while (0)
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
 #endif
 
 #define	TUNER_STB6100

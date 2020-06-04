@@ -5,8 +5,6 @@
  *
  * Copyright (C) ST Microelectronics
  *
- * Version for ADB ITI-5800S, BSKA & BXZB models
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -36,11 +34,6 @@
 #include "stb6100.h"
 
 static unsigned int verbose = 1;
-
-//#define FE_ERROR  0
-//#define FE_NOTICE 1
-//#define FE_INFO   2
-//#define FE_DEBUG  3
 
 extern short paramDebug;
 #if defined TAGDEBUG
