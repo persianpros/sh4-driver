@@ -109,11 +109,6 @@ static struct semaphore 	   write_sem;
 static struct semaphore 	   receive_sem;
 static struct semaphore 	   draw_thread_sem;
 
-#define RTC_NAME "aotom-rtc"
-static struct platform_device *rtc_pdev;
-
-extern YWPANEL_Version_t panel_version;
-
 static int VFD_Show_Time(u8 hh, u8 mm)
 {
 	if( (hh > 24) || (mm > 59))
@@ -1023,108 +1018,6 @@ extern void remove_proc_fp(void);
 
 static struct class *vfd_class = 0;
 
-static int aotom_reboot_event(struct notifier_block *nb, unsigned long event, void *ptr)
-{
-	switch(event) {
-		case SYS_POWER_OFF:
-			YWPANEL_VFD_ShowString("POWEROFF");
-			break;
-		case SYS_HALT:
-			YWPANEL_VFD_ShowString("HALT");
-			break;
-		default:
-			YWPANEL_VFD_ShowString("REBOOT");
-			return NOTIFY_DONE;
-	}
-	msleep(1000);
-	clear_display();
-	YWPANEL_FP_ControlTimer(true);
-	YWPANEL_FP_SetCpuStatus(YWPANEL_CPUSTATE_STANDBY);
-	return NOTIFY_DONE;
-};
-
-static struct notifier_block aotom_reboot_block = {
-	.notifier_call = aotom_reboot_event,
-	.priority = INT_MAX,
-};
-
-static int aotom_rtc_read_time(struct device *dev, struct rtc_time *tm)
-{
-	u32 uTime = 0;
-	//printk("%s\n", __func__);
-	uTime = YWPANEL_FP_GetTime();
-	rtc_time_to_tm(uTime, tm);
-	return 0;
-}
-
-static int tm2time(struct rtc_time *tm)
-{
-	return mktime(tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-}
-
-static int aotom_rtc_set_time(struct device *dev, struct rtc_time *tm)
-{
-	int res = 0;
-	//printk("%s\n", __func__);
-	u32 uTime = tm2time(tm);
-	res = YWPANEL_FP_SetTime(uTime);
-	YWPANEL_FP_ControlTimer(true);
-	return res;
-}
-
-static int aotom_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *al)
-{
-	return 0;
-}
-
-static int aotom_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *al)
-{
-	u32 a_time = 0;
-	if (al->enabled)
-		a_time = tm2time(&al->time);
-	printk(KERN_INFO "%s enabled:%d time: %d\n", __func__, al->enabled, a_time);
-	YWPANEL_FP_SetPowerOnTime(a_time);
-	return 0;
-}
-
-static const struct rtc_class_ops aotom_rtc_ops = {
-	.read_time = aotom_rtc_read_time,
-	.set_time = aotom_rtc_set_time,
-	.read_alarm = aotom_rtc_read_alarm,
-	.set_alarm = aotom_rtc_set_alarm,
-};
-
-static int __devinit aotom_rtc_probe(struct platform_device *pdev)
-{
-	struct rtc_device *rtc;
-	/* I have no idea where the pdev comes from, but it needs the can_wakeup = 1
-	* otherwise we don't get the wakealarm sysfs attribute... :-) */
-	pdev->dev.power.can_wakeup = 1;
-	rtc = rtc_device_register("aotom", &pdev->dev, &aotom_rtc_ops, THIS_MODULE);
-	printk(KERN_DEBUG "%s %p\n", __func__, rtc);
-	if (IS_ERR(rtc))
-		return PTR_ERR(rtc);
-	printk(KERN_DEBUG "%s 2\n", __func__);
-	platform_set_drvdata(pdev, rtc);
-	return 0;
-}
-static int __devexit aotom_rtc_remove(struct platform_device *pdev)
-{
-	struct rtc_device *rtc = platform_get_drvdata(pdev);
-	printk(KERN_DEBUG "%s %p\n", __func__, rtc);
-	rtc_device_unregister(rtc);
-	platform_set_drvdata(pdev, NULL);
-	return 0;
-}
-static struct platform_driver aotom_rtc_driver = {
-	.probe = aotom_rtc_probe,
-	.remove = __devexit_p(aotom_rtc_remove),
-	.driver = {
-		.name = RTC_NAME,
-		.owner = THIS_MODULE,
-	},
-};
-
 static int __init aotom_init_module(void)
 {
 	int i;
@@ -1167,16 +1060,6 @@ static int __init aotom_init_module(void)
 		led_state[i].led_task = kthread_run(led_thread, (void *) i, "led_thread");
 	}
 
-	register_reboot_notifier(&aotom_reboot_block);
-	i = platform_driver_register(&aotom_rtc_driver);
-	if (i)
-		printk(KERN_ERR "%s platform_driver_register failed: %d\n", __func__, i);
-	else
-		rtc_pdev = platform_device_register_simple(RTC_NAME, -1, NULL, 0);
-
-	if (IS_ERR(rtc_pdev))
-		printk(KERN_ERR "%s platform_device_register_simple failed: %ld\n",__func__, PTR_ERR(rtc_pdev));
-		
 	create_proc_fp();
 	dprintk(5, "%s <\n", __func__);
 
@@ -1195,11 +1078,6 @@ static int led_thread_active(void) {
 static void __exit aotom_cleanup_module(void)
 {
 	int i;
-
-	unregister_reboot_notifier(&aotom_reboot_block);
-	platform_driver_unregister(&aotom_rtc_driver);
-	platform_set_drvdata(rtc_pdev, NULL);
-	platform_device_unregister(rtc_pdev);
 
 	if((draw_thread_status != DRAW_THREAD_STATUS_STOPPED) && draw_task)
 		kthread_stop(draw_task);
