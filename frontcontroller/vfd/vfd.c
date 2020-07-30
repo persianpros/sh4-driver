@@ -596,5 +596,5 @@ module_init(vfd_init_module);
 module_exit(vfd_cleanup_module);
 
 MODULE_DESCRIPTION("VFD module for Kathrein UFS910 (Q'n'D port from MARUSYS)");
-MODULE_AUTHOR("captaintrip");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

@@ -833,7 +833,7 @@ static struct dvb_frontend_ops stv0297_ops =
 };
 
 MODULE_DESCRIPTION("ST STV0297 DVB-C Demodulator driver");
-MODULE_AUTHOR("Dennis Noermann and Andrew de Quincey mod -=Mario=-");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 EXPORT_SYMBOL(stv0297_attach);

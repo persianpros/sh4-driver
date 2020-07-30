@@ -599,7 +599,7 @@ module_init(led_module_init);
 module_exit(led_module_exit);
 
 MODULE_DESCRIPTION("Pace7241 front vfd driver");
-MODULE_AUTHOR("j00zek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

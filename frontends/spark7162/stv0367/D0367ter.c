@@ -1,4 +1,3 @@
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/string.h>
@@ -822,7 +821,7 @@ error:
 }
 
 MODULE_DESCRIPTION("DVB d0367 Frontend");
-MODULE_AUTHOR("oSaiYa");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 EXPORT_SYMBOL(dvb_d0367_fe_ofdm_attach);

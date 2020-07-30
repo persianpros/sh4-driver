@@ -382,7 +382,7 @@ MODULE_PARM_DESC(type, "device type (a8293, lnb24, lnbh25p, lnbh26p, pio)");
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
-MODULE_AUTHOR("Spider-Team");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_DESCRIPTION("Multiplatform LNB power control driver");
 MODULE_LICENSE("GPL");
 

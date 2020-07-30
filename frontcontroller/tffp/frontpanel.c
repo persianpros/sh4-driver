@@ -3319,7 +3319,7 @@ module_init(frontpanel_init_module);
 module_exit(frontpanel_cleanup_module);
 
 MODULE_DESCRIPTION("FrontPanel module for Topfield TF77X0HDPVR " VERSION);
-MODULE_AUTHOR("Gustav Gans, enhanced by Audioniek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 // vim:ts=4

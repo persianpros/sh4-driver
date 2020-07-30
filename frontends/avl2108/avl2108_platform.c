@@ -212,7 +212,7 @@ int __init avl2108_platform_init(void)
 
 MODULE_DESCRIPTION("Unified avl2108 driver using platform device model");
 
-MODULE_AUTHOR("konfetti");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_init(avl2108_platform_init);

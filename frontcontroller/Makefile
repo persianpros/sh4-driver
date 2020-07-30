@@ -56,8 +56,6 @@ endif
 
 ifdef ADB_BOX
 obj-y += adb_5800_fp/
-obj-y += adb_box_fp/front_bska/
-obj-y += adb_box_fp/front_bsla/
 endif
 
 ifdef ADB_2850

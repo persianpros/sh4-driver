@@ -1215,7 +1215,7 @@ module_init(vfd_module_init);
 module_exit(vfd_module_exit);
 
 MODULE_DESCRIPTION("PT6958+PT6302 frontpanel driver");
-MODULE_AUTHOR("freebox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

@@ -544,7 +544,7 @@ module_init(led_module_init);
 module_exit(led_module_exit);
 
 MODULE_DESCRIPTION("SagemCom88 front vfd driver");
-MODULE_AUTHOR("Nemo");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

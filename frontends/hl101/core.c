@@ -1386,6 +1386,6 @@ module_init(fe_core_init);
 module_exit(fe_core_exit);
 
 MODULE_DESCRIPTION("Tunerdriver");
-MODULE_AUTHOR("Spider-Team");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

@@ -133,7 +133,7 @@ module_init(cec_init);
 module_exit(cec_exit);
 
 MODULE_DESCRIPTION("CEC Driver");
-MODULE_AUTHOR("konfetti & schischu");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(debug, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

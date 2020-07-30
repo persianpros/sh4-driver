@@ -1738,5 +1738,5 @@ module_param(debug, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(debug, "Debug Output 0=disabled 1..=enabled(debuglevel)");
 
 MODULE_DESCRIPTION("Frontpanel VFD/MICOM module for abcom ABIP 9900/99HD");
-MODULE_AUTHOR("Dagobert,Sisyfos");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

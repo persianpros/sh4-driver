@@ -51,30 +51,27 @@ obj-m += fe-core.o
 endif
 
 ifdef VIP1_V2
-fe-core-vip1v2-objs += vip1_v2/stb0899_algo.o
-fe-core-vip1v2-objs += vip1_v2/stb0899_drv.o
-fe-core-vip1v2-objs += vip1_v2/stb6100.o
-fe-core-vip1v2-objs += vip1_v2/stv090x.o
-fe-core-vip1v2-objs += vip1_v2/stv6110x.o
-fe-core-vip1v2-objs += vip1_v2/ix7306.o
-fe-core-vip1v2-objs += vip1_v2/zl10353.o
-fe-core-vip1v2-objs += vip1_v2/cx24116.o
-fe-core-vip1v2-objs += vip1_v2/sharp6465.o
-fe-core-vip1v2-objs += vip1_v2/tda10023.o
-fe-core-vip1v2-objs += vip1_v2/lg031.o
-fe-core-vip1v2-objs += vip1_v2/core.o
-obj-m += fe-core-vip1v2.o 
+fe-core-objs += vip2/stv090x.o
+fe-core-objs += vip2/stv6110x.o
+fe-core-objs += vip2/ix7306.o
+fe-core-objs += vip2/zl10353.o
+fe-core-objs += vip2/tda10023.o
+fe-core-objs += vip2/lg031.o
+fe-core-objs += vip2/sharp6465.o
+fe-core-objs += vip2/core.o
+obj-m += fe-core.o
 endif
 
 ifdef VIP2_V1
-fe-core-vip2-objs += vip2/stv090x.o
-fe-core-vip2-objs += vip2/ix7306.o
-fe-core-vip2-objs += vip2/zl10353.o
-fe-core-vip2-objs += vip2/sharp6465.o
-fe-core-vip2-objs += vip2/tda10023.o
-fe-core-vip2-objs += vip2/lg031.o
-fe-core-vip2-objs += vip2/core.o
-obj-m += fe-core-vip2.o
+fe-core-objs += vip2/stv090x.o
+fe-core-objs += vip2/stv6110x.o
+fe-core-objs += vip2/ix7306.o
+fe-core-objs += vip2/zl10353.o
+fe-core-objs += vip2/tda10023.o
+fe-core-objs += vip2/lg031.o
+fe-core-objs += vip2/sharp6465.o
+fe-core-objs += vip2/core.o
+obj-m += fe-core.o
 endif
 
 ifdef SPARK

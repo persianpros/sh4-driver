@@ -285,6 +285,6 @@ module_init(led_module_init);
 module_exit(led_module_exit);
 
 MODULE_DESCRIPTION("ADB28xx front_led driver");
-MODULE_AUTHOR("plfreebox@gmail.com");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

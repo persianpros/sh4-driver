@@ -1963,6 +1963,6 @@ module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled, >0=enabled (level)");
 
 MODULE_DESCRIPTION("ADB ITI-5800SX PT6958 + PT6302 frontpanel driver");
-MODULE_AUTHOR("freebox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

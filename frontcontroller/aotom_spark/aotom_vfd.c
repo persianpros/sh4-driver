@@ -93,7 +93,7 @@ YWFP_INFO_t YWFP_INFO;
 
 /****************************************************************************/
 
-static SegAddrVal_T VfdSegAddr[15];
+static SegAddrVal_t VfdSegAddr[15];
 struct semaphore vfd_sem;
 struct semaphore vfd_sem_rw;
 struct rw_semaphore vfd_rws;
@@ -107,10 +107,15 @@ typedef enum PIO_Mode_e
 {
 	PIO_Out,
 	PIO_In
-} PIO_Mode_T;
+} PIO_Mode_t;
 
+/****************************************************************************
+ *
+ * Character tables
+ *
+ */
 // Segment table 1 for VFD clock display on clock part (standby)
-static u8 YWPANEL_CharArray[]=
+static u8 YWPANEL_CharArray[] =
 /*
     aaaaaaa 
    f       b
@@ -461,7 +466,7 @@ static char dvfd_bitmap[96][5] =
 
  Segment table for LED display
 
-    aaaaaaa 
+    aaaaaaa
    f       b
    f       b
    f       b
@@ -469,7 +474,7 @@ static char dvfd_bitmap[96][5] =
    e       c
    e       c
    e       c
-   ddddddd   h
+    ddddddd   h
 
    a    b    c    d    e    f    g    h
    0x80 0x40 0x20 0x10 0x08 0x04 0x02 0x01
@@ -578,17 +583,17 @@ enum YWPANL_WRITE_INSTR_e
 	YWPANEL_DISPLAY_INSTR_DVFD
 };
 
-#define FP_CS_CLR() {udelay(10);stpio_set_pin(pio_cs, 0);}
-#define FP_CS_SET() {udelay(10);stpio_set_pin(pio_cs, 1);}
+#define FP_CS_CLR() {udelay(10); stpio_set_pin(pio_cs, 0);}
+#define FP_CS_SET() {udelay(10); stpio_set_pin(pio_cs, 1);}
 
-static SegAddrVal_T VfdSegAddr[15];
+static SegAddrVal_t VfdSegAddr[15];
 static struct i2c_adapter *panel_i2c_adapter;
 static const u16 cnCRC_16 = 0x8005;
 // CRC-16 = X16 + X15 + X2 + X0
 static const u16 cnCRC_CCITT = 0x1021;
 // CRC-CCITT = X16 + X12 + X5 + X0
 
-static u32 Table_CRC[256]; // CRC
+static u32 Table_CRC[256];  // CRC
 
 static void YWPANEL_BuildTable16(u16 aPoly)
 {
@@ -615,7 +620,7 @@ static void YWPANEL_BuildTable16(u16 aPoly)
 	}
 }
 
-u16 YWPANEL_GenerateCRC16(u8 * buffer, u32 bufLength)
+u16 YWPANEL_GenerateCRC16(u8 *buffer, u32 bufLength)
 {
 	u32 i;
 	u16 nAccum = 0;
@@ -1086,8 +1091,8 @@ int YWPANEL_FP_ParseI2cData(YWPANEL_FPData_t *data, YWPANEL_I2CData_t *I2CData)
 {
 	u16 crc16Code = 0;
 	u16 receiveCode = 0;
-	u8 dataType;
-	u8 datalength;
+	u8 	dataType;
+	u8 	datalength;
 
 	if ((data == NULL) || (I2CData == NULL))
 	{
@@ -1286,7 +1291,7 @@ int YWPANEL_FP_ParseI2cData(YWPANEL_FPData_t *data, YWPANEL_I2CData_t *I2CData)
 		}
 	}
 
-	switch (dataType) // read data from FP
+	switch (dataType)  // read data from FP
 	{
 		case YWPANEL_READ_INSTR_ACK:  //ACK
 		{
@@ -1324,7 +1329,7 @@ int YWPANEL_FP_ParseI2cData(YWPANEL_FPData_t *data, YWPANEL_I2CData_t *I2CData)
 		{
 			if (data->dataType == YWPANEL_DATATYPE_GETCPUSTATE)
 			{
-				data->data.CpuState.state= I2CData->readBuff[2];
+				data->data.CpuState.state = I2CData->readBuff[2];
 				data->ack = true;
 			}
 			else
@@ -1344,7 +1349,7 @@ int YWPANEL_FP_ParseI2cData(YWPANEL_FPData_t *data, YWPANEL_I2CData_t *I2CData)
 		{
 			if (data->dataType == YWPANEL_DATATYPE_GETPOWERONSTATE)
 			{
-				data->data.PowerOnState.state= I2CData->readBuff[2];
+				data->data.PowerOnState.state = I2CData->readBuff[2];
 				data->ack = true;
 			}
 			else
@@ -1354,12 +1359,12 @@ int YWPANEL_FP_ParseI2cData(YWPANEL_FPData_t *data, YWPANEL_I2CData_t *I2CData)
 			}
 			break;
 		}
-		case YWPANEL_INIT_INSTR_GETBLUEKEY1: /* get blue key */
+		case YWPANEL_INIT_INSTR_GETBLUEKEY1:  /* get blue key */
 		case YWPANEL_INIT_INSTR_GETBLUEKEY2:
 		case YWPANEL_INIT_INSTR_GETBLUEKEY3:
 		case YWPANEL_INIT_INSTR_GETBLUEKEY4:
 		case YWPANEL_INIT_INSTR_GETBLUEKEY5:
-		case YWPANEL_INIT_INSTR_GETSTBYKEY1: /* get standby key */
+		case YWPANEL_INIT_INSTR_GETSTBYKEY1:  /* get standby key */
 		case YWPANEL_INIT_INSTR_GETSTBYKEY2:
 		case YWPANEL_INIT_INSTR_GETSTBYKEY3:
 		case YWPANEL_INIT_INSTR_GETSTBYKEY4:
@@ -1392,10 +1397,10 @@ int YWPANEL_FP_ParseI2cData(YWPANEL_FPData_t *data, YWPANEL_I2CData_t *I2CData)
 		case YWPANEL_INIT_INSTR_GETPOWERONTIME:
 		case YWPANEL_INIT_INSTR_GETTIME:
 		{
-			data->data.time.second = ((I2CData->readBuff[2] <<24) & 0xff000000)
-			                       | ((I2CData->readBuff[3] <<16) & 0x00ff0000)
-			                       | ((I2CData->readBuff[4] << 8) & 0x0000ff00)
-			                       | ((I2CData->readBuff[5])      & 0x000000ff);
+			data->data.time.second = ((I2CData->readBuff[2] << 24) & 0xff000000)
+			                       | ((I2CData->readBuff[3] << 16) & 0x00ff0000)
+			                       | ((I2CData->readBuff[4] <<  8) & 0x0000ff00)
+			                       | ((I2CData->readBuff[5])       & 0x000000ff);
 			data->ack = true;
 			break;
 		}
@@ -1428,11 +1433,14 @@ static int YWPANEL_FPWriteDataToI2c(struct i2c_adapter *I2CHandle, u8 *writeBuff
 	return true;
 }
 #else
-static int YWPANEL_FPWriteDataToI2c(struct i2c_adapter *I2CHandle, u8 * writeBuffer, u32 writeBufLen, u8 *readBuffer, u32 readBufLen)
+static int YWPANEL_FPWriteDataToI2c(struct i2c_adapter *I2CHandle, u8 *writeBuffer, u32 writeBufLen, u8 *readBuffer, u32 readBufLen)
 {
 	int ret = 0;
-	struct i2c_msg i2c_msg[] = {{ .addr = I2C_BUS_ADD, .flags = 0, .buf = writeBuffer, .len = writeBufLen},
-	                            { .addr = I2C_BUS_ADD, .flags = I2C_M_RD, .buf = readBuffer, .len = readBufLen}};
+	struct i2c_msg i2c_msg[] =
+	{
+		{ .addr = I2C_BUS_ADD, .flags = 0, .buf = writeBuffer, .len = writeBufLen},
+		{ .addr = I2C_BUS_ADD, .flags = I2C_M_RD, .buf = readBuffer, .len = readBufLen}
+	};
 
 	if (NULL == panel_i2c_adapter)
 	{
@@ -1444,7 +1452,7 @@ static int YWPANEL_FPWriteDataToI2c(struct i2c_adapter *I2CHandle, u8 * writeBuf
 
 	if (ret != 1)
 	{
-		ywtrace_print(TRACE_ERROR, "I2C read error at %d\n", __LINE__);
+		ywtrace_print(TRACE_ERROR, "I2C write error at %d\n", __LINE__);
 		return false;
 	}
 
@@ -1478,10 +1486,9 @@ int YWPANEL_FP_SendData(YWPANEL_FPData_t *data)
 		up(&vfd_sem_rw);
 		return false;
 	}
-
 	memset(&I2CData, 0, sizeof(I2CData));
 
-	if (YWPANEL_FP_SetI2cData(data,&I2CData) != true)
+	if (YWPANEL_FP_SetI2cData(data, &I2CData) != true)
 	{
 		ywtrace_print(TRACE_ERROR,"SetI2cData error at line %d\n",__LINE__);
 		up(&vfd_sem_rw);
@@ -1496,7 +1503,6 @@ int YWPANEL_FP_SendData(YWPANEL_FPData_t *data)
 		up(&vfd_sem_rw);
 		return false;
 	}
-
 	ret = YWPANEL_FP_ParseI2cData(data, &I2CData);
 
 	if (ret != true)
@@ -1505,7 +1511,6 @@ int YWPANEL_FP_SendData(YWPANEL_FPData_t *data)
 		up(&vfd_sem_rw);
 		return false;
 	}
-
 	up(&vfd_sem_rw);
 	return ret;
 }
@@ -1756,7 +1761,7 @@ int YWPANEL_FP_SetLed(int which, int on)
 	return ErrorCode;
 }
 
-int YWPANEL_FP_SetPIOMode(PIO_Mode_T Mode_PIO)
+int YWPANEL_FP_SetPIOMode(PIO_Mode_t Mode_PIO)
 {
 	int ST_ErrCode = 0;
 
@@ -1770,7 +1775,6 @@ int YWPANEL_FP_SetPIOMode(PIO_Mode_T Mode_PIO)
 	}
 	stpio_configure_pin(pio_scl, STPIO_OUT);
 	stpio_configure_pin(pio_cs,  STPIO_OUT);
-
 	return ST_ErrCode;
 }
 
@@ -1822,10 +1826,11 @@ u8 YWPANEL_FP_RD(void)
 	return val;
 }
 
-int YWPANEL_VFD_SegDigSeg(u8 dignum, SegNum_T segnum, u8 val)
+int YWPANEL_VFD_SegDigSeg(u8 dignum, SegNum_t segnum, u8 val)
 {
 	int ST_ErrCode = 0;
 	u8 addr = 0;
+
 	if (segnum < 0 && segnum > 1)
 	{
 		ST_ErrCode = -EINVAL;
@@ -1848,7 +1853,7 @@ int YWPANEL_VFD_SegDigSeg(u8 dignum, SegNum_T segnum, u8 val)
 	return ST_ErrCode;
 }
 
-int YWPANEL_FP_SetMode(FPMode_T mode)
+int YWPANEL_FP_SetMode(FPMode_t mode)
 {
 	int ST_ErrCode = 0;
 	u8 data = 0;
@@ -1894,6 +1899,7 @@ int YWPANEL_VFD_ShowContent_Standby(void)
 int YWPANEL_VFD_ShowContent_Common(void)
 {
 	int ST_ErrCode = 0;
+
 	FP_CS_CLR();
 	ST_ErrCode = YWPANEL_FP_WR(0x8F);
 	FP_CS_SET();
@@ -1905,6 +1911,7 @@ int YWPANEL_VFD_ShowContentOff_Standby(void)
 {
 	int ST_ErrCode = 0;
 	YWPANEL_FPData_t data;
+
 	if (down_interruptible(&vfd_sem))
 	{
 	   ST_ErrCode = -EBUSY;
@@ -1925,7 +1932,7 @@ int YWPANEL_VFD_ShowContentOff_Standby(void)
 int YWPANEL_VFD_ShowContentOff_Common(void)
 {
 	int ST_ErrCode = 0;
-	ST_ErrCode = YWPANEL_FP_WR(0x87); //switch display off (bit 3 = 0)
+	ST_ErrCode = YWPANEL_FP_WR(0x87);  //switch display off (bit 3 = 0)
 
 	return ST_ErrCode;
 }
@@ -1933,7 +1940,8 @@ int YWPANEL_VFD_ShowContentOff_Common(void)
 void YWPANEL_FP_ClearAll(void)
 {
 	int i;
-	for (i = 0; i < 13; i++) // 13 digits (clock plus text)
+
+	for (i = 0; i < 13; i++)  // grid counter
 	{
 		YWPANEL_VFD_SegDigSeg(i + 1, SEGNUM1, 0x00);
 		VfdSegAddr[i + 1].CurrValue1 = 0x00;
@@ -1971,7 +1979,7 @@ static void YWPANEL_VFD_DrawNum(u8 c, u8 position)
 		VfdSegAddr[dignum].CurrValue2 = VfdSegAddr[dignum].CurrValue2 & 0x40;
 		YWPANEL_VFD_SegDigSeg(dignum, SEGNUM2, (NumLib[c][1] >> 1) | VfdSegAddr[dignum].CurrValue2);
 	}
-	else
+	else 
 	{
 		if ((NumLib[c][0] & 0x01))
 		{
@@ -1988,7 +1996,7 @@ static void YWPANEL_VFD_DrawNum(u8 c, u8 position)
 
 void YWPANEL_VFD_Seg_Addr_Init(void)
 {
-	u8 i, addr = 0xC0;  //address flag
+	u8 i, addr = 0xC0;  // address flag
 	for (i = 0; i < 13; i++) // 13 digits (8 text, 5 clock)?
 	{
 		VfdSegAddr[i + 1].CurrValue1 = 0;
@@ -2005,9 +2013,10 @@ static int YWPANEL_VFD_ShowTime_StandBy(u8 hh, u8 mm)
 	int ErrorCode = 0;
 	YWPANEL_FPData_t data;
 	u8 digitNum1, digitNum2, temp;
+
 	if (down_interruptible(&vfd_sem))
 	{
-	   return -EBUSY;
+		return -EBUSY;
 	}
 //show hour
 	memset(&data, 0, sizeof(YWPANEL_FPData_t));
@@ -2019,7 +2028,7 @@ static int YWPANEL_VFD_ShowTime_StandBy(u8 hh, u8 mm)
 
 	temp = digitNum2;
 	digitNum2 = (digitNum2 & 0xbf) | (digitNum1 & 0x40);
-	digitNum1 = (digitNum1 & 0x3c) | ((temp & 0x40) << 1) | ((digitNum1 & 0x01) << 1)|((digitNum1 & 0x02) >> 1);
+	digitNum1 = (digitNum1 & 0x3c) | ((temp & 0x40) << 1) | ((digitNum1 & 0x01) << 1) | ((digitNum1 & 0x02) >> 1);
 	data.data.vfdData.type = YWPANEL_VFD_DISPLAY;
 	data.data.vfdData.address[0] = VfdSegAddr[10].Segaddr2;
 
@@ -2035,11 +2044,11 @@ static int YWPANEL_VFD_ShowTime_StandBy(u8 hh, u8 mm)
 	data.data.vfdData.address[0] = VfdSegAddr[10].Segaddr1;
 
 	data.data.vfdData.DisplayValue[0] = digitNum1;
-	VfdSegAddr[10].CurrValue1= data.data.vfdData.DisplayValue[0];
+	VfdSegAddr[10].CurrValue1 = data.data.vfdData.DisplayValue[0];
 
 	if (YWPANEL_FP_SendData(&data) != true)
 	{
-		ywtrace_print(TRACE_ERROR,"YWPANEL_FP_SendData failed at line [%d]\n",__LINE__);
+		ywtrace_print(TRACE_ERROR,"YWPANEL_FP_SendData failed at line [%d]\n", __LINE__);
 		ErrorCode = -ETIME;
 	}
 
@@ -2050,11 +2059,13 @@ static int YWPANEL_VFD_ShowTime_StandBy(u8 hh, u8 mm)
 	digitNum2 = YWPANEL_CharArray[mm / 10];
 	digitNum1 = YWPANEL_CharArray[mm % 10];
 
+	// tens
 	temp = digitNum2;
 	digitNum2 = (digitNum2 & 0xbf) | (digitNum1 & 0x40);
-	digitNum1 = (digitNum1 & 0x3c) | ((temp & 0x40) << 1) | ((digitNum1 & 0x01) << 1) | ((digitNum1 & 0x02) >>1);
+	digitNum1 = (digitNum1 & 0x3c) | ((temp & 0x40) << 1) | ((digitNum1 & 0x01) << 1) | ((digitNum1 & 0x02) >> 1);
 	data.data.vfdData.type = YWPANEL_VFD_DISPLAY;
 	data.data.vfdData.address[0] = VfdSegAddr[9].Segaddr2;
+
 	data.data.vfdData.DisplayValue[0] = digitNum2;
 	VfdSegAddr[9].CurrValue2 = data.data.vfdData.DisplayValue[0];
 
@@ -2063,9 +2074,9 @@ static int YWPANEL_VFD_ShowTime_StandBy(u8 hh, u8 mm)
 		ywtrace_print(TRACE_ERROR, "YWPANEL_FP_SendData failed at line [%d]\n", __LINE__);
 		ErrorCode = -ETIME;
 	}
-
 	data.data.vfdData.address[0] = VfdSegAddr[9].Segaddr1;
 
+	// units
 	data.data.vfdData.DisplayValue[0] = digitNum1;
 	VfdSegAddr[9].CurrValue1= data.data.vfdData.DisplayValue[0];
 
@@ -2074,7 +2085,6 @@ static int YWPANEL_VFD_ShowTime_StandBy(u8 hh, u8 mm)
 		ywtrace_print(TRACE_ERROR, "YWPANEL_FP_SendData failed at line [%d]\n", __LINE__);
 		ErrorCode = -ETIME;
 	}
-
 	up(&vfd_sem);
 	return ErrorCode;
 }
@@ -2085,10 +2095,9 @@ static int YWPANEL_VFD_ShowTime_Common(u8 hh, u8 mm)
 
 	if (down_interruptible(&vfd_sem))
 	{
-	   ErrorCode = -EBUSY;
-	   return ErrorCode;
+		ErrorCode = -EBUSY;
+		return ErrorCode;
 	}
-
 	if ((hh > 23) && (mm > 59)) // BUG fixed: 24h and 60m were valid!
 	{
 		ErrorCode = -EINVAL;
@@ -2104,7 +2113,7 @@ static int YWPANEL_VFD_ShowTime_Common(u8 hh, u8 mm)
 /* Show Time Off */
 static int YWPANEL_VFD_ShowTimeOff_StandBy(void)
 {
-	return YWPANEL_FP_ShowTime(0,0);
+	return YWPANEL_FP_ShowTime(0, 0);
 }
 
 static int YWPANEL_VFD_ShowTimeOff_Common(void)
@@ -2113,7 +2122,7 @@ static int YWPANEL_VFD_ShowTimeOff_Common(void)
 
 	if (down_interruptible(&vfd_sem))
 	{
-		ST_ErrCode =-EBUSY;
+		ST_ErrCode = -EBUSY;
 		return ST_ErrCode;
 	}
 	ST_ErrCode = YWPANEL_VFD_SegDigSeg(9, SEGNUM1, 0x00);
@@ -2756,7 +2765,7 @@ static int YWPANEL_LEDDisplayString(void)
 	{
 		ret = -1;
 		ywtrace_print(TRACE_ERROR, "[ERROR][%s] TIME OUT\n", __func__);
- 	}
+	}
 	return ret;
 }
 
@@ -2867,14 +2876,14 @@ static int YWPANEL_VFD_ShowString_StandBy(char *str)
 	return ST_ErrCode;
 }
 
-static int YWPANEL_VFD_ShowString_Common(char* str)
+static int YWPANEL_VFD_ShowString_Common(char *str)
 {
 	int ST_ErrCode = 0;
 	int number_of_utf8_characters, i;
 
 	if (down_interruptible(&vfd_sem))
 	{
-		ST_ErrCode =-EBUSY;
+		ST_ErrCode = -EBUSY;
 		return ST_ErrCode;
 	}
 
@@ -2900,7 +2909,6 @@ static int YWPANEL_VFD_ShowString_Common(char* str)
 		YWPANEL_VFD_SegDigSeg(i, SEGNUM1, v1);
 		YWPANEL_VFD_SegDigSeg(i, SEGNUM2, v2);
 	}
-
 	up(&vfd_sem);
 	return ST_ErrCode;
 }
@@ -2910,7 +2918,7 @@ static int YWPANEL_VFD_ShowIcon_StandBy(int which, int on)
 {
 	int ST_ErrCode = 0;
 	int dig_num = 0, seg_num = 0;
-	SegNum_T seg_part = 0;
+	SegNum_t seg_part = 0;
 	u8 seg_offset = 0;
 	YWPANEL_FPData_t data;
 
@@ -2976,7 +2984,7 @@ static int YWPANEL_VFD_ShowIcon_Common(int which, int on)
 {
 	int ST_ErrCode = 0;
 	int dig_num = 0, seg_num = 0;
-	SegNum_T seg_part = 0;
+	SegNum_t seg_part = 0;
 	u8 seg_offset = 0;
 	u8 addr = 0, val = 0;
 
@@ -3212,7 +3220,7 @@ static int YWPANEL_FP_DETECT(void)
 	}
 
 	/* use i2c write to detect */
-	//printk("%s:%d\n", __func__, __LINE__);
+//	dprintk(1, "%s:%d\n", __func__, __LINE__);
 	ret = i2c_transfer(panel_i2c_adapter, &i2c_msg, 1);
 
 	if (ret == 1)
@@ -3230,12 +3238,11 @@ static int YWPANEL_FP_DETECT(void)
 /* Initialize */
 static int YWPANEL_FP_Init_StandBy(void)
 {
-	int ErrorCode = 0;
 	init_MUTEX(&vfd_sem);
 	init_MUTEX(&vfd_sem_rw);
 
 	YWPANEL_VFD_Seg_Addr_Init();
-	return ErrorCode;
+	return 0;
 }
 
 static int YWPANEL_FP_Init_Common(void)
@@ -3264,9 +3271,8 @@ static int YWPANEL_FP_Init_Common(void)
 	YWPANEL_FP_ClearAll();
 //	YWPANEL_FP_ShowContent();
 	YWPANEL_FP_ShowString("Welcome!");
-
 	return ErrorCode;
- }
+}
 
 /* Terminate */
 static int YWPANEL_FP_Term_StandBy(void)
@@ -3300,7 +3306,7 @@ static int YWPANEL_FP_SetBrightness_Unknown(int level)
 	return -ENODEV;
 }
 
-static int YWPANEL_FP_ShowString_Unknown(char* str)
+static int YWPANEL_FP_ShowString_Unknown(char *str)
 {
 	return -ENODEV;
 }
@@ -3315,6 +3321,12 @@ static int YWPANEL_FP_X_Unknown(void)
 	return -ENODEV;
 }
 
+/******************************************************************
+ *
+ * Initialization code
+ *
+*/
+
 static int YWPANEL_FP_Init_Unknown(void)
 {
 	return 0;
@@ -3323,10 +3335,10 @@ static int YWPANEL_FP_Init_Unknown(void)
 int (*YWPANEL_FP_Initialize)(void);
 int (*YWPANEL_FP_Term)(void);
 int (*YWPANEL_FP_ShowIcon)(int, int);
-int (*YWPANEL_FP_ShowTime)(u8 hh,u8 mm);
+int (*YWPANEL_FP_ShowTime)(u8 hh, u8 mm);
 int (*YWPANEL_FP_ShowTimeOff)(void);
 int (*YWPANEL_FP_SetBrightness)(int);
-u8 (*YWPANEL_FP_ScanKeyboard)(void);
+u8  (*YWPANEL_FP_ScanKeyboard)(void);
 int (*YWPANEL_FP_ShowString)(char *);
 int (*YWPANEL_FP_ShowContent)(void);
 int (*YWPANEL_FP_ShowContentOff)(void);
@@ -3381,17 +3393,16 @@ int YWPANEL_FP_Init(void)
 			return ErrorCode;
 		}
 	}
-
 	ErrorCode = YWPANEL_FP_Initialize();
 
 	memset(&panel_version, 0, sizeof(YWPANEL_Version_t));
 
-	if (YWPANEL_FP_GetVersion(&panel_version)) // get FP version info
+	if (YWPANEL_FP_GetVersion(&panel_version))  // get FP version info
 	{
-		panel_disp_type = panel_version.DisplayInfo; // get display type
+		panel_disp_type = panel_version.DisplayInfo;  // get display type
 
 		if (panel_disp_type < YWPANEL_FP_DISPTYPE_UNKNOWN || panel_disp_type > YWPANEL_FP_DISPTYPE_LBD)
-		{ // if display type invalid
+		{  // if display type invalid
 			panel_disp_type = YWPANEL_FP_DISPTYPE_VFD; // default to VFD
 		}
 
@@ -3482,6 +3493,4 @@ int YWPANEL_FP_Init(void)
 	}
 	return ErrorCode;
 }
-
 // vim:ts=4
-

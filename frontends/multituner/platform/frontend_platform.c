@@ -79,7 +79,7 @@ int __init frontend_platform_init(void)
 
 MODULE_DESCRIPTION("Frontend platform module");
 
-MODULE_AUTHOR("konfetti");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_init(frontend_platform_init);

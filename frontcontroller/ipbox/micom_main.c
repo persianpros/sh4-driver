@@ -638,7 +638,7 @@ MODULE_DESCRIPTION("MICOM frontcontroller module (CUBEREVO_3000HD)");
 MODULE_DESCRIPTION("MICOM frontcontroller module (UNKNOWN)");
 #endif
 
-MODULE_AUTHOR("Konfetti");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

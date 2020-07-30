@@ -593,7 +593,7 @@ module_init(micom_init_module);
 module_exit(micom_cleanup_module);
 
 MODULE_DESCRIPTION("Vitamin MICOM frontcontroller module");
-MODULE_AUTHOR("Dagobert & Schischu, Konfetti & Audioniek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

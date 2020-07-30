@@ -1208,6 +1208,6 @@ module_param(gmt, charp, 0);
 MODULE_PARM_DESC(gmt, "gmt offset (default +0000");
 
 MODULE_DESCRIPTION("VFD module for fulan boxes");
-MODULE_AUTHOR("Spider-Team, oSaoYa");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

@@ -787,6 +787,6 @@ module_param(rec, int, 0644);
 MODULE_PARM_DESC(rec, "Receiver model 1=recorder(default), other=no recorder");
 
 MODULE_DESCRIPTION("Front panel PT6302 & PT6958 driver");
-MODULE_AUTHOR("B4Team & Audioniek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

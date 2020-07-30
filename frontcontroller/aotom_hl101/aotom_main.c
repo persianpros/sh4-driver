@@ -1123,5 +1123,5 @@ MODULE_PARM_DESC(gmt, "gmt offset (default +0000");
 
 
 MODULE_DESCRIPTION("VFD module for SpiderBox-HL101");
-MODULE_AUTHOR("Spider-Team, oSaoYa, Ducktrick");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

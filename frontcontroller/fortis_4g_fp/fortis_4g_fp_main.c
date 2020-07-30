@@ -1357,7 +1357,7 @@ module_exit(fortis4g_cleanup_module);
 
 // TODO: gmt offset
 MODULE_DESCRIPTION("Fortis 4G frontcontroller module");
-MODULE_AUTHOR("Dagobert, Schischu, Konfetti, Spider-Team, oSaoYa & Audioniek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

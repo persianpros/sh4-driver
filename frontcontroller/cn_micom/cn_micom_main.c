@@ -673,7 +673,7 @@ module_init(mcom_init_module);
 module_exit(mcom_cleanup_module);
 
 MODULE_DESCRIPTION("CN MCOM frontcontroller module");
-MODULE_AUTHOR("Dagobert & Schischu & Konfetti");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

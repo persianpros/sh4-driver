@@ -724,6 +724,6 @@ module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled (default), >1=enabled (level_");
 
 MODULE_DESCRIPTION("ADB ITI-5800S(X) front panel driver");
-MODULE_AUTHOR("freebox, enhanced by Audioniek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

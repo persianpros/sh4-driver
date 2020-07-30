@@ -2064,6 +2064,6 @@ module_init(cxd2820_init_module);
 module_exit(cxd2820_cleanup_module);
 
 MODULE_DESCRIPTION("CXD2820 DVB-T/T2");
-MODULE_AUTHOR("Duckbox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

@@ -2503,7 +2503,7 @@ MODULE_VERSION(SMARTCARD_VERSION);
 module_param(debug, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(debug, "Turn on/off SmartCard debugging (default:off)");
 
-MODULE_AUTHOR("Spider-Team");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_DESCRIPTION("SmartCard Interface driver");
 MODULE_LICENSE("GPL");
 

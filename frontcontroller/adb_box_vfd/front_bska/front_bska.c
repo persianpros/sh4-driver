@@ -916,5 +916,5 @@ module_init(vfd_module_init);
 module_exit(vfd_module_exit);
 
 MODULE_DESCRIPTION("PT6958 frontpanel driver");
-MODULE_AUTHOR("freebox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

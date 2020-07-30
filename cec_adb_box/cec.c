@@ -381,6 +381,6 @@ module_init(init_cec_module);
 module_exit(cleanup_cec_module);
 
 MODULE_DESCRIPTION("ADB_BOX CEC");
-MODULE_AUTHOR("plfreebox@gmail.com");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

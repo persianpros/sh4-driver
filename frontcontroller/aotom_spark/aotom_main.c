@@ -5,7 +5,7 @@
  * (c) 2011 oSaoYa
  * (c) 2012-2013 Stefan Seyfried
  * (c) 2012-2013 martii
- * (c) 2013-2015 Audioniek
+ * (c) 2013-2020 Audioniek
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -133,10 +133,10 @@ static struct semaphore draw_thread_sem;
 static struct semaphore led_sem;
 
 static struct task_struct *draw_task = 0;
-#define DRAW_THREAD_STATUS_RUNNING 0
-#define DRAW_THREAD_STATUS_STOPPED 1
-#define DRAW_THREAD_STATUS_INIT 2
-static int draw_thread_status = DRAW_THREAD_STATUS_STOPPED;
+#define THREAD_STATUS_RUNNING 0
+#define THREAD_STATUS_STOPPED 1
+#define THREAD_STATUS_INIT 2
+static int draw_thread_status = THREAD_STATUS_STOPPED;
 
 #define RTC_NAME "aotom-rtc"
 static struct platform_device *rtc_pdev;
@@ -147,12 +147,11 @@ extern YWPANEL_Version_t panel_version;
 
 static int VFD_Show_Time(u8 hh, u8 mm, u8 ss)
 {
-	if ((hh > 24) || (mm > 59) || (ss > 59))
+	if ((hh > 23) || (mm > 59) || (ss > 59))
 	{
-		dprintk(2, "%s Bad parameter!\n", __func__);
+		dprintk(1, "%s Invalid time!\n", __func__);
 		return -1;
 	}
-
 	return YWPANEL_FP_SetTime((hh * 3600) + (mm * 60) + ss);
 }
 
@@ -221,7 +220,7 @@ void VFD_set_all_icons(int onoff)
 	{
 		first = ICON_FIRST;
 		last = ICON_LAST;
-		led_state[LED_SPINNER].state = 0; //spinner off
+		led_state[LED_SPINNER].state = 0;  // spinner off
 	}
 
 	for (i = first; i < last + 1; i++)
@@ -338,7 +337,7 @@ static int draw_thread(void *arg)
 		memcpy(buf, data->data, len);
 		buf[len] = 0;
 	}
-	draw_thread_status = DRAW_THREAD_STATUS_RUNNING;
+	draw_thread_status = THREAD_STATUS_RUNNING;
 
 	if (utf8len - saved > YWPANEL_width + 1)
 	{
@@ -351,7 +350,7 @@ static int draw_thread(void *arg)
 
 			if (kthread_should_stop())
 			{
-				draw_thread_status = DRAW_THREAD_STATUS_STOPPED;
+				draw_thread_status = THREAD_STATUS_STOPPED;
 				return 0;
 			}
 			if (fp_type == FP_LED && (b + 2 < buf + sizeof(buf)) && (b[2] == '.' || b[2] == ','|| b[2] == ':'))
@@ -373,7 +372,7 @@ static int draw_thread(void *arg)
 			{
 				if (kthread_should_stop())
 				{
-					draw_thread_status = DRAW_THREAD_STATUS_STOPPED;
+					draw_thread_status = THREAD_STATUS_STOPPED;
 					return 0;
 				}
 				msleep(40);
@@ -390,7 +389,7 @@ static int draw_thread(void *arg)
 	{
 		clear_display();
 	}
-	draw_thread_status = DRAW_THREAD_STATUS_STOPPED;
+	draw_thread_status = THREAD_STATUS_STOPPED;
 	return 0;
 }
 
@@ -399,7 +398,7 @@ static int led_thread(void *arg)
 	int led = (int)arg;
 
 	// toggle LED status for a given time period
-	led_state[led].status = DRAW_THREAD_STATUS_RUNNING;
+	led_state[led].status = THREAD_STATUS_RUNNING;
 
 	while (!kthread_should_stop())
 	{
@@ -410,8 +409,9 @@ static int led_thread(void *arg)
 				break;
 			}
 			while (!down_trylock(&led_sem));  // make sure semaphore is at 0
-
-			YWPANEL_FP_SetLed(led, !led_state[led].state); // toggle LED
+			{
+				YWPANEL_FP_SetLed(led, !led_state[led].state); // toggle LED
+			}
 
 			while ((led_state[led].period > 0) && !kthread_should_stop())
 			{
@@ -422,7 +422,7 @@ static int led_thread(void *arg)
 			YWPANEL_FP_SetLed(led, led_state[led].state);
 		}
 	}
-	led_state[led].status = DRAW_THREAD_STATUS_STOPPED;
+	led_state[led].status = THREAD_STATUS_STOPPED;
 	led_state[led].led_task = 0;
 	return 0;
 }
@@ -432,11 +432,11 @@ static int spinner_thread(void *arg)
 	int led = (int)arg;
 	int i = 0;
 
-	if (led_state[led].status == DRAW_THREAD_STATUS_RUNNING)
+	if (led_state[led].status == THREAD_STATUS_RUNNING)
 	{
 		return 0;
 	}
-	led_state[led].status = DRAW_THREAD_STATUS_RUNNING;
+	led_state[led].status = THREAD_STATUS_RUNNING;
 
 	while (!kthread_should_stop())
 	{
@@ -499,7 +499,7 @@ static int spinner_thread(void *arg)
 			aotomSetIcon(ICON_DISK_CIRCLE, LOG_OFF);
 		}
 	}
-	led_state[led].status = DRAW_THREAD_STATUS_STOPPED;
+	led_state[led].status = THREAD_STATUS_STOPPED;
 	led_state[led].led_task = 0;
 	return 0;
 }
@@ -514,10 +514,10 @@ static int run_draw_thread(struct vfd_ioctl_data *draw_data)
 	}
 
 	// return if there is already a draw task running for the same text
-	if ((draw_thread_status != DRAW_THREAD_STATUS_STOPPED)
-	&& draw_task
-	&& (last_draw_data.length == draw_data->length)
-	&& !memcmp(&last_draw_data.data, draw_data->data, draw_data->length))
+	if ((draw_thread_status != THREAD_STATUS_STOPPED)
+	&&  draw_task
+	&&  (last_draw_data.length == draw_data->length)
+	&&  !memcmp(&last_draw_data.data, draw_data->data, draw_data->length))
 	{
 		up(&draw_thread_sem);
 		return 0;
@@ -526,20 +526,19 @@ static int run_draw_thread(struct vfd_ioctl_data *draw_data)
 	memcpy(&last_draw_data, draw_data, sizeof(struct vfd_ioctl_data));
 
 	// stop existing thread, if any
-	if ((draw_thread_status != DRAW_THREAD_STATUS_STOPPED) && draw_task)
+	if ((draw_thread_status != THREAD_STATUS_STOPPED) && draw_task)
 	{
 		kthread_stop(draw_task);
-		while ((draw_thread_status != DRAW_THREAD_STATUS_STOPPED))
+		while ((draw_thread_status != THREAD_STATUS_STOPPED))
 		{
 			msleep(1);
 		}
 	}
-
-	draw_thread_status = DRAW_THREAD_STATUS_INIT;
+	draw_thread_status = THREAD_STATUS_INIT;
 	draw_task = kthread_run(draw_thread, draw_data, "draw_thread");
 
 	//wait until thread has copied the argument
-	while (draw_thread_status == DRAW_THREAD_STATUS_INIT)
+	while (draw_thread_status == THREAD_STATUS_INIT)
 	{
 		msleep(1);
 	}
@@ -578,7 +577,7 @@ int aotomWriteText(char *buf, size_t len)
 }
 //EXPORT_SYMBOL(aotomWriteText);
 
-int aotomSetTime(char* time)
+int aotomSetTime(char *time)
 {
 	int res = 0;
 
@@ -743,7 +742,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 						led_state[led_nr].state = aotom_data.u.led.on;
 						break;
 					}
-					default: // toggle for (aotom_data.u.led.on * 10) ms
+					default:  // toggle for (aotom_data.u.led.on * 10) ms
 					{
 						dprintk(10, "%s Blink LED %d for 10ms\n", __func__, led_nr);
 						flashLED(led_nr, aotom_data.u.led.on * 10);
@@ -930,7 +929,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 				{
 					aotom_data.u.icon.on = LOG_ON;
 				}
-//display icon
+// display icon
 				switch (icon_nr)
 				{
 					case ICON_ALL:
@@ -981,7 +980,8 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		case VFDSETPOWERONTIME:
 		{
 			u32 uTime = 0;
-			get_user(uTime, (int *) arg);
+
+			get_user(uTime, (int *)arg);
 			YWPANEL_FP_SetPowerOnTime(uTime);
 			res = 0;
 			break;
@@ -998,6 +998,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		{
 			u32 uTime = 0;
 			get_user(uTime, (int *) arg);
+
 			YWPANEL_FP_SetPowerOnTime(uTime);
 			VFD_clr();
 			YWPANEL_FP_ControlTimer(true);
@@ -1026,9 +1027,10 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		case VFDGETTIME:
 		{
 			u32 uTime = 0;
+
 			uTime = YWPANEL_FP_GetTime();
 			dprintk(5, "%s FP time: %d\n", __func__, uTime);
-			res = put_user(uTime, (int *) arg);
+			res = put_user(uTime, (int *)arg);
 			break;
 		}
 		case VFDGETWAKEUPMODE:
@@ -1187,8 +1189,8 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 				}
 				dprintk(1, "%s # of frontpanel keys        : %d\n", __func__, fpanel_version.scankeyNum);
 				dprintk(1, "%s Number of version bytes     : %d\n", __func__, sizeof(fpanel_version));
-				put_user(fpanel_version.CpuType, (int *) arg);
-				res = copy_to_user((char *)arg, &fpanel_version, sizeof(fpanel_version));
+				res = put_user(fpanel_version.DisplayInfo, (int *)arg);
+				res |= copy_to_user((char *)arg, &fpanel_version, sizeof(fpanel_version));
 			}
 			break;
 		}
@@ -1218,9 +1220,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			break;
 		}
 	}
-
 	up(&write_sem);
-
 	dprintk(5, "%s <\n", __func__);
 	return res;
 }
@@ -1335,7 +1335,7 @@ static void button_bad_polling(struct work_struct *work)
 	bad_polling = 2;
 }
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17)
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 17)
 static DECLARE_WORK(button_obj, button_bad_polling);
 #else
 static DECLARE_WORK(button_obj, button_bad_polling, NULL);
@@ -1573,22 +1573,18 @@ static int __init aotom_init_module(void)
 
 	if (YWPANEL_FP_Init())
 	{
-		printk("[aotom] Unable to initialize module.\n");
+		dprintk(1, "Unable to initialize module.\n");
 		return -1;
 	}
-
-	VFD_clr();
-
-	if (button_dev_init() != 0)
+	VFD_clr();  // clear display
+	if (button_dev_init() != 0)  // initialize front panel button driver
 	{
 		return -1;
 	}
-
 	if (register_chrdev(VFD_MAJOR, "VFD", &vfd_fops))
 	{
-		printk("Unable to get major %d for VFD.\n",VFD_MAJOR);
+		dprintk(1, "Unable to get major %d for VFD.\n", VFD_MAJOR);
 	}
-
 	sema_init(&write_sem, 1);
 	sema_init(&draw_thread_sem, 1);
 
@@ -1596,7 +1592,7 @@ static int __init aotom_init_module(void)
 	{
 		led_state[i].state = LOG_OFF;
 		led_state[i].period = 0;
-		led_state[i].status = DRAW_THREAD_STATUS_STOPPED;
+		led_state[i].status = THREAD_STATUS_STOPPED;
 		sema_init(&led_sem, 0);
 		if (i == LED_SPINNER && fp_type == FP_VFD)
 		{
@@ -1604,7 +1600,7 @@ static int __init aotom_init_module(void)
 		}
 		else
 		{
-			led_state[i].led_task = kthread_run(led_thread, (void *) i, "led_thread");
+			led_state[i].led_task = kthread_run(led_thread, (void *)i, "led_thread");
 		}
 	}
 
@@ -1638,7 +1634,7 @@ static int led_thread_active(void)
 
 	for (i = 0; i < LASTLED; i++)
 	{
-		if (!led_state[i].status && led_state[i].led_task)	
+		if (!led_state[i].status && led_state[i].led_task)
 		{
 			return -1;
 		}
@@ -1656,7 +1652,7 @@ static void __exit aotom_cleanup_module(void)
 	platform_device_unregister(rtc_pdev);
 	remove_proc_fp();
 
-	if ((draw_thread_status != DRAW_THREAD_STATUS_STOPPED) && draw_task)
+	if ((draw_thread_status != THREAD_STATUS_STOPPED) && draw_task)
 	{
 		kthread_stop(draw_task);
 	}
@@ -1670,11 +1666,10 @@ static void __exit aotom_cleanup_module(void)
 		}
 	}
 
-	while ((draw_thread_status != DRAW_THREAD_STATUS_STOPPED) && !led_thread_active())
+	while ((draw_thread_status != THREAD_STATUS_STOPPED) && !led_thread_active())
 	{
 		msleep(1);
 	}
-
 	dprintk(5, "[BTN] Unloading...\n");
 	button_dev_exit();
 
@@ -1693,7 +1688,6 @@ module_param(gmt, charp, 0);
 MODULE_PARM_DESC(gmt, "GMT offset (default +0000");
 
 MODULE_DESCRIPTION("VFD module for Fulan receivers");
-MODULE_AUTHOR("Spider-Team, oSaoYa, Audioniek");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
-
 // vim:ts=4

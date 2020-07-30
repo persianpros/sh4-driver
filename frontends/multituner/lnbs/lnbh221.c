@@ -167,7 +167,7 @@ MODULE_PARM_DESC(paramDebug, "Enable logging (default : 0 = no logging)");
 
 MODULE_DESCRIPTION("LNBH221 Handling");
 
-MODULE_AUTHOR("konfetti");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_init(lnbh221_init);

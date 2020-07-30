@@ -601,8 +601,6 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(UFS922) \
  || defined(UFC960) \
  || defined(FORTIS_HDBOX) \
- || defined(HL101) \
- || defined(VIP1_V2) \
  || defined(VIP2_V1) \
  || defined(CUBEREVO) \
  || defined(CUBEREVO_MINI2) \
@@ -620,7 +618,8 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(UFS913) \
  || defined(SAGEMCOM88)
 		pti_hal_init(&pti, &pContext->DvbDemux, demultiplexDvbPackets, 2);
-#elif defined(SPARK7162)
+#elif defined(SPARK7162) \
+ ||   defined(PACE7241)
 		pti_hal_init(&pti, &pContext->DvbDemux, demultiplexDvbPackets, 3);
 #else
 		pti_hal_init(&pti, &pContext->DvbDemux, demultiplexDvbPackets, 1);
@@ -651,7 +650,8 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(ADB_BOX)
+ || defined(ADB_BOX) \
+ || defined(PACE7241)
 		fe_core_register_frontend(&pContext->DvbContext->DvbAdapter);
 #elif defined(CUBEREVO) \
  || defined(CUBEREVO_MINI2) \

@@ -170,7 +170,7 @@ static void socket_cleanup(void)
 
 MODULE_DESCRIPTION("Multituner Socket Handling");
 
-MODULE_AUTHOR("konfetti");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 
 module_init(socket_init);

@@ -2828,5 +2828,5 @@ module_init(tuner_init);
 module_exit(tuner_exit);
 
 MODULE_DESCRIPTION("Tunerdriver");
-MODULE_AUTHOR("Dagobert");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

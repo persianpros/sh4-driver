@@ -2924,6 +2924,6 @@ module_init(cx24116_init);
 module_exit(cx24116_exit);
 
 MODULE_DESCRIPTION("Tunerdriver");
-MODULE_AUTHOR("Dagobert");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

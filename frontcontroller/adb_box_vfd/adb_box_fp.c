@@ -630,6 +630,6 @@ module_param(rec, int, 0644);
 MODULE_PARM_DESC(rec, "adb_box rec");
 
 MODULE_DESCRIPTION("fp pt6302 & pt6958 driver");
-MODULE_AUTHOR("B4Team");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

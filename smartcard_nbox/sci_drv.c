@@ -2626,7 +2626,7 @@ MODULE_PARM_DESC(type, "box type (bska, bsla, bxzb)");
 module_param(mode_sci1,charp,0);
 MODULE_PARM_DESC(mode_sci1, "mode SCI1 (tda8004,nbox)");
 
-MODULE_AUTHOR("Spider-Team mod freebox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_DESCRIPTION("SmartCard Interface driver");
 MODULE_LICENSE("GPL");
 

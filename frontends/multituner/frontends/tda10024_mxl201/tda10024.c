@@ -1358,6 +1358,6 @@ module_init(tda10024_init_module);
 module_exit(tda10024_cleanup_module);
 
 MODULE_DESCRIPTION("TDA10024 DVB-C demodulator driver");
-MODULE_AUTHOR("Duckbox");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

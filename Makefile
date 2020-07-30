@@ -442,4 +442,12 @@ obj-y += smartcard/
 obj-y += fan_pace7241/
 endif
 
+ifdef VIP1_V2
+obj-y += smartcard/
+endif
+
+ifdef VIP2_V1
+obj-y += smartcard/
+endif
+
 endif
