@@ -232,7 +232,7 @@ static enum stb0899_status stb0899_search_tmg(struct stb0899_state *state)
 
 	while ((stb0899_check_tmg(state) != TIMINGOK) && next_loop)
 	{
-		derot_freq += index * internal->direction * derot_step;	/* next derot zig zag position */
+		derot_freq += index * internal->direction * derot_step;	 /* next derot zig zag position */
 
 //		dprintk(20, "index = %d, derot_freq = %d, limit = %d, direction = %d, step = %d\n", index, derot_freq, derot_limit, internal->direction, derot_step);
 
@@ -458,7 +458,7 @@ static enum stb0899_status stb0899_search_data(struct stb0899_state *state)
 		if ((internal->status != CARRIEROK)
 		||  (stb0899_check_data(state) != DATAOK))
 		{
-			derot_freq += index * internal->direction * derot_step;  /* next zig zag derotator position */
+			derot_freq += index * internal->direction *derot_step;  /* next zig zag derotator position */
 
 //			dprintk(20, "index = %d, derot_freq = %d, limit = %d, direction = %d, step = %d\n", index, derot_freq, derot_limit, internal->direction, derot_step);
 
@@ -715,7 +715,7 @@ enum stb0899_status stb0899_dvbs_algo(struct stb0899_state *state)
 					{
 //						dprintk(20, "RANGE OK, Derot freq = %d, mclk = %d\n", internal->derot_freq, internal->mclk);
 
-						internal->freq = params->freq + ((internal->derot_freq *internal->mclk) / 1000);
+						internal->freq = params->freq + ((internal->derot_freq * internal->mclk) / 1000);
 						reg = stb0899_read_reg(state, STB0899_PLPARM);
 						internal->fecrate = STB0899_GETFIELD(VITCURPUN, reg);
 //						dprintk(20, "Freq = %d, internal resultant freq = %d\n", params->freq, internal->freq);
@@ -920,7 +920,7 @@ static u32 stb0899_dvbs2_calc_dev(struct stb0899_state *state)
 	dec_ratio = (dec_ratio == 0) ? 1 : dec_ratio;
 
 	master_clk = internal->master_clk / 1000;  /* for integer Caculation */
-	srate = internal->srate / 1000;	 /* for integer Caculation */
+	srate = internal->srate / 1000;  /* for integer Caculation */
 	correction = (512 * master_clk) / (2 * dec_ratio * srate);
 	return correction;
 }

@@ -9,7 +9,7 @@
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add nuvoton irq handling
  *
- * (c) 2014-2019 Audioniek: rewritten and expanded for Fortis 4G
+ * (c) 2014-2020 Audioniek: rewritten and expanded for Fortis 4G
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
  * 20200122 Audioniek       Simplify brightness control.
  * 20200126 Audioniek       Fix power on error message on VFD models.
  * 20200215 Audioniek       Fix illegal icon number on VFD models.
+ * 20200313 Audioniek       Add UTF8 support on VFD models (untested yet).
  *
  ****************************************************************************************/
 
@@ -96,7 +97,6 @@
 //#include <linux/reboot.h>
 
 #include "fortis_4g_fp.h"
-#include "fortis_4g_fp_utf.h"
 #if defined(FOREVER_NANOSMART) \
  || defined(DP7001) \
  || defined(FOREVER_2424HD)
@@ -108,11 +108,19 @@
  ||   defined(GPV8000) \
  ||   defined(EP8000) \
  ||   defined(EPP8000)
+//#include "fortis_4g_fp_utf.h"
 #include "fortis_4g_fp_et16315.h"
+#else
+#warning Architecture not supported!
 #endif
 
 //static int mode = 0;  // mode = compatibility to E2 vfd driver
 short paramDebug = 10;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[fortis_4g_fp] "
+
 int waitTime = 1000;
 #if defined USE_RTC
 static char rtc_device[] = "rtc0";
@@ -416,6 +424,7 @@ static int clear_display(void)
 	return res;
 }
 
+#if 0
 int utf8charlen(unsigned char c)
 {
 	if (!c)
@@ -472,6 +481,7 @@ int utf8strlen(char *s, int len)
 	}
 	return ulen;  // can be UTF8 (or pure ASCII, at least no non-UTF-8 8bit characters)
 }
+#endif
 
 static int display_thread(void *arg)
 {
@@ -481,19 +491,21 @@ static int display_thread(void *arg)
 	int i, j;
 	int len;
 	int res = -1;
-	int utf8len;
+//	int utf8len;
 
 	len = display_data->length;
 	memcpy(bBuf, display_data->data, len);
 	bBuf[len] = 0;
 
-	utf8len = utf8strlen(bBuf, len);  // get corrected length for UTF8
+//	utf8len = utf8strlen(bBuf, len);  // get corrected length for UTF8
 
 	display_thread_status = DISPLAY_THREAD_RUNNING;
 
-	if (utf8len > DISP_SIZE)  // scroll
+//	if (utf8len > DISP_SIZE)  // scroll
+	if (len > DISP_SIZE)  // scroll
 	{  // TODO: insert UTF8
-		for (i = 0; i <= utf8len; i++)
+//		for (i = 0; i <= utf8len; i++)
+		for (i = 0; i <= len; i++)
 		{
 			if (kthread_should_stop())
 			{
@@ -516,11 +528,14 @@ static int display_thread(void *arg)
 				msleep(25);
 			}
 		}
-		utf8len = DISP_SIZE;  // set character count for final display
+//		utf8len = DISP_SIZE;  // set character count for final display
+		len = DISP_SIZE;  // set character count for final display
 	}
-	if (utf8len > 0)
+//	if (utf8len > 0)
+	if (len > 0)
 	{
-		res = fortis_4gWriteString(bBuf, utf8len);
+//		res = fortis_4gWriteString(bBuf, utf8len);
+		res = fortis_4gWriteString(bBuf, len);
 	}
 	else
 	{
@@ -605,7 +620,7 @@ int fortis_4gInit_func(void)
 #elif defined(DP7001)
 	printk("Fortis DP7001 LED");
 #elif defined(FOREVER_2424HD)
-	printk("Forever 2424HD LED");
+	printk("FForever 2424HD LED");
 #elif defined(FOREVER_3434HD)
 	printk("Forever 3434HD VFD");
 #elif defined(GPV8000)
@@ -620,10 +635,10 @@ int fortis_4gInit_func(void)
 	printk(" front panel module initializing\n");
 
 #if defined(FOREVER_3434HD) \
- ||   defined(FOREVER_9898HD) \
- ||   defined(GPV8000) \
- ||   defined(EP8000) \
- ||   defined(EPP8000)
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	for (vLoop = 1; vLoop < ICON_MAX; vLoop++)
 	{
 		res |= fortis_4gSetIcon(vLoop, 0);  // all icons off
@@ -713,7 +728,7 @@ int fortis_4gGetVersion(unsigned int *data)
 
 	if (i != 8)
 	{
-		printk(TAGDEBUG"Error reading boot loader info\n");
+		dprintk(0, "Error reading boot loader info\n");
 		return -1;
 	}
 
@@ -732,7 +747,6 @@ int fortis_4gGetVersion(unsigned int *data)
 		data[1] <<= 8;
 		data[1] += buf[i];
 	}
-
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }

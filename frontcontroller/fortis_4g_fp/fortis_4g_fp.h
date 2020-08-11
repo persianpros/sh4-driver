@@ -5,7 +5,7 @@
  *
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add irq handling
- * (c) 2014-2019 Audioniek: Rewritten and adapted for Fortis 4G
+ * (c) 2014-2020 Audioniek: Rewritten and adapted for Fortis 4G
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,10 +40,15 @@
 #define _fortis_4gh
 
 extern short paramDebug;
-#define TAGDEBUG "[fortis_4g_fp] "
-
 #ifndef dprintk
-#define dprintk(level, x...) do { if ((paramDebug) && (paramDebug >= level)) printk(TAGDEBUG x); } while (0)
+#define dprintk(level, x...) \
+do \
+{ \
+	if (((paramDebug) && (paramDebug >= level)) || (level == 0)) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
 #endif
 
 /****************************************************************************************/
@@ -89,29 +94,33 @@ extern short paramDebug;
 /* Defines for the FP LEDs */
 /* LED numbers are bitmapped, LED_MAX should be the sum of the other defined LEDs */
 /* LED arrangement across models is as follows:
- * Red LED is always present, and driven from ET16315 LED output 0
+ * Red LED is always present, and driven from ET16315 LED output 0 on VFD models
  * Blue LED is only present on FOREVER_3434HD, and driven from ET16315 LED output 1
+ * Green LED is present on some LED models, driven from GPIO pin 13,2
  * Logo LEDs (if present) are driven from GPIO pin 15,7
  */
-#define MAX_LED_BRIGHT 1 // LED is either on or off, 4G Fortis models cannot dim their LEDs
+#define MAX_LED_BRIGHT 7  // Note: Fortis 4G models cannot control LED brightness, value is
+                          //       for compatibility with Nuvoton and HS7XXX models.
 #if defined(DP7001) \
- || defined(FOREVER_2424HD)
+ || defined(FOREVER_2424HD)  // TODO: verify FOREVER_2424HD
 #define LED_GREEN      1
 #define LED_LOGO       2
 #define MAX_LED        3 // X: standby (red, not controllable), 1: remote (green), 2: logo
-#elif defined(FOREVER_NANOSMART) // 1: standby (red), (green) seems to be not directly controllable (off when red is on)
+#elif defined(FOREVER_NANOSMART)  // 1: standby (red), (green) seems to be not directly controllable (off when red is on)
 #define LED_GREEN      1
 #define MAX_LED        1
-#elif defined(FOREVER_3434HD) // 1: standby (red), 2: blue, 4: logo
+#elif defined(FOREVER_3434HD)  // 1: standby (red), 2: blue, 4: logo
 #define LED_RED        1
 #define LED_BLUE       2
 #define LED_LOGO       4
 #define MAX_LED        7
-#elif defined(GPV8000) || defined(EP8000) || defined(EPP8000) // 1: standby (red), 2: logo
+#elif defined(GPV8000) \
+ ||   defined(EP8000) \
+ ||   defined(EPP8000)  // 1: standby (red), 2: logo
 #define LED_RED        1
 #define LED_LOGO       2
 #define MAX_LED        3
-#elif defined(FOREVER_9898HD) // 1: standby (red)
+#elif defined(FOREVER_9898HD)  // 1: standby (red)
 #define LED_RED        1
 #define MAX_LED        1
 #endif
@@ -119,7 +128,11 @@ extern short paramDebug;
 #define MAX_BRIGHT     7  // display brightness
 
 /* Defines for the icons */
-#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000) \
+ || defined(FOREVER_9898HD)
 #define ICON_MIN       0
 #define ICON_DOT       1
 #define ICON_REC       ICON_DOT
@@ -131,15 +144,21 @@ extern short paramDebug;
 #endif
 
 /* Defines for the FP display */
-#if defined(FOREVER_NANOSMART) || defined(DP7001)|| defined(FOREVER_2424HD)
-#define DISP_SIZE 4
-#elif defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
-#define DISP_SIZE 8
+#if defined(FOREVER_NANOSMART) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD)
+#define DISP_SIZE      4
+#elif defined(FOREVER_3434HD) \
+ ||   defined(FOREVER_9898HD) \
+ ||   defined(GPV8000) \
+ ||   defined(EP8000) \
+ ||   defined(EPP8000)
+#define DISP_SIZE      8
 #endif
 
 #define RESELLER_OFFSET 0x00000500
 
-// Uncomment next line if RTC is used
+// Uncomment next line if SoC RTC is used
 //#define USE_RTC        1
 
 struct saved_data_s
@@ -148,7 +167,7 @@ struct saved_data_s
 	char data[128];
 };
 
-//String data displayed last on FP
+// String data displayed last on FP
 static struct saved_data_s lastdata;
 
 struct set_icon_s
@@ -175,7 +194,7 @@ struct set_light_s
 
 struct get_version_s
 {
-	unsigned int data[2]; // data[0] = boot loader version, data[1] = resellerID
+	unsigned int data[2];  // data[0] = boot loader version, data[1] = resellerID
 };
 
 /* This will set the mode temporarily (for one ioctl)
@@ -255,8 +274,8 @@ extern int fortis_4gSetTimeFormat(char format);
 extern int fortis_4gSetTimeDisplayOnOff(char onoff);
 extern int fortis_4gWriteString(unsigned char *aBuf, int len);
 extern int fortis_4gGetVersion(unsigned int *data);
-extern int fortis_4gInit_core(void); //Initialize the I/O part
-extern void fortis_4gExit_core(void); //Cleanup the I/O part
+extern int fortis_4gInit_core(void);  // Initialize the I/O part
+extern void fortis_4gExit_core(void);  // Cleanup the I/O part
 extern void create_proc_fp(void);
 extern void remove_proc_fp(void);
 /****************************************************************************************/

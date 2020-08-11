@@ -7,7 +7,7 @@
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add nuvoton irq handling
  *
- * (c) 2014-2019 Audioniek: rewritten for Fortis 4th generation receivers
+ * (c) 2014-2020 Audioniek: rewritten for Fortis 4th generation receivers
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,6 +66,11 @@
 #include "fortis_4g_fp.h"
 #include "fortis_4g_names.h"
 
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[fortis_4g_fp_proc_fs] "
+
 /*
  *  /proc/------
  *             |
@@ -96,10 +101,10 @@ extern int install_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *wr
 extern int remove_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *write_proc);
 
 /* from other fortis_4g modules */
-//extern int fortis_4gWriteString(char *buf, size_t len);
-//#if defined(....)  All models can control display brightness
-//extern int fortis_4gSetBrightness(int level);
-//#endif
+// extern int fortis_4gWriteString(char *buf, size_t len);
+// #if defined(....)  All models can control display brightness
+// extern int fortis_4gSetBrightness(int level);
+// #endif
 
 /* Globals */
 static int progress = 0;
@@ -108,7 +113,7 @@ static int progress = 0;
  || defined(GPV8000) \
  || defined(EP8000) \
  || defined(EPP8000)
-//static int symbol_circle = 0;
+// static int symbol_circle = 0;
 static int old_icon_state;
 #endif
 static u32 led0_pattern = 0;
@@ -237,8 +242,8 @@ static int led_pattern_write(struct file *file, const char __user *buf, unsigned
 				led0_pattern = pattern;
 			}
 
-//TODO: Not implemented completely; only the cases 0 and 0xffffffff (ever off/on) are handled
-//Other patterns are blink patterned in time, so handling those should be done in a thread
+// TODO: Not implemented completely; only the cases 0 and 0xffffffff (ever off/on) are handled
+// Other patterns are blink patterned in time, so handling those should be done in a thread
 
 			if (pattern == 0)
 			{

@@ -1,8 +1,17 @@
-/*
- * STB0899 Multistandard Frontend driver
- * Copyright (C) Manu Abraham (abraham.manu@gmail.com)
+/************************************************************************
  *
- * Copyright (C) ST Microelectronics
+ * Frontend core driver
+ *
+ * Customized for Edision Argus VIP (?)
+ *
+ * Supports:
+ * Demodulator STM STB0899 with tuner STM STB6100 (DVB-S/S2)
+ * Demodulator STM STV090x with tuner STM STB6100 (DVB-S/S2)
+ * Demodulator STM STV090x with tuner STM STV6110x (DVB-S/S2)
+ * Demodulator STM STV090x with tuner Sharp 7306 (DVB-S/S2)
+ * Demodulator Sony CX24116 with tuner ? (DVB-S/S2)
+ * Demodulator Zarlink ZL10353 with tuner Sharp 6465 (DVB-T)
+ * Demodulator NXP TDA10023 with tuner LG031 (DVB-C)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,20 +20,168 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+ *
+ ************************************************************************/
 
-#ifndef __STB0899_CFG_H
-#define __STB0899_CFG_H
+#include "core.h"
+/* Demodulators */
+#include "stb0899_drv.h"
+#include "stb0899_reg.h"
+#include "stb0899_cfg.h"
+#include "stv090x.h"
+#include "cx24116.h"
+#include "zl10353.h"
 
-static const struct stb0899_s2_reg  stb0899_s2_init_2[] =
+/* Tuners */
+#include "stb6100.h"
+#include "stb6100_cfg.h"
+#if defined TUNER_STV6110
+#include "stv6110x.h"
+#endif
+#if defined TUNER_IX7306
+#include "ix7306.h"
+#endif
+#include "sharp6465.h"
+#include "tda1002x.h"
+#include "lg031.h"
+
+#include <linux/platform_device.h>
+#include <asm/system.h>
+#include <asm/io.h>
+#include <linux/dvb/dmx.h>
+#include <linux/proc_fs.h>
+#include <pvr_config.h>
+
+// Default parameters
+short paramDebug = 0;
+  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 100=open/close functions, 150=all)
+
+static char *demod = "stb0899";
+static int demodType;
+
+static char *tuner = "stb6100";
+static int tunerType;
+
+static struct core *core[MAX_DVB_ADAPTERS];
+
+#define I2C_ADDR_STB0899   (0xd4 >> 1)  // d4 -> 0x6a
+#define I2C_ADDR_STB6100   (0xc0 >> 1)  // c0 -> 0x60
+#define I2C_ADDR_STV090X   (0xd0 >> 1)  // d0 -> 0x68
+#define I2C_ADDR_STV6110X  (0xc0 >> 1)  // c0 -> 0x60
+#define I2C_ADDR_CX24116   (0x0a >> 1)  // 0a -> 0x05
+#define I2C_ADDR_IX7306    (0xc0 >> 1)  // c0 -> 0x60
+#define I2C_ADDR_CE6353    (0x1e >> 1)  // 1e -> 0x0f
+#define I2C_ADDR_SHARP6465 (0xc2 >> 1)  // c2 -> 0x61
+#define I2C_ADDR_TDA10023  (0x18 >> 1)  // 18 -> 0x0c
+#define I2C_ADDR_LG031     (0xc6 >> 1)  // c6 -> 0x63
+
+#define CLK_EXT_IX7306     4000000
+
+enum
 {
+	STV090X,
+	STB0899,
+	CX24116,
+	CE6353,
+	TDA10023,
+};
 
+enum
+{
+	STB6100,
+	STV6110X,
+	SHARP7306,
+	SHARP6465,
+	LG031,
+};
+
+static struct core *core[MAX_DVB_ADAPTERS];
+
+/****************************************************************
+ *
+ * Initialization table for STM STB0899 demodulator.
+ *
+ */
+static struct stb0899_config stb0899_config;
+static struct stb6100_config stb6100_config;
+
+static const struct stb0899_s1_reg stb0899_init_dev [] =
+{
+	{ STB0899_DISCNTRL1,   0x26 },
+	{ STB0899_DISCNTRL2,   0x80 },
+	{ STB0899_DISRX_ST0,   0x04 },
+	{ STB0899_DISRX_ST1,   0x20 },
+	{ STB0899_DISPARITY,   0x00 },
+	{ STB0899_DISFIFO,     0x00 },
+	{ STB0899_DISF22,      0x99 },
+	{ STB0899_DISF22RX,    0x85 },  // 0xa8
+	{ STB0899_ACRPRESC,    0x11 },
+	{ STB0899_ACRDIV1,     0x0a },
+	{ STB0899_ACRDIV2,     0x05 },
+	{ STB0899_DACR1,       0x00 },
+	{ STB0899_DACR2,       0x00 },
+	{ STB0899_OUTCFG,      0x00 },
+	{ STB0899_MODECFG,     0x00 },  // Inversion
+	{ STB0899_IRQMSK_3,    0xf3 },
+	{ STB0899_IRQMSK_2,    0xfc },
+	{ STB0899_IRQMSK_1,    0xff },
+	{ STB0899_IRQMSK_0,    0xff },
+	{ STB0899_I2CCFG,      0x88 },
+	{ STB0899_I2CRPT,      0x58 },
+	{ STB0899_GPIO00CFG,   0x82 },
+	{ STB0899_GPIO01CFG,   0x82 },
+	{ STB0899_GPIO02CFG,   0x82 },
+	{ STB0899_GPIO03CFG,   0x82 },
+	{ STB0899_GPIO04CFG,   0x82 },
+	{ STB0899_GPIO05CFG,   0x82 },
+	{ STB0899_GPIO06CFG,   0x82 },
+	{ STB0899_GPIO07CFG,   0x82 },
+	{ STB0899_GPIO08CFG,   0x82 },
+	{ STB0899_GPIO09CFG,   0x82 },
+	{ STB0899_GPIO10CFG,   0x82 },
+	{ STB0899_GPIO11CFG,   0x82 },
+	{ STB0899_GPIO12CFG,   0x82 },
+	{ STB0899_GPIO13CFG,   0x82 },
+	{ STB0899_GPIO14CFG,   0x82 },
+	{ STB0899_GPIO15CFG,   0x82 },
+	{ STB0899_GPIO16CFG,   0x82 },
+	{ STB0899_GPIO17CFG,   0x82 },
+	{ STB0899_GPIO18CFG,   0x82 },
+	{ STB0899_GPIO19CFG,   0x82 },
+	{ STB0899_GPIO20CFG,   0x82 },
+	{ STB0899_SDATCFG,     0xb8 },
+	{ STB0899_SCLTCFG,     0xba },
+	{ STB0899_AGCRFCFG,    0x1c },  // 0x11 DVB-S; 0x1c DVB-S2 (1c, rjkm)
+	{ STB0899_GPIO22,      0x82 },
+	{ STB0899_GPIO21,      0x91 },
+	{ STB0899_DIRCLKCFG,   0x82 },
+	{ STB0899_CLKOUT27CFG, 0x7e },
+	{ STB0899_STDBYCFG,    0x82 },
+	{ STB0899_CS0CFG,      0x82 },
+	{ STB0899_CS1CFG,      0x82 },
+	{ STB0899_DISEQCOCFG,  0x20 },
+	{ STB0899_NCOARSE,     0x15 },  // 0x15 = 27 Mhz Clock, F/3 = 198MHz, F/6 = 108MHz
+	{ STB0899_SYNTCTRL,    0x00 },  // 0x00 = CLK from CLKI, 0x02 = CLK from XTALI
+	{ STB0899_FILTCTRL,    0x00 },
+	{ STB0899_SYSCTRL,     0x00 },
+	{ STB0899_STOPCLK1,    0x20 },  // orig: 0x00 budget-ci: 0x20
+	{ STB0899_STOPCLK2,    0x00 },
+	{ STB0899_INTBUFCTRL,  0x0a },
+	{ STB0899_AGC2I1,      0x00 },
+	{ STB0899_AGC2I2,      0x00 },
+	{ STB0899_AGCIQIN,     0x00 },
+	{ STB0899_TSTRES,      0x40 },  //rjkm
+	{ 0xffff,              0xff },
+};
+
+static const struct stb0899_s2_reg stb0899_init_s2_demod[] =
+{
 	{ STB0899_OFF0_DMD_STATUS,         STB0899_BASE_DMD_STATUS,        0x00000103 },  /* DMDSTATUS      */
 	{ STB0899_OFF0_CRL_FREQ,           STB0899_BASE_CRL_FREQ,          0x3ed1da56 },  /* CRLFREQ        */
 	{ STB0899_OFF0_BTR_FREQ,           STB0899_BASE_BTR_FREQ,          0x00004000 },  /* BTRFREQ        */
@@ -203,10 +360,10 @@ static const struct stb0899_s2_reg  stb0899_s2_init_2[] =
 	{ STB0899_OFF8_EQ_Q_OUT_COEFF_8,   STB0899_BASE_EQ_Q_OUT_COEFF_N,  0x00000000 },  /* EQQCOEFFSOUT8  */
 	{ STB0899_OFF9_EQ_Q_OUT_COEFF_9,   STB0899_BASE_EQ_Q_OUT_COEFF_N,  0x00000000 },  /* EQQCOEFFSOUT9  */
 	{ STB0899_OFFa_EQ_Q_OUT_COEFF_10,  STB0899_BASE_EQ_Q_OUT_COEFF_N,  0x00000000 },  /* EQQCOEFFSOUT10 */
-	{ 0xffff,                          0xffffffff,                     0xffffffff },
+	{ 0xffff,                          0xffffffff,                     0xffffffff }
 };
-#if 0
-static const struct stb0899_s1_reg stb0899_s1_init_3[] =
+
+static const struct stb0899_s1_reg stb0899_init_s1_demod[] =
 {
 	{ STB0899_DEMOD,          0x00 },
 	{ STB0899_RCOMPC,         0xc9 },
@@ -339,9 +496,9 @@ static const struct stb0899_s1_reg stb0899_s1_init_3[] =
 	{ STB0899_UPKTERRORL,     0x00 },
 	{ 0xffff,                 0xff },
 };
-#endif
 
-static const struct stb0899_s2_reg stb0899_s2_init_4[] =
+
+static const struct stb0899_s2_reg stb0899_init_s2_fec[] =
 {
 	{ STB0899_OFF0_BLOCK_LNGTH,     STB0899_BASE_BLOCK_LNGTH,     0x00000008 },  /* BLOCKLNGTH */
 	{ STB0899_OFF0_ROW_STR,         STB0899_BASE_ROW_STR,         0x000000b4 },  /* ROWSTR     */
@@ -350,7 +507,7 @@ static const struct stb0899_s2_reg stb0899_s2_init_4[] =
 	{ STB0899_OFF0_INFO_LENGTH,     STB0899_BASE_INFO_LENGTH,     0x00000078 },  /* INFOLENGTH */
 	{ STB0899_OFF0_BOT_ADDR,        STB0899_BASE_BOT_ADDR,        0x000001e0 },  /* BOT_ADDR   */
 	{ STB0899_OFF0_BCH_BLK_LN,      STB0899_BASE_BCH_BLK_LN,      0x0000a8c0 },  /* BCHBLKLN   */
-	{ STB0899_OFF0_BCH_T,           STB0899_BASE_BCH_T,           0x0000000c },  /* BCHT	   */
+	{ STB0899_OFF0_BCH_T,           STB0899_BASE_BCH_T,           0x0000000c },  /* BCHT       */
 	{ STB0899_OFF0_CNFG_MODE,       STB0899_BASE_CNFG_MODE,       0x00000001 },  /* CNFGMODE   */
 	{ STB0899_OFF0_LDPC_STAT,       STB0899_BASE_LDPC_STAT,       0x0000000d },  /* LDPCSTAT   */
 	{ STB0899_OFF0_ITER_SCALE,      STB0899_BASE_ITER_SCALE,      0x00000040 },  /* ITERSCALE  */
@@ -363,10 +520,10 @@ static const struct stb0899_s2_reg stb0899_s2_init_4[] =
 	{ STB0899_OFF0_ERR_ACC_PER,     STB0899_BASE_ERR_ACC_PER,     0x00000008 },  /* ERRACCPER  */
 	{ STB0899_OFF0_BCH_ERR_ACC,     STB0899_BASE_BCH_ERR_ACC,     0x00000000 },  /* BCHERRACC  */
 	{ STB0899_OFF0_FEC_TP_SEL,      STB0899_BASE_FEC_TP_SEL,      0x00000000 },  /* FECTPSEL   */
-	{ 0xffff,                       0xffffffff,                   0xffffffff },
+	{ 0xffff,                       0xffffffff,                   0xffffffff }
 };
 
-static const struct stb0899_s1_reg stb0899_s1_init_5[] =
+static const struct stb0899_s1_reg stb0899_init_tst[] =
 {
 	{ STB0899_TSTCK,      0x00 },
 	{ STB0899_TSTRES,     0x00 },
@@ -408,20 +565,606 @@ static const struct stb0899_s1_reg stb0899_s1_init_5[] =
 	{ 0xffff,             0xff },
 };
 
-#define STB0899_DVBS2_ESNO_AVE              3
-#define STB0899_DVBS2_ESNO_QUANT            32
-#define STB0899_DVBS2_AVFRAMES_COARSE       10
-#define STB0899_DVBS2_AVFRAMES_FINE         20
-#define STB0899_DVBS2_MISS_THRESHOLD        6
-#define STB0899_DVBS2_UWP_THRESHOLD_ACQ     1125
-#define STB0899_DVBS2_UWP_THRESHOLD_TRACK   758
-#define STB0899_DVBS2_UWP_THRESHOLD_SOF	    1350
-#define STB0899_DVBS2_SOF_SEARCH_TIMEOUT    1664100
+/****************************************************************
+ *
+ * Configuration data.
+ *
+ */
+#define CORE_STB0899_DVBS2_ESNO_AVE              3
+#define CORE_STB0899_DVBS2_ESNO_QUANT            32
+#define CORE_STB0899_DVBS2_AVFRAMES_COARSE       10
+#define CORE_STB0899_DVBS2_AVFRAMES_FINE         20
+#define CORE_STB0899_DVBS2_MISS_THRESHOLD        6
+#define CORE_STB0899_DVBS2_UWP_THRESHOLD_ACQ     1125
+#define CORE_STB0899_DVBS2_UWP_THRESHOLD_TRACK   758
+#define CORE_STB0899_DVBS2_UWP_THRESHOLD_SOF     1350
+#define CORE_STB0899_DVBS2_SOF_SEARCH_TIMEOUT    1664100
 
-#define STB0899_DVBS2_BTR_NCO_BITS          28
-#define STB0899_DVBS2_BTR_GAIN_SHIFT_OFFSET 15
-#define STB0899_DVBS2_CRL_NCO_BITS          30
-#define STB0899_DVBS2_LDPC_MAX_ITER         70
+#define CORE_STB0899_DVBS2_BTR_NCO_BITS          28
+#define CORE_STB0899_DVBS2_BTR_GAIN_SHIFT_OFFSET 15
+#define CORE_STB0899_DVBS2_CRL_NCO_BITS          30
+#define CORE_STB0899_DVBS2_LDPC_MAX_ITER         70
 
-#endif //__STB0899_CFG_H
+static struct stb0899_config stb0899_config =
+{
+	.init_dev              = stb0899_init_dev,
+	.init_s2_demod         = stb0899_init_s2_demod,
+	.init_s1_demod         = stb0899_init_s1_demod,
+	.init_s2_fec           = stb0899_init_s2_fec,
+	.init_tst              = stb0899_init_tst,
+
+	.lnb_enable            = NULL,
+	.lnb_vsel              = NULL,
+
+	.demod_address         = I2C_ADDR_STB0899,  /* I2C Address */
+	.block_sync_mode       = STB0899_SYNC_FORCED,  /* ? */
+
+	.xtal_freq             = 27000000,  /* Assume Hz ? */
+	.inversion             = IQ_SWAP_ON,  /* ? */
+
+	.lo_clk                = 76500000,
+	.hi_clk                = 99000000,
+
+	.ts_output_mode        = 0,  /* Use parallel mode */
+	.clock_polarity        = 0,  /*  */
+	.data_clk_parity       = 0,  /*  */
+	.fec_mode              = 0,  /*  */
+
+	.esno_ave              = CORE_STB0899_DVBS2_ESNO_AVE,
+	.esno_quant            = CORE_STB0899_DVBS2_ESNO_QUANT,
+	.avframes_coarse       = CORE_STB0899_DVBS2_AVFRAMES_COARSE,
+	.avframes_fine         = CORE_STB0899_DVBS2_AVFRAMES_FINE,
+	.miss_threshold        = CORE_STB0899_DVBS2_MISS_THRESHOLD,
+	.uwp_threshold_acq     = CORE_STB0899_DVBS2_UWP_THRESHOLD_ACQ,
+	.uwp_threshold_track   = CORE_STB0899_DVBS2_UWP_THRESHOLD_TRACK,
+	.uwp_threshold_sof     = CORE_STB0899_DVBS2_UWP_THRESHOLD_SOF,
+	.sof_search_timeout    = CORE_STB0899_DVBS2_SOF_SEARCH_TIMEOUT,
+
+	.btr_nco_bits          = CORE_STB0899_DVBS2_BTR_NCO_BITS,
+	.btr_gain_shift_offset = CORE_STB0899_DVBS2_BTR_GAIN_SHIFT_OFFSET,
+	.crl_nco_bits          = CORE_STB0899_DVBS2_CRL_NCO_BITS,
+	.ldpc_max_iter         = CORE_STB0899_DVBS2_LDPC_MAX_ITER,
+
+	.tuner_get_frequency   = stb6100_get_frequency,
+	.tuner_set_frequency   = stb6100_set_frequency,
+	.tuner_set_bandwidth   = stb6100_set_bandwidth,
+	.tuner_get_bandwidth   = stb6100_get_bandwidth,
+	.tuner_set_rfsiggain   = NULL,
+};
+
+static struct stv090x_config stv090x_config =
+{
+	.device              = STV0903,
+	.demod_mode          = STV090x_DUAL,  /* STV090x_SINGLE */
+	.clk_mode            = STV090x_CLK_EXT,
+
+	.xtal                = 8000000,
+	.address             = I2C_ADDR_STV090X,
+
+	.ts1_mode            = STV090x_TSMODE_DVBCI,  /* STV090x_TSMODE_SERIAL_CONTINUOUS */
+	.ts2_mode            = STV090x_TSMODE_DVBCI,  /* STV090x_TSMODE_SERIAL_CONTINUOUS */
+	.ts1_clk             = 0,
+	.ts2_clk             = 0,
+
+	.lnb_enable          = NULL,
+	.lnb_vsel            = NULL,
+
+	.repeater_level      = STV090x_RPTLEVEL_16,
+
+	.tuner_init          = NULL,
+	.tuner_set_mode      = NULL,
+	.tuner_set_frequency = NULL,
+	.tuner_get_frequency = NULL,
+	.tuner_set_bandwidth = NULL,
+	.tuner_get_bandwidth = NULL,
+	.tuner_set_bbgain    = NULL,
+	.tuner_get_bbgain    = NULL,
+	.tuner_set_refclk    = NULL,
+	.tuner_get_status    = NULL
+};
+
+static struct cx24116_config cx24116_config =
+{
+	.demod_address   = I2C_ADDR_CX24116,  /* I2C Address */
+	.mpg_clk_pos_pol = 0x01,
+	.lnb_enable 	 = NULL,
+	.lnb_vsel	 	 = NULL,
+};
+
+static struct stb6100_config stb6100_config =
+{
+	.tuner_address = I2C_ADDR_STB6100,
+	.refclock      = 27000000
+};
+
+#if defined TUNER_STV6110
+static struct stv6110x_config stv6110x_config =
+{
+	.addr    = I2C_ADDR_STV6110X,
+	.refclk  = 16000000,
+	.clk_div = 2,
+};
+#endif
+
+#if defined TUNER_IX7306
+static const struct ix7306_config bs2s7hz7306a_config =
+{
+	.name      = "Sharp BS2S7HZ7306A",
+	.addr      = I2C_ADDR_IX7306,
+	.step_size = IX7306_STEP_1000,
+	.bb_lpf    = IX7306_LPF_12,
+	.bb_gain   = IX7306_GAIN_2dB,
+};
+#endif
+
+static struct zl10353_config ce6353_config =
+{
+	.demod_address = I2C_ADDR_CE6353,
+	.no_tuner      = 1,
+	.parallel_ts   = 1,
+};
+
+static const struct sharp6465_config s6465_config =
+{
+	.name      = "Sharp 6465",
+	.addr      = I2C_ADDR_SHARP6465,
+	.bandwidth = BANDWIDTH_8_MHZ,
+
+	.Frequency = 500000,
+	.IF        = 36167,
+	.TunerStep = 16667,
+};
+
+static struct tda10023_config philips_tda10023_config =
+{
+	.demod_address = I2C_ADDR_TDA10023,
+	.invert        = 1,
+};
+
+static struct lg031_config lg_lg031_config =
+{
+	.addr = I2C_ADDR_LG031,
+};
+
+/****************************************************************
+ *
+ * Driver code.
+ *
+ */
+static struct dvb_frontend *frontend_init(struct core_config *cfg, int i)
+{
+	struct dvb_frontend *frontend = NULL;
+	struct stv6110x_devctl *ctl;
+
+	dprintk(100, "%s >\n", __func__);
+
+	if (i > 0)
+	{
+		return NULL;
+	}
+	switch (demodType)
+	{
+		case STV090X:
+		{
+			frontend = dvb_attach(stv090x_attach, &stv090x_config, cfg->i2c_adap, STV090x_DEMODULATOR_0);
+			if (frontend)
+			{
+				stv090x_config.lnb_enable  = cfg->lnb_enable;
+				stv090x_config.lnb_vsel    = cfg->lnb_vsel;
+				dprintk(20, "STV090x demodulator attached\n");
+
+				switch (tunerType)
+				{
+#if defined TUNER_IX7306
+					case SHARP7306:
+					{
+						if (dvb_attach(ix7306_attach, frontend, &bs2s7hz7306a_config, cfg->i2c_adap))
+						{
+							dprintk(20, "IX7306 tuner attached\n");
+							//stv090x_config.xtal = CLK_EXT_IX7306;
+							stv090x_config.tuner_set_frequency = ix7306_set_frequency;
+							stv090x_config.tuner_get_frequency = ix7306_get_frequency;
+							stv090x_config.tuner_set_bandwidth = ix7306_set_bandwidth;
+							stv090x_config.tuner_get_bandwidth = ix7306_get_bandwidth;
+							stv090x_config.tuner_get_status    = frontend->ops.tuner_ops.get_status;
+						}
+						else
+						{
+							dprintk(1, "%s: Error attaching IX7306 tuner\n", __func__);
+							goto error_out;
+						}
+						break;
+					}
+#elif defined TUNER_STV6110
+					case STV6110X:
+					default:
+					{
+						ctl = dvb_attach(stv6110x_attach, frontend, &stv6110x_config, cfg->i2c_adap);
+						if (ctl)
+						{
+							dprintk(20, "%s: STV6110x tuner attached\n", __func__);
+							stv090x_config.tuner_init          = ctl->tuner_init;
+							stv090x_config.tuner_set_mode      = ctl->tuner_set_mode;
+							stv090x_config.tuner_set_frequency = ctl->tuner_set_frequency;
+							stv090x_config.tuner_get_frequency = ctl->tuner_get_frequency;
+							stv090x_config.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
+							stv090x_config.tuner_get_bandwidth = ctl->tuner_get_bandwidth;
+							stv090x_config.tuner_set_bbgain    = ctl->tuner_set_bbgain;
+							stv090x_config.tuner_get_bbgain    = ctl->tuner_get_bbgain;
+							stv090x_config.tuner_set_refclk    = ctl->tuner_set_refclk;
+							stv090x_config.tuner_get_status    = ctl->tuner_get_status;
+						}
+						else
+						{
+							dprintk(1, "%s: Error attaching STV6110x tuner\n", __func__);
+							goto error_out;
+						}
+						break;
+					}
+#endif
+				}
+			}
+			else
+			{
+				dprintk(1, "%s: Error attaching STV090x\n", __func__);
+				goto error_out;
+			}
+			break;
+		}
+		case STB0899:
+		{
+			frontend = dvb_attach(stb0899_attach, &stb0899_config, cfg->i2c_adap);
+
+			if (frontend)
+			{
+				dprintk(20, "STB0899 demodulator attached\n");
+
+				if (dvb_attach(stb6100_attach, frontend, &stb6100_config, cfg->i2c_adap) == 0)
+				{
+					dprintk(1, "%s: Error attaching STB6100 tuner \n", __func__);
+					goto error_out;
+				}
+				dprintk(20, "STB6100 tuner attached\n");
+			}
+			else
+			{
+				dprintk(1, "%s: Error attaching STB0899\n", __func__);
+				goto error_out;
+			}
+			stb0899_config.lnb_enable = cfg->lnb_enable;
+			stb0899_config.lnb_vsel   = cfg->lnb_vsel;
+			break;
+		}
+		case CE6353:
+		{
+			frontend = dvb_attach(zl10353_attach, &ce6353_config, cfg->i2c_adap);
+			if (frontend)
+			{
+				dprintk(20, "CE6353 demodulator attached\n");
+				switch (tunerType)
+				{
+					case SHARP6465:
+					{
+						if (dvb_attach(sharp6465_attach, frontend, &s6465_config, cfg->i2c_adap))
+						{
+							dprintk(20, "Sharp 6465 tuner attached\n");
+						}
+						else
+						{
+							dprintk(1, "%s: Error attaching Sharp 6465 tuner\n", __func__);
+							goto error_out;
+						}
+						break;
+					}
+					default:
+					{
+						dprintk(1, "%s: Error: Unknown tuner\n", __func__);
+						goto error_out;
+					}
+				}
+			}
+			else
+			{
+				dprintk(1, "%s: Error attaching CE6353\n", __func__);
+				goto error_out;
+			}
+			break;
+		}
+		case TDA10023:
+		{
+			frontend = dvb_attach(tda10023_attach, &philips_tda10023_config, cfg->i2c_adap, 0x48);
+			if (frontend)
+			{
+				dprintk(20, "TDA10023 attached\n");
+				switch (tunerType)
+				{
+					case LG031:
+					{
+						if (dvb_attach(lg031_attach, frontend, &lg_lg031_config, cfg->i2c_adap))
+						{
+							dprintk(20, "LG031 tuner attached\n");
+						}
+						else
+						{
+							dprintk(1, "%s: Error attaching LG031\n", __func__);
+							goto error_out;
+						}
+						break;
+					}
+					default:
+					{
+						dprintk(1, "%s: Error: Unknown tuner\n", __func__);
+						goto error_out;
+					}
+				}
+			}
+			else
+			{
+				dprintk(1, "%s: Error attaching TDA10023\n", __func__);
+				goto error_out;
+			}
+			break;
+		}
+#if 0
+		case CX24116:
+		{
+			?;
+		}
+#endif
+		default:
+		{
+			dprintk(1, "%s: Error Unknown demodulator\n", __func__);
+			goto error_out;
+		}
+	}
+	return frontend;
+
+error_out:
+	dprintk(1, "%s: Frontend registration failed!\n", __func__);
+	if (frontend)
+	{
+		dvb_frontend_detach(frontend);
+	}
+	return NULL;
+}
+
+static struct dvb_frontend *init_fe_device(struct dvb_adapter *adapter, struct plat_tuner_config *tuner_cfg, int i)
+{
+	struct fe_core_state *state;
+	struct dvb_frontend *frontend;
+	struct core_config *cfg;
+
+	dprintk(150, "%s > (I2C bus = %d)\n", __func__, tuner_cfg->i2c_bus);
+
+	cfg = kmalloc(sizeof(struct core_config), GFP_KERNEL);
+	if (cfg == NULL)
+	{
+		dprintk(1, "%s: kmalloc failed\n", __func__);
+		return NULL;
+	}
+	/* initialize the config data */
+	cfg->i2c_adap = i2c_get_adapter(tuner_cfg->i2c_bus);
+
+	dprintk(20, "%s: I2C adapter = 0x%0x\n", __func__, (unsigned int)cfg->i2c_adap);
+
+	cfg->i2c_addr = tuner_cfg->i2c_addr;
+	dprintk(20, "%s: I2C address = 0x%02x\n", __func__, (unsigned int)cfg->i2c_addr);
+
+	dprintk(50, "%s: Tuner reset PIO        = %d.%d\n", __func__, tuner_cfg->tuner_enable[0], tuner_cfg->tuner_enable[1]);
+	dprintk(50, "%s: LNB enable PIO         = %d.%d\n", __func__, tuner_cfg->lnb_enable[0], tuner_cfg->lnb_enable[1]);
+	dprintk(50, "%s: LNB voltage select PIO = %d.%d\n", __func__, tuner_cfg->lnb_vsel[0], tuner_cfg->lnb_vsel[1]);
+
+	cfg->tuner_reset_pin = stpio_request_pin(tuner_cfg->tuner_enable[0], tuner_cfg->tuner_enable[1], "TUNER RST", STPIO_OUT);
+	cfg->lnb_enable = stpio_request_pin(tuner_cfg->lnb_enable[0], tuner_cfg->lnb_enable[1], "LNB_POWER", STPIO_OUT);
+	cfg->lnb_vsel = stpio_request_pin(tuner_cfg->lnb_vsel[0], tuner_cfg->lnb_vsel[1], "LNB 13/18", STPIO_OUT);
+
+	if ((cfg->i2c_adap == NULL)
+	||  (cfg->tuner_reset_pin == NULL)
+	||  (cfg->lnb_vsel == NULL)
+	||  (cfg->lnb_enable == NULL))
+	{
+		dprintk(1, "%s: Failed to allocate resources (%s)\n", __func__, (cfg->i2c_adap == NULL) ? "I2C" : "STPIO error");
+
+		if (cfg->tuner_reset_pin != NULL)
+		{
+			stpio_free_pin(cfg->tuner_reset_pin);
+		}
+		if (cfg->lnb_enable != NULL)
+		{
+			stpio_free_pin(cfg->lnb_enable);
+		}
+		if (cfg->lnb_vsel != NULL)
+		{
+			stpio_free_pin(cfg->lnb_vsel);
+		}
+		kfree(cfg);
+		return NULL;
+	}
+	if (demodType == STB0899)
+	{
+		/*
+		 * NOTE! on some STB0899 versions, the internal PLL takes a longer time
+		 * to settle, aka LOCK. On the older revisions of the chip, we don't see
+		 * this, as a result on the newer chips the entire clock tree, will not
+		 * be stable after a freshly powered up situation.
+		 * In this case, we should RESET the STB0899 (Active LOW) and wait for
+		 * PLL stabilization.
+		 *
+		 * On the Edision Argus VIP1, the STB0899 demodulator's RESETB is
+		 * connected to the sti7101 PIO, PIO3, Pin 2 TODO: check this
+		 */
+		/* Reset Demodulator */
+		cfg->tuner_reset_act = tuner_cfg->tuner_enable[2];
+	
+		if (cfg->tuner_reset_pin != NULL)
+		{
+			/* set to low */
+			stpio_set_pin(cfg->tuner_reset_pin, !cfg->tuner_reset_act);
+			/* Wait for everything to die */
+			msleep(50);
+			/* Pull it up out of Reset state */
+			stpio_set_pin(cfg->tuner_reset_pin, cfg->tuner_reset_act);
+		}
+		/* Wait for PLL to stabilize */
+		msleep(250);
+		/*
+		 * PLL state should be stable now. Ideally, we should check
+		 * for PLL LOCK status. But well, never mind!
+		 */
+	}
+	frontend = frontend_init(cfg, i);
+
+	if (frontend == NULL)
+	{
+		dprintk(1, "%s: No frontend found!\n", __func__);
+		return NULL;
+	}
+	dprintk(20, "Registering frontend (adapter = 0x%x)\n", __func__, (unsigned int)adapter);
+
+	if (dvb_register_frontend(adapter, frontend))
+	{
+		dprintk(1, "%s: Frontend registration failed\n", __func__);
+		if (frontend->ops.release)
+		{
+			frontend->ops.release(frontend);
+		}
+		return NULL;
+	}
+	state = frontend->demodulator_priv;
+	dprintk(20, "Registering frontend successful\n", __func__);
+	return frontend;
+}
+
+struct plat_tuner_config tuner_resources[] =
+{
+	[0] =
+	{
+		.adapter      = 0,
+		.i2c_bus      = 0,
+		.tuner_enable = {2, 3, 1},  // tuner reset pin
+		.lnb_enable   = {1, 6, 1},  // LNB voltage on/off
+		.lnb_vsel     = {1, 2, 0},  // LNB voltage 13/18V select
+	},
+};
+
+void fe_core_register_frontend(struct dvb_adapter *dvb_adap)
+{
+	int i = 0;
+	int vLoop = 0;
+
+	dprintk(10, "%s: Spider-Team plug and play frontend core\n", __func__);
+
+	core[i] = (struct core *)kmalloc(sizeof(struct core), GFP_KERNEL);
+	if (!core[i])
+	{
+		return;
+	}
+	memset(core[i], 0, sizeof(struct core));
+
+	core[i]->dvb_adapter = dvb_adap;
+	dvb_adap->priv = core[i];
+
+	dprintk(20,"# of tuner(s): %d\n", ARRAY_SIZE(tuner_resources));
+
+	for (vLoop = 0; vLoop < ARRAY_SIZE(tuner_resources); vLoop++)
+	{
+		if (core[i]->frontend[vLoop] == NULL)
+		{
+			dprintk(20, "%s: Initialize frontend %d\n", __func__, vLoop);
+			core[i]->frontend[vLoop] = init_fe_device(core[i]->dvb_adapter, &tuner_resources[vLoop], vLoop);
+		}
+	}
+	dprintk(150, "%s: <\n", __func__);
+	return;
+}
+EXPORT_SYMBOL(fe_core_register_frontend);
+
+int __init fe_core_init(void)
+{
+	if ((demod[0] == 0)
+	|| (strcmp("stb0899", demod) == 0))
+	{
+		dprintk(20, "Demodulator: STM STB0899 DVB-S2  ");
+		demodType = STB0899;
+	}
+	else if (strcmp("stv090x", demod) == 0)
+	{
+		dprintk(20, "Demodulator: STM STV090x DVB-S2  ");
+		demodType = STV090X;
+	}
+	else if (strcmp("cx24116", demod) == 0)
+	{
+		dprintk(20, "Demodulator: Conexant CX24116 DVB-S2  ");
+		demodType = CX24116;
+	}
+	else if (strcmp("ce6353", demod) == 0)
+	{
+		dprintk(20, "Demodulator: Zarlink CE6353 DVB-T  ");
+		demodType = CE6353;
+	}
+	else if (strcmp("tda10023", demod) == 0)
+	{
+		dprintk(20, "demodulator: NXP TDA10023 DVB-C  ");
+		demodType = TDA10023;
+	}
+	else
+	{
+		printk("demodulator: STM STB0899 DVB-S2  ");
+		demodType = STB0899;
+	}
+
+	if ((tuner[0] == 0) || (strcmp("stb6100", tuner) == 0))
+	{
+		printk("tuner: STM STB6100\n");
+		tunerType = STB6100;
+	}
+	else if (strcmp("stv6110x", tuner) == 0)
+	{
+		printk("tuner: STM STV6110x\n");
+		tunerType = STV6110X;
+	}
+	else if (strcmp("sharp7306", tuner) == 0)
+	{
+		printk("tuner: Sharp 7306\n");
+		tunerType = SHARP7306;
+	}
+	else if (strcmp("sharp6465", tuner) == 0)
+	{
+		printk("tuner: Sharp 6465\n");
+		tunerType = SHARP6465;
+	}
+	else if (strcmp("lg031", tuner) == 0)
+	{
+		printk("tuner: LG031\n");
+		tunerType = LG031;
+	}
+	else
+	{
+		printk("tuner: STM STB6100\n");
+		tunerType = STB6100;
+	}
+	dprintk(20, "Frontend core loaded\n");
+	return 0;
+}
+
+static void __exit fe_core_exit(void)
+{
+	dprintk(20, "Frontend core unloaded\n");
+}
+
+module_init(fe_core_init);
+module_exit(fe_core_exit);
+
+module_param(demod, charp, 0);
+MODULE_PARM_DESC(demod, "Demodulator type: stb0899(default), stv090x, cx24116, ce6353, tda10023");
+
+module_param(tuner, charp, 0);
+MODULE_PARM_DESC(tuner, "Tuner type: stb6100(default), stv6110x, sharp7306, sharp6465, lg031");
+
+module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
+
+MODULE_DESCRIPTION("Edision argusVIP1 (pluggable tuner) front end driver");
+MODULE_AUTHOR("Open Vision developers");
+MODULE_LICENSE("GPL");
 // vim:ts=4

@@ -10,7 +10,7 @@
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add nuvoton irq handling
  *
- * (c) 2014-2019 Audioniek: rewritten for Fortis 4th generation receivers
+ * (c) 2014-2020 Audioniek: rewritten for Fortis 4th generation receivers
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,9 +56,14 @@
  * 20141108 Audioniek       All code for older kernel versions removed.
  * 20150205 Audioniek       FOREVER_2424HD model added.
  * 20200122 Audioniek       Simplify brightness control.
+ * 20200602 Audioniek       Fixed compiler warning.
+ * 20200606 Audioniek       Corrected some lower case letters.
+ * 20200606 Audioniek       Clean up brightness control and LightOnOff code.
+ * 20200607 Audioniek       Code debugged/tested on a DP7001.
  *
  *****************************************************************************/
-//TODO: split display on/off and brightness in stead of combining them with brightness=0 is display off
+
+// TODO: control colon and decimal points as icons
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -84,11 +89,18 @@
 #include "fortis_4g_fp.h"
 #include "fortis_4g_fp_et6226.h"
 
-#if defined(FOREVER_NANOSMART) || defined(DP7001) || defined(FOREVER_2424HD)
+#if defined(FOREVER_NANOSMART) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD)
 #define DISP_SIZE 4
 #else
 #warning Architecture not supported!
 #endif
+
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[fortis_4g_et6226] "
 
 static struct et6226_chip *et6226_data;  // global values for IOCTL routines
 
@@ -142,28 +154,28 @@ static unsigned char et6226_fp_chars[] =
 	//76543210    76543210    76543210    76543210  bit numbers
 	0b00000000, 0b00000110, 0b00100010, 0b01011100, // '  - #'
 	0b01101101, 0b01010010, 0b01111101, 0b00000010, // '$' - 0x27
-	0b00111001, 0b00001111, 0b01110110, 0b00100110, // '( - +'
+	0b00111001, 0b00001111, 0b01110110, 0b01000110, // '( - +'
 	0b00001100, 0b01000000, 0b00001000, 0b01010010, // ', - /'
 	0b00111111, 0b00000110, 0b01011011, 0b01001111, // '0 - 3'
 	0b01100110, 0b01101101, 0b01111101, 0b00000111, // '4 - 7'
 	0b00111111, 0b01101111, 0b00010000, 0b00001100, // '8 - ;'
-	0b01011000, 0b00101000, 0b01111101, 0b01010011, // '< - ?'
-	0b01111011, 0b01101111, 0b01111100, 0b01011000, // '@ - C'
+	0b01011000, 0b01001000, 0b01111101, 0b01010011, // '< - ?'
+	0b01111011, 0b01110111, 0b01111100, 0b01011000, // '@ - C'
 	0b01011110, 0b01111001, 0b01110001, 0b00111101, // 'D - G'
-	0b01110110, 0b00000110, 0b00011110, 0b01111010, // 'H - K'
+	0b01110110, 0b00000110, 0b00011110, 0b01110100, // 'H - K'
 	0b00111000, 0b01010101, 0b00110111, 0b00111111, // 'L - O'
 	0b01110011, 0b01100111, 0b01110111, 0b01101101, // 'P - S'
-	0b01111000, 0b00111110, 0b00110111, 0b01111110, // 'T - W'
-	0b01110110, 0b01100110, 0b01011011, 0b00111001, // 'X - ['
-	0b00110100, 0b00001111, 0b00100011, 0b00010000, // 0x5c -'_'
+	0b01111000, 0b00111110, 0b00111110, 0b01111110, // 'T - W'
+	0b01110110, 0b01101110, 0b01011011, 0b00111001, // 'X - ['
+	0b01100100, 0b00001111, 0b00100011, 0b00010000, // 0x5c -'_'
 	0b00100000, 0b01011111, 0b01111100, 0b01011000, // '` - c'
 	0b01011110, 0b01111011, 0b01110001, 0b01101111, // 'd - g'
-	0b01110100, 0b00000100, 0b00001110, 0b01111000, // 'h - k'
+	0b01110100, 0b00000100, 0b00001110, 0b01110100, // 'h - k'
 	0b00111000, 0b01010101, 0b01010100, 0b01011100, // 'l - o'
-	0b01110011, 0b01100111, 0b00001110, 0b01101101, // 'p - s'
+	0b01110011, 0b01100111, 0b01010000, 0b01101101, // 'p - s'
 	0b01111000, 0b00011100, 0b00011100, 0b00011100, // 't - w'
-	0b01110110, 0b01100111, 0b01011011, 0b00111001, // 'x' - 0x7c
-	0b00000110, 0b00001111, 0b00000100, 0b01011100  // '|' - 0x7f
+	0b01110110, 0b01101110, 0b01011011, 0b00111001, // 'x' - 0x7c
+	0b00000110, 0b00001111, 0b00000100, 0b01111111  // '|' - 0x7f
 };
 
 /****************************************************************************************
@@ -178,7 +190,9 @@ static unsigned char et6226_fp_chars[] =
 */
 static int polling = 1;
 static struct workqueue_struct *keyboard_workqueue;
-#if defined(FOREVER_NANOSMART) || defined(DP7001) || defined(FOREVER_2424HD)
+#if defined(FOREVER_NANOSMART) \
+ || defined(DP7001) \
+ || defined(FOREVER_2424HD)
 /*
   The ET6226 provides following values on key presses:
           GR0      GR1       GR2      GR3
@@ -204,6 +218,8 @@ static struct workqueue_struct *keyboard_workqueue;
   CHUP key is between KS3 and GR0 -> keycode = 0x54/0x14 (0b0X010100)
   PWR key is connected to GPIO pin 3.1 (not to the ET6226)
 */
+#define KEY_TOGGLE_MASK 0b01000000
+
 static struct et6226_key front_panel_keys[] =
 {
 	{ 0x54, KEY_UP,   "Channel Up" },
@@ -227,8 +243,10 @@ static struct i2c_board_info et6226_i2c_info =
 static struct et6226_chip et6226_init_values =
 {
 	/* Display control */
-	.ctl_reg = ET6226_DISPLAY_ENABLE + ET6226_EIGHT_SEGMENT_MODE,
-	.brightness = 8, /* 0=display off, 8=highest */
+	.on = 1,            // display is on (valid 0 = off, 1 = on)
+	.display_mode = 1,  // (valid 0 = 7 segments, 1 = 8 segments; decimal points are also driven (at least in DP7001)
+	.sleep_mode = 0,    // off (valid: 0 = off (normal operation), 1 = on)
+	.brightness = 7,    // highest (valid: 0 .. 7)
 	.char_tbl = et6226_fp_chars,
 #if defined(DP7001)
 	.text = "7001", /* initial display text */
@@ -251,6 +269,12 @@ static struct et6226_chip et6226_init_values =
  * I2C routines for ET6226
  *
  ****************************************************************************************/
+
+/****************************************************************************************
+ *
+ * Send one byte to ET6226 (I2C address = address)
+ *
+ ****************************************************************************************/
 int et6226_i2c_write(struct i2c_client *client, unsigned char address, unsigned char byte)
 {
 	int ret = 0;
@@ -270,6 +294,11 @@ int et6226_i2c_write(struct i2c_client *client, unsigned char address, unsigned 
 	return ret;
 }
 
+/****************************************************************************************
+ *
+ * Read one byte from ET6226 (I2C address = address)
+ *
+ ****************************************************************************************/
 unsigned char et6226_i2c_read(struct i2c_client *client, unsigned char address, unsigned char *data)
 {
 	int ret;
@@ -290,71 +319,12 @@ unsigned char et6226_i2c_read(struct i2c_client *client, unsigned char address, 
 }
 
 #if 0
-/* Keyboard input */
-static void et6226_keys_poll(struct work_struct *work)
-{
-/*
-  ET6226 provides following values on key presses:
-          GR0      GR1       GR2      GR3
-  KS1(a)  01000100 01000101 01000110 01000111
-  KS2(b)  01001100 01001101 01001110 01001111
-  KS3(c)  01010100 01010101 01010110 01010111
-  KS4(d)  01011100 01011101 01011110 01011111
-  KS5(e)  01100100 01100101 01100110 01100111
-  KS6(f)  01101100 01101101 01101110 01101111
-  KS7(g)  01110100 01110101 01110110 01110111
-  KS8(p)  01111100 01111101 01111110 01111111
-
-  bit10  = digit number
-  bit2   = always 1
-  bit543 = segment number - 1
-  bit6   = key up or down; 1 = pressed, 0 = not pressed?
-  bit7   = always 0
-
-  On repeated polls with no new key pressed, ET6226 returns bit6=0, bit543X01=last key scanned
-
-  CHUP key is between KS2 and GR0 -> keycode = 0x4c/0x0c (0b0X001100)
-  CHDN key is between KS3 and GR0 -> keycode = 0x54/0x14 (0b0X010100)
-*/
-	struct et6226_chip *chip = container_of(work, struct et6226_chip, keys_work.work);
-	unsigned char keys, diff;
-	int i;
-
-	spin_lock(&chip->lock);
-
-	et6226_i2c_read(chip->client, ET6226_GET_KEYS_ADDR, &keys);
-
-	spin_unlock(&chip->lock);
-
-	diff = ((keys ^ chip->key_prev) & 0b01000000);
-
-	if (diff) //key was pressed or released
-	{
-		for (i = 0; i < chip->keys_num; i++)
-		{
-			struct et6226_key *key = &chip->keys[i];
-
-			if ((keys | 0b01000000) == key->value)
-			{
-				input_event(chip->input, EV_KEY, key->code, (keys & 0b01000000));
-				input_sync(chip->input);
-				dprintk(10, "Key = %s, state = %d\n", key->desc, (diff >> 6)); 
-			}
-		}
-	}
-	chip->key_prev = keys;
-
-	schedule_delayed_work(&chip->keys_work, chip->keys_poll);
-}
-#endif
-
-#if 0
 static void et6226_set_sleep_mode(struct et6226_chip *chip, char sleep)
 {
 
 	if (sleep && chip->display_enable)
 	{
-		chip->display_enable = 0; //switch display off
+		chip->display_enable = 0; // switch display off
 		chip->sleep_mode = ET6226_SLEEP_MODE;
 		dprintk(5, "Put ET6226 to sleep\n");
 	}
@@ -365,37 +335,9 @@ static void et6226_set_sleep_mode(struct et6226_chip *chip, char sleep)
 	}
 	et6226_i2c_write(chip->client, ET6226_CTL_ADDR, ET6226_CTL_DATA(chip->display_enable, chip->sleep_mode, chip->display_mode, chip->brightness));
 }
-
-static int et6226_set_light(struct et6226_chip *chip, char light)
-{
-	int ret  = -1;
-	int display_enable;
-
-	if (chip->sleep_mode)
-	{
-		dprintk(5, "Sleep mode set, no change\n");
-	}
-	else
-	{
-		if (light)
-		{
-			display_enable = ET6226_DISPLAY_ENABLE; //switch display on
-			dprintk(5, "Display on\n");
-		}
-		else
-		{
-			display_enable = 0; //switch display off
-			dprintk(5, "Display off\n");
-		}
-	}
-	chip->display_enable = display_enable;
-
-	ret = et6226_i2c_write(chip->client, ET6226_CTL_ADDR, ET6226_CTL_DATA(chip->display_enable, chip->sleep_mode, chip->display_mode, chip->brightness));
-	return ret;
-}
 #endif
 
-/* Display routines */
+/* Display routine */
 static void et6226_clear(struct et6226_chip *chip)
 {
 	int i;
@@ -413,31 +355,36 @@ static void et6226_clear(struct et6226_chip *chip)
  ****************************************************************************************/
 static void init_leds(void)
 {
+// TODO: FOREVER_NANOSMART
 	dprintk(100, "%s >\n", __func__);
 	/* Set GPIO direction to out and switch LEDs off */
 	gpio_request(GPIO_LED_GREEN, "LED_GREEN");
-#if defined(DP7001) || defined(FOREVER_2424HD)
-	gpio_direction_output(GPIO_LED_GREEN, 1); //drive of LED_GREEN is inverted
+#if defined(DP7001) \
+ || defined(FOREVER_2424HD)
+	gpio_direction_output(GPIO_LED_GREEN, 1);  // drive of LED_GREEN is inverted
 	gpio_request(GPIO_LED_LOGO, "LED_LOGO");
-	gpio_direction_output(GPIO_LED_LOGO, 1); //drive of LED_LOGO is inverted
+	gpio_direction_output(GPIO_LED_LOGO, 1);  // drive of LED_LOGO is inverted
 #else
 	gpio_direction_output(GPIO_LED_GREEN, 0);
 #endif
 	msleep(200);
 	/* Switch LEDs on */
+#if defined(DP7001) \
+ || defined(FOREVER_2424HD)
 	fortis_4gSetLED(LED_GREEN, 1);
-#if defined(DP7001) || defined(FOREVER_2424HD)
 	fortis_4gSetLED(LED_LOGO, 1);
 #endif
 	msleep(200);
 	/* Switch LEDs off */
 	fortis_4gSetLED(LED_GREEN, 0);
-#if defined(DP7001) || defined(FOREVER_2424HD)
+#if defined(DP7001) \
+ || defined(FOREVER_2424HD)
 	fortis_4gSetLED(LED_LOGO, 0);
 #endif
 	msleep(200);
 	/* Initial: LOGO on, rest off */
-#if defined(DP7001) || defined(FOREVER_2424HD)
+#if defined(DP7001) \
+ || defined(FOREVER_2424HD)
 	fortis_4gSetLED(LED_LOGO, 1);
 #endif
 	dprintk(100, "%s <\n", __func__);
@@ -446,10 +393,376 @@ static void init_leds(void)
 static void cleanup_leds(void)
 {
 	gpio_free(GPIO_LED_GREEN);
-#if defined(DP7001) || defined(FOREVER_2424HD)
+#if defined(DP7001) \
+ || defined(FOREVER_2424HD)
 	gpio_free(GPIO_LED_LOGO);
 #endif
 }
+
+/****************************************************************************************
+ *
+ * IOCTL ET6226 routines
+ *
+ ****************************************************************************************/
+
+/*************************************
+ *
+ * Function SetIcon
+ *
+ */
+int fortis_4gSetIcon(int which, int on)
+{
+	return 0;  // LED models do not have icons
+}
+/* export for later use in e2_proc */
+EXPORT_SYMBOL(fortis_4gSetIcon);
+
+/*************************************
+ *
+ * Function SetLED (and SetPwrLED)
+ *
+ * Note: accepts any value from 0 to MAX_LED_BRIGHT as
+ * level to set for compatibility reasons.
+ * Fortis 4G models however cannot control the
+ * brightness of their LEDs.
+ * For this reason the value zero switches a LED
+ * off, a value of 1 or higher but lower than
+ * MAX_LED_BRIGHT switches it on.
+ */
+int fortis_4gSetLED(int which, int level)
+{
+	int ret = -1;
+
+	dprintk(150, "%s > %d, %d\n", __func__, which, level);
+
+	if (which < 1 || which > MAX_LED)
+	{
+		dprintk(1, "LED number %d out of range (1-%d)\n", which, MAX_LED);
+		return -EINVAL;
+	}
+
+	if ((level < 0) || (level > MAX_LED_BRIGHT))
+	{
+		dprintk(1, "LED brightness %d out of range (0-%d)\n", level, MAX_LED_BRIGHT);
+		return -EINVAL;
+	}
+	if (level)
+	{
+		level = 1;
+	}
+	ret = 0;
+
+	switch (which)
+	{
+		case LED_GREEN:
+		{
+#if defined(DP7001) \
+ || defined(FOREVER_2424HD)
+			/* Note: drive of LED_GREEN is inverted on DP7001/7050 */
+			gpio_set_value(GPIO_LED_GREEN, level ? 0 : 1);
+#else
+			gpio_set_value(GPIO_LED_GREEN, level);
+#endif
+			break;
+		}
+
+#if !defined(FOREVER_NANOSMART)
+		case LED_LOGO:
+		{
+#if defined(DP7001) || defined(FOREVER_2424HD)
+			/* Note: drive of LED_LOGO is inverted on DP7001/7050 */
+			gpio_set_value(GPIO_LED_LOGO, level ? 0 : 1);
+#else
+			gpio_set_value(GPIO_LED_LOGO, level);
+#endif
+			break;
+		}
+#endif  // !defined(FOREVER_NANOSMART)
+		default:
+		{
+//			dprintk(1, "%s Unknown LED number %d specified\n", __func__, which);
+//			ret = -EINVAL;
+			break;
+		}
+	}
+	dprintk(150, "%s < RTV = %d\n", __func__, ret);
+	return ret;
+}
+/* export for later use in e2_proc */
+EXPORT_SYMBOL(fortis_4gSetLED);
+
+/*************************************
+ *
+ * Function SetBrightness
+ *
+ */
+int fortis_4gSetBrightness(int level)
+{
+	int ret = -1;
+
+	dprintk(150, "%s >\n", __func__);
+
+	if (level < 0 || level > MAX_BRIGHT)
+	{
+		dprintk(0, "Display brightness level %d out of range (0-%d)\n", level, MAX_BRIGHT);
+		return -EINVAL;
+	}
+
+	et6226_data->brightness = level;  // remember setting
+//	dprintk(50, "Brightness level to set: %d\n", level);
+
+	if (et6226_data->sleep_mode)
+	{
+		dprintk(0, "Sleep mode set, no change\n");
+		ret = 0;
+	}
+	ret = et6226_i2c_write(et6226_data->client, ET6226_CTL_ADDR, ET6226_CTL_DATA(et6226_data->on, et6226_data->sleep_mode, et6226_data->display_mode, et6226_data->brightness));
+
+	dprintk(150, "%s < RTV = %d\n", __func__, ret);
+	return ret;
+}
+/* export for later use in e2_proc */
+EXPORT_SYMBOL(fortis_4gSetBrightness);
+
+/*************************************
+ *
+ * Function SetDisplayOnOff
+ *
+ */
+int fortis_4gSetDisplayOnOff(int on)
+{
+	int ret = -1;
+
+//	dprintk(100, "%s >\n", __func__);
+
+	et6226_data->on = (on == 0 ? 0 : ET6226_DISPLAY_ENABLE);  // remember setting
+
+	if (et6226_data->sleep_mode)
+	{
+		dprintk(0, "Sleep mode set, no change\n");
+		ret = 0;
+	}
+	ret = et6226_i2c_write(et6226_data->client, ET6226_CTL_ADDR, ET6226_CTL_DATA(et6226_data->on, et6226_data->sleep_mode, et6226_data->display_mode, et6226_data->brightness));
+//	dprintk(100, "%s <\n", __func__);
+	return ret;
+}
+
+/*************************************
+ *
+ * Function GetWakeUpMode
+ *
+ * (to be built)
+ *
+ */
+int fortis_4gGetWakeUpMode(void)
+{
+	int ret = 0;
+
+	dprintk(100, "%s >\n", __func__);
+
+	if (ret)
+	{
+		/* error */
+		printk("%s: error\n", __func__);
+		ret = -ETIMEDOUT;
+	}
+	else
+	{
+		/* wake reason mode received ->noop here */
+		dprintk(1, "Wake up mode received\n");
+	}
+
+	dprintk(100, "%s <\n", __func__);
+	return ret;
+}
+
+/*************************************
+ *
+ * Function SetTimeFormat
+ * (to be built, if needed)
+ *
+ */
+int fortis_4gSetTimeFormat(char format)
+{
+//	char buffer[4];
+	int  ret = -1;
+
+	dprintk(100, "%s >\n", __func__);
+
+//	buffer[0] = SOP;
+//	buffer[1] = cCommandSetTimeFormat;
+//	buffer[2] = format;
+//	buffer[3] = EOP;
+
+//	dprintk(20, "Time mode command= 0x%02x (SOP) 0x%02x 0x%02x 0x%02x (EOP)\n", buffer[0], buffer[1], buffer[2], buffer[3]);
+//	res = fortis_4gWriteCommand(buffer, 4, 0);
+
+	dprintk(100, "%s <\n", __func__);
+	return ret;
+}
+
+/*************************************
+ *
+ * Function SetTimeDisplay
+ *
+ * (to be built, if needed)
+ */
+int fortis_4gSetTimeDisplayOnOff(char onoff)
+{
+	int  ret = -1;
+
+	dprintk(100, "%s >\n", __func__);
+
+	dprintk(1, "SetTimeDisplayOnOff not implemented yet.\n");
+
+	dprintk(100, "%s <\n", __func__);
+	return ret;
+}
+
+/*************************************
+ *
+ * Function WriteString
+ *
+ */
+#if defined(DP7001) \
+ || defined(FOREVER_2424HD)
+int fortis_4gWriteString(unsigned char *aBuf, int len)
+{
+	int i, j, ret = -1;
+	int buflen = len;
+	int strlen;
+	int dot_count = 0;
+	int colon_count = 0;
+	unsigned char bBuf[ET6226_DISPLAY_MAX_DIGITS];  // display string without replaceable colon/periods
+	unsigned char cmd_buf[ET6226_DISPLAY_MAX_DIGITS] = { 0, };  // bytes to send to ET6226
+
+	dprintk(100, "%s > %d\n", __func__, len);
+
+	aBuf[len] = 0;
+	dprintk(20, "Display [%s] (%d characters)\n", aBuf, len);
+
+	bBuf[0] = aBuf[0];
+	bBuf[1] = aBuf[1];
+	i = 2;  // input character counter
+	j = 2;  // output digit counter
+
+	while ((j <= ET6226_DISPLAY_MAX_DIGITS) && (i < buflen))
+	{
+		if (aBuf[i] == '.')  // if character is period
+		{
+			if (i == 2)
+			{
+				cmd_buf[0] |= 0x80;
+			}
+			else
+			{
+				if (j >= 2)
+				{
+					cmd_buf[i - 1 - colon_count] |= 0x80;
+				}
+			}
+			dot_count++;
+		}
+		else if ((aBuf[i] == ':') && (j == 2))
+		{
+			cmd_buf[1] |= 0x80;  // flag colon on
+			colon_count++;
+		}
+		else
+		{
+			bBuf[j] = aBuf[i];  // copy next character
+			j++;
+		}
+		i++;
+	}
+	strlen = buflen - dot_count - colon_count;
+
+	if (strlen > ET6226_DISPLAY_MAX_DIGITS)
+	{
+		strlen = ET6226_DISPLAY_MAX_DIGITS;
+	}
+	for (i = 0; i < ET6226_DISPLAY_MAX_DIGITS; i++)
+	{
+		cmd_buf[i] |= et6226_data->char_tbl[(bBuf[i] - 0x20)];
+	}
+	if (strlen < 4)
+	{
+		for (i = strlen; i < ET6226_DISPLAY_MAX_DIGITS; i++)
+		{
+			cmd_buf[i] &= 0x80;
+		}
+	}
+	for (i = 0; i < ET6226_DISPLAY_MAX_DIGITS; i++)
+	{
+		ret = et6226_i2c_write(et6226_data->client, ET6226_DSP_ADDR + i, cmd_buf[i]);
+	}
+	/* save last string written to fp */
+	memcpy(&lastdata.data, aBuf, 64);
+	lastdata.length = len;
+
+	dprintk(100, "%s <\n", __func__);
+	return ret;
+}
+#elif defined(FOREVER_NANOSMART)
+int fortis_4gWriteString(unsigned char *aBuf, int len)
+{
+	int i, ret;
+	int buflen;
+	unsigned char bBuf[ET6226_DISPLAY_MAX_DIGITS];
+	unsigned char cmd_buf[ET6226_DISPLAY_MAX_DIGITS] = { 0 };
+
+	dprintk(100, "%s > %d\n", __func__, len);
+
+	buflen = len;
+	bBuf[0] = aBuf[0];
+	bBuf[1] = aBuf[1];
+
+/* Connection of colon is:
+ * GR2 + KSP -> colon in center (buf[1])
+ */
+	if (aBuf[2] == ':') // if 3rd character is a colon
+	{
+		cmd_buf[1] |= 0x80; // switch colon on
+		bBuf[2] = aBuf[3]; // shift rest of buffer
+		bBuf[3] = aBuf[4]; // forward
+	}
+	else
+	{
+		bBuf[2] = aBuf[2];
+		bBuf[3] = aBuf[3];
+	}
+
+	if (buflen > ET6226_DISPLAY_MAX_DIGITS)
+	{
+		buflen = ET6226_DISPLAY_MAX_DIGITS;
+	}
+
+	for (i = 0; i < buflen; i++)
+	{
+		cmd_buf[i] |= et6226_data->char_tbl[(bBuf[i] - 0x20)];
+	}
+
+	for (i = 0; i < ET6226_DISPLAY_MAX_DIGITS; i++)
+	{
+		ret |= et6226_i2c_write(et6226_data->client, ET6226_DSP_ADDR + i, cmd_buf[i]);
+	}
+
+	/* save last string written to fp */
+	memcpy(&lastdata.data, aBuf, 128);
+	lastdata.length = len;
+
+	dprintk(100, "%s <\n", __func__);
+	return ret;
+}
+#else  // not FOREVER_NANOSMART or DP7001/7050
+int fortis_4gWriteString(unsigned char* aBuf, int len)
+{
+	dprintk(100, "%s >\n", __func__);
+	dprintk(100, "%s <\n", __func__);
+	return -EFAULT;
+}
+#endif
+// End of ET6226 IOCTL code
 
 /****************************************************************************************
  *
@@ -464,7 +777,6 @@ static void keyboard_poll(struct work_struct *work)
 	{
 		unsigned char key_data;
 		int key_pressed;
-//		struct et6226_chip *chip;
 
 //		spin_lock(&chip->lock);
 
@@ -477,7 +789,7 @@ static void keyboard_poll(struct work_struct *work)
 		{
 			key_pressed = (key_data & KEY_TOGGLE_MASK) >> 6; /* returns pressed (1) or not (0) */
 
-			fortis_4gSetLED(LED_GREEN, key_pressed); /* handle feedback */ //TODO invert LED
+			fortis_4gSetLED(LED_GREEN, key_pressed); /* handle feedback */  // TODO invert LED
 
 			if (key_pressed)  /* if key was pressed, must be new key */
 			{
@@ -491,8 +803,6 @@ static void keyboard_poll(struct work_struct *work)
 						et6226_data->key_press = key_pressed;
 						et6226_data->key_code = key->code;
 						et6226_data->key_desc = key->desc;
-//						input_report_key(et6226_data->keyboard, et6226_data->key_code, key_pressed); //report key press
-//						input_sync(et6226_data->keyboard);
 						dprintk(20, "Press, key = %s, state = %d\n", et6226_data->key_desc, key_pressed);
 						break;
 					}
@@ -503,8 +813,6 @@ static void keyboard_poll(struct work_struct *work)
 			{
 				if (et6226_data->key_press != key_pressed)
 				{
-//					input_report_key(et6226_data->keyboard, et6226_data->key_code, key_pressed); //report key release
-//					input_sync(et6226_data->keyboard);
 					dprintk(20, "Release, key = %s, state = %d\n", et6226_data->key_desc, key_pressed);
 				}
 				et6226_data->key_press = key_pressed; /* flag key release processed */
@@ -637,10 +945,11 @@ int __init fortis_4g_if_init(void)
 	}
 	et6226_data->client = et6226_client;
 
-	/* Initialize the ET6226 */
-	et6226_data->on = et6226_init->ctl_reg && ET6226_DISPLAY_ENABLE;
-	et6226_data->sleep_mode = et6226_init->ctl_reg && ET6226_SLEEP_MODE;
-	et6226_data->display_mode = et6226_init->ctl_reg && ET6226_SEVEN_SEGMENT_MODE;
+	/* Initialize the ET6226 values*/
+	et6226_data->on = et6226_init->on;
+	et6226_data->display_mode = et6226_init->display_mode;
+	et6226_data->sleep_mode = et6226_init->sleep_mode;
+	et6226_data->brightness = et6226_init->brightness;
 
 	et6226_clear(et6226_data);  /* Clear display memory */
 
@@ -649,6 +958,8 @@ int __init fortis_4g_if_init(void)
 
 	/* Set display mode and initial brightness */
 	fortis_4gSetBrightness(et6226_init->brightness);
+	/* display initial text */
+	fortis_4gWriteString(et6226_init->text, sizeof(et6226_init->text));
 
 	dprintk(10, "Display initialized, brightness %d\n", et6226_data->brightness);
 
@@ -670,356 +981,7 @@ int __init fortis_4g_if_init(void)
 	return 0;
 }
 
-/****************************************************************************************
- *
- * IOCTL ET6226 routines
- *
- ****************************************************************************************/
-/* Function SetIcon */
-int fortis_4gSetIcon(int which, int on)
-{
-	return 0;
-}
-/* export for later use in e2_proc */
-EXPORT_SYMBOL(fortis_4gSetIcon);
-
-/* Function SetLED (and SetPwrLED) */
-int fortis_4gSetLED(int which, int level)
-{
-	int ret = -1;
-
-	dprintk(100, "%s > %d, %d\n", __func__, which, level);
-
-	if (which < 1 || which > MAX_LED)
-	{
-		printk("[fortis_4g_et6226] LED number %d out of range (1-%d)\n", which, MAX_LED);
-		return -EINVAL;
-	}
-
-	if (level < 1)
-	{
-		level = 0;
-	}
-	else
-	{
-		if (MAX_LED_BRIGHT != 1)
-		{
-			if (level > MAX_LED_BRIGHT)
-			{
-				printk("[fortis_4g_et6226] LED brightness %d out of range (0-%d)\n", which, MAX_LED_BRIGHT);
-				return -EINVAL;
-			}
-		}
-		else
-		{
-			level = MAX_LED_BRIGHT;
-		}
-	}
-	ret = 0;
-
-	switch(which)
-	{
-		case LED_GREEN:
-		{
-#if defined(DP7001) || defined(FOREVER_2424HD)
-			/* Note: drive of LED_GREEN is inverted on DP7001/7050 */
-			gpio_set_value(GPIO_LED_GREEN, level ? 0 : 1);
-#else
-			gpio_set_value(GPIO_LED_GREEN, level);
-#endif
-			break;
-		}
-
-#if !defined(FOREVER_NANOSMART)
-		case LED_LOGO:
-		{
-#if defined(DP7001) || defined(FOREVER_2424HD)
-			/* Note: drive of LED_LOGO is inverted on DP7001/7050 */
-			gpio_set_value(GPIO_LED_LOGO, level ? 0 : 1);
-#else
-			gpio_set_value(GPIO_LED_LOGO, level);
-#endif
-			break;
-		}
-#endif //!defined(FOREVER_NANOSMART)
-		default:
-		{
-			dprintk(1, "%s Unknown LED number %d specified\n", __func__, which);
-			ret = -EINVAL;
-			break;
-		}
-	}
-	dprintk(100, "%s < RTV = %d\n", __func__, ret);
-	return ret;
-}
-
-/* export for later use in e2_proc */
-EXPORT_SYMBOL(fortis_4gSetLED);
-
-/* Function SetBrightness */
-int fortis_4gSetBrightness(int level)
-{
-	int ret = -1;
-
-	dprintk(100, "%s > Brightness level to set: %d\n", __func__, level);
-
-	if (level < 0 || level > MAX_BRIGHT)
-	{
-		dprintk(0, "Display brightness level %d out of range (0-%d)\n", level, MAX_BRIGHT);
-		return -EINVAL;
-	}
-
-	/* Calculate brightness value to write */
-	if (level > 6)
-	{
-		level = 0; // set maximum brightness
-	}
-	else if (level < 0)
-	{
-		level = 1; // set lowest brighness
-	}
-	else
-	{
-		level++; // set requested brightness
-	}
-	et6226_data->brightness = level;
-	if (et6226_data->sleep_mode)
-	{
-		dprintk(0, "Sleep mode set, no change\n");
-		ret = 0;
-	}
-	ret = et6226_i2c_write(et6226_data->client, ET6226_CTL_ADDR, ET6226_CTL_DATA(et6226_data->on, et6226_data->sleep_mode, et6226_data->display_mode, et6226_data->brightness));
-
-	dprintk(100, "%s < RTV = %d\n", __func__, ret);
-	return ret;
-}
-/* export for later use in e2_proc */
-EXPORT_SYMBOL(fortis_4gSetBrightness);
-
-/* Function SetDisplayOnOff */
-int fortis_4gSetDisplayOnOff(int on)
-{
-	int ret = -1;
-
-//	dprintk(100, "%s >\n", __func__);
-
-	et6226_data->on = on; // remember setting
-	if (et6226_data->sleep_mode)
-	{
-		dprintk(0, "Sleep mode set, no change\n");
-		ret = 0;
-	}
-	ret = et6226_i2c_write(et6226_data->client, ET6226_CTL_ADDR, ET6226_CTL_DATA((on ? ET6226_DISPLAY_ENABLE : 0), et6226_data->sleep_mode, et6226_data->display_mode, et6226_data->brightness));
-//	dprintk(100, "%s <\n", __func__);
-	return ret;
-}
-
-/* Function GetWakeUpMode (to be built) */
-int fortis_4gGetWakeUpMode(void)
-{
-	int ret = 0;
-
-	dprintk(100, "%s >\n", __func__);
-
-//	memset(buffer, 0, 3);
-
-//	buffer[0] = SOP;
-//	buffer[1] = cCommandGetPowerOnSrc;
-//	buffer[2] = EOP;
-
-//	errorOccured = 0;
-//	ret = fortis_4gWriteCommand(buffer, 3, 1);
-
-//	if (errorOccured == 1)
-	if (ret)
-	{
-		/* error */
-		printk("[fortis_4g_i2c] GetWakeMode: error\n");
-		ret = -ETIMEDOUT;
-	}
-	else
-	{
-		/* wake reason mode received ->noop here */
-		dprintk(1, "wake up mode received\n");
-	}
-
-	dprintk(100, "%s <\n", __func__);
-	return ret;
-}
-
-/* Function SetTimeFormat (to be built, if needed) */
-int fortis_4gSetTimeFormat(char format)
-{
-//	char buffer[4];
-	int  ret = -1;
-
-	dprintk(100, "%s >\n", __func__);
-
-//	buffer[0] = SOP;
-//	buffer[1] = cCommandSetTimeFormat;
-//	buffer[2] = format;
-//	buffer[3] = EOP;
-
-//	dprintk(20, "Time mode command= 0x%02x (SOP) 0x%02x 0x%02x 0x%02x (EOP)\n", buffer[0], buffer[1], buffer[2], buffer[3]);
-//	res = fortis_4gWriteCommand(buffer, 4, 0);
-
-	dprintk(100, "%s <\n", __func__);
-	return ret;
-}
-
-/* Function SetTimeDisplay (to be built, if needed) */
-int fortis_4gSetTimeDisplayOnOff(char onoff)
-{
-	int  ret = -1;
-
-	dprintk(100, "%s >\n", __func__);
-
-	dprintk(1, "SetTimeDisplayOnOff not implemented yet.\n");
-
-	dprintk(100, "%s <\n", __func__);
-	return ret;
-}
-
-/* Function WriteString */
-#if defined(DP7001) || defined(FOREVER_2424HD)
-int fortis_4gWriteString(unsigned char *aBuf, int len)
-{
-	int i, j, ret = -1;
-	int buflen = len;
-	int strlen;
-	int dot_count = 0;
-	int colon_count = 0;
-	unsigned char bBuf[ET6226_DISPLAY_MAX_DIGITS];  // display string without replaceable colon/periods
-	unsigned char cmd_buf[ET6226_DISPLAY_MAX_DIGITS] = { 0, };  // bytes to send to ET6226
-
-	dprintk(100, "%s > %d\n", __func__, len);
-
-	aBuf[len] = 0;
-	dprintk(10, "Display [%s] (%d characters)\n", aBuf, len);
-
-	bBuf[0] = aBuf[0];
-	bBuf[1] = aBuf[1];
-	i = 2;  // input character counter
-	j = 2;  // output digit counter
-
-	while ((j <= ET6226_DISPLAY_MAX_DIGITS) && (i < buflen))
-	{
-		if (aBuf[i] == '.')  // if character is period
-		{
-			if (i == 2)
-			{
-				cmd_buf[0] |= 0x80;
-			}
-			else
-			{
-				if (j >= 2)
-				{
-					cmd_buf[i - 1 - colon_count] |= 0x80;
-				}
-			}
-			dot_count++;
-		}
-		else if ((aBuf[i] == ':') && (j == 2))
-		{
-			cmd_buf[1] |= 0x80;  // flag colon on
-			colon_count++;
-		}
-		else
-		{
-			bBuf[j] = aBuf[i];  // copy next character
-			j++;
-		}
-		i++;
-	}
-	strlen = buflen - dot_count - colon_count;
-
-	if (strlen > ET6226_DISPLAY_MAX_DIGITS)
-	{
-		strlen = ET6226_DISPLAY_MAX_DIGITS;
-	}
-	for (i = 0; i < ET6226_DISPLAY_MAX_DIGITS; i++)
-	{
-		cmd_buf[i] |= et6226_data->char_tbl[(bBuf[i] - 0x20)];
-	}
-	if (strlen < 4)
-	{
-		for (i = strlen; i < ET6226_DISPLAY_MAX_DIGITS; i++)
-		{
-			cmd_buf[i] &= 0x80;
-		}
-	}
-	for (i = 0; i < ET6226_DISPLAY_MAX_DIGITS; i++)
-	{
-		ret = et6226_i2c_write(et6226_data->client, ET6226_DSP_ADDR + i, cmd_buf[i]);
-	}
-	/* save last string written to fp */
-	memcpy(&lastdata.data, aBuf, 64);
-	lastdata.length = len;
-
-	dprintk(100, "%s <\n", __func__);
-	return ret;
-}
-#elif defined(FOREVER_NANOSMART)
-int fortis_4gWriteString(unsigned char *aBuf, int len)
-{
-	int i, ret;
-	int buflen;
-	unsigned char bBuf[ET6226_DISPLAY_MAX_DIGITS];
-	unsigned char cmd_buf[ET6226_DISPLAY_MAX_DIGITS] = { 0 };
-
-	dprintk(100, "%s > %d\n", __func__, len);
-
-	buflen = len;
-	bBuf[0] = aBuf[0];
-	bBuf[1] = aBuf[1];
-
-/* Connection of colon is:
- * GR2 + KSP -> colon in center (buf[1])
- */
-	if (aBuf[2] == ':') // if 3rd character is a colon
-	{
-		cmd_buf[1] |= 0x80; // switch colon on
-		bBuf[2] = aBuf[3]; // shift rest of buffer
-		bBuf[3] = aBuf[4]; // forward
-	}
-	else
-	{
-		bBuf[2] = aBuf[2];
-		bBuf[3] = aBuf[3];
-	}
-
-	if (buflen > ET6226_DISPLAY_MAX_DIGITS)
-	{
-		buflen = ET6226_DISPLAY_MAX_DIGITS;
-	}
-
-	for (i = 0; i < buflen; i++)
-	{
-		cmd_buf[i] |= et6226_data->char_tbl[(bBuf[i] - 0x20)];
-	}
-
-	for (i = 0; i < ET6226_DISPLAY_MAX_DIGITS; i++)
-	{
-		ret |= et6226_i2c_write(et6226_data->client, ET6226_DSP_ADDR + i, cmd_buf[i]);
-	}
-
-	/* save last string written to fp */
-	memcpy(&lastdata.data, aBuf, 128);
-	lastdata.length = len;
-
-	dprintk(100, "%s <\n", __func__);
-	return ret;
-}
-#else  // not FOREVER_NANOSMART or DP7001/7050
-int fortis_4gWriteString(unsigned char* aBuf, int len)
-{
-	dprintk(100, "%s >\n", __func__);
-	dprintk(100, "%s <\n", __func__);
-	return -EFAULT;
-}
-#endif
-
-int fortis_4gInit_core(void)
+int __init fortis_4gInit_core(void)
 {
 	int res;
 

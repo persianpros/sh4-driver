@@ -10,7 +10,7 @@
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add nuvoton irq handling
  *
- * (c) 2014-2019 Audioniek: rewritten for Fortis 4th generation receivers
+ * (c) 2014-2020 Audioniek: rewritten for Fortis 4th generation receivers
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,6 +72,7 @@
  * 20191225 Audioniek      Fix non-working channel up front panel key.
  * 20200122 Audioniek      Simplify brightness control.
  * 20200201 Audioniek      FOREVER_9898HD: handle red LED differently.
+ * 20200313 Audioniek      Add UTF8 support (untested yet).
  *
  *****************************************************************************/
 
@@ -96,12 +97,22 @@
 
 #include "fortis_4g_fp.h"
 #include "fortis_4g_fp_et16315.h"
+#include "fortis_4g_fp_utf.h"
 
-#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 #define DISP_SIZE 8
 #else
 #warning Box model not supported!
 #endif
+
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[fortis_4g_et16315] "
 
 static struct et16315_chip *et16315_data;  // global values for IOCTL routines
 
@@ -151,9 +162,9 @@ static struct et16315_chip *et16315_data;  // global values for IOCTL routines
  */
 static struct et16315_char et16315_fp_chars[] =
 {
-	/*    value0      value1      value2                   */
-	/*  imfbhjka    qdrpnecg             <-display segment */
-	/*  76543210    76543210    76543210                   */
+	/*    value0      value1      value2                                   */
+	/*  imfbhjka    qdrpnecg             <-display segment                 */
+	/*  76543210    76543210    76543210      ASCII  character/description */
 	{ 0b00000000, 0b00000000, 0b00000000 },  // 020, space 
 	{ 0b10000100, 0b00010000, 0b00000000 },  // 021, '!'
 	{ 0b00110000, 0b00000000, 0b00000000 },  // 022, double quote
@@ -249,8 +260,143 @@ static struct et16315_char et16315_fp_chars[] =
 	{ 0b00000100, 0b00010000, 0b00000000 },  // 07c, '|'
 	{ 0b10001000, 0b00100000, 0b00000000 },  // 07d, '}'
 	{ 0b01000000, 0b00000001, 0b00000000 },  // 07e, '~'
-	{ 0b11000000, 0b01000111, 0b00000000 }   // 07f, DEL
-// Note: values 0x80 - 0xff are handled by UTF8 routines
+	{ 0b11000000, 0b01000111, 0b00000000 },  // 07f, DEL
+// Note: following values are cyrillic patterns (offset 0x60 - 0df)  // TODO: determine segment patterns
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 080, Ѐ cyrillic capital letter ie with grave
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 081, Ё cyrillic capital letter io
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 082, Ђ cyrillic capital letter dje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 083, Ѓ cyrillic capital letter gje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 084, Є cyrillic capital letter ukrainian ie
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 085, Ѕ cyrillic capital letter dze
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 086, І cyrillic capital letter byelorussian-ukrainian i
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 087, Ї cyrillic capital letter yi
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 088, Ј cyrillic capital letter je
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 089, Љ cyrillic capital letter lje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 08a, Њ cyrillic capital letter nje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 08b, Ћ cyrillic capital letter tshe
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 08c, Ќ cyrillic capital letter kje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 08d, Ѝ cyrillic capital letter i with grave
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 08e, Ў cyrillic capital letter short u
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 08f, Џ cyrillic capital letter dzhe
+
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 090, А cyrillic capital letter a
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 091, Б cyrillic capital letter be
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 092, В cyrillic capital letter ve
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 093, Г cyrillic capital letter ghe
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 094, Д cyrillic capital letter de
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 095, Е cyrillic capital letter ie
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 096, Ж cyrillic capital letter zhe
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 097, З cyrillic capital letter ze
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 098, И cyrillic capital letter i
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 099, Й cyrillic capital letter short i
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 09a, К cyrillic capital letter ka
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 09b, Л cyrillic capital letter el
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 09c, М cyrillic capital letter em
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 09d, Н cyrillic capital letter en
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 09e, О cyrillic capital letter o
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 09f, П cyrillic capital letter pe
+
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a0, Р Cyrillic capital letter er
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a1, С Cyrillic capital letter es
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a2, Т Cyrillic capital letter te
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a3, У Cyrillic capital letter u
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a4, Ф Cyrillic capital letter ef
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a5, Х Cyrillic capital letter ha
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a6, Ц Cyrillic capital letter tse
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a7, Ч Cyrillic capital letter che
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a8, Ш Cyrillic capital letter sha
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0a9, Щ Cyrillic capital letter shcha
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0aa, Ъ Cyrillic capital letter hard sign
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ab, Ы Cyrillic capital letter yeru
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ac, Ь Cyrillic capital letter soft sign
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ad, Э Cyrillic capital letter e
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ae, Ю Cyrillic capital letter yu
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0af, Я Cyrillic capital letter ya
+
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b0, а Cyrillic small letter a
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b1, б Cyrillic small letter be
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b2, в Cyrillic small letter ve
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b3, г Cyrillic small letter ghe
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b4, д Cyrillic small letter de
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b5, е Cyrillic small letter ie
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b6, ж Cyrillic small letter zhe
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b7, з Cyrillic small letter ze
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b8, и Cyrillic small letter i
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0b9, й Cyrillic small letter short i
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ba, к Cyrillic small letter ka
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0bb, л Cyrillic small letter el
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0bc, м Cyrillic small letter em
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0bd, н Cyrillic small letter en
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0be, о Cyrillic small letter o
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0bf, п Cyrillic small letter pe
+
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c0, р Cyrillic small letter er
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c1, с Cyrillic small letter es
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c2, т Cyrillic small letter te
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c3, у Cyrillic small letter u
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c4, ф Cyrillic small letter ef
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c5, х Cyrillic small letter ha
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c6, ц Cyrillic small letter tse
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c7, ч Cyrillic small letter che
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c8, ш Cyrillic small letter sha
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0c9, щ Cyrillic small letter shcha
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ca, ъ Cyrillic small letter hard sign
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0cb, ы Cyrillic small letter yeru
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0cc, ь Cyrillic small letter soft sign
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0cd, э Cyrillic small letter e
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ce, ю Cyrillic small letter yu
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0cf, я Cyrillic small letter ya
+
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d0, ѐ Cyrillic small letter ie with grave
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d1, ё Cyrillic small letter io
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d2, ђ Cyrillic small letter dje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d3, ѓ Cyrillic small letter gje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d4, є Cyrillic small letter ukrainian ie
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d5, ѕ Cyrillic small letter dze
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d6, і Cyrillic small letter byelorussian-ukrainian i
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d7, ї Cyrillic small letter yi
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d8, ј Cyrillic small letter je
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0d9, љ Cyrillic small letter lje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0da, њ Cyrillic small letter nje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0db, ћ Cyrillic small letter tshe
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0dc, ќ Cyrillic small letter kje
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0dd, ѝ Cyrillic small letter i with grave
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0de, ў Cyrillic small letter short u
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0df, џ Cyrillic small letter dzhe
+
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e0, Ѡ Cyrillic capital letter omega
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e1, ѡ Cyrillic small letter omega
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e2, Ѣ Cyrillic capital letter yat
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e3, ѣ Cyrillic small letter yat
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e4, Ѥ Cyrillic capital letter iotified e
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e5, ѥ Cyrillic small letter iotified e
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e6, Ѧ Cyrillic capital letter little yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e7, ѧ Cyrillic small letter little yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e8, Ѩ Cyrillic capital letter iotified little yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0e9, ѩ Cyrillic small letter iotified little yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ea, Ѫ Cyrillic capital letter big yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0eb, ѫ Cyrillic small letter big yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ec, Ѭ Cyrillic capital letter iotified big yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ed, ѭ Cyrillic small letter iotified big yus
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ee, Ѯ Cyrillic capital letter ksi
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ef, ѯ Cyrillic small letter ksi
+
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f0, Ѱ Cyrillic capital letter psi
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f1, ѱ Cyrillic small letter psi
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f2, Ѳ Cyrillic capital letter fita
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f3, ѳ Cyrillic small letter fita
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f4, Ѵ Cyrillic capital letter izhitsa
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f5, ѵ Cyrillic small letter izhitsa
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f6, Ѷ Cyrillic capital letter izhitsa with double grave accent
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f7, ѷ Cyrillic small letter izhitsa with double grave accent
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f8, Ѹ Cyrillic capital letter uk
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0f9, ѹ Cyrillic small letter uk
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0fa, Ѻ Cyrillic capital letter round omega
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0fb, ѻ Cyrillic small letter round omega
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0fc, Ѽ Cyrillic capital letter omega with titlo
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0fd, ѽ Cyrillic small letter omega with titlo
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0fe, Ѿ Cyrillic capital letter ot
+	{ 0b00000000, 0b00000000, 0b00000000 },  // 0ff, ѿ Cyrillic small letter ot
 };
 
 /****************************************************************************************
@@ -265,7 +411,11 @@ static struct et16315_char et16315_fp_chars[] =
  */
 static int polling = 1;
 static struct workqueue_struct *keyboard_workqueue;
-#if defined(FOREVER_9898HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 /* Front panel keys are connected as follows:
   
   Channel Up  : between KS1 & K1 -> bit 7 of byte 0
@@ -301,7 +451,7 @@ static struct et16315_platform_data et16315_init_values =
 	/* VFD display */
 	.digits      = et16315_config_8_digits_20_segments,  // 8 character display
 	.brightness  = MAX_BRIGHT,
-	.on          = 1, // display enable
+	.on          = 1,  // display enable
 	.char_tbl    = et16315_fp_chars,
 #if defined(FOREVER_3434HD)
 	.text        = "FOREVER_3434HD",  /* initial display text */
@@ -320,13 +470,13 @@ static struct et16315_platform_data et16315_init_values =
 #if defined(FOREVER_3434HD)
 	.led         = LED_BLUE + LED_LOGO,  // blue & logo on
 #elif defined(FOREVER_9898HD)
-	.led         = LED_RED, // all LEDs off
+	.led         = LED_RED,  // all LEDs off
 #elif defined(GPV8000) \
  ||   defined(EP8000) \
  ||   defined(EPP8000)
 	.led         = LED_LOGO,  // logo on, rest off
 #else
-	.led         = 0, // all LEDs off
+	.led         = 0,  // all LEDs off
 #endif
 
 	/* Keyboard */
@@ -368,7 +518,7 @@ static void et16315_readb(struct et16315_chip *chip, u8 *byte)
 		udelay(2);
 		gpio_set_value(chip->gpio_clk, 1);
 		udelay(1);
-		*byte <<= 1;  // note: bit order is reversed!
+		*byte <<= 1;  // note: MSbit is received first
 		*byte |= (gpio_get_value(chip->gpio_dout) & 0b00000001);
 	}
 }
@@ -381,12 +531,15 @@ static void et16315_send(struct et16315_chip *chip, u8 command, const void *buf,
 	BUG_ON(len > ET16315_DISPLAY_BUFFER_SIZE);
 
 #if 0
-	dprintk(20, "%s: command: 0x%02X (len = %d)", __func__, command, len);
-	for (i = 0; i < len; i++)
+	if (paramDebug >= 20)
 	{
-		printk(" [0x%02X]", data[i]);
+		dprintk(20, "%s: command: 0x%02X (len = %d)", __func__, command, len);
+		for (i = 0; i < len; i++)
+		{
+			printk(" [0x%02X]", data[i]);
+		}
+		printk("\n");
 	}
-	printk("\n");
 #endif
 	gpio_set_value(chip->gpio_stb, 0);
 	udelay(1);
@@ -517,15 +670,18 @@ static void init_leds(struct et16315_chip *chip)
 	struct et16315_platform_data *et16315_init = &et16315_init_values;
 
 	dprintk(100, "%s >\n", __func__);
-#if defined(EP8000) || defined(EPP8000) || defined(GPV8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	// blink red led
 	et16315_set_led(chip, LED_RED);
 	msleep(200);
-	et16315_set_led(chip, 0); // all LEDs off
+	et16315_set_led(chip, 0);  // all LEDs off
 	msleep(200);
 	gpio_free(GPIO_LED_LOGO);
 	gpio_request(GPIO_LED_LOGO, "LED_LOGO");
-	gpio_direction_output(GPIO_LED_LOGO, 1); // drive of LED_LOGO is inverted
+	gpio_direction_output(GPIO_LED_LOGO, 1);  // drive of LED_LOGO is inverted
 #if defined(FOREVER_3434HD)
 	// blink blue led
 	et16315_set_led(chip, LED_BLUE);
@@ -537,7 +693,7 @@ static void init_leds(struct et16315_chip *chip)
 	chip->led = et16315_init->led;
 	fortis_4gSetLED(chip->led, 1);
 #elif defined(FOREVER_9898HD)
-	dprintk(1, "%s FOREVER_9898HD detected: Red LED is GPIO driven\n", __func__);
+	dprintk(1, "%s FOREVER_9898HD detected: Red LED is GPIO driven?\n", __func__);
 //	gpio_free(GPIO_LED_RED);
 //	gpio_request(GPIO_LED_RED, "LED_RED");
 //	gpio_direction_output(GPIO_LED_RED, 1);
@@ -551,8 +707,13 @@ static void init_leds(struct et16315_chip *chip)
 
 static void cleanup_leds(void)
 {
-#if defined(EP8000) || defined(EPP8000) || defined(GPV8000) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	gpio_free(GPIO_LED_LOGO);
+#elif defined(FOREVER_9898HD)
+//	gpio_free(GPIO_LED_RED);
 #endif
 }
 
@@ -578,7 +739,7 @@ static void keyboard_poll(struct work_struct *work)
 
 		if (diff)
 		{
-			dprintk(20, "Key data from ET16315: 0x%04x%04x\n", (key_data & 0xffff0000),(key_data & 0xffff));
+			dprintk(20, "Key data from ET16315: 0x%04x%04x\n", ((key_data & 0xffff0000) >> 4), (key_data & 0xffff));
 		}
 		for (i = 0; i < et16315_data->keys_num; i++)
 		{
@@ -586,11 +747,11 @@ static void keyboard_poll(struct work_struct *work)
 
 			if (diff & key->mask)
 			{
-				dprintk(20, "Key received: %s (code 0x%02x, 0x%04x%04x)\n", key->desc, key->code, (key_data & key->mask & 0xffff0000),(key_data & key->mask & 0xffff));
+				dprintk(20, "Key received: %s (code 0x%02x, 0x%04x%04x)\n", key->desc, key->code, ((key_data & key->mask & 0xffff0000) >> 4),(key_data & key->mask & 0xffff));
 				
 //				input_event(et16315_data->keyboard, EV_KEY, key->code, !!(key_data & key->mask));
 //				input_sync(et16315_data->keyboard);
-				fortis_4gSetIcon(ICON_DOT, (key_data ? 1 : 0));  //key feedback
+				fortis_4gSetIcon(ICON_DOT, (key_data ? 1 : 0));  // key feedback
 			}
 		}
 		et16315_data->key_prev = key_data;
@@ -786,8 +947,10 @@ int __init fortis_4g_if_init(void)
 	fortis_4gSetIcon(ICON_COLON3, 1);
 	msleep(100);
 
+//#if !defined(FOREVER_9898HD)
 	init_leds(et16315_data);
 	dprintk(10, "LEDs initialized\n");
+//#endif
 	fortis_4gSetIcon(ICON_DOT, 0);
 	msleep(100);
 	fortis_4gSetIcon(ICON_COLON1, 0);
@@ -834,7 +997,7 @@ int fortis_4gSetIcon(int which, int on)
 
 	dprintk(100, "%s > which = %d, on = %d\n", __func__, which, on);
 
-	switch(which)
+	switch (which)
 	{
 		case ICON_DOT:
 		{
@@ -858,7 +1021,7 @@ int fortis_4gSetIcon(int which, int on)
 		}
 		default:
 		{
-			dprintk(1, "Icon number %d out of range (1-%d)\n", which, ICON_MAX);
+			dprintk(1, "Icon number %d out of range (1-%d)\n", which, ICON_MAX - 1);
 			return -EINVAL;
 		}
 	}
@@ -915,7 +1078,7 @@ int fortis_4gSetLED(int which, int level)
 	if (which & LED_RED)
  #endif
 	{
-		led = et16315_data->led; // get current values
+		led = et16315_data->led;  // get current values
 
 		if (level)
 		{
@@ -926,7 +1089,7 @@ int fortis_4gSetLED(int which, int level)
 			led &= ~which;  // remove led from bit mask
 		}
 		et16315_data->led = led & 0x03;
-		dprintk(1, "Setting LED pattern 0x%02x\n", led);
+		dprintk(10, "Setting LED pattern 0x%02x\n", led);
 		et16315_set_led(et16315_data, led);
 	}
 //	else
@@ -934,7 +1097,10 @@ int fortis_4gSetLED(int which, int level)
 //	}
 #endif // FOREVER_9898HD
 	// Handle GPIO connected LEDs
-#if defined(FOREVER_3434HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000)
+#if defined(FOREVER_3434HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	if (which & LED_LOGO)
 	{
 		/* Note: drive of LED_LOGO is inverted on FOREVER_3434HD/GPV8000/EP8000/EPP8000 */
@@ -1040,17 +1206,121 @@ int fortis_4gSetTimeDisplayOnOff(char onoff)
 }
 
 /* Function WriteString */
-#if defined(GPV8000) || defined(EP8000) || defined(EPP8000) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000) \
+ || defined(FOREVER_9898HD)
 int fortis_4gWriteString(unsigned char *aBuf, int len)
 {
-	int i;
+	int i, j;
 	int ret = -1;
-	unsigned char bBuf[64];
+	unsigned char *UTF_Char_Table;
+	unsigned char bBuf[64];  // resulting display string after UTF 8 processing
 
 	dprintk(100, "%s > %d\n", __func__, len);
 
-	aBuf[len] = 0;
-	dprintk(100, "Display [%s] (len = %d)\n", aBuf, len);
+	/* Handle UTF8 stuff */
+	i = 0;  // input string index
+	j = 0;  // output string index
+
+#if defined(VFD_SCROLL)  /* Scroll normally handled in display thread */
+	while ((i < len) && (j < 63))
+#else
+	while ((i < len) && (j < DISP_SIZE))
+#endif
+	{
+		if (aBuf[i] < 0x80)  // if normal ASCII
+		{
+			bBuf[j] = aBuf[i];  // copy to output string
+		}
+		else if (aBuf[i] < 0xe0)
+		{
+			switch (aBuf[i])
+			{
+				case 0xc2:
+				{
+					UTF_Char_Table = UTF_C2;
+					break;
+				}
+				case 0xc3:
+				{
+					UTF_Char_Table = UTF_C3;
+					break;
+				}
+				case 0xc4:
+				{
+					UTF_Char_Table = UTF_C4;
+					break;
+				}
+				case 0xc5:
+				{
+					UTF_Char_Table = UTF_C5;
+					break;
+				}
+				case 0xd0:
+				{
+					UTF_Char_Table = UTF_D0;  // cyrillic I
+					break;
+				}
+				case 0xd1:
+				{
+					UTF_Char_Table = UTF_D1;  // cyrillic II
+					break;
+				}
+				default:
+				{
+					UTF_Char_Table = NULL;
+				}
+			}
+			i++;  // set index to next byte
+			if (UTF_Char_Table)
+			{
+				if (UTF_Char_Table[aBuf[i] & 0x3f] != 0x00)  // if printable
+				{
+					bBuf[j] = UTF_Char_Table[aBuf[i] & 0x3f];  // get replacement character from table
+				}
+				else
+				{
+					j--;  //else skip character
+				}
+			}
+			else
+			{
+#if 0
+				sprintf(&bBuf[j], "%02x", aBuf[i - 1]);  // show hex value;
+				j += 2;  // advance output index
+				bBuf[j] = (aBuf[i] & 0x3f) | 0x40;
+#else
+				bBuf[j] = 0x20;  // display a space
+#endif
+			}
+		}
+		else
+		{
+			if (aBuf[i] < 0xF0)
+			{
+				i += 2;  // skip 2 input bytes
+			}
+			else if (aBuf[i] < 0xF8)
+			{
+				i += 3;
+			}
+			else if (aBuf[i] < 0xFC)
+			{
+				i += 4;
+			}
+			else
+			{
+				i += 5;
+			}
+			bBuf[j] = 0x20;  // and put a space
+		}
+		i++;
+		j++;
+	}
+	bBuf[j] = 0;  // terminate result string
+	dprintk(100, "Display [%s] (len = %d)\n", bBuf, j);
 
 #if defined(VFD_SCROLL)  /* Scroll normally handled in display thread */
 	if (len > et16315_data->digits)
@@ -1059,23 +1329,23 @@ int fortis_4gWriteString(unsigned char *aBuf, int len)
 		{
 			len = 63;
 		}
-		et16315_set_text(et16315_data + 2, aBuf);  // initial display
+		et16315_set_text(et16315_data + 2, bBuf);  // initial display
 
 		msleep(300);
 		for (i = 1; i <= len; i++)
 		{
-			memset(bBuf, ' ', et16315_data->digits);  // fill buffer with spaces
-			memcpy(bBuf, aBuf + i, len);
-			et16315_set_text(et16315_data, bBuf);
+			memset(aBuf, ' ', et16315_data->digits);  // fill buffer with spaces
+			memcpy(aBuf, bBuf + i, len);
+			et16315_set_text(et16315_data, aBuf);
 			msleep(300);
 		}
 	}
 #endif
-	et16315_set_text(et16315_data, aBuf);
+	et16315_set_text(et16315_data, bBuf);
 	ret = 0;
 
 	/* save last string written to fp */
-	memcpy(&lastdata.data, aBuf, 64);
+	memcpy(&lastdata.data, bBuf, 64);
 	lastdata.length = len;
 
 	dprintk(100, "%s <\n", __func__);

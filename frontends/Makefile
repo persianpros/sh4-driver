@@ -213,74 +213,34 @@ obj-y += lnb/
 endif
 
 ifdef FOREVER_NANOSMART
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif
 
 ifdef FOREVER_9898HD
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif
 
 ifdef DP7001
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif
 
 ifdef FOREVER_3434HD
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif 
 
 ifdef FOREVER_2424HD
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif
 
 ifdef GPV8000
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif
 
 ifdef EP8000
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif
 
 ifdef EPP8000
-stv090x-objs += stv090x/stv090x.o
-stv090x-objs += stv090x/stv6110x.o
-stv090x-objs += stv090x/ix7306.o
-stv090x-objs += stv090x/core.o
-obj-m += stv090x.o
 obj-y += lnb/
 endif
 
@@ -339,14 +299,6 @@ obj-m += avl2108_platform.o
 endif
 
 ifdef ATEVIO7500
-#avl2108-objs += avl2108/avl2108.o
-#avl2108-objs += avl2108/stv6110a.o
-#avl2108-objs += avl2108/stv6306.o
-#avl2108-objs += avl2108/lnb_pio.o
-#avl2108-objs += avl2108/lnbh221.o
-#obj-m += avl2108.o
-#avl2108_platform-objs += avl2108/avl2108_platform.o
-#obj-m += avl2108_platform.o
 obj-y += multituner/
 endif
 

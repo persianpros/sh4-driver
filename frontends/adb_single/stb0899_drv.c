@@ -30,7 +30,7 @@
  * Date     By              Description
  * -----------------------------------------------------------------------
  * 20?????? STM             Original generic version.
- * 201????? B4T/Freebox?    Adpated for use on ADB ITI-5800S.
+ * 201????? B4T/Freebox?    Adapted for use on ADB ITI-5800S.
  * 20200505 Audioniek       Debug output via standard dprintk
  *                          with paramDebug.
  * 20200507 Audioniek       Remove unused DiSEqC PWM code, clean up.

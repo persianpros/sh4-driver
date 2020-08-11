@@ -22,13 +22,12 @@
 #  include <linux/stm/pio.h>
 #endif
 
-#include <linux/dvb/version.h>
-
-#if DVB_API_VERSION < 5
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
 #include "compat.h"
+#include <linux/mutex.h>
 #endif
 
-#define MAX_DVB_ADAPTERS       4
+#define MAX_DVB_ADAPTERS 4
 #define MAX_TUNERS_PER_ADAPTER 4
 
 extern short paramDebug;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
@@ -45,7 +44,7 @@ do \
 
 struct core_config
 {
-	struct i2c_adapter  *i2c_adap;   /* i2c bus of the tuner */
+	struct i2c_adapter	*i2c_adap;   /* i2c bus of the tuner */
 	u8                  i2c_addr;    /* i2c address of the tuner */
 	u8                  i2c_addr_lnb_supply;  /* i2c address of the lnb_supply */
 	u8                  vertical;    /* i2c value */
@@ -54,12 +53,14 @@ struct core_config
 	struct stpio_pin    *lnb_vsel;   // 13/18V select pin
 	struct stpio_pin    *tuner_reset_pin;
 	u8                  tuner_reset_act; /* active state of the pin */
+
 };
 
 struct fe_core_state
 {
 	struct dvb_frontend_ops  ops;
 	struct dvb_frontend      frontend;
+
 	const struct core_config *config;
 	int                      thread_id;
 	int                      not_responding;

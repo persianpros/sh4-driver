@@ -81,7 +81,7 @@ static int stb6100_set_freq(struct dvb_frontend *fe, u32 frequency)
 		err = tuner_ops->set_state(fe, DVBFE_TUNER_FREQUENCY, &state);
 		if (err < 0)
 		{
-			printk(KERN_ERR "%s: Invalid parameter\n", __func__);
+			dprintk(1, "%s: Invalid parameter\n", __func__);
 			return err;
 		}
 

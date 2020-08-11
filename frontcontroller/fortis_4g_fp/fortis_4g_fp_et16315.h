@@ -37,13 +37,19 @@
 #ifndef _4g_fp_et16315_h
 #define _4g_fp_et16315_h
 
-/* Comment or delete next line to enable text
+/* Uncomment next line to enable text
    scrolling in low level VFD driver */
-#define VFD_SCROLL     1
+//#define VFD_SCROLL     1
 
 // Logo LEDs are driven from a PIO pin
-#if defined(EP8000) || defined(EPP8000) || defined(GPV8000) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD)
+#if defined(FOREVER_3434HD) \
+ || defined(EP8000) \
+ || defined(EPP8000) \
+ || defined(GPV8000)
 #define GPIO_LED_LOGO  stm_gpio(15, 7)
+#elif defined(FOREVER_9898HD)
+// NOTE: FOREVER_9898HD does not have a lighted logo, but red LED is GPIO driven?
+//#define GPIO_LED_RED  stm_gpio(3, 1)  //TODO: GPIO # to be determined
 #endif
 
 // LED wiring on ET16315, all VFD models, except FOREVER_9898HD
@@ -60,7 +66,6 @@
 #define ET16315_DRIVER_NAME "et16315_kbd"
 
 /* ET16315 command bytes
- 
 1. Display set command: 0b00XXnnnn
  nnnn  Display mode
  ----------------------------
@@ -77,6 +82,7 @@
 #define ET16315_CMD1_SET_DISPLAY_MODE(mode) \
 		(0x00 | ((mode) & 0xf))
 
+
 #define ET16315_TEST_MODE      0b00001000  // -> option = + 0x08
 #define ET16315_FIXED_ADDR     0b00000100  // -> option = + 0x04
 #define ET16315_AUTO_ADDR_INC  0b00000000  // -> option = + 0x00
@@ -85,6 +91,18 @@
 #define ET16315_CMD_READ_KEY   0b00000010  // -> option = + 0x02
 #define ET16315_CMD_DONTCARE   0b00000011  // not used
 
+/*
+2. Data setting command: 0b01XXTAnn
+ T: 0=normal mode
+    1=test mode
+ A: 0=Auto display addres increment
+    1=Fixed address
+ nn  Mode
+ 00  Write display data (three bytes / digit) -> 24 bytes for the whole display of 8 digits
+ 01  Write LED port (next byte written controls output pins: bit=1 is LED on)
+ 10  Read key scan data (read four bytes of key data)
+ 11  Not used
+*/
 #define ET16315_CMD2_DATA_SET(test_mode, fixed_address, command) \
 		(0x40 | \
 		(test_mode ? ET16315_TEST_MODE : 0x00) | \
@@ -101,6 +119,7 @@
 #define ET16315_CMD3_SET_ADDRESS(address) \
 		(0xc0 | (address & 0x3f))
 
+
 #define ET16315_DISPLAY_ENABLE 0b00001000
 
 /*
@@ -113,7 +132,6 @@
 		(0x80 | \
 		(on ? ET16315_DISPLAY_ENABLE : 0x0) | \
 		(brightness & 0x7))
-
 
 #define ET16315_KEYBOARD_BUFFER_SIZE 1
 #define ET16315_DISPLAY_MAX_DIGITS   12
@@ -175,7 +193,7 @@ struct et16315_chip
 
 	/* VFD display */
 	int    digits;
-	int    on; // state of display enable
+	int    on;  // state of display enable
 	int    brightness;
 	u8     last_display[ET16315_DISPLAY_BUFFER_SIZE];
 	struct et16315_char *char_tbl;

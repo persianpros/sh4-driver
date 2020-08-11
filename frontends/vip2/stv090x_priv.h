@@ -56,7 +56,6 @@ extern short paramDebug;  // debug print level is zero as default (0=nothing, 1=
 #endif
 #define TAGDEBUG "[stv090x] "
 
-
 #define STV090x_READ_DEMOD(__state, __reg) (((__state)->demod == STV090x_DEMODULATOR_1) ? stv090x_read_reg(__state, STV090x_P2_##__reg) : stv090x_read_reg(__state, STV090x_P1_##__reg))
 
 #define STV090x_WRITE_DEMOD(__state, __reg, __data) (((__state)->demod == STV090x_DEMODULATOR_1) ? stv090x_write_reg(__state, STV090x_P2_##__reg, __data) : stv090x_write_reg(__state, STV090x_P1_##__reg, __data))
@@ -79,7 +78,7 @@ extern short paramDebug;  // debug print level is zero as default (0=nothing, 1=
 #define STV090x_SEARCH_AGC2_TH_CUT20 700
 #define STV090x_SEARCH_AGC2_TH_CUT30 1400
 
-#define STV090x_SEARCH_AGC2_TH(__ver) ((__ver <= 0x20) ? STV090x_SEARCH_AGC2_TH_CUT20 :	STV090x_SEARCH_AGC2_TH_CUT30)
+#define STV090x_SEARCH_AGC2_TH(__ver) ((__ver <= 0x20) ? STV090x_SEARCH_AGC2_TH_CUT20 : STV090x_SEARCH_AGC2_TH_CUT30)
 
 enum stv090x_signal_state
 {
