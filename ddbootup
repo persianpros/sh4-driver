@@ -5,12 +5,12 @@ modelcheck=`cat /etc/openvision/model`
 
 # Load coprocessor firmware
 if [ $brandcheck == "forever" ]; then
-	/usr/bin/ustslave /dev/st231-0 /boot/companion_h205_video_Ax.bin
-	/usr/bin/ustslave /dev/st231-0 /boot/companion_h205_video_Bx.bin
-	/usr/bin/ustslave /dev/st231-1 /boot/companion_h205_audio.bin
+	/bin/ustslave /dev/st231-0 /boot/companion_h205_video_Ax.bin
+	/bin/ustslave /dev/st231-0 /boot/companion_h205_video_Bx.bin
+	/bin/ustslave /dev/st231-1 /boot/companion_h205_audio.bin
 else
-	/usr/bin/ustslave /dev/st231-0 /boot/video.elf
-	/usr/bin/ustslave /dev/st231-1 /boot/audio.elf
+	/bin/ustslave /dev/st231-0 /boot/video.elf
+	/bin/ustslave /dev/st231-1 /boot/audio.elf
 fi
 
 # Run sysv init
