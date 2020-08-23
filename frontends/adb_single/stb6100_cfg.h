@@ -93,7 +93,7 @@ static int stb6100_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 	{
 		if ((err = tuner_ops->get_bandwidth(fe, bandwidth)) < 0)
 		{
-			dprintk(1. "%s: Invalid parameter\n", __func__);
+			dprintk(1, "%s: Invalid parameter\n", __func__);
 			return err;
 		}
 		band = *bandwidth;

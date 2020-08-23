@@ -56,9 +56,11 @@
 /* 2015-11-06 V4.11  Spinner added.                                        */
 /* 2018-12-28 V4.11a /proc/stb/lcd/sybol_circle added; icon definitions    */
 /*                    moved to frontpanel.h.                               */
+/* 2020-08-19 V4.12  /proc/stb/lcd/sybol_timeshift added.                  */
+/*                                                                         */
 /***************************************************************************/
 
-#define VERSION         "V4.11a"
+#define VERSION         "V4.12"
 //#define DEBUG
 
 #include <asm/io.h>
@@ -1159,7 +1161,7 @@ static void VFDSetIRMode(byte Mode, byte OnOff)
 /**********************************************************************************************/
 /* Code for showing the icons                                                                 */
 /**********************************************************************************************/
-static inline void SetIconBits(byte Reg, byte Bit, byte Mode)
+void SetIconBits(byte Reg, byte Bit, byte Mode)
 {
 	byte i, j;
 

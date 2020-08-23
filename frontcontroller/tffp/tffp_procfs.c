@@ -45,12 +45,17 @@
  *  /proc/stb/lcd/
  *             |
  *             +--- symbol_circle (rw)       Control of spinner
+ *             |
+ *             +--- symbol_timeshift (rw)    Control of timeshift icon
  */
 
 extern int install_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *write_proc, void *data);
 extern int remove_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *write_proc);
 
+extern void SetIconBits(byte Reg, byte Bit, byte Mode);
+
 static int symbol_circle = 0;
+static int symbol_timeshift = 0;
 #if 0
 static int lnb_sense1_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
@@ -103,7 +108,7 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 		sscanf(myString, "%d", &symbol_circle);
 		kfree(myString);
 
-		Spinner_on = symbol_circle = 0 ? 0 : 1;
+		Spinner_on = (symbol_circle == 0 ? 0 : 1);
 
 		/* always return count to avoid endless loop */
 		ret = count;
@@ -120,6 +125,49 @@ static int symbol_circle_read(char *page, char **start, off_t off, int count, in
 	if (NULL != page)
 	{
 		len = sprintf(page,"%d", symbol_circle);
+	}
+	return len;
+}
+
+static int symbol_timeshift_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &symbol_timeshift);
+		kfree(myString);
+		
+		SetIconBits(27, 1, symbol_timeshift == 0 ? 0 : 0x0f);
+
+		/* always return count to avoid endless loop */
+		ret = count;
+	}
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int symbol_timeshift_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page,"%d", symbol_timeshift);
 	}
 	return len;
 }
@@ -271,7 +319,8 @@ struct fp_procs
 	{ "stb/fp/was_timer_wakeup", was_timer_wakeup_read, NULL },
 	{ "stb/fp/led0_pattern", NULL, led0_pattern_write },
 	{ "stb/fp/led_pattern_speed", NULL, led_pattern_speed_write },
-	{ "stb/lcd/symbol_circle", symbol_circle_read, symbol_circle_write }
+	{ "stb/lcd/symbol_circle", symbol_circle_read, symbol_circle_write },
+	{ "stb/lcd/symbol_timeshift", symbol_timeshift_read, symbol_timeshift_write }
 };
 
 void create_proc_fp(void)
