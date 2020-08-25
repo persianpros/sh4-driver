@@ -1621,7 +1621,7 @@ static struct file_operations vfd_fops =
  * Button driver
  *
  */
-static char *button_driver_name = "Spiderbox HL101 front panel button driver";
+static char *button_driver_name = "Spiderbox HL101 frontpanel buttons driver";
 static struct input_dev *button_dev;
 static int button_value = -1;
 static int bad_polling = 1;

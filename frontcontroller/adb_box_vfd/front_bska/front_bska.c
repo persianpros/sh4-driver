@@ -20,7 +20,7 @@
 static int buttoninterval = 350/*ms*/;
 static struct timer_list button_timer;
 
-static char *button_driver_name = "NBOX frontpanel buttons";
+static char *button_driver_name = "nBox frontpanel buttons driver";
 static struct input_dev *button_dev;
 
 struct vfd_driver

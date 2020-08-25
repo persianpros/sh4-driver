@@ -20,7 +20,7 @@
 #include "button.h"
 #include "pio.h"
 
-static char *button_driver_name = "Kathrein UFS-910 frontpanel buttons";
+static char *button_driver_name = "Kathrein UFS-910 frontpanel buttons driver";
 static struct input_dev *button_dev;
 static unsigned char button_value = 0;
 static int bad_polling = 1;

@@ -34,7 +34,7 @@
 
 #include "simu_button.h"
 
-static char *button_driver_name = "SH4 RC event driver";
+static char *button_driver_name = "SH4 RC event driver for remote control";
 static struct input_dev *button_dev;
 
 int button_dev_init(void)

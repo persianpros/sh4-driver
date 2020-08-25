@@ -70,7 +70,7 @@
 #define KEY_PWR stm_gpio(11, 6)
 #endif
 
-static char *button_driver_name = "Pace HDS-7241 frontpanel buttons";
+static char *button_driver_name = "Pace HDS-7241 frontpanel buttons driver";
 static struct input_dev *button_dev;
 static struct workqueue_struct *wq;
 static int bad_polling = 1;

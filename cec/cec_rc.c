@@ -22,7 +22,7 @@
 #include "cec_opcodes_def.h"
 #include "cec_debug.h"
 
-static char *button_driver_name = "SH4 RC event driver";
+static char *button_driver_name = "SH4 RC event driver for remote control";
 static struct input_dev *button_dev;
 unsigned int last_keycode = 0xFFFF;
 

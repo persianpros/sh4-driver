@@ -1235,7 +1235,7 @@ static struct file_operations vfd_fops =
 };
 
 /*----- Button driver -------*/
-static char *button_driver_name = "Fulan front panel button driver";
+static char *button_driver_name = "Fulan frontpanel buttons driver";
 static struct input_dev *button_dev;
 static int bad_polling = 1;
 static struct workqueue_struct *fpwq;
