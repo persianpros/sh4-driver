@@ -178,7 +178,23 @@ export CCFLAGSY
 obj-y := avs/
 obj-y += multicom/
 obj-y += stgfb/
+ifndef FOREVER_NANOSMART
+ifndef FOREVER_9898HD
+ifndef DP7001
+ifndef FOREVER_3434HD
+ifndef FOREVER_2424HD
+ifndef GPV8000
+ifndef EP8000
+ifndef EPP8000
 obj-y += player2/
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
 ifndef PACE7241 #boxtype not needed
 ifndef SAGEMCOM88 #Sagemcom88 has own boxtype
 obj-y += boxtype/
@@ -193,13 +209,45 @@ ifdef WLANDRIVER
 obj-y += wireless/
 endif
 
+ifndef FOREVER_NANOSMART
+ifndef FOREVER_9898HD
+ifndef DP7001
+ifndef FOREVER_3434HD
+ifndef FOREVER_2424HD
+ifndef GPV8000
+ifndef EP8000
+ifndef EPP8000
 ifeq (,$(wildcard $(DRIVER_TOPDIR)/pti_np ))
 obj-y += pti/
 else
 obj-y += pti_np/
 endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
 
+ifndef FOREVER_NANOSMART
+ifndef FOREVER_9898HD
+ifndef DP7001
+ifndef FOREVER_3434HD
+ifndef FOREVER_2424HD
+ifndef GPV8000
+ifndef EP8000
+ifndef EPP8000
 obj-y += compcache/
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
 obj-y += bpamem/
 
 ifdef HL101
