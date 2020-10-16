@@ -25,7 +25,7 @@
  *
  ****************************************************
  *
- * Note: used only by UFS910, VIP1_V2, Octagon1008, HL101
+ * Note: used only by UFS910, VIP1_V1, VIP1_V2, Octagon1008, HL101
  *
  */
 
@@ -85,6 +85,7 @@ short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= er
 	} while (0)
 
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
  || defined(OCTAGON1008)
 struct stpio_pin *cic_enable_pin;
@@ -97,6 +98,7 @@ unsigned long reg_buffer = 0;
 #if defined(OCTAGON1008)
 static unsigned char *slot_membase[2];
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 static unsigned long reg_ci_base;
 #else
@@ -217,6 +219,7 @@ static int cimax_read_attribute_mem(struct dvb_ca_en50221 *ca, int slot, int add
 /* ************************** */
 
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
  || defined(OCTAGON1008)
 static int cimax_writeregN (struct cimax_state *state, u8 * data, u16 len)
@@ -298,6 +301,7 @@ static int cimax_readreg(struct cimax_state* state, u8 reg)
 void getCiSource(int slot, int* source)
 {
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 	int val;
 
@@ -307,6 +311,7 @@ void getCiSource(int slot, int* source)
 	if(slot == 0)
 	{
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 		if (val != 0)
 		{
@@ -331,6 +336,7 @@ void getCiSource(int slot, int* source)
 	if(slot == 1)
 	{
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 		if (val != 0)
 		{
@@ -362,6 +368,7 @@ void getCiSource(int slot, int* source)
 int setCiSource(int slot, int source)
 {
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 	int val;
 
@@ -377,6 +384,7 @@ int setCiSource(int slot, int source)
 	{
 		/* send stream A through module B and stream B through module A */
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 		val |= 0x20;
 #else
@@ -388,6 +396,7 @@ int setCiSource(int slot, int source)
 		/* enforce direct mapping */
 		/* send stream A through module A and stream B through module B */
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 		val &= ~0x20;
 #else
@@ -404,7 +413,7 @@ void setDestination(struct cimax_state *state, int slot)
 {
 	int result = 0;
 	int loop = 0;
-				
+
 	dprintk(150, "%s > slot = %d\n", __func__, slot);
 
 #if !defined(OCTAGON1008)
@@ -605,6 +614,7 @@ static int cimax_read_attribute_mem(struct dvb_ca_en50221 *ca, int slot, int add
 #if defined(OCTAGON1008)
 		res = slot_membase[slot][address];
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		res = ctrl_inb(reg_ci_base + (address));
 #else
@@ -625,6 +635,7 @@ static int cimax_read_attribute_mem(struct dvb_ca_en50221 *ca, int slot, int add
 #if defined(OCTAGON1008)
 		res = slot_membase[slot][address];
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		res = ctrl_inb(reg_ci_base + (address));
 #else
@@ -669,6 +680,7 @@ static int cimax_write_attribute_mem(struct dvb_ca_en50221 *ca, int slot, int ad
 #if defined(OCTAGON1008)
 		slot_membase[slot][address] = value;
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		ctrl_outb(value, reg_ci_base + (address));
 #else
@@ -687,6 +699,7 @@ static int cimax_write_attribute_mem(struct dvb_ca_en50221 *ca, int slot, int ad
 #if defined(OCTAGON1008)
 		slot_membase[slot][address] = value;
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		ctrl_outb(value, reg_ci_base + (address));
 #else
@@ -718,7 +731,9 @@ static int cimax_read_cam_control(struct dvb_ca_en50221 *ca, int slot, u8 addres
 
 #if defined(OCTAGON1008)
 		res = slot_membase[slot][address];
-#elif defined(HL101) || defined(VIP1_V2)
+#elif defined(HL101) \
+ ||   defined(VIP1_V1) \
+ ||   defined(VIP1_V2)
 		res = ctrl_inb(reg_ci_base + (address /*<< 1*/));
 #else
 		res = ctrl_inb(reg_bank4 + (address << 1));
@@ -738,6 +753,7 @@ static int cimax_read_cam_control(struct dvb_ca_en50221 *ca, int slot, u8 addres
 #if defined(OCTAGON1008)
 		res = slot_membase[slot][address];
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		res = ctrl_inb(reg_ci_base + (address /*<< 1*/));
 #else
@@ -750,6 +766,7 @@ static int cimax_read_cam_control(struct dvb_ca_en50221 *ca, int slot, u8 addres
 #if defined(OCTAGON1008)
 	// do nothing
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		dprintk (50, "%s Address = 0x%.8lx: res = 0x%02x\n", __func__, reg_ci_base + (address /*<< 1*/), res);
 #else
@@ -782,6 +799,7 @@ static int cimax_write_cam_control(struct dvb_ca_en50221 *ca, int slot, u8 addre
 #if defined(OCTAGON1008)
 		// do nothing
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		dprintk (50, "%s Address = 0x%.8lx: value = 0x%02x\n", __func__, reg_ci_base + (address ), value);
 #else
@@ -802,6 +820,7 @@ static int cimax_write_cam_control(struct dvb_ca_en50221 *ca, int slot, u8 addre
 #if defined(OCTAGON1008)
 		slot_membase[slot][address] = value;
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		ctrl_outb(value, reg_ci_base + (address ));
 #else
@@ -822,6 +841,7 @@ static int cimax_write_cam_control(struct dvb_ca_en50221 *ca, int slot, u8 addre
 #if defined(OCTAGON1008)
 		slot_membase[slot][address] = value;
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 		ctrl_outb(value, reg_ci_base + (address ));
 #else
@@ -904,6 +924,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 	struct cimax_core *core = &ci_core;
 	int result;
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 	u8 sequence[33] =
 	{
@@ -925,6 +946,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 
 	core->dvb_adap = dvb_adap;
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 	state->i2c = i2c_get_adapter(2);
 #elif defined(OCTAGON1008)
@@ -981,6 +1003,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 	stpio_set_pin (module_pin[1], 0);
 
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 	cic_enable_pin = stpio_request_pin (2, 5, "CIMaX", STPIO_OUT);
 	if (cic_enable_pin == NULL)
@@ -1011,6 +1034,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 	cimax_writereg(state, 0x1f, 0x80);
 
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
  || defined(OCTAGON1008)
 	cimax_writeregN(state, sequence, sizeof(sequence));
@@ -1109,6 +1133,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 	ctrl_outl(0x00000008, reg_config + EMIBank3 + EMI_CFG_DATA3);
 
 #elif defined(HL101) \
+ ||   defined(VIP1_V1) \
  ||   defined(VIP1_V2)
 	/*
 	ctrl_outl(0x002045f9, reg_config + EMIBank3 + EMI_CFG_DATA0);
@@ -1159,6 +1184,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
  * For now I know the mapped address and use it directly.
  */
    #if defined(HL101) \
+    || defined(VIP1_V1) \
     || defined(VIP1_V2)
 	reg_ci_base = (unsigned long) 0xa2c00000;
    #else

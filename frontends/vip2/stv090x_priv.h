@@ -24,37 +24,13 @@
 
 #include "dvb_frontend.h"
 
-#if 0
-#define FE_ERROR    0
-#define FE_NOTICE   1
-#define FE_INFO     2
-#define FE_DEBUG    3
-#define FE_DEBUGREG 4
-#endif
-
-#if 0
-#define dprintk(__y, __z, format, arg...) do {						\
-		if (__z) {									\
-			if	((verbose > FE_ERROR) && (verbose > __y))			\
-				printk(KERN_ERR "%s: " format "\n", __func__ , ##arg);		\
-			else if	((verbose > FE_NOTICE) && (verbose > __y))			\
-				printk(KERN_NOTICE "%s: " format "\n", __func__ , ##arg);	\
-			else if ((verbose > FE_INFO) && (verbose > __y))			\
-				printk(KERN_INFO "%s: " format "\n", __func__ , ##arg);		\
-			else if ((verbose > FE_DEBUG) && (verbose > __y))			\
-				printk(KERN_DEBUG "%s: " format "\n", __func__ , ##arg);	\
-		} else {									\
-			if (verbose > __y)							\
-				printk(format, ##arg);						\
-		}										\
-	} while (0)
-#endif
 
 extern short paramDebug;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
 #if defined TAGDEBUG
 #undef TAGDEBUG
 #endif
 #define TAGDEBUG "[stv090x] "
+
 
 #define STV090x_READ_DEMOD(__state, __reg) (((__state)->demod == STV090x_DEMODULATOR_1) ? stv090x_read_reg(__state, STV090x_P2_##__reg) : stv090x_read_reg(__state, STV090x_P1_##__reg))
 
@@ -78,7 +54,7 @@ extern short paramDebug;  // debug print level is zero as default (0=nothing, 1=
 #define STV090x_SEARCH_AGC2_TH_CUT20 700
 #define STV090x_SEARCH_AGC2_TH_CUT30 1400
 
-#define STV090x_SEARCH_AGC2_TH(__ver) ((__ver <= 0x20) ? STV090x_SEARCH_AGC2_TH_CUT20 : STV090x_SEARCH_AGC2_TH_CUT30)
+#define STV090x_SEARCH_AGC2_TH(__ver) ((__ver <= 0x20) ? STV090x_SEARCH_AGC2_TH_CUT20 :	STV090x_SEARCH_AGC2_TH_CUT30)
 
 enum stv090x_signal_state
 {
@@ -240,9 +216,9 @@ struct stv090x_internal
 	struct i2c_adapter *i2c_adap;
 	u8                 i2c_addr;
 
-	struct mutex       demod_lock; /* Lock access to shared register */
-	struct mutex       tuner_lock; /* Lock access to tuners */
-	s32                mclk; /* Masterclock Divider factor */
+	struct mutex       demod_lock;  /* Lock access to shared register */
+	struct mutex       tuner_lock;  /* Lock access to tuners */
+	s32                mclk;  /* Masterclock Divider factor */
 	u32                dev_ver;
 
 	int                num_used;
@@ -259,7 +235,7 @@ struct stv090x_state
 	const struct stv090x_config *config;
 	struct dvb_frontend         frontend;
 
-	u32                         *verbose; /* Cached module verbosity */
+//	u32                         *verbose; /* Cached module verbosity */
 
 	enum stv090x_delsys         delsys;
 	enum stv090x_fec            fec;

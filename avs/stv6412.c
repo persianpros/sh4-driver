@@ -165,7 +165,7 @@ static struct s_stv6412_data tmpstv6412_data;
 static int stv6412_s_old_src;
 
 /* ---------------------------------------------------------------------- */
-#if defined(FORTIS_HDBOX) || defined(HL101)  || defined(IPBOX9900)
+#if defined(FORTIS_HDBOX) || defined(HL101) || defined(VIP1_V1)  || defined(IPBOX9900)
 //Trick: hack ;)
 int stv6412_set(struct i2c_client *client)
 {
@@ -218,13 +218,13 @@ int stv6412_set_volume( struct i2c_client *client, int vol )
 //		c--;
 //	}
 #if !defined(ADB_BOX)
-	if(c==63)
+	if (c == 63)
 	{
-		c=62;
+		c = 62;
 	}
-	if(c==0)
+	if (c == 0)
 	{
-		c=1;
+		c = 1;
 	}
 	if ((c > 63) || (c < 0))
 	{
@@ -372,9 +372,7 @@ inline int stv6412_set_t_sb( struct i2c_client *client, int type )
 	{
 		return -EINVAL;
 	}
-
 	stv6412_data.t_sb = type;
-
 	return stv6412_set(client);
 }
 
@@ -426,7 +424,6 @@ int stv6412_get_status(struct i2c_client *client)
 	{
 		return -1;
 	}
-
 	return byte;
 }
 
@@ -722,7 +719,7 @@ int stv6412_command(struct i2c_client *client, unsigned int cmd, void *arg )
 			/* set video fast blanking */
 			case AVSIOSFBLK:
 			{
-#if defined(FORTIS_HDBOX) || defined(HL101) || defined(IPBOX9900) || defined(IPBOX99)
+#if defined(FORTIS_HDBOX) || defined(HL101) || defined(VIP1_V1) || defined(IPBOX9900) || defined(IPBOX99)
 				printk("[AVS STV6418] does not support AVSIOSFBLK yet!\n");
 				return -1;
 #else
@@ -801,8 +798,8 @@ int stv6412_command(struct i2c_client *client, unsigned int cmd, void *arg )
 			/* get video fast blanking */
 			case AVSIOGFBLK:
 			{
-#if defined(FORTIS_HDBOX) || defined(HL101) || defined(IPBOX9900) || defined(IPBOX99)
-				printk("[AVS STV6418] not support AVSIOSFBLK yet!\n");
+#if defined(FORTIS_HDBOX) || defined(HL101) || defined(VIP1_V1) || defined(IPBOX9900) || defined(IPBOX99)
+				printk("[AVS STV6418] does not support AVSIOSFBLK yet!\n");
 				break;
 #else
 				val = stv6412_get_fblk();
@@ -961,49 +958,75 @@ int stv6412_command_kernel(struct i2c_client *client, unsigned int cmd, void *ar
 		{
 			/* get video */
 			case AVSIOGVSW1:
+			{
 				val = stv6412_get_vsw(0);
 				break;
+			}
 			case AVSIOGVSW2:
+			{
 				val = stv6412_get_vsw(1);
 				break;
+			}
 			case AVSIOGVSW3:
+			{
 				val = stv6412_get_vsw(2);
 				break;
+			}
 			/* get audio */
 			case AVSIOGASW1:
+			{
 				val = stv6412_get_asw(0);
 				break;
+			}
 			case AVSIOGASW2:
+			{
 				val = stv6412_get_asw(1);
 				break;
+			}
 			case AVSIOGASW3:
+			{
 				val = stv6412_get_asw(2);
 				break;
+			}
 			/* get vol & mute */
 			case AVSIOGVOL:
+			{
 				val = stv6412_get_volume();
 				break;
+			}
 			case AVSIOGMUTE:
+			{
 				val = stv6412_get_mute();
 				break;
+			}
 			/* get video fast blanking */
 			case AVSIOGFBLK:
+			{
 				val = stv6412_get_fblk();
 				break;
+			}
 			case AVSIOGSCARTPIN8:
+			{
 				val = scartPin8Table_reverse[stv6412_get_t_sb()];
 				break;
+			}
 			/* get slow blanking (tv) */
 			case AVSIOGFNC:
+			{
 				val = stv6412_get_t_sb();
 				break;
+			}
 			/* get status */
 			case AVSIOGSTATUS:
+			{
 				// TODO: error handling
 				val = stv6412_get_status(client);
 				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
 		*((int*) arg) = (int) val;
 		return 0;
@@ -1011,22 +1034,31 @@ int stv6412_command_kernel(struct i2c_client *client, unsigned int cmd, void *ar
 	else
 	{
 		printk("[AVS]: SAA command\n");
-
 		val = (int) arg;
 
 		switch(cmd)
 		{
 			case SAAIOSMODE:
+			{
 		   		 return stv6412_set_mode(client,val);
+			}
 	 	        case SAAIOSENC:
+			{
 				 return stv6412_set_encoder(client,val);
+			}
 			case SAAIOSWSS:
+			{
 				return stv6412_set_wss(client,val);
+			}
 			case SAAIOSSRCSEL:
+			{
 				return stv6412_src_sel(client,val);
+			}
 			default:
+			{
 				dprintk("[AVS]: SAA command not supported\n");
 				return -EINVAL;
+			}
 		}
 	}
 	return 0;
@@ -1088,14 +1120,13 @@ int stv6412_init(struct i2c_client *client)
 	/* Data 6 */
 	stv6412_data.a_in  = 0;
 #endif
-
 	stv6412_s_old_src = 1;
 
 	/* save mute/unmute values */
 	tc_asc = 0xff;
 	v_asc  = 0xff;
-
 	return stv6412_set(client);
 }
 
 /* ---------------------------------------------------------------------- */
+// vim:ts=4

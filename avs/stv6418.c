@@ -50,10 +50,12 @@ static unsigned char backup_regs[STV6418_MAX_REGS + 1];
 /* hold old values for standby */
 static unsigned char t_stnby=0;
 
+#if !defined(IPBOX9900) && !defined(IPBOX99) && !defined(ATEVIO7500) && !defined(CUBEREVO_3000HD)
 static struct stpio_pin* eMute;   // mute bin
 
 #define MUTE_CLR() {stpio_set_pin(eMute, 0);}
 #define MUTE_SET() {stpio_set_pin(eMute, 1);}
+#endif
 
 #define STV6418_DATA_SIZE sizeof(regs)
 
@@ -204,8 +206,6 @@ int stv6418_set(struct i2c_client *client)
 	int i;
 	
 	regs[0] = 0x00;
-
-	regs[0] = 0x00;
 	regs[1] = 0x40; /* 0x40 */
 	regs[2] = 0x09; /* 0x09 */
 	regs[3] = 0x11;
@@ -217,52 +217,56 @@ int stv6418_set(struct i2c_client *client)
 	regs[9] = 0xc0;
 	regs[10]= 0x00;
 
-	dprintk("[AVS]: %s > %d\n", __func__, STV6418_DATA_SIZE);
+//	dprintk("%s > %d\n", __func__, STV6418_DATA_SIZE);
 
-	dprintk("[AVS]: regs = { ");
+#if 0
+	dprintk("regs = { ");
 	for (i = 0; i <= STV6418_MAX_REGS; i++)
+	{
 		dprintk("0x%02x ", regs[i]);
+	}
 	dprintk(" }\n");
-
+#endif
 	if ( STV6418_DATA_SIZE != i2c_master_send(client, regs, STV6418_DATA_SIZE))
 	{
-		printk("[AVS]: %s: error sending data\n", __func__);
+		dprintk("%s: error sending data\n", __func__);
 		return -EFAULT;
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
-
+//	dprintk("%s <\n", __func__);
 	return 0;
 }
 
 int stv6418_set_volume( struct i2c_client *client, int vol )
 {
-	int c=0;
+	int c = 0;
 
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 	c = vol;
 
-	if(c==63)
-		c=62;
-	if(c==0)
-		c=1;
-
+	if (c == 63)
+	{
+		c = 62;
+	}
+	if (c == 0)
+	{
+		c = 1;
+	}
 	if ((c > 63) || (c < 0))
+	{
 		return -EINVAL;
-
+	}
 	c /= 2;
-
 	set_bits(regs, cReg0, c, 1, 5);
 
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
 inline int stv6418_set_mute( struct i2c_client *client, int type )
 {
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 
-	if ((type<0) || (type>1))
+	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
 	}
@@ -271,14 +275,16 @@ inline int stv6418_set_mute( struct i2c_client *client, int type )
 	{
 		if (tv_value == 0xff)
 		{
-		   tv_value = get_bits(regs, cReg1, 0, 2);
-		   vcr_value = get_bits(regs, cReg1, 3, 2);
+			tv_value = get_bits(regs, cReg1, 0, 2);
+			vcr_value = get_bits(regs, cReg1, 3, 2);
 
-		   set_bits(regs, cReg1, 0, 0, 2); /* tv cinch mute */
-		   set_bits(regs, cReg1, 0, 3, 2); /* vcr mute */
+			set_bits(regs, cReg1, 0, 0, 2);  /* tv cinch mute */
+			set_bits(regs, cReg1, 0, 3, 2);  /* vcr mute */
 		}
 #ifndef ATEVIO7500
-#if !defined (IPBOX9900) && !defined (IPBOX99) && !defined(CUBEREVO_3000HD)
+#if !defined (IPBOX9900) \
+ && !defined (IPBOX99) \
+ && !defined(CUBEREVO_3000HD)
 		MUTE_SET();
 #endif
 #endif
@@ -294,21 +300,22 @@ inline int stv6418_set_mute( struct i2c_client *client, int type )
 			vcr_value = 0xff;
 		}
 #ifndef ATEVIO7500
-#if !defined (IPBOX9900) && !defined (IPBOX99) && !defined(CUBEREVO_3000HD)
+#if !defined (IPBOX9900) \
+ && !defined (IPBOX99) \
+ && !defined(CUBEREVO_3000HD)
 		MUTE_CLR();
 #endif
 #endif
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
 inline int stv6418_set_vsw( struct i2c_client *client, int sw, int type )
 {
-	printk("[AVS]: %s: SET VSW: %d %d\n",__func__, sw, type);
+	dprintk("%s: SET VSW: %d %d\n",__func__, sw, type);
 
-	if (type<0 || type>4)
+	if (type < 0 || type > 4)
 	{
 		return -EINVAL;
 	}
@@ -316,64 +323,80 @@ inline int stv6418_set_vsw( struct i2c_client *client, int sw, int type )
 	switch(sw)
 	{
 		case 0:	// vcr
-	        set_bits(regs, cReg2, type, 4, 3);
+		{
+			set_bits(regs, cReg2, type, 4, 3);
 			break;
+		}
 		case 1:	// rgb
-			if (type<0 || type>2)
+		{
+			if (type < 0 || type > 2)
 			{
 				return -EINVAL;
 			}
-
 			set_bits(regs, cReg3, type, 2, 2);
 			break;
+		}
 		case 2: // tv
+		{
 			set_bits(regs, cReg2, type, 0, 3);
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
 inline int stv6418_set_asw( struct i2c_client *client, int sw, int type )
 {
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
+
 	switch(sw)
 	{
 		case 0:
-			if (type<=0 || type>3)
+		{
+			if (type <= 0 || type > 3)
 			{
 				return -EINVAL;
 			}
-
 			/* if muted ? yes: save in temp */
 			if ( vcr_value == 0xff )
+			{
 				set_bits(regs, cReg1, type, 3, 2);
+			}
 			else
+			{
 				vcr_value = type;
-
+			}
 			break;
+		}
 		case 1:
 		case 2:
-			if (type<=0 || type>4)
+		{
+			if (type <= 0 || type > 4)
 			{
 				return -EINVAL;
 			}
-
 			/* if muted ? yes: save in temp */
 			if ( tv_value == 0xff )
+			{
 				set_bits(regs, cReg1, type, 0, 2);
+			}
 			else
+			{
 				tv_value = type;
-
+			}
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
@@ -382,16 +405,15 @@ inline int stv6418_set_t_sb( struct i2c_client *client, int type )
 /* fixme: on stv6418 we have another range
  * think on this ->see register description below
  */
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 
-	if (type<0 || type>3)
+	if (type < 0 || type > 3)
 	{
 		return -EINVAL;
 	}
-
 	set_bits(regs, cReg6, type, 2, 4);
 	
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
@@ -400,41 +422,38 @@ inline int stv6418_set_wss( struct i2c_client *client, int vol )
 /* fixme: on stv6418 we hav more possibilites here
  * think on this ->see register description below
  */
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 
 	if (vol == SAA_WSS_43F)
 	{
-           set_bits(regs, cReg6, 3, 2, 4);
+        	set_bits(regs, cReg6, 3, 2, 4);
 	}
 	else if (vol == SAA_WSS_169F)
 	{
-           set_bits(regs, cReg6, 2, 2, 4);
+		set_bits(regs, cReg6, 2, 2, 4);
 	}
 	else if (vol == SAA_WSS_OFF)
 	{
-           set_bits(regs, cReg6, 0, 2, 4);
+		set_bits(regs, cReg6, 0, 2, 4);
 	}
 	else
 	{
 		return  -EINVAL;
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
 inline int stv6418_set_fblk( struct i2c_client *client, int type )
 {
-	dprintk("[AVS]: %s >\n", __func__);
-	if (type<0 || type>3)
+//	dprintk("%s >\n", __func__);
+
+	if (type < 0 || type > 3)
 	{
 		return -EINVAL;
 	}
-
 	set_bits(regs, cReg3, type, 0, 2);
-
-	dprintk("[AVS]: %s <\n", __func__);
-
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
@@ -442,7 +461,7 @@ int stv6418_get_status(struct i2c_client *client)
 {
 	unsigned char byte;
 
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 
 	byte = 0;
 
@@ -450,9 +469,7 @@ int stv6418_get_status(struct i2c_client *client)
 	{
 		return -1;
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
-
+//	dprintk("%s <\n", __func__);
 	return byte;
 }
 
@@ -460,7 +477,7 @@ int stv6418_get_volume(void)
 {
 	int c;
 
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 	
 	c = get_bits(regs, cReg0, 1, 5);
 
@@ -468,77 +485,95 @@ int stv6418_get_volume(void)
 	{
 		c *= 2;
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
-
+//	dprintk("%s <\n", __func__);
 	return c;
 }
 
 inline int stv6418_get_mute(void)
 {
-	dprintk("[AVS]: %s <>\n", __func__);
+//	dprintk("%s <>\n", __func__);
 	return !((tv_value == 0xff) && (vcr_value == 0xff));
 }
 
 inline int stv6418_get_fblk(void)
 {
-	dprintk("[AVS]: %s <>\n", __func__);
+//	dprintk("%s <>\n", __func__);
 	return get_bits(regs, cReg3, 0, 2);
 }
 
 inline int stv6418_get_t_sb(void)
 {
-	dprintk("[AVS]: %s <>\n", __func__);
+//	dprintk("%s <>\n", __func__);
 	return get_bits(regs, cReg6, 2, 4);
 }
 
 inline int stv6418_get_vsw( int sw )
 {
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
+
 	switch(sw)
 	{
 		case 0:
+		{
 			return get_bits(regs, cReg2, 4, 3);
 			break;
+		}
 		case 1:
+		{
 			return get_bits(regs, cReg3, 2, 2);
 			break;
+		}
 		case 2:
+		{
 			return get_bits(regs, cReg2, 0, 3);
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
-
+//	dprintk("%s <\n", __func__);
 	return -EINVAL;
 }
 
 inline int stv6418_get_asw( int sw )
 {
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
+
 	switch(sw)
 	{
 		case 0:
+		{
 			// muted ? yes: return tmp values
 			if ( vcr_value == 0xff )
+			{
 				return get_bits(regs, cReg1, 3, 2);
+			}
 			else
+			{
 				return vcr_value;
+			}
+		}
 		case 1:
 		case 2:
+		{
 			if ( tv_value == 0xff )
+			{
 				return get_bits(regs, cReg1, 0, 2);
+			}
 			else
+			{
 				return tv_value;
+			}
 			break;
+		}
 		default:
+		{
 			return -EINVAL;
+		}
 	}
-
-	dprintk("[AVS]: %s <\n", __func__);
-
+//	dprintk("%s <\n", __func__);
 	return -EINVAL;
 }
 
@@ -549,80 +584,88 @@ int stv6418_set_encoder( struct i2c_client *client, int vol )
  
 int stv6418_set_mode( struct i2c_client *client, int val )
 {
-	dprintk("[AVS]: SAAIOSMODE command : %d\n", val);
+	dprintk("SAAIOSMODE command : %d\n", val);
 
 	if (val == SAA_MODE_RGB)
 	{
-		if(get_bits(regs, cReg2, 0, 3) == 4) // scart selected
+		if (get_bits(regs, cReg2, 0, 3) == 4)  // scart selected
+		{
 			stv6418_s_old_src = 1;
+		}
 		else
+		{
 			set_bits(regs, cReg2, 1, 0, 3);
+		}
                 set_bits(regs, cReg3, 1, 0, 2);    /* fast blanking */
 	}
 	else if (val == SAA_MODE_FBAS)
 	{
-		if(get_bits(regs, cReg2, 0, 3) == 4) // scart selected
+		if (get_bits(regs, cReg2, 0, 3) == 4) // scart selected
+		{
 			stv6418_s_old_src = 1;
+		}
 		else
+		{
 			set_bits(regs, cReg2, 1, 0, 3);
+		}
                 set_bits(regs, cReg3, 0, 0, 2);   /* fast blanking */
 	}
 	else if (val == SAA_MODE_SVIDEO)
 	{
-		if(get_bits(regs, cReg2, 0, 3) == 4) // scart selected
+		if (get_bits(regs, cReg2, 0, 3) == 4) // scart selected
+		{
 			stv6418_s_old_src = 2;
+		}
 		else
+		{
 			set_bits(regs, cReg2, 2, 0, 3);
+		}
                 set_bits(regs, cReg3, 0, 0, 2);   /* fast blanking */
 	}
 	else
 	{
 		return  -EINVAL;
 	}
- 
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
  
 int stv6418_src_sel( struct i2c_client *client, int src )
 {
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 
 	if (src == SAA_SRC_ENC)
 	{
-	   set_bits(regs, cReg2, stv6418_s_old_src, 0, 3); /* t_vsc */
-	   set_bits(regs, cReg2, stv6418_s_old_src, 4, 3); /* v_vsc */
-	   set_bits(regs, cReg1, 1, 0, 2); /* tc_asc */
-	   set_bits(regs, cReg1, 1, 3, 2); /* v_asc */
+		set_bits(regs, cReg2, stv6418_s_old_src, 0, 3); /* t_vsc */
+		set_bits(regs, cReg2, stv6418_s_old_src, 4, 3); /* v_vsc */
+		set_bits(regs, cReg1, 1, 0, 2); /* tc_asc */
+		set_bits(regs, cReg1, 1, 3, 2); /* v_asc */
 	}
-	else if(src == SAA_SRC_SCART)
+	else if (src == SAA_SRC_SCART)
 	{
-	   stv6418_s_old_src = get_bits(regs, cReg2, 0, 3);
-	   set_bits(regs, cReg2, 4, 0, 3);
-	   set_bits(regs, cReg2, 0, 4, 3);
-	   set_bits(regs, cReg1, 2, 0, 2);
-	   set_bits(regs, cReg1, 0, 3, 2);
+		stv6418_s_old_src = get_bits(regs, cReg2, 0, 3);
+		set_bits(regs, cReg2, 4, 0, 3);
+		set_bits(regs, cReg2, 0, 4, 3);
+		set_bits(regs, cReg1, 2, 0, 2);
+		set_bits(regs, cReg1, 0, 3, 2);
   	}
   	else
 	{
 		return  -EINVAL;
 	}
- 
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
 inline int stv6418_standby( struct i2c_client *client, int type )
 {
- 
-	dprintk("[AVS]: %s >\n", __func__);
+//	dprintk("%s >\n", __func__);
 
-	if ((type<0) || (type>1))
+	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
 	}
- 
-	if (type==1) 
+	if (type == 1) 
 	{
 		if (t_stnby == 0)
 		{
@@ -641,7 +684,9 @@ inline int stv6418_standby( struct i2c_client *client, int type )
 			t_stnby = 1;
 		}
 		else
+		{
 			return -EINVAL;		
+		}
 	}
 	else
 	{
@@ -651,21 +696,22 @@ inline int stv6418_standby( struct i2c_client *client, int type )
 			t_stnby = 0;
 		}
 		else
+		{
 			return -EINVAL;
+		}
 	}
- 
-	dprintk("[AVS]: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return stv6418_set(client);
 }
 
 int stv6418_command(struct i2c_client *client, unsigned int cmd, void *arg )
 {
-	int val=0;
+	int val = 0;
 
 	unsigned char scartPin8Table[3] = { 0, 2, 3 };
 	unsigned char scartPin8Table_reverse[4] = { 0, 0, 1, 2 };
 
-	dprintk("[AVS]: %s(%d)\n", __func__, cmd);
+//	dprintk("%s(%d)\n", __func__, cmd);
 	
 	if (cmd & AVSIOSET)
 	{
@@ -678,88 +724,140 @@ int stv6418_command(struct i2c_client *client, unsigned int cmd, void *arg )
 		{
 			/* set video */
 			case AVSIOSVSW1:
+			{
 				return stv6418_set_vsw(client,0,val);
+			}
 			case AVSIOSVSW2:
+			{
 				return stv6418_set_vsw(client,1,val);
+			}
 			case AVSIOSVSW3:
+			{
 				return stv6418_set_vsw(client,2,val);
+			}
 			/* set audio */
 			case AVSIOSASW1:
+			{
 				return stv6418_set_asw(client,0,val);
+			}
 			case AVSIOSASW2:
+			{
 				return stv6418_set_asw(client,1,val);
+			}
 			case AVSIOSASW3:
+			{
 				return stv6418_set_asw(client,2,val);
+			}
 			/* set vol & mute */
 			case AVSIOSVOL:
+			{
 				return stv6418_set_volume(client,val);
+			}
 			case AVSIOSMUTE:
+			{
 				return stv6418_set_mute(client,val);
+			}
 			/* set video fast blanking */
 			case AVSIOSFBLK:
+			{
 				return stv6418_set_fblk(client,val);
+			}
 /* no direct manipulation allowed, use set_wss instead */
 			/* set slow blanking (tv) */
 			case AVSIOSSCARTPIN8:
+			{
 				return stv6418_set_t_sb(client,scartPin8Table[val]);
+			}
 			case AVSIOSFNC:
+			{
 				return stv6418_set_t_sb(client,val);
+			}
 			case AVSIOSTANDBY:
+			{
 				return stv6418_standby(client,val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-	} else if (cmd & AVSIOGET)
+	}
+	else if (cmd & AVSIOGET)
 	{
 		switch (cmd)
 		{
 			/* get video */
 			case AVSIOGVSW1:
+			{
 				val = stv6418_get_vsw(0);
 				break;
+			}
 			case AVSIOGVSW2:
+			{
 				val = stv6418_get_vsw(1);
 				break;
+			}
 			case AVSIOGVSW3:
+			{
 				val = stv6418_get_vsw(2);
 				break;
+			}
 			/* get audio */
 			case AVSIOGASW1:
+			{
 				val = stv6418_get_asw(0);
 				break;
+			}
 			case AVSIOGASW2:
+			{
 				val = stv6418_get_asw(1);
 				break;
+			}
 			case AVSIOGASW3:
+			{
 				val = stv6418_get_asw(2);
 				break;
+			}
 			/* get vol & mute */
 			case AVSIOGVOL:
+			{
 				val = stv6418_get_volume();
 				break;
+			}
 			case AVSIOGMUTE:
+			{
 				val = stv6418_get_mute();
 				break;
+			}
 			/* get video fast blanking */
 			case AVSIOGFBLK:
+			{
 				val = stv6418_get_fblk();
 				break;
+			}
 			case AVSIOGSCARTPIN8:
+			{
 				val = scartPin8Table_reverse[stv6418_get_t_sb()];
 				break;
+			}
 			/* get slow blanking (tv) */
 			case AVSIOGFNC:
+			{
 				val = stv6418_get_t_sb();
 				break;
+			}
 			/* get status */
 			case AVSIOGSTATUS:
+			{
 				// TODO: error handling
 				val = stv6418_get_status(client);
 				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
 		return put_user(val,(int*)arg);
 	}
 	else
@@ -772,151 +870,220 @@ int stv6418_command(struct i2c_client *client, unsigned int cmd, void *arg )
 
 		switch(cmd)
 		{
-		case SAAIOSMODE:
-           		 return stv6418_set_mode(client,val);
- 	        case SAAIOSENC:
-        		 return stv6418_set_encoder(client,val);
-		case SAAIOSWSS:
-			return stv6418_set_wss(client,val);
-		case SAAIOSSRCSEL:
-        		return stv6418_src_sel(client,val);
-		default:
-			dprintk("[AVS]: SAA command not supported\n");
+			case SAAIOSMODE:
+			{
+				return stv6418_set_mode(client,val);
+			}
+				case SAAIOSENC:
+        		{
+				return stv6418_set_encoder(client,val);
+			}
+			case SAAIOSWSS:
+			{
+				return stv6418_set_wss(client,val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return stv6418_src_sel(client,val);
+			}
+			default:
+			{
+				dprintk("SAA command 0x%02x not supported\n", cmd);
+			}
 			return -EINVAL;
 		}
 	}
-
-	dprintk("[AVS: %s <\n", __func__);
+//	dprintk("%s <\n", __func__);
 	return 0;
 }
 
 int stv6418_command_kernel(struct i2c_client *client, unsigned int cmd, void *arg)
 {
-   int val=0;
+	int val = 0;
 
 	unsigned char scartPin8Table[3] = { 0, 2, 3 };
 	unsigned char scartPin8Table_reverse[4] = { 0, 0, 1, 2 };
 
-	
 	if (cmd & AVSIOSET)
 	{
 		val = (int) arg;
 
-      	dprintk("[AVS]: %s: AVSIOSET command(%d)\n", __func__, cmd);
+		dprintk("%s: AVSIOSET command(%d)\n", __func__, cmd);
 
 		switch (cmd)
 		{
 			/* set video */
 			case AVSIOSVSW1:
+			{
 				return stv6418_set_vsw(client,0,val);
+			}
 			case AVSIOSVSW2:
+			{
 				return stv6418_set_vsw(client,1,val);
+			}
 			case AVSIOSVSW3:
+			{
 				return stv6418_set_vsw(client,2,val);
+			}
 			/* set audio */
 			case AVSIOSASW1:
+			{
 				return stv6418_set_asw(client,0,val);
+			}
 			case AVSIOSASW2:
+			{
 				return stv6418_set_asw(client,1,val);
+			}
 			case AVSIOSASW3:
+			{
 				return stv6418_set_asw(client,2,val);
+			}
 			/* set vol & mute */
 			case AVSIOSVOL:
+			{
 				return stv6418_set_volume(client,val);
+			}
 			case AVSIOSMUTE:
+			{
 				return stv6418_set_mute(client,val);
+			}
 			/* set video fast blanking */
 			case AVSIOSFBLK:
+			{
 				return stv6418_set_fblk(client,val);
+			}
 /* no direct manipulation allowed, use set_wss instead */
 			/* set slow blanking (tv) */
 			case AVSIOSSCARTPIN8:
+			{
 				return stv6418_set_t_sb(client,scartPin8Table[val]);
+			}
 			case AVSIOSFNC:
+			{
 				return stv6418_set_t_sb(client,val);
+			}
 			case AVSIOSTANDBY:
+			{
 				return stv6418_standby(client,val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-	} else if (cmd & AVSIOGET)
+	}
+	else if (cmd & AVSIOGET)
 	{
-      	dprintk("[AVS]: %s: AVSIOSET command(%d)\n", __func__, cmd);
+		dprintk("%s: AVSIOSET command(%d)\n", __func__, cmd);
 
 		switch (cmd)
 		{
 			/* get video */
 			case AVSIOGVSW1:
-                                val = stv6418_get_vsw(0);
-                                break;
+			{
+				val = stv6418_get_vsw(0);
+				break;
+			}
 			case AVSIOGVSW2:
-                                val = stv6418_get_vsw(1);
-                                break;
+			{
+				val = stv6418_get_vsw(1);
+				break;
+			}
 			case AVSIOGVSW3:
-                                val = stv6418_get_vsw(2);
-                                break;
+			{
+				val = stv6418_get_vsw(2);
+				break;
+			}
 			/* get audio */
 			case AVSIOGASW1:
-                                val = stv6418_get_asw(0);
-                                break;
+			{
+				val = stv6418_get_asw(0);
+				break;
+			}
 			case AVSIOGASW2:
-                                val = stv6418_get_asw(1);
-                                break;
+			{
+				val = stv6418_get_asw(1);
+				break;
+			}
 			case AVSIOGASW3:
-                                val = stv6418_get_asw(2);
-                                break;
+			{
+				val = stv6418_get_asw(2);
+				break;
+			}
 			/* get vol & mute */
 			case AVSIOGVOL:
-                                val = stv6418_get_volume();
-                                break;
+			{
+				val = stv6418_get_volume();
+				break;
+			}
 			case AVSIOGMUTE:
-                                val = stv6418_get_mute();
-                                break;
+			{
+				val = stv6418_get_mute();
+				break;
+			}
 			/* get video fast blanking */
 			case AVSIOGFBLK:
-                                val = stv6418_get_fblk();
-                                break;
+			{
+				val = stv6418_get_fblk();
+				break;
+			}
 			case AVSIOGSCARTPIN8:
+			{
 				val = scartPin8Table_reverse[stv6418_get_t_sb()];
 				break;
+			}
 			/* get slow blanking (tv) */
 			case AVSIOGFNC:
+			{
 				val = stv6418_get_t_sb();
 				break;
+			}
 			/* get status */
 			case AVSIOGSTATUS:
+			{
 				// TODO: error handling
 				val = stv6418_get_status(client);
 				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
 		arg = (void*) val;
-	        return 0;
+		return 0;
 	}
 	else
 	{
-		dprintk("[AVS]: %s: SAA command (%d)\n", __func__, cmd);
+		dprintk("%s: SAA command (%d)\n", __func__, cmd);
 
 		val = (int) arg;
 
 		switch(cmd)
 		{
-		case SAAIOSMODE:
-           		 return stv6418_set_mode(client,val);
- 	        case SAAIOSENC:
-        		 return stv6418_set_encoder(client,val);
-		case SAAIOSWSS:
-			return stv6418_set_wss(client,val);
-		case SAAIOSSRCSEL:
-        		return stv6418_src_sel(client,val);
-		default:
-			dprintk("[AVS]: %s: SAA command(%d) not supported\n", __func__, cmd);
-			return -EINVAL;
+			case SAAIOSMODE:
+			{
+				return stv6418_set_mode(client,val);
+			}
+			case SAAIOSENC:
+			{
+				return stv6418_set_encoder(client,val);
+			}
+			case SAAIOSWSS:
+			{
+				return stv6418_set_wss(client,val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return stv6418_src_sel(client,val);
+			}
+			default:
+			{
+				dprintk("%s: SAA command (0x%02x) not supported\n", __func__, cmd);
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
@@ -934,13 +1101,17 @@ int stv6418_init(struct i2c_client *client)
 	regs[9] = 0xc0;
 	regs[10]= 0x00;
 
-#if !defined(IPBOX9900) && !defined(IPBOX99) && !defined(ATEVIO7500) && !defined(CUBEREVO_3000HD)
+#if !defined(IPBOX9900) \
+ && !defined(IPBOX99) \
+ && !defined(ATEVIO7500) \
+ && !defined(CUBEREVO_3000HD)
 	eMute= stpio_request_pin (2, 2, "AVS_MUTE", STPIO_OUT);
 	if (eMute == NULL)
 	{
-		dprintk("[AVS]: request mute bin failed!\n");
+		dprintk("request mute pin failed!\n");
 		return -EIO;
 	}
 #endif    
     return stv6418_set(client);
 }
+// vim:ts=4

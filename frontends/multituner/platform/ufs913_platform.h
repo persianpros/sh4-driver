@@ -1,5 +1,5 @@
 /*
- * @brief ufs913_platform.c
+ * @brief ufs913_platform.h
  *
  * @author konfetti
  *
@@ -37,7 +37,7 @@
 
 struct avl_private_data_s avl_tuner_priv =
 {
-	.demod_freq       = 11200, /* fixme: the next three could be determined by the pll config!!! */
+	.demod_freq       = 11200,  /* fixme: the next three could be determined by the pll config!!! */
 	.fec_freq         = 16800,
 	.mpeg_freq        = 25200,
 

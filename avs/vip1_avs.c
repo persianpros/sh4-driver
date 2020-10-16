@@ -52,32 +52,34 @@ static unsigned char t_vol;
 /* hold old values for standby */
 static unsigned char ft_stnby=0;
 
-static struct stpio_pin*	scart_tv_sat;
-static struct stpio_pin*	scart_vcr_det;
-static struct stpio_pin*	scart_cvbs_rgb;
-static struct stpio_pin*	scart_169_43;
-static struct stpio_pin*	scart_mute;
-static struct stpio_pin*	scart_standby;
+static struct stpio_pin *scart_tv_sat;
+static struct stpio_pin *scart_vcr_det;
+static struct stpio_pin *scart_cvbs_rgb;
+static struct stpio_pin *scart_169_43;
+static struct stpio_pin *scart_mute;
+static struct stpio_pin *scart_standby;
 
 int vip1_avs_src_sel(int src)
 {
-	if(src == SAA_SRC_ENC)
+	if (src == SAA_SRC_ENC)
+	{
 		stpio_set_pin(scart_tv_sat, 1);
-	else if(src == SAA_SRC_SCART)
+	}
+	else if (src == SAA_SRC_SCART)
+	{
 		stpio_set_pin(scart_tv_sat, 0);
-	
+	}
 	return 0;
 }
 
 inline int vip1_avs_standby(int type)
 {
 
-	if ((type<0) || (type>1))
+	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
 	}
- 
-	if (type==1) 
+	if (type == 1)
 	{
 		if (ft_stnby == 0)
 		{
@@ -85,7 +87,9 @@ inline int vip1_avs_standby(int type)
 			ft_stnby = 1;
 		}
 		else
-			return -EINVAL;		
+		{
+			return -EINVAL;
+		}
 	}
 	else
 	{
@@ -95,39 +99,37 @@ inline int vip1_avs_standby(int type)
 			ft_stnby = 0;
 		}
 		else
+		{
 			return -EINVAL;
+		}
 	}
-
 	return 0;
 }
- 
+
 int vip1_avs_set_volume(int vol)
 {
-	int c=0;
- 
-	dprintk("[AVS]: %s (%d)\n", __func__, vol);
+	int c = 0;
+
+	dprintk("[AVS] %s Set volume to %d\n", __func__, vol);
 	c = vol;
- 
+
 	if (c > 63 || c < 0)
-		return -EINVAL;
- 
-	c = 63 - c;
- 
-	c=c/2;
- 
-	t_vol = c;
- 
-	return 0;
-}
- 
-inline int vip1_avs_set_mute(int type)
-{
-	if ((type<0) || (type>1))
 	{
 		return -EINVAL;
 	}
- 
-	if (type==AVS_MUTE) 
+	c = 63 - c;
+	c = c / 2;
+	t_vol = c;
+	return 0;
+}
+
+inline int vip1_avs_set_mute(int type)
+{
+	if ((type < 0) || (type > 1))
+	{
+		return -EINVAL;
+	}
+	if (type == AVS_MUTE)
 	{
 		t_mute = 1;
 	}
@@ -135,49 +137,50 @@ inline int vip1_avs_set_mute(int type)
 	{
 		t_mute = 0;
 	}
-
-
 	stpio_set_pin(scart_mute, t_mute);
 	return 0;
 }
- 
+
 int vip1_avs_get_volume(void)
 {
 	int c;
- 
+
 	c = t_vol;
- 
 	return c;
 }
- 
+
 inline int vip1_avs_get_mute(void)
 {
 	return t_mute;
 }
- 
+
 int vip1_avs_set_mode(int vol)
 {
 	switch(vol)
 	{
-	case	SAA_MODE_RGB:
-		stpio_set_pin(scart_cvbs_rgb, 1);
-		break;
-	case	SAA_MODE_FBAS:
-		stpio_set_pin(scart_cvbs_rgb, 0);
-		break;
-	default:
-		break;
-
+		case SAA_MODE_RGB:
+		{
+			stpio_set_pin(scart_cvbs_rgb, 1);
+			break;
+		}
+		case	SAA_MODE_FBAS:
+		{
+			stpio_set_pin(scart_cvbs_rgb, 0);
+			break;
+		}
+		default:
+		{
+			break;
+		}
 	}
- 
 	return 0;
 }
- 
+
 int vip1_avs_set_encoder(int vol)
 {
 	return 0;
 }
- 
+
 int vip1_avs_set_wss(int vol)
 {
 	dprintk("[AVS]: %s\n", __func__);
@@ -198,33 +201,39 @@ int vip1_avs_set_wss(int vol)
 	{
 		return  -EINVAL;
 	}
- 
 	return 0;
 }
 
 int vip1_avs_command(unsigned int cmd, void *arg )
 {
-	int val=0;
+	int val = 0;
 
 	dprintk("[AVS]: %s(%d)\n", __func__, cmd);
 
 	if (cmd & AVSIOSET)
 	{
-		if ( copy_from_user(&val,arg,sizeof(val)) )
+		if (copy_from_user(&val, arg, sizeof(val)))
 		{
 			return -EFAULT;
 		}
-
 		switch (cmd)
 		{
 			case AVSIOSVOL:
+			{
 				return vip1_avs_set_volume(val);
+			}
 			case AVSIOSMUTE:
+			{
 				return vip1_avs_set_mute(val);
+			}
 			case AVSIOSTANDBY:
+			{
 				return vip1_avs_standby(val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
 	}
 	else if (cmd & AVSIOGET)
@@ -232,160 +241,214 @@ int vip1_avs_command(unsigned int cmd, void *arg )
 		switch (cmd)
 		{
 			case AVSIOGVOL:
+			{
 				val = vip1_avs_get_volume();
 				break;
+			}
 			case AVSIOGMUTE:
+			{
 				val = vip1_avs_get_mute();
 				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
 		return put_user(val,(int*)arg);
 	}
 	else
 	{
-		dprintk("[AVS]: %s: SAA command\n", __func__);
+		dprintk("[AVS] %s: SAA command\n", __func__);
 
 		/* an SAA command */
 		if ( copy_from_user(&val,arg,sizeof(val)) )
 		{
 			return -EFAULT;
 		}
-
-		switch(cmd)
+		switch (cmd)
 		{
-		case SAAIOSMODE:
-           		 return vip1_avs_set_mode(val);
- 	        case SAAIOSENC:
-        		 return vip1_avs_set_encoder(val);
-		case SAAIOSWSS:
-			return vip1_avs_set_wss(val);
-		case SAAIOSSRCSEL:
-        		return vip1_avs_src_sel(val);
-		default:
-			dprintk("[AVS]: %s: SAA command not supported\n", __func__);
-			return -EINVAL;
+			case SAAIOSMODE:
+			{
+			return vip1_avs_set_mode(val);
+			}
+			case SAAIOSENC:
+			{
+				return vip1_avs_set_encoder(val);
+			}
+			case SAAIOSWSS:
+			{
+				return vip1_avs_set_wss(val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return vip1_avs_src_sel(val);
+			}
+			default:
+			{
+				dprintk("[AVS]: %s: SAA command not supported\n", __func__);
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
 int vip1_avs_command_kernel(unsigned int cmd, void *arg)
 {
-    int val=0;
-	
+	int val = 0;
+
 	if (cmd & AVSIOSET)
 	{
 		val = (int) arg;
 
-      	dprintk("[AVS]: %s: AVSIOSET command\n", __func__);
+	dprintk("[AVS] %s: AVSIOSET command\n", __func__);
 
 		switch (cmd)
 		{
 			case AVSIOSVOL:
-		            return vip1_avs_set_volume(val);
-		        case AVSIOSMUTE:
-		            return vip1_avs_set_mute(val);
-		        case AVSIOSTANDBY:
-		            return vip1_avs_standby(val);
+			{
+				return vip1_avs_set_volume(val);
+			}
+		case AVSIOSMUTE:
+			{
+				return vip1_avs_set_mute(val);
+			}
+		case AVSIOSTANDBY:
+			{
+				return vip1_avs_standby(val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
 	}
 	else if (cmd & AVSIOGET)
 	{
-		dprintk("[AVS]: %s: AVSIOGET command\n", __func__);
+		dprintk("[AVS] %s: AVSIOGET command\n", __func__);
 
 		switch (cmd)
 		{
 			case AVSIOGVOL:
-			    val = vip1_avs_get_volume();
-			    break;
+				val = vip1_avs_get_volume();
+				break;
 			case AVSIOGMUTE:
-			    val = vip1_avs_get_mute();
-			    break;
+			{
+				val = vip1_avs_get_mute();
+				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
 		arg = (void *) val;
-	        return 0;
+	return 0;
 	}
 	else
 	{
-		dprintk("[AVS]: %s: SAA command (%d)\n", __func__, cmd);
+		dprintk("[AVS] %s: SAA command (%d)\n", __func__, cmd);
 
 		val = (int) arg;
 
 		switch(cmd)
 		{
-		case SAAIOSMODE:
-           		 return vip1_avs_set_mode(val);
- 	        case SAAIOSENC:
-        		 return vip1_avs_set_encoder(val);
-		case SAAIOSWSS:
-			return vip1_avs_set_wss(val);
-		case SAAIOSSRCSEL:
-        		return vip1_avs_src_sel(val);
-		default:
-			dprintk("[AVS]: %s: SAA command not supported\n", __func__);
-			return -EINVAL;
+			case SAAIOSMODE:
+		{
+				return vip1_avs_set_mode(val);
+			}
+		case SAAIOSENC:
+			{
+			return vip1_avs_set_encoder(val);
+			}
+			case SAAIOSWSS:
+			{
+				return vip1_avs_set_wss(val);
+			}
+			case SAAIOSSRCSEL:
+			{
+			return vip1_avs_src_sel(val);
+			}
+			default:
+			{
+				dprintk("[AVS]: %s: SAA command not supported\n", __func__);
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
 int vip1_avs_init(void)
 {
 
-	scart_tv_sat	= stpio_request_pin (5, 3, "scart_tv_sat", STPIO_OUT);
-	scart_vcr_det	= stpio_request_pin (5, 6, "scart_vcr_det", STPIO_IN);
-	scart_cvbs_rgb	= stpio_request_pin (5, 2, "scart_cvbs_rgb", STPIO_OUT);
-	scart_169_43	= stpio_request_pin (2, 6, "scart_169_43", STPIO_OUT);
-	scart_mute		= stpio_request_pin (2, 2, "scart_mute", STPIO_OUT);
-	scart_standby	= stpio_request_pin (2, 7, "scart_standby", STPIO_OUT);
+	scart_tv_sat   = stpio_request_pin (5, 3, "scart_tv_sat", STPIO_OUT);  //
+	scart_vcr_det  = stpio_request_pin (5, 6, "scart_vcr_det", STPIO_IN);  //reads VCR SCART pin 8?
+	scart_cvbs_rgb = stpio_request_pin (5, 2, "scart_cvbs_rgb", STPIO_OUT);  //sets TV SCART pin 16?
+	scart_169_43   = stpio_request_pin (2, 6, "scart_169_43", STPIO_OUT); // set TV SCART pin 8 to > 8V
+	scart_mute     = stpio_request_pin (2, 2, "scart_mute", STPIO_OUT);  // ?
+	scart_standby  = stpio_request_pin (2, 7, "scart_standby", STPIO_OUT);  //
 
-
-	if ((scart_tv_sat == NULL) || (scart_vcr_det == NULL) || (scart_cvbs_rgb == NULL)
-		||(scart_169_43 == NULL) || (scart_mute == NULL) || (scart_standby == NULL))
+	if ((scart_tv_sat == NULL)
+	|| (scart_vcr_det == NULL)
+	|| (scart_cvbs_rgb == NULL)
+	|| (scart_169_43 == NULL)
+	|| (scart_mute == NULL)
+	|| (scart_standby == NULL))
 	{
-		if(scart_tv_sat != NULL)
+		if (scart_tv_sat != NULL)
+		{
 			stpio_free_pin (scart_tv_sat);
+		}
 		else
-			dprintk("[AVS]: scart_tv_sat error\n");
-
-		if(scart_vcr_det != NULL)
+		{
+			dprintk("[AVS] scart_tv_sat error (PIO 5,3)\n");
+		}
+		if (scart_vcr_det != NULL)
+		{
 			stpio_free_pin (scart_vcr_det);
+		}
 		else
-			dprintk("[AVS]: scart_vcr_det error\n");
-
-		if(scart_cvbs_rgb != NULL)
+		{
+			dprintk("[AVS] scart_vcr_det error (PIO 5,6)\n");  // gives error
+		}
+		if (scart_cvbs_rgb != NULL)
+		{
 			stpio_free_pin(scart_cvbs_rgb);
+		}
 		else
-			dprintk("[AVS]: scart_cvbs_rgb error\n");
-		if(scart_169_43 != NULL)
+		{
+			dprintk("[AVS] scart_cvbs_rgb error (PIO 5,2)\n");
+		}
+		if (scart_169_43 != NULL)
+		{
 			stpio_free_pin (scart_169_43);
+		}
 		else
-			dprintk("[AVS]: scart_169_43 error\n");
-
-		if(scart_mute != NULL)
+		{
+			dprintk("[AVS] scart_169_43 error (PIO 2,6)\n");
+		}
+		if (scart_mute != NULL)
+		{
 			stpio_free_pin (scart_mute);
+		}
 		else
-			dprintk("[AVS]: scart_mute error\n");
-
-		if(scart_standby != NULL)
+		{
+			dprintk("[AVS] scart_mute error (PIO 2,2)\n");
+		}
+		if (scart_standby != NULL)
+		{
 			stpio_free_pin(scart_standby);
+		}
 		else
-			dprintk("[AVS]: scart_standby error\n");
-
+		{
+			dprintk("[AVS] scart_standby error (PIO2n7)\n");
+		}
 		return -1;
 	}
 	stpio_set_pin(scart_tv_sat, 1);
-
-	printk("[AVS]: init success\n");
-
-  return 0;
+	printk("[AVS] init success\n");
+	return 0;
 }
+// vim:ts=4

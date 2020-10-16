@@ -72,8 +72,14 @@ spinlock_t mr_lock = SPIN_LOCK_UNLOCKED;
 static struct vfd_driver vfd;
 static int debug  = 0;
 
-#define DBG(fmt, args...) if ( debug ) printk(KERN_INFO "[vfd] :: " fmt "\n", ## args )
-#define ERR(fmt, args...) printk(KERN_ERR "[vfd] :: " fmt "\n", ## args )
+short paramDebug;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#define TAGDEBUG "[adb_2850_fp] "
+#define dprintk(level, x...) \
+do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	printk(TAGDEBUG x); \
+} while (0)
 
 typedef enum
 {
@@ -133,7 +139,7 @@ static void set_icon(unsigned char *kbuf, unsigned char len)
 		}
 		default:
 		{
-		    ERR("icon unknown %d", kbuf[0]);
+		    dprintk(1, "%s: Unknown icon %d\n", __func__, kbuf[0]);
 		    break;
 		}
 	}
@@ -149,11 +155,12 @@ static void set_icon(unsigned char *kbuf, unsigned char len)
 // VFD
 //-------------------------------------------------------------------------------------------
 
-#define VFDIOC_DCRAMWRITE        0xc0425a00
-#define VFDIOC_BRIGHTNESS        0xc0425a03
-#define VFDIOC_DISPLAYWRITEONOFF 0xc0425a05
-#define VFDIOC_DRIVERINIT        0xc0425a08
-#define VFDIOC_ICONDISPLAYONOFF  0xc0425a0a
+#define VFDDISPLAYCHARS      0xc0425a00
+#define VFDBRIGHTNESS        0xc0425a03
+#define VFDDISPLAYWRITEONOFF 0xc0425a05
+#define VFDDRIVERINIT        0xc0425a08
+#define VFDICONDISPLAYONOFF  0xc0425a0a
+#define VFDSETLED            0xc0425afe
 
 static int vfd_ioctl (struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
@@ -161,31 +168,40 @@ static int vfd_ioctl (struct inode *inode, struct file *file, unsigned int cmd, 
 
 	switch (cmd)
 	{
-		case VFDIOC_DCRAMWRITE:
+		case VFDDISPLAYCHARS:
 		{
 			break;
 		}
-		case VFDIOC_BRIGHTNESS:
+		case VFDBRIGHTNESS:
 		{
 			break;
 		}
-		case VFDIOC_DISPLAYWRITEONOFF:
+		case VFDDISPLAYWRITEONOFF:
 		{
 			break;
 		}
-		case VFDIOC_ICONDISPLAYONOFF:
+		case VFDSETLED:
+		case VFDICONDISPLAYONOFF:
 		{
-			copy_from_user(&vfddata, (void*)arg, sizeof (struct vfd_ioctl_data ));
+			copy_from_user(&vfddata, (void*)arg, sizeof(struct vfd_ioctl_data));
 			set_icon(vfddata.data, vfddata.length);
 			break;
 		}
-		case VFDIOC_DRIVERINIT:
+		case VFDDRIVERINIT:
+		{
+			break;
+		}
+		case 0x5305:
+		{
+			break;
+		}
+		case 0x5401:
 		{
 			break;
 		}
 		default:
 		{
-			ERR("[vfd] unknown ioctl %08x", cmd);
+			dprintk(1, "%s: Unknown IOCTL %08x", __func__, cmd);
 			break;
 		}
 	}
@@ -202,18 +218,18 @@ static ssize_t vfd_read(struct file *filp, char *buf, size_t len, loff_t *off)
 	return len;
 }
 
-static int vfd_open( struct inode *inode, struct file *file )
+static int vfd_open(struct inode *inode, struct file *file)
 {
-	DBG("vfd_open");
+	dprintk(100, "%s >\n", __func__);
 
 	if (down_interruptible(&(vfd.sem)))
 	{
-		DBG("interrupted while waiting for sema.");
+		dprintk(1, "%s: Interrupted while waiting for semaphore.\n", __func__);
 		return -ERESTARTSYS;
 	}
 	if (vfd.opencount > 0)
 	{
-		DBG("device already opened.");
+		dprintk(1, "%s: Device already opened.\n", __func__);
 		up(&(vfd.sem));
 		return -EUSERS;
 	}
@@ -224,7 +240,7 @@ static int vfd_open( struct inode *inode, struct file *file )
 
 static int vfd_close(struct inode *inode, struct file *file)
 {
-	DBG("vfd_close");
+	dprintk(100, "%s >\n", __func__);
 	vfd.opencount = 0;
 	return 0;
 }
@@ -241,39 +257,36 @@ static struct file_operations vfd_fops =
 
 static void __exit led_module_exit(void) 
 {
-	unregister_chrdev( VFD_MAJOR, "vfd" );
+	unregister_chrdev(VFD_MAJOR, "vfd");
 }
 
 static int __init led_module_init( void )
 {
-	DBG("LED ADB2850 init.");
-	DBG("Register character device %d.", VFD_MAJOR );
+	printk("ADB2850 fron panel driver initilizing.\n");
+	dprintk(20, "Register character device %d\n.", VFD_MAJOR);
 	if (register_chrdev(VFD_MAJOR, "vfd", &vfd_fops))
 	{
-		ERR("Registering major %d failed", VFD_MAJOR );
+		dprintk(1, "Registering major %d failed\n", VFD_MAJOR);
 		goto led_init_fail;
 	}
 	sema_init( &(vfd.sem), 1);
 	vfd.opencount = 0;
 
-	gpio_request(LED1, "LED1");
-	if (LED1 == NULL)
+	if (gpio_request(LED1, "LED1") == 0);
 	{
-		ERR("PIO request for LED1 failed, abort.");
+		dprintk(1, "PIO request for LED1 failed, abort.\n");
 		goto led_init_fail;
 	}
 	gpio_direction_output(LED1, STM_GPIO_DIRECTION_OUT);
 	gpio_set_value(LED1, 1);  // green on
 
-	gpio_request(LED2, "LED2");
-	if (LED2 == NULL)
+	if (gpio_request(LED2, "LED2") == 0)
 	{
-		ERR("PIO request for LED2 failed, abort.");
+		dprintk(1, "PIO request for LED2 failed, abort.\n");
 		goto led_init_fail;
 	}
 	gpio_direction_output(LED2, STM_GPIO_DIRECTION_OUT);
 	gpio_set_value(LED2, 0);
-
 	return 0;
 
 led_init_fail:
@@ -283,6 +296,9 @@ led_init_fail:
 
 module_init(led_module_init);
 module_exit(led_module_exit);
+
+module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
 MODULE_DESCRIPTION("ADB28xx front_led driver");
 MODULE_AUTHOR("Open Vision developers");

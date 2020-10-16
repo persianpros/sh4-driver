@@ -48,7 +48,7 @@ struct StreamContext_s;
 #include "pti.h"
 
 #if defined(PLAYER_179) || defined(PLAYER_191)
-#if (defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1) || defined(SPARK) || defined(SPARK7162)) || defined(SAGEMCOM88)
+#if (defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2) || defined(SPARK) || defined(SPARK7162)) || defined(SAGEMCOM88)
 static int waitMS=20;
 static int videoMem=4096;
 #endif
@@ -764,6 +764,8 @@ void pti_hal_init ( struct stpti *pti , struct dvb_demux* demux, void (*_demulti
  || defined(ATEVIO7500) \
  || defined(HS7110) \
  || defined(HS7810A) \
+ || defined(HS7420) \
+ || defined(HS7429) \
  || defined(HS7119) \
  || defined(HS7819) \
  || defined(FOREVER_NANOSMART) \
@@ -866,7 +868,12 @@ void pti_hal_init ( struct stpti *pti , struct dvb_demux* demux, void (*_demulti
   add_timer(&ptiTimer);
 
   return;
+}
 
+int pti_hal_descrambler_set_aes ( int session_handle, int descrambler_handle,
+			      u8 * Data, int parity, int data_type )
+{
+	return 0;
 }
 
 int pti_hal_descrambler_set ( int session_handle, int descrambler_handle,
@@ -1112,6 +1119,7 @@ void paceSwtsByPti(void)
 EXPORT_SYMBOL(paceSwtsByPti);
 
 EXPORT_SYMBOL(pti_hal_descrambler_set);
+EXPORT_SYMBOL(pti_hal_descrambler_set_aes);
 EXPORT_SYMBOL(pti_hal_descrambler_unlink);
 EXPORT_SYMBOL(pti_hal_descrambler_link);
 EXPORT_SYMBOL(pti_hal_get_new_descrambler);
@@ -1141,7 +1149,7 @@ module_init             (pti_init);
 module_exit             (pti_exit);
 
 #if defined(PLAYER_179) || defined(PLAYER_191)
-#if (defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1) || defined(SPARK) || defined(SPARK7162)) || defined(SAGEMCOM88)
+#if (defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2) || defined(SPARK) || defined(SPARK7162)) || defined(SAGEMCOM88)
 module_param(waitMS, int, 0444);
 MODULE_PARM_DESC(waitMS, "waitMS");
 

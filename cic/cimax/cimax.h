@@ -11,20 +11,21 @@
 
 #define cNumberSlots 2
 
-struct cimax_core {
-        struct dvb_adapter		    *dvb_adap;
-        struct dvb_ca_en50221       ca; /* cimax */
-        struct dvb_ca_en50221       ca1; /* for camd access */
+struct cimax_core
+{
+	struct dvb_adapter    *dvb_adap;
+	struct dvb_ca_en50221 ca; /* cimax */
+	struct dvb_ca_en50221 ca1; /* for camd access */
 };
 
-struct cimax_state {
-        struct dvb_frontend_ops     ops;
-	    struct cimax_core			*core;
+struct cimax_state
+{
+	struct dvb_frontend_ops ops;
+	struct cimax_core       *core;
+        struct i2c_adapter      *i2c;
+        int                     i2c_addr;
 
-        struct i2c_adapter      	*i2c;
-        int					        i2c_addr;
-
-        int                         module_status[cNumberSlots];
+        int                     module_status[cNumberSlots];
 };
 
 int init_cimax(struct dvb_adapter *dvb_adap);
@@ -32,3 +33,4 @@ int init_cimax(struct dvb_adapter *dvb_adap);
 int setCiSource(int slot, int source);
 
 #endif
+// vim:ts=4

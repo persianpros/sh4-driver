@@ -220,12 +220,17 @@ obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif
 
+ifdef VIP1_V1
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
 ifdef VIP1_V2
 obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif
 
-ifdef VIP2_V1
+ifdef VIP2
 obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif

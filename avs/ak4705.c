@@ -18,10 +18,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
- 
+
 #include <linux/module.h>
 #include <linux/kernel.h>
- 
+
 #include <linux/sched.h>
 #include <linux/string.h>
 #include <linux/timer.h>
@@ -31,12 +31,12 @@
 #include <linux/poll.h>
 #include <linux/types.h>
 #include <linux/i2c.h>
- 
+
 #include "avs_core.h"
 #include "ak4705.h"
- 
+
 /* ---------------------------------------------------------------------- */
- 
+
 static int debug = AVS_DEBUG;
 
 /*

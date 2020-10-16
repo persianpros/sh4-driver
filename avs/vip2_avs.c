@@ -1,9 +1,11 @@
 /*
- *   vip2_avs.c -
+ *   vip2_avs.c
  *
  *   spider-team 2010.
  *
  *   mainly based on avs_core.c from Gillem gillem@berlios.de / Tuxbox-Project
+ *
+ *   Driver for Edision Argus VIP2 AVS based on PIO driven 74HC595.
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -53,52 +55,56 @@ static unsigned char t_vol;
 static unsigned char ft_stnby=0;
 static unsigned char fctl=0;
 
-enum scart_ctl {
-	SCART_MUTE 		= 0,
-	SCART_STANDBY	= 1,
-	SCART_WSS		= 2,
-	SCART_CVBS_RGB	= 3,
-	SCART_TV_SAT	= 4,
-	SCART_0_12V		= 5,
-	FAN_VCCEN1		= 6,
-	HDD_VCCEN2		= 7,
+enum scart_ctl
+{
+	SCART_MUTE     = 0,
+	SCART_STANDBY  = 1,
+	SCART_WSS      = 2,
+	SCART_CVBS_RGB = 3,
+	SCART_TV_SAT   = 4,
+	SCART_0_12V    = 5,
+	FAN_VCCEN1     = 6,
+	HDD_VCCEN2     = 7
 };
 
-static struct stpio_pin*	srclk; // shift clock
-static struct stpio_pin*	rclk;  // latch clock
-static struct stpio_pin*	sda;   // serial data
+static struct stpio_pin *srclk; // shift clock (pin 11)
+static struct stpio_pin *lclk;  // latch clock (pin 12)
+static struct stpio_pin *sda;   // serial data (pin 14)
+// Output enable (pin 13) is connected to ground?
 
-#define SRCLK_CLR() {stpio_set_pin(srclk, 0);}
-#define SRCLK_SET() {stpio_set_pin(srclk, 1);}
+#define SRCLK_CLR() { stpio_set_pin(srclk, 0); }
+#define SRCLK_SET() { stpio_set_pin(srclk, 1); }
 
-#define RCLK_CLR() {stpio_set_pin(rclk, 0);}
-#define RCLK_SET() {stpio_set_pin(rclk, 1);}
+#define LCLK_CLR() { stpio_set_pin(lclk, 0); }
+#define LCLK_SET() { stpio_set_pin(lclk, 1); }
 
-#define SDA_CLR() {stpio_set_pin(sda, 0);}
-#define SDA_SET() {stpio_set_pin(sda, 1);}
+#define SDA_CLR() { stpio_set_pin(sda, 0); }
+#define SDA_SET() { stpio_set_pin(sda, 1); }
 
 void vip2_avs_hc595_out(unsigned char ctls, int state)
 {
 	int i;
 
-	if(state)
+	if (state)
+	{
 		fctl |= 1 << ctls;
+	}
 	else
+	{
 		fctl &= ~(1 << ctls);
-
+	}
 	/*
 	 * clear everything out just in case to
 	 * prepare shift register for bit shifting
 	 */
-
 	SDA_CLR();
 	SRCLK_CLR();
-    udelay(10);
+	udelay(10);
 
-    for(i = 7; i >=0; i--)
+	for (i = 7; i >= 0; i--)
 	{
-    	SRCLK_CLR();
-		if(fctl & (1<<i))
+		SRCLK_CLR();
+		if (fctl & (1 << i))
 		{
 			SDA_SET();
 		}
@@ -110,31 +116,31 @@ void vip2_avs_hc595_out(unsigned char ctls, int state)
 		SRCLK_SET();
 		udelay(1);
 	}
-
-    RCLK_CLR();
-    udelay(1);
-    RCLK_SET();
+	LCLK_CLR();  // latch clocked data
+	udelay(1);
+	LCLK_SET();
 }
 
 int vip2_avs_src_sel(int src)
 {
-	if(src == SAA_SRC_ENC)
+	if (src == SAA_SRC_ENC)
+	{
 		vip2_avs_hc595_out(SCART_TV_SAT, 1);
-	else if(src == SAA_SRC_SCART)
+	}
+	else if (src == SAA_SRC_SCART)
+	{
 		vip2_avs_hc595_out(SCART_TV_SAT, 0);
-	
+	}
 	return 0;
 }
 
 inline int vip2_avs_standby(int type)
 {
-
-	if ((type<0) || (type>1))
+	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
 	}
- 
-	if (type==1) 
+	if (type == 1)  // superfluous!
 	{
 		if (ft_stnby == 0)
 		{
@@ -142,7 +148,9 @@ inline int vip2_avs_standby(int type)
 			ft_stnby = 1;
 		}
 		else
+		{
 			return -EINVAL;		
+		}
 	}
 	else
 	{
@@ -152,39 +160,37 @@ inline int vip2_avs_standby(int type)
 			ft_stnby = 0;
 		}
 		else
+		{
 			return -EINVAL;
+		}
 	}
-
 	return 0;
 }
  
 int vip2_avs_set_volume(int vol)
 {
-	int c=0;
+	int c = 0;
  
-	dprintk("[AVS]: %s (%d)\n", __func__, vol);
+	dprintk("[AVS] %s: vol = %d\n", __func__, vol);
 	c = vol;
  
 	if (c > 63 || c < 0)
+	{
 		return -EINVAL;
- 
+	} 
 	c = 63 - c;
- 
-	c=c/2;
- 
+ 	c = c / 2;
 	t_vol = c;
- 
 	return 0;
 }
  
 inline int vip2_avs_set_mute(int type)
 {
-	if ((type<0) || (type>1))
+	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
 	}
- 
-	if (type==AVS_MUTE) 
+	if (type == AVS_MUTE) // superfluous!
 	{
 		t_mute = 1;
 	}
@@ -192,7 +198,6 @@ inline int vip2_avs_set_mute(int type)
 	{
 		t_mute = 0;
 	}
-
 	vip2_avs_hc595_out(SCART_MUTE, t_mute); 
 	return 0;
 }
@@ -202,7 +207,6 @@ int vip2_avs_get_volume(void)
 	int c;
  
 	c = t_vol;
- 
 	return c;
 }
  
@@ -211,21 +215,25 @@ inline int vip2_avs_get_mute(void)
 	return t_mute;
 }
  
-int vip2_avs_set_mode(int vol)
+int vip2_avs_set_mode(int rgb)
 {
-	switch(vol)
+	switch (rgb)
 	{
-	case	SAA_MODE_RGB:
-		vip2_avs_hc595_out(SCART_CVBS_RGB, 1);
-		break;
-	case	SAA_MODE_FBAS:
-		vip2_avs_hc595_out(SCART_CVBS_RGB, 0);
-		break;
-	default:
-		break;
-
+		case SAA_MODE_RGB:
+		{
+			vip2_avs_hc595_out(SCART_CVBS_RGB, 1);
+			break;
+		}
+		case SAA_MODE_FBAS:
+		{
+			vip2_avs_hc595_out(SCART_CVBS_RGB, 0);
+			break;
+		}
+		default:
+		{
+			break;
+		}
 	}
- 
 	return 0;
 }
  
@@ -234,19 +242,19 @@ int vip2_avs_set_encoder(int vol)
 	return 0;
 }
  
-int vip2_avs_set_wss(int vol)
+int vip2_avs_set_wss(int wss)
 {
-	dprintk("[AVS]: %s\n", __func__);
+	dprintk("[AVS] %s >\n", __func__);
 
-	if (vol == SAA_WSS_43F)
+	if (wss == SAA_WSS_43F)
 	{
 		vip2_avs_hc595_out(SCART_WSS, 0);
 	}
-	else if (vol == SAA_WSS_169F)
+	else if (wss == SAA_WSS_169F)
 	{
 		vip2_avs_hc595_out(SCART_WSS, 1);
 	}
-	else if (vol == SAA_WSS_OFF)
+	else if (wss == SAA_WSS_OFF)
 	{
 		vip2_avs_hc595_out(SCART_WSS, 1);
 	}
@@ -254,33 +262,39 @@ int vip2_avs_set_wss(int vol)
 	{
 		return  -EINVAL;
 	}
- 
 	return 0;
 }
 
 int vip2_avs_command(unsigned int cmd, void *arg )
 {
-	int val=0;
+	int val = 0;
 
-	dprintk("[AVS]: %s(%d)\n", __func__, cmd);
+	dprintk("[AVS] %s > cmd = %d\n", __func__, cmd);
 
 	if (cmd & AVSIOSET)
 	{
-		if ( copy_from_user(&val,arg,sizeof(val)) )
+		if (copy_from_user(&val, arg, sizeof(val)))
 		{
 			return -EFAULT;
 		}
-
 		switch (cmd)
 		{
 			case AVSIOSVOL:
+			{
 				return vip2_avs_set_volume(val);
+			}
 			case AVSIOSMUTE:
+			{
 				return vip2_avs_set_mute(val);
+			}
 			case AVSIOSTANDBY:
+			{
 				return vip2_avs_standby(val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
 	}
 	else if (cmd & AVSIOGET)
@@ -288,141 +302,182 @@ int vip2_avs_command(unsigned int cmd, void *arg )
 		switch (cmd)
 		{
 			case AVSIOGVOL:
+			{
 				val = vip2_avs_get_volume();
 				break;
+			}
 			case AVSIOGMUTE:
+			{
 				val = vip2_avs_get_mute();
 				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
-		return put_user(val,(int*)arg);
+		return put_user(val, (int*)arg);
 	}
 	else
 	{
-		dprintk("[AVS]: %s: SAA command\n", __func__);
+		dprintk("[AVS] %s SAA command\n", __func__);
 
 		/* an SAA command */
-		if ( copy_from_user(&val,arg,sizeof(val)) )
+		if (copy_from_user(&val,arg,sizeof(val)))
 		{
 			return -EFAULT;
 		}
-
-		switch(cmd)
+		switch (cmd)
 		{
-		case SAAIOSMODE:
-           		 return vip2_avs_set_mode(val);
- 	        case SAAIOSENC:
-        		 return vip2_avs_set_encoder(val);
-		case SAAIOSWSS:
-			return vip2_avs_set_wss(val);
-		case SAAIOSSRCSEL:
-        		return vip2_avs_src_sel(val);
-		default:
-			dprintk("[AVS]: %s: SAA command not supported\n", __func__);
-			return -EINVAL;
+			case SAAIOSMODE:
+			{
+				return vip2_avs_set_mode(val);
+			}
+			case SAAIOSENC:
+			{
+				return vip2_avs_set_encoder(val);
+			}
+			case SAAIOSWSS:
+			{
+				return vip2_avs_set_wss(val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return vip2_avs_src_sel(val);
+			}
+			default:
+			{
+				dprintk("[AVS] %s: Unsupported SAA command\n", __func__);
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
 int vip2_avs_command_kernel(unsigned int cmd, void *arg)
 {
-    int val=0;
+	int val = 0;
 	
 	if (cmd & AVSIOSET)
 	{
-		val = (int) arg;
-
-      	dprintk("[AVS]: %s: AVSIOSET command\n", __func__);
-
+		val = (int)arg;
+		dprintk("[AVS] %s: AVSIOSET command\n", __func__);
 		switch (cmd)
 		{
 			case AVSIOSVOL:
-		            return vip2_avs_set_volume(val);
-		        case AVSIOSMUTE:
-		            return vip2_avs_set_mute(val);
-		        case AVSIOSTANDBY:
-		            return vip2_avs_standby(val);
+			{
+				return vip2_avs_set_volume(val);
+			}
+			case AVSIOSMUTE:
+			{
+				return vip2_avs_set_mute(val);
+			}
+			case AVSIOSTANDBY:
+			{
+				return vip2_avs_standby(val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
 	}
 	else if (cmd & AVSIOGET)
 	{
-		dprintk("[AVS]: %s: AVSIOGET command\n", __func__);
-
+		dprintk("[AVS] %s: AVSIOGET command\n", __func__);
 		switch (cmd)
 		{
 			case AVSIOGVOL:
-			    val = vip2_avs_get_volume();
-			    break;
+			{
+				val = vip2_avs_get_volume();
+				break;
+			}
 			case AVSIOGMUTE:
+			{
 			    val = vip2_avs_get_mute();
 			    break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
-		arg = (void *) val;
-	        return 0;
+		arg = (void *)val;
+		return 0;
 	}
 	else
 	{
-		dprintk("[AVS]: %s: SAA command (%d)\n", __func__, cmd);
-
-		val = (int) arg;
-
-		switch(cmd)
+		dprintk("[AVS] %s: SAA command (%d)\n", __func__, cmd);
+		val = (int)arg;
+		switch (cmd)
 		{
-		case SAAIOSMODE:
-           		 return vip2_avs_set_mode(val);
- 	        case SAAIOSENC:
-        		 return vip2_avs_set_encoder(val);
-		case SAAIOSWSS:
-			return vip2_avs_set_wss(val);
-		case SAAIOSSRCSEL:
-        		return vip2_avs_src_sel(val);
-		default:
-			dprintk("[AVS]: %s: SAA command not supported\n", __func__);
-			return -EINVAL;
+			case SAAIOSMODE:
+			{
+				return vip2_avs_set_mode(val);
+			}
+			case SAAIOSENC:
+			{
+				return vip2_avs_set_encoder(val);
+			}
+			case SAAIOSWSS:
+			{
+				return vip2_avs_set_wss(val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return vip2_avs_src_sel(val);
+			}
+			default:
+			{
+				dprintk("[AVS] %s: Unsupported SAA command\n", __func__);
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
 int vip2_avs_init(void)
 {
-	srclk= stpio_request_pin (2, 5, "AVS_HC595_SRCLK", STPIO_OUT);
-	rclk = stpio_request_pin (2, 6, "AVS_HC595_RCLK", STPIO_OUT);
-	sda  = stpio_request_pin (2, 7, "AVS_HC595_SDA", STPIO_OUT);
+	dprintk("[AVS] %s: > Assigning AVS PIOs\n", __func__);
+	srclk = stpio_request_pin(2, 5, "AVS_HC595_SRCLK", STPIO_OUT);
+	lclk  = stpio_request_pin(2, 6, "AVS_HC595_LCLK", STPIO_OUT);
+	sda   = stpio_request_pin(2, 7, "AVS_HC595_SDA", STPIO_OUT);
 
-	if ((srclk == NULL) || (rclk == NULL) || (sda == NULL))
+	if ((srclk == NULL) || (lclk == NULL) || (sda == NULL))
 	{
-		if(srclk != NULL)
-			stpio_free_pin (srclk);
+		if (srclk != NULL)
+		{
+			dprintk("[AVS] %s: Assigning srclk PIO failed\n", __func__);
+			stpio_free_pin(srclk);
+		}
 		else
-			dprintk("[AVS]: srclk error\n");
-
-		if(rclk != NULL)
-			stpio_free_pin (rclk);
+		{
+			dprintk("[AVS] srclk error\n");
+		}
+		if (lclk != NULL)
+		{
+			dprintk("[AVS] %s: Assigning lclk PIO failed\n", __func__);
+			stpio_free_pin(lclk);
+		}
 		else
-			dprintk("[AVS]: rclk error\n");
-
-		if(sda != NULL)
+		{
+			dprintk("[AVS] lclk error\n");
+		}
+		if (sda != NULL)
+		{
+			dprintk("[AVS] %s: Assigning sda PIO failed\n", __func__);
 			stpio_free_pin(sda);
+		}
 		else
-			dprintk("[AVS]: sda error\n");
-
+		{
+			dprintk("[AVS] sda error\n");
+		}
 		return -1;
 	}
-
-	vip2_avs_hc595_out(SCART_TV_SAT, 1); 	// set encoder
-
-	printk("[AVS]: init success\n");
-
-  return 0;
+	vip2_avs_hc595_out(SCART_TV_SAT, 1);  // set encoder
+	dprintk("[AVS] init success\n");
+	return 0;
 }
+// vim:ts=4

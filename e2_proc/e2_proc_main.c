@@ -245,8 +245,9 @@
 #include <linux/string.h>
 #include <linux/module.h>
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
- || defined(VIP2_V1)
+ || defined(VIP2)
 #include <linux/version.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
 #  include <linux/stpio.h>
@@ -263,8 +264,9 @@ typedef int (*proc_write_t)(struct file *file, const char __user *buf, unsigned 
 
 // For 12V output
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
- || defined(VIP2_V1)
+ || defined(VIP2)
 struct stpio_pin *_12v_pin;
 #endif
 
@@ -315,10 +317,12 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "tf7700\n");
 #elif defined(HL101)
 	int len = sprintf(page, "hl101\n");
+#elif defined(VIP1_V1)
+	int len = sprintf(page, "vip1_v1\n");
 #elif defined(VIP1_V2)
 	int len = sprintf(page, "vip1_v2\n");
-#elif defined(VIP2_V1)
-	int len = sprintf(page, "vip2_v1\n");
+#elif defined(VIP2)
+	int len = sprintf(page, "vip2\n");
 #elif defined(UFS922)
 	int len = sprintf(page, "ufs922\n");
 #elif defined(UFC960)
@@ -714,8 +718,9 @@ static int info_chipset_read(char *page, char **start, off_t off, int count, int
  || defined(TF7700) \
  || defined(UFS922) \
  || defined(UFC960) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
- || defined(VIP2_V1) \
+ || defined(VIP2) \
  || defined(CUBEREVO) \
  || defined(CUBEREVO_MINI) \
  || defined(CUBEREVO_MINI2) \
@@ -896,14 +901,14 @@ out:
 	return ret;
 }
 
-#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1)
+#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V1) || defined(VIP2)
 int _12v_isON = 0;
 
 void set_12v(int onoff)
 {
 #if defined(HL101) \
- || defined(VIP1_V2) \
- || defined(VIP2_V1)
+ || defined(VIP1_V1) \
+ || defined(VIP2)
 	if (onoff)
 	{
 		stpio_set_pin(_12v_pin, 1);
@@ -952,8 +957,8 @@ int proc_misc_12V_output_write(struct file *file, const char __user *buf, unsign
 		ret = count;
 	}
 #if defined(HL101) \
- || defined(VIP1_V2) \
- || defined(VIP2_V1)
+ || defined(VIP1_V1) \
+ || defined(VIP2)
 //	set_12v(_12v_isON);  // set 12V output
 #endif
 	ret = count;
@@ -1026,10 +1031,18 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/lcd/scroll_delay",                                             NULL, info_scroll_delay_read, info_scroll_delay_write, NULL, ""},
 	{cProcEntry, "stb/lcd/initial_scroll_delay",                                     NULL, info_initial_scroll_delay_read, info_initial_scroll_delay_write, NULL, ""},
 	{cProcEntry, "stb/lcd/final_scroll_delay",                                       NULL, info_final_scroll_delay_read, info_final_scroll_delay_write, NULL, ""},
-#if defined(ADB_BOX) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700) || defined(VITAMIN_HD5000) || defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1)
+#if defined(ADB_BOX) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700) || defined(VITAMIN_HD5000) || defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2)
 	{cProcEntry, "stb/lcd/symbol_circle"                                            , NULL, NULL, NULL, NULL, ""},
 #endif
-#if defined(ADB_BOX) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(CUBEREVO) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_3000HD) || defined(SPARK7162) || defined(TF7700) || defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1)
+#if defined(SPARK7162) \
+ || defined(TF7700) \
+ || defined(HL101) \
+ || defined(VIP1_V1) \
+ || defined(VIP1_V2) \
+ || defined(VIP2)
+	{cProcEntry, "stb/lcd/symbol_hdd",                                               NULL, NULL, NULL, NULL, ""},
+#endif
+#if defined(ADB_BOX) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(CUBEREVO) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_3000HD) || defined(SPARK7162) || defined(TF7700) || defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2)
 	{cProcEntry, "stb/lcd/symbol_timeshift",                                         NULL, NULL, NULL, NULL, ""},
 #endif
 	{cProcDir  , "stb/video"                                                        , NULL, NULL, NULL, NULL, ""},
@@ -1078,7 +1091,10 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/fp/lnb_sense1"                                                , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/lnb_sense2"                                                , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/led0_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
-	{cProcEntry, "stb/fp/led1_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
+#if !defined(VIP1_V2) \
+ && !defined(VIP2)
+	{cProcEntry, "stb/fp/led1_pattern",                                              NULL, NULL, default_write_proc, NULL, ""},
+#endif
 #if defined(ADB_BOX)
 	{cProcEntry, "stb/fp/led2_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
 	{cProcEntry, "stb/fp/led3_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
@@ -1097,15 +1113,12 @@ struct ProcStructure_s e2Proc[] =
 
 #if defined(SPARK) \
  || defined(SPARK7162) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
- || defined(VIP2_V1)
+ || defined(VIP2)
 	{cProcEntry, "stb/fp/aotom",                                                     NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/displaytype",                                               NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/timemode",                                                  NULL, NULL, NULL, NULL, ""},
-
-//	{cProcEntry, "vfd",                                                              NULL, NULL, NULL, NULL, ""},
-//	{cProcDir,   "stb/vfd",                                                          NULL, NULL, NULL, NULL, ""},
-
 	{cProcDir,   "stb/power",                                                        NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/power/standbyled",                                             NULL, NULL, NULL, NULL, ""},
 #endif
@@ -1138,8 +1151,7 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/tsmux/ci1_input"                                              , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/tsmux/lnb_b_input"                                            , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/misc"                                                         , NULL, NULL, NULL, NULL, ""},
-	// VIP1_V2: // PIO4.6 is on/off
-#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1)
+#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V1) || defined(VIP2)
 	{cProcEntry, "stb/misc/12V_output"                                              , NULL, proc_misc_12V_output_read, proc_misc_12V_output_write, NULL, ""},
 #else
 	{cProcEntry, "stb/misc/12V_output"                                              , NULL, NULL, NULL, NULL, ""},
@@ -1236,29 +1248,39 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/cec/send"                                                     , NULL, NULL, NULL, NULL, ""},
 #endif
 	/* dagobert: the dei settings can be used for all 7109 architectures to affect the de-interlacer */
-#if defined(FORTIS_HDBOX) || defined(HL101) || defined(OCTAGON1008) || defined(TF7700) || defined(UFS922) || defined(UFC960) || defined(VIP1_V2) || defined(VIP2_V1) || defined(CUBEREVO) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_250HD) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500HD) || defined(CUBEREVO_3000HD) || defined(IPBOX9900) || defined(IPBOX99) || defined(IPBOX55) || defined(ARIVALINK200)
+#if defined(FORTIS_HDBOX) || defined(HL101) || defined(OCTAGON1008) || defined(TF7700) || defined(UFS922) || defined(UFC960) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2) || defined(CUBEREVO) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_250HD) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500HD) || defined(CUBEREVO_3000HD) || defined(IPBOX9900) || defined(IPBOX99) || defined(IPBOX55) || defined(ARIVALINK200)
 	/* dagobert: the dei settings can be used for all 7109 architectures to affec the de-interlacer */
 	{cProcEntry, "stb/video/plane/dei_fmd"                                          , NULL, NULL, NULL, NULL, "dei_fmd"},
 	{cProcEntry, "stb/video/plane/dei_mode"                                         , NULL, NULL, NULL, NULL, "dei_mode"},
 	{cProcEntry, "stb/video/plane/dei_ctrl"                                         , NULL, NULL, NULL, NULL, "dei_ctrl"},
-	{cProcDir  , "stb/fan"                                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fan/fan_ctrl"                                                 , NULL, NULL, NULL, NULL, ""},
 #endif
 #if defined(IPBOX9900) || defined(IPBOX99)
 	{cProcEntry, "stb/misc/fan"                                                     , NULL, NULL, NULL, NULL, ""},
 #endif
+// Enigma2 implementation of fan control, doubles the historic various SH4 ones... (TODO: add these)
+#if defined(CUBEREVO) \
+ || defined(IPBOX9900) \
+ || defined(IPBOX99) \
+ || defined(ADB_BOX) \
+ || defined(SAGEMCOM88) \
+ || defined(PACE7241)
+	{cProcEntry, "stb/fp/fan",                                                       NULL, NULL, NULL, NULL, ""},
+#endif
+#if defined(ADB_BOX) \
+ || defined(CUBEREVO) \
+ || defined(IPBOX9900) \
+ || defined(IPBOX99)
+	{cProcEntry, "stb/fp/fan_pwm",                                                   NULL, NULL, NULL, NULL, ""},
+#endif
 #if defined(ADB_BOX) || defined(SAGEMCOM88)
 	{cProcDir  , "stb/fan"                                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/cec"                                                     , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fan/fan_ctrl"                                                 , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/cec"                                                     , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/switch_type"                                            , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/switch"                                                 , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/switch_choices"                                         , NULL, NULL, NULL, NULL, ""},
 #elif defined(ARIVALINK200)
         {cProcEntry, "stb/hdmi/cec"                                                     , NULL, NULL, NULL, NULL, ""},
-#elif defined(PACE7241)
-	{cProcDir  , "stb/fan"                                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fan/fan_ctrl"                                                 , NULL, NULL, NULL, NULL, ""},
 #endif
 	{cProcDir  , "stb/player"                                                       , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/player/version"                                               , NULL, get_player_version, NULL, NULL, ""}
@@ -1617,8 +1639,9 @@ static int __init e2_proc_init_module(void)
 			}
 		}
 	}
-#if defined(VIP1_V2) \
- || defined(VIP2_V1)
+#if defined(VIP1_V1) \
+ || defined(VIP1_V2) \
+ || defined(VIP2)
 	_12v_pin = stpio_request_pin(4, 6, "12V_CTL", STPIO_OUT);
 	if (_12v_pin == NULL)
 	{

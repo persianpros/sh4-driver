@@ -27,8 +27,13 @@
  *	- /dev/rc  (reading of key events)
  *
  *****************************************************************************/
-//extern static short paramDebug;
-#define TAGDEBUG "[proton] "
+
+#if !defined __PROTON_H___
+#define __PROTON_H___
+
+//extern static short paramDebug = 0;
+
+#define TAGDEBUG "[hl101 fp] "
 #define dprintk(level, x...) \
 do \
 { \
@@ -154,7 +159,6 @@ typedef struct
 	struct file      *fp;
 	int              read;
 	struct semaphore sem;
-
 } tFrontPanelOpen;
 
 

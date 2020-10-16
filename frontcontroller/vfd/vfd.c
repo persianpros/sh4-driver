@@ -262,6 +262,7 @@ static int VFD_CGRAM_Write(struct vfd_ioctl_data *data)
 static int VFD_SetRemote()
 {
 	unsigned char write_data[2];
+
 	write_data[0] = 0xe3;
 	write_data[1] = 0x0f;
 	VFD_Write_Chars(write_data, 2);
@@ -271,6 +272,7 @@ static int VFD_SetRemote()
 static int VFD_ADRAM_Write(struct vfd_ioctl_data *data)
 {
 	unsigned char write_data[16];
+
 	write_data[0] = (data->data[0] & 0x0f) | ADRAM_COMMAND;
 	write_data[1] = data->data[4];
 	//printk("ICON ON/OFF Data = %x, %x\n", write_data[0], write_data[1]);

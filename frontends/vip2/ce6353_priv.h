@@ -1,5 +1,5 @@
 /*
- *  Driver for Zarlink DVB-T ZL10353 demodulator
+ *  Driver for Zarlink DVB-T CE6353 demodulator
  *
  *  Copyright (C) 2006, 2007 Christopher Pascoe <c.pascoe@itee.uq.edu.au>
  *
@@ -19,17 +19,17 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef _ZL10353_PRIV_
-#define _ZL10353_PRIV_
+#ifndef _CE6353_PRIV_
+#define _CE6353_PRIV_
 
-#define ID_ZL10353  0x14 /* Zarlink ZL10353 */
+#define ID_CE6353  0x14 /* Zarlink CE6353 */
 #define ID_CE6230   0x18 /* Intel CE6230 */
 #define ID_CE6231   0x19 /* Intel CE6231 */
 
 #define msb(x) (((x) >> 8) & 0xff)
 #define lsb(x) ((x) & 0xff)
 
-enum zl10353_reg_addr
+enum ce6353_reg_addr
 {
 	INTERRUPT_0        = 0x00,
 	INTERRUPT_1        = 0x01,
@@ -77,5 +77,5 @@ enum zl10353_reg_addr
 	ACQ_DELAY          = 0xE9,
 };
 
-#endif  /* _ZL10353_PRIV_ */
+#endif  /* _CE6353_PRIV_ */
 // vim:ts=4

@@ -46,6 +46,11 @@ cimax-objs += cimax/cimax.o
 obj-m += cimax.o
 endif
 
+ifdef VIP1_V1
+cimax-objs += cimax/cimax.o
+obj-m += cimax.o
+endif
+
 ifdef VIP1_V2
 cimax-objs += cimax/cimax.o
 obj-m += cimax.o

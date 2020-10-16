@@ -30,10 +30,13 @@ endif
 ifdef HL101
  PART1=1
 endif
+ifdef VIP1_V1
+ PART1=1
+endif
 ifdef VIP1_V2
  PART1=1
 endif
-ifdef VIP2_V1
+ifdef VIP2
  PART1=1
 endif
 ifdef OCTAGON1008

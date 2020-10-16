@@ -1849,7 +1849,7 @@ int stb0899_get_dev_id(struct stb0899_state *state)
 		dprintk(1, "Could not find an STB0899 demodulator\n");
 		return -ENODEV;
 	}
-	dprintk(50, "%s < FEC Core ID = %s, Version = %d", __func__, (char *) &fec_str, fec_ver);
+	dprintk(50, "%s < FEC Core ID = %s, Version = %d", __func__, (char *)&fec_str, fec_ver);
 	return 0;
 }
 
@@ -2117,7 +2117,7 @@ static enum dvbfe_search stb0899_search(struct dvb_frontend *fe, struct dvb_fron
 //					internal->v_status = stb0899_read_reg(state, STB0899_VSTATUS);
 //					internal->err_ctrl = stb0899_read_reg(state, STB0899_ERRCTRL1);
 //					dprintk(50, "VSTATUS=0x%02x\n", internal->v_status);
-//					dprintk(50, "ERR_CTRL=0x%02\nx", internal->err_ctrl);
+//					dprintk(50, "ERR_CTRL=0x%02x\n", internal->err_ctrl);
 					return DVBFE_ALGO_SEARCH_SUCCESS;
 				}
 				else

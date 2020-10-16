@@ -402,7 +402,7 @@ struct dvb_frontend *sharp6465_attach(struct dvb_frontend *fe, const struct shar
 	info              = &fe->ops.tuner_ops.info;
 
 	memcpy(info->name, config->name, sizeof(config->name));
-	dprintk(20, "%s: Attaching Sharp 6465 (%s) tuner\n", __func__, info->name);
+	dprintk(20, "Attaching %s tuner\n", info->name);
 	return fe;
 
 exit:

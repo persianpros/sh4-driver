@@ -1,24 +1,24 @@
 /*
- * STV6110(A) Silicon tuner driver
- *
- * Copyright (C) Manu Abraham <abraham.manu@gmail.com>
- *
- * Copyright (C) ST Microelectronics
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+	STV6110(A) Silicon tuner driver
+
+	Copyright (C) Manu Abraham <abraham.manu@gmail.com>
+
+	Copyright (C) ST Microelectronics
+
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
 
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -32,21 +32,7 @@
 #include "stv6110x.h"
 #include "stv6110x_priv.h"
 
-extern short paramDebug;
-#if defined TAGDEBUG
-#undef TAGDEBUG
-#endif
-#define TAGDEBUG "[stv6110x] "
-
-#if defined dprintk
-#undef dprintk
-#endif
-#define dprintk(level, x...) \
-do \
-{ \
-	if ((paramDebug) && (paramDebug >= level) || level == 0) \
-	printk(TAGDEBUG x); \
-} while (0)
+static unsigned int verbose = 16;
 
 static int stv6110x_read_reg(struct stv6110x_state *stv6110x, u8 reg, u8 *data)
 {
@@ -56,14 +42,14 @@ static int stv6110x_read_reg(struct stv6110x_state *stv6110x, u8 reg, u8 *data)
 	u8 b1[] = { 0 };
 	struct i2c_msg msg[] =
 	{
-		{ .addr = config->addr, .flags = 0,        .buf = b0, .len = 1 },
+		{ .addr = config->addr, .flags = 0, .buf = b0, .len = 1 },
 		{ .addr = config->addr, .flags = I2C_M_RD, .buf = b1, .len = 1 }
 	};
 
 	ret = i2c_transfer(stv6110x->i2c, msg, 2);
 	if (ret != 2)
 	{
-		dprintk(1, "I/O Error\n");
+		dprintk(FE_ERROR, 1, "[STV6110X] I/O Error");
 		return -EREMOTEIO;
 	}
 	*data = b1[0];
@@ -77,23 +63,21 @@ static int stv6110x_write_regs(struct stv6110x_state *stv6110x, int start, u8 da
 	u8 buf[len + 1];
 	struct i2c_msg msg =
 	{
-		.addr  = config->addr,
+		.addr = config->addr,
 		.flags = 0,
-		.buf   = buf,
-		.len   = len + 1
+		.buf = buf,
+		.len = len + 1
 	};
-
 	if (start + len > 8)
 	{
 		return -EINVAL;
 	}
 	buf[0] = start;
 	memcpy(&buf[1], data, len);
-
 	ret = i2c_transfer(stv6110x->i2c, &msg, 1);
 	if (ret != 1)
 	{
-		dprintk(1, "I/O Error\n");
+		dprintk(FE_ERROR, 1, "[STV6110X] I/O Error");
 		return -EREMOTEIO;
 	}
 	return 0;
@@ -112,7 +96,7 @@ static int stv6110x_init(struct dvb_frontend *fe)
 	ret = stv6110x_write_regs(stv6110x, 0, stv6110x->regs, ARRAY_SIZE(stv6110x->regs));
 	if (ret < 0)
 	{
-		dprintk(1, "Initialization failed\n");
+		dprintk(FE_ERROR, 1, "[STV6110X] Initialization failed");
 		return -1;
 	}
 	return 0;
@@ -126,7 +110,6 @@ static int stv6110x_set_frequency(struct dvb_frontend *fe, u32 frequency)
 	u8 i;
 
 	STV6110x_SETFIELD(stv6110x->regs[STV6110x_CTRL1], CTRL1_K, (REFCLOCK_MHz - 16));
-
 	if (frequency <= 1023000)
 	{
 		STV6110x_SETFIELD(stv6110x->regs[STV6110x_TNG1], TNG1_DIV4SEL, 1);
@@ -151,11 +134,9 @@ static int stv6110x_set_frequency(struct dvb_frontend *fe, u32 frequency)
 		STV6110x_SETFIELD(stv6110x->regs[STV6110x_TNG1], TNG1_PRESC32_ON, 1);
 		pVal = 20;
 	}
-
 	for (rDiv = 0; rDiv <= 3; rDiv++)
 	{
 		pCalc = (REFCLOCK_kHz / 100) / R_DIV(rDiv);
-
 		if ((abs((s32)(pCalc - pVal))) < (abs((s32)(pCalcOpt - pVal))))
 		{
 			rDivOpt = rDiv;
@@ -182,11 +163,10 @@ static int stv6110x_set_frequency(struct dvb_frontend *fe, u32 frequency)
 	{
 		stv6110x_read_reg(stv6110x, STV6110x_STAT1, &stv6110x->regs[STV6110x_STAT1]);
 		if (!STV6110x_GETFIELD(STAT1_CALVCO_STRT, stv6110x->regs[STV6110x_STAT1]))
-		{
 			break;
-		}
 		msleep(1);
 	}
+
 	return 0;
 }
 
@@ -328,7 +308,7 @@ static int stv6110x_set_mode(struct dvb_frontend *fe, enum tuner_mode mode)
 	ret = stv6110x_write_reg(stv6110x, STV6110x_CTRL1, stv6110x->regs[STV6110x_CTRL1]);
 	if (ret < 0)
 	{
-		dprintk(1, "I/O Error\n");
+		dprintk(FE_ERROR, 1, "[STV6110X] I/O Error");
 		return -EIO;
 	}
 	return 0;
@@ -351,7 +331,7 @@ static int stv6110x_get_status(struct dvb_frontend *fe, u32 *status)
 	if (STV6110x_GETFIELD(STAT1_LOCK, stv6110x->regs[STV6110x_STAT1]))
 	{
 		*status = TUNER_PHASELOCKED;
-		dprintk(20, "6110x locked\n");
+		printk("6110 locked\n");
 	}
 	else
 	{
@@ -361,7 +341,9 @@ static int stv6110x_get_status(struct dvb_frontend *fe, u32 *status)
 }
 
 #if 0
-static int stv6110x_get_state(struct dvb_frontend *fe, enum tuner_param param, struct tuner_state *state)
+static int stv6110x_get_state(struct dvb_frontend *fe,
+			      enum tuner_param param,
+			      struct tuner_state *state)
 {
 	switch (param)
 	{
@@ -395,7 +377,9 @@ static int stv6110x_get_state(struct dvb_frontend *fe, enum tuner_param param, s
 	return 0;
 }
 
-static int stv6110x_set_state(struct dvb_frontend *fe, enum tuner_param param, struct tuner_state *tstate)
+static int stv6110x_set_state(struct dvb_frontend *fe,
+			      enum tuner_param param,
+			      struct tuner_state *tstate)
 {
 	struct stv6110x_state *stv6110x = fe->tuner_priv;
 
@@ -447,48 +431,49 @@ static int stv6110x_release(struct dvb_frontend *fe)
 
 static struct dvb_tuner_ops stv6110x_ops =
 {
-	.info =
-	{
-		.name           = "STV6110(A) Silicon Tuner",
-		.frequency_min  =  950000,
-		.frequency_max  = 2150000,
+	.info = {
+		.name = "STV6110(A) Silicon Tuner",
+		.frequency_min = 950000,
+		.frequency_max = 2150000,
 		.frequency_step = 0,
 	},
 
 #if 0
-	.get_status         = stv6110x_get_status,
-	.get_state          = stv6110x_get_state,
-	.set_state          = stv6110x_set_state,
+	.get_status = stv6110x_get_status,
+	.get_state = stv6110x_get_state,
+	.set_state = stv6110x_set_state,
 #endif
-	.release            = stv6110x_release
+	.release = stv6110x_release
 };
 
 static struct stv6110x_devctl stv6110x_ctl =
 {
-	.tuner_init          = stv6110x_init,
-	.tuner_sleep         = stv6110x_sleep,
-	.tuner_set_mode      = stv6110x_set_mode,
+	.tuner_init = stv6110x_init,
+	.tuner_sleep = stv6110x_sleep,
+	.tuner_set_mode = stv6110x_set_mode,
 	.tuner_set_frequency = stv6110x_set_frequency,
 	.tuner_get_frequency = stv6110x_get_frequency,
 	.tuner_set_bandwidth = stv6110x_set_bandwidth,
 	.tuner_get_bandwidth = stv6110x_get_bandwidth,
-	.tuner_set_bbgain    = stv6110x_set_bbgain,
-	.tuner_get_bbgain    = stv6110x_get_bbgain,
-	.tuner_set_refclk    = stv6110x_set_refclock,
-	.tuner_get_status    = stv6110x_get_status,
+	.tuner_set_bbgain = stv6110x_set_bbgain,
+	.tuner_get_bbgain = stv6110x_get_bbgain,
+	.tuner_set_refclk = stv6110x_set_refclock,
+	.tuner_get_status = stv6110x_get_status,
 };
 
-struct stv6110x_devctl *stv6110x_attach(struct dvb_frontend *fe, const struct stv6110x_config *config, struct i2c_adapter *i2c)
+struct stv6110x_devctl *stv6110x_attach(struct dvb_frontend *fe,
+				     const struct stv6110x_config *config,
+				     struct i2c_adapter *i2c)
 {
 	struct stv6110x_state *stv6110x;
-	u8 default_regs[] = { 0x07, 0x11, 0xdc, 0x85, 0x17, 0x01, 0xe6, 0x1e };
+	u8 default_regs[] = {0x07, 0x11, 0xdc, 0x85, 0x17, 0x01, 0xe6, 0x1e};
 
 	stv6110x = kzalloc(sizeof(struct stv6110x_state), GFP_KERNEL);
 	if (!stv6110x)
 	{
 		return NULL;
 	}
-	stv6110x->i2c    = i2c;
+	stv6110x->i2c = i2c;
 	stv6110x->config = config;
 	stv6110x->devctl = &stv6110x_ctl;
 	memcpy(stv6110x->regs, default_regs, 8);
@@ -519,10 +504,10 @@ struct stv6110x_devctl *stv6110x_attach(struct dvb_frontend *fe, const struct st
 			break;
 		}
 	}
-	fe->tuner_priv    = stv6110x;
+
+	fe->tuner_priv = stv6110x;
 	fe->ops.tuner_ops = stv6110x_ops;
-	dprintk(20, "%s: Attaching STV6110x\n", __func__);
+	printk(KERN_INFO "%s: Attaching STV6110x\n", __func__);
 	return stv6110x->devctl;
 }
 EXPORT_SYMBOL(stv6110x_attach);
-// vim:ts=4

@@ -46,11 +46,15 @@ ifdef HL101
 obj-y += aotom_hl101/
 endif
 
+ifdef VIP1_V1
+obj-y += proton/
+endif
+
 ifdef VIP1_V2
 obj-y += aotom_vip/
 endif
 
-ifdef VIP2_V1
+ifdef VIP2
 obj-y += aotom_vip/
 endif
 

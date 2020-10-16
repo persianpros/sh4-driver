@@ -74,7 +74,7 @@ static struct dvb_device CaDevice =
 
 #ifdef __TDT__
 static int caInitialized = 0;
-#if !defined(VIP2_V1) \
+#if !defined(VIP2) \
  && !defined (SPARK) \
  && !defined (SPARK7162) \
  && !defined (ADB_BOX) \
@@ -93,7 +93,7 @@ struct dvb_device *CaInit(struct DeviceContext_s *DeviceContext)
 	{
 		/* the following call creates ca0 associated with the cimax hardware */
 		printk(KERN_DEBUG "Initializing CI Controller\n");
-#if !defined(VIP2_V1) \
+#if !defined(VIP2) \
  && !defined (SPARK) \
  && !defined (SPARK7162) \
  && !defined(ADB_BOX) \
@@ -160,7 +160,7 @@ static int CaIoctl(struct inode *Inode,
 			{
 				if (descramble_index >= NUMBER_OF_DESCRAMBLERS)
 				{
-					printk("Error only descramblers 0 - %d supportet\n", NUMBER_OF_DESCRAMBLERS - 1);
+					printk("Error only descramblers 0 - %d supported\n", NUMBER_OF_DESCRAMBLERS - 1);
 					return -1;
 				}
 				pSession->descramblerForPid[pid] = descramble_index;

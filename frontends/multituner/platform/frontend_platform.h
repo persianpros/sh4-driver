@@ -1,5 +1,5 @@
 /*
- * @brief platform.h
+ * @brief frontend_platform.h
  *
  * @author konfetti
  *
@@ -37,7 +37,7 @@ struct platform_frontend_config_s
 	void *private;
 };
 
-#if 0
+#if defined UFS913
 struct platform_frontend_s
 {
 	int numConfigs;

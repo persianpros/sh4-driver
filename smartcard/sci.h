@@ -72,11 +72,13 @@
 /******* SC generic *******/
 
 #if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(ATEVIO7500) \
  || defined(FORTIS_HDBOX) \
  || defined(CUBEREVO) \
  || defined(ADB_BOX) \
  || defined(SPARK7162) \
+ || defined(IPBOX9900) \
  || defined(EP8000) \
  || defined(EPP8000) \
  || defined(GPV8000) \

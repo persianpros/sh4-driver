@@ -3123,7 +3123,7 @@ static void YWPANEL_LEDSetString(char *LEDStrBuf)
 		if (i < len)
 		{
 			c = (int) LEDStrBuf[i + a];
-			if (i == 2 && c == 0x2e)   //save one digit by displaying dot e.g. 23.59
+			if (i == 2 && c == 0x2e)   // save one digit by displaying dot e.g. 23.59
 			{
 				YWPANEL_LedDisplayData[i - 1]++;
 				a = 1;

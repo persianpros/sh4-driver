@@ -2,7 +2,7 @@
 #define _VIP1_AVS_
 
 /*
- *   svip2_avs.h - audio/video switch driver
+ *   vip1_avs.h - audio/video switch driver
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -23,6 +23,5 @@
 int vip1_avs_init(void);
 int vip1_avs_command(unsigned int cmd, void *arg );
 int vip1_avs_command_kernel(unsigned int cmd, void *arg);
-
 #endif
-
+// vim:ts=4

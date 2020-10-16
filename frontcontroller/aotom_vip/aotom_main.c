@@ -34,7 +34,7 @@
  * Notes: This driver has been modified using the original code supplied in
  *        other repositories, and then enhanced/debugged using code from
  *        aotom_spark.
- *        As it is likely that all Edision Argus VIP2s have a VFD frontpanel
+ *        As it is likely that all Edision Argus VIP1/2s have a VFD frontpanel
  *        all code referring to LED and DVFD panels has been conditioned
  *        out. It can be compiled by removing two comments in aotom_main.h
  *        if this is desired.
@@ -93,6 +93,10 @@ short paramDebug = 0;
 #define KEY_PRESS_UP      0
 
 static char *gmt = "+3600";  // GMT offset is plus one hour (Europe) as default
+int scroll_repeats = 1;  // 0 = no, number is times??
+int scroll_delay = 20;  // wait time (x 10 ms) between scrolls
+int initial_scroll_delay = 40;  // wait time (x 10 ms) to start scrolling
+int final_scroll_delay = 50;  // wait time (x 10 ms) to start final display
 
 typedef struct
 {
@@ -126,9 +130,6 @@ static int receiveCount = 0;
 static struct semaphore write_sem;
 static struct semaphore receive_sem;
 static struct semaphore draw_thread_sem;
-#if defined(FP_LEDS)
-static struct semaphore led_sem;
-#endif
 static struct semaphore spinner_sem;
 
 static struct task_struct *draw_task = 0;
@@ -217,15 +218,8 @@ static int draw_thread(void *arg)
 	char buf[sizeof(data->data) + 2 * DISPLAYWIDTH_MAX];
 	int len = data->length;
 	int off = 0;
-	int doton3 = 0;
 
-#if defined(FP_LEDS)
-	if (YWPANEL_width == 4 && len == 5 && data->data[2] == '.')
-	{
-		doton3 = 1;
-	}
-#endif
-	if (len > YWPANEL_width + doton3)
+	if (len > YWPANEL_width)
 	{
 		memset(buf, ' ', sizeof(buf));
 		off = YWPANEL_width - 1;
@@ -240,7 +234,7 @@ static int draw_thread(void *arg)
 	}
 	draw_thread_status = THREAD_STATUS_RUNNING;
 
-	if (len > YWPANEL_width + doton3)  // determine scroll
+	if (len > YWPANEL_width)  // determine scroll
 	{
 		int pos;
 
@@ -254,15 +248,15 @@ static int draw_thread(void *arg)
 				return 0;
 			}
 			YWPANEL_FP_ShowString(buf + pos);
-			// sleep 200 ms
-			for (i = 0; i < 5; i++)
+			// sleep scroll delay
+			for (i = 0; i < 10; i++)
 			{
 				if (kthread_should_stop())
 				{
 					draw_thread_status = THREAD_STATUS_STOPPED;
 					return 0;
 				}
-				msleep(40);
+				msleep(scroll_delay);
 			}
 		}
 	}
@@ -275,42 +269,6 @@ static int draw_thread(void *arg)
 	draw_thread_status = THREAD_STATUS_STOPPED;
 	return 0;
 }
-
-#if defined(FP_LEDS)
-static int led_thread(void *arg)
-{
-	int led = (int)arg;  // get led#
-
-	// toggle LED status for a given time period
-	led_state[led].status = THREAD_STATUS_RUNNING;
-
-	while (!kthread_should_stop())
-	{
-		if (!down_interruptible(&led_sem))
-		{
-			if (kthread_should_stop())
-			{
-				break;
-			}
-
-			while (!down_trylock(&led_sem));  // make sure semaphore is at 0
-
-			YWPANEL_FP_SetLed(led, led_state[led].state ? LOG_OFF : LOG_ON);  // toggle LED
-			
-			while ((led_state[led].period > 0) && !kthread_should_stop())
-			{
-				msleep(10);
-				led_state[led].period -= 10;
-			}
-			// switch LED back to previous state
-			YWPANEL_FP_SetLed(led, led_state[led].state);
-		}
-	}
-	led_state[led].status = THREAD_STATUS_STOPPED;
-	led_state[led].thread_task = 0;
-	return 0;
-}
-#endif
 
 static int spinner_thread(void *arg)
 {
@@ -494,6 +452,11 @@ int vfd_init_func(void)
 	return 0;
 }
 
+/*************************************************
+ *
+ * Code to handle /dev/vfd
+ *
+ */
 static ssize_t AOTOMdev_write(struct file *filp, const char *buff, size_t len, loff_t *off)
 {
 	char *kernel_buf;
@@ -537,8 +500,10 @@ static ssize_t AOTOMdev_write(struct file *filp, const char *buff, size_t len, l
 	{
 		len = data.length = sizeof(data.data);
 	}
+//	TODO: insert UTF8 handling
 //	dprintk(10, "%s Text: %s, length: %d\n", __func__, kernel_buf, len); 	
 	memcpy(data.data, kernel_buf, data.length);
+// TODO: insert scrolling
 	res = run_draw_thread(&data);
 
 	kfree(kernel_buf);
@@ -1043,7 +1008,7 @@ static struct file_operations vfd_fops =
 };
 
 /*----- Button driver -------*/
-static char *button_driver_name = "Edision frontpanel buttons driver";
+static char *button_driver_name = "Edision front panel button driver";
 static struct input_dev *button_dev;
 static int bad_polling = 1;
 static struct workqueue_struct *fpwq;
@@ -1303,7 +1268,7 @@ static int __init aotom_init_module(void)
 {
 	int i;
 
-	dprintk(0, "Edision argus VIP1/2 front panel driver %s\n", Revision);
+	dprintk(0, "Edision Argus VIP1/2 front panel driver %s\n", Revision);
 
 	if (YWPANEL_FP_Init())
 	{
@@ -1462,7 +1427,7 @@ MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 module_param(gmt, charp, 0);
 MODULE_PARM_DESC(gmt, "GMT offset (default +3600");
 
-MODULE_DESCRIPTION("VFD module for Edision argus VIP receivers");
+MODULE_DESCRIPTION("VFD module for Edision argus VIP V2 and VIP2 receivers");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

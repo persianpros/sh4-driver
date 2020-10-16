@@ -485,7 +485,7 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_B;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(ATEVIO7500) && !defined(ADB_BOX) && !defined(VITAMIN_HD5000)  // no votage control
+#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX) && !defined(VITAMIN_HD5000)  // no votage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO4, PIO_CLR_P4OUT, 0x40);
 #endif
 #endif
@@ -494,7 +494,7 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(ATEVIO7500) && !defined(ADB_BOX) && !defined(VITAMIN_HD5000)  // no votage control
+#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX) && !defined(VITAMIN_HD5000)  // no votage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO4, PIO_SET_P4OUT, 0x40);
 #endif
 #endif
@@ -504,7 +504,7 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 			PERROR("Invalid Vcc value '%d', set Vcc 5V", vcc);
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(ATEVIO7500) && !defined(ADB_BOX) // no votage control
+#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX) // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO4, PIO_SET_P4OUT, 0x40);
 #endif
 #endif
@@ -517,7 +517,7 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_B;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no votage control
+#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO3, PIO_CLR_P3OUT, 0x40);
 #endif
 #endif
@@ -526,7 +526,7 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no votage control
+#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO3, PIO_SET_P3OUT, 0x40);
 #endif
 #endif
@@ -536,7 +536,7 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 			PERROR("Invalid Vcc value '%d', set Vcc 5V", vcc);
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no votage control
+#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO3, PIO_CLR_P3OUT, 0x40);
 #endif
 #endif
@@ -2384,19 +2384,27 @@ int sci_read_proc(char *buffer, char **start, off_t offset,  int size,  int *eof
 		sci = &sci_cb[ix];
 		blen = strlen(outbuf);
 		if (sci_is_card_present(sci) == (SCI_ERROR)SCI_CARD_NOT_PRESENT)
+		{
 			sprintf(outbuf + blen, "sci%d: no card\n", ix);
+		}
 		else
+		{
 			sprintf(outbuf + blen, "sci%d: card detected\n", ix);
+		}
 	}
 	blen = strlen(outbuf);
 	if (size < blen)
+	{
 		return -EINVAL;
+	}
 	/*
 	 * If file position is non-zero, then assume the string has
 	 * been read and indicate there is no more data to be read.
 	 */
 	if (offset != 0)
+	{
 		return 0;
+	}
 	/*
 	 * We know the buffer is big enough to hold the string.
 	 */

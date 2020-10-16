@@ -23,7 +23,8 @@
 
 #include "dvb_frontend.h"
 
-struct tda18218_config {
+struct tda18218_config
+{
 	u8 i2c_address;
 	u8 i2c_wr_max;
 	u8 loop_through:1;
@@ -31,17 +32,16 @@ struct tda18218_config {
 
 #define CONFIG_MEDIA_TUNER_TDA18218
 
-#if defined(CONFIG_MEDIA_TUNER_TDA18218) || \
-	(defined(CONFIG_MEDIA_TUNER_TDA18218_MODULE) && defined(MODULE))
-extern struct dvb_frontend *tda18218_attach(struct dvb_frontend *fe,
-	struct i2c_adapter *i2c, struct tda18218_config *cfg);
+#if defined(CONFIG_MEDIA_TUNER_TDA18218) \
+ || (defined(CONFIG_MEDIA_TUNER_TDA18218_MODULE) && defined(MODULE))
+extern struct dvb_frontend *tda18218_attach(struct dvb_frontend *fe, struct i2c_adapter *i2c, struct tda18218_config *cfg);
 #else
-static inline struct dvb_frontend *tda18218_attach(struct dvb_frontend *fe,
-	struct i2c_adapter *i2c, struct tda18218_config *cfg)
+static inline struct dvb_frontend *tda18218_attach(struct dvb_frontend *fe, struct i2c_adapter *i2c, struct tda18218_config *cfg)
 {
-	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
+	dprintk(0, "%s: Driver disabled by Kconfig\n", __func__);
 	return NULL;
 }
 #endif
 
-#endif
+#endif // TDA18218_H
+// vim:ts=4

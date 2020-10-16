@@ -61,11 +61,10 @@ static int stv6110x_read_reg(struct stv6110x_state *stv6110x, u8 reg, u8 *data)
 	ret = i2c_transfer(stv6110x->i2c, msg, 2);
 	if (ret != 2)
 	{
-		dprintk(1, "I/O Error\n");
+		dprintk(1, "%s: I/O Error\n", __func__);
 		return -EREMOTEIO;
 	}
 	*data = b1[0];
-
 	return 0;
 }
 
@@ -111,7 +110,7 @@ static int stv6110x_init(struct dvb_frontend *fe)
 	ret = stv6110x_write_regs(stv6110x, 0, stv6110x->regs, ARRAY_SIZE(stv6110x->regs));
 	if (ret < 0)
 	{
-		dprintk(1, "Initialization failed\n");
+		dprintk(1, "%s: Initialization failed\n", __func__);
 		return -1;
 	}
 	return 0;
@@ -156,8 +155,9 @@ static int stv6110x_set_frequency(struct dvb_frontend *fe, u32 frequency)
 		pCalc = (REFCLOCK_kHz / 100) / R_DIV(rDiv);
 
 		if ((abs((s32)(pCalc - pVal))) < (abs((s32)(pCalcOpt - pVal))))
+		{
 			rDivOpt = rDiv;
-
+		}
 		pCalcOpt = (REFCLOCK_kHz / 100) / R_DIV(rDivOpt);
 	}
 
@@ -243,7 +243,6 @@ static int stv6110x_set_bandwidth(struct dvb_frontend *fe, u32 bandwidth)
 	}
 	STV6110x_SETFIELD(stv6110x->regs[STV6110x_CTRL3], CTRL3_RCCLK_OFF, 0x1); /* cal. done */
 	stv6110x_write_reg(stv6110x, STV6110x_CTRL3, stv6110x->regs[STV6110x_CTRL3]);
-
 	return 0;
 }
 
@@ -333,7 +332,7 @@ static int stv6110x_set_mode(struct dvb_frontend *fe, enum tuner_mode mode)
 	ret = stv6110x_write_reg(stv6110x, STV6110x_CTRL1, stv6110x->regs[STV6110x_CTRL1]);
 	if (ret < 0)
 	{
-		dprintk(1, "I/O Error\n");
+		dprintk(1, "%s: I/O Error\n", __func__);
 		return -EIO;
 	}
 	return 0;
@@ -453,7 +452,7 @@ static struct dvb_tuner_ops stv6110x_ops =
 		.name           = "STV6110(A) Silicon Tuner",
 		.frequency_min  =  950000,
 		.frequency_max  = 2150000,
-		.frequency_step	= 0,
+		.frequency_step = 0,
 	},
 	.init               = stv6110x_init,
 	.sleep              = stv6110x_sleep,
@@ -468,6 +467,7 @@ static struct dvb_tuner_ops stv6110x_ops =
 static struct stv6110x_devctl stv6110x_ctl =
 {
 	.tuner_init          = stv6110x_init,
+	.tuner_sleep         = stv6110x_sleep,
 	.tuner_set_mode      = stv6110x_set_mode,
 	.tuner_set_frequency = stv6110x_set_frequency,
 	.tuner_get_frequency = stv6110x_get_frequency,

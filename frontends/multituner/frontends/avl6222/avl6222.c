@@ -5,10 +5,10 @@
  *
  * @author Pedro Aguilar <pedro@duolabs.com>
  *
- * @brief Availink avl2108 - DVBS/S2 Satellite demod driver with Sharp BS2S7HZ6360 tuner
+ * @brief Availink avl6222 - DVBS/S2 Satellite demod driver with LG TDQA-S601F tuner
  *
  * Copyright (C) 2009-2010 Duolabs Spa
- *               2011 adapted by konfetti for use with ufs922, octagon1008 and atevio7500
+ *               2011 adapted by konfetti for use with ufs913
  *
  * based on avl6222 code from:
  * @author Ramon-Tomislav Rebersak <ramon.rebersak@gmail.com>
@@ -62,11 +62,11 @@ short initDone = 0;
 
 const struct avl6222_pllconf pll_conf[] =
 {
-	{503,  1, 7, 4, 2,  4000, 11200, 16800, 25200},
-	{447,  1, 7, 4, 2,  4500, 11200, 16800, 25200},
-	{503,  4, 7, 4, 2, 10000, 11200, 16800, 25200},
-	{503,  7, 7, 4, 2, 16000, 11200, 16800, 25200},
-	{111,  2, 7, 4, 2, 27000, 11200, 16800, 25200}
+	{ 503,  1, 7, 4, 2,  4000, 11200, 16800, 25200 },
+	{ 447,  1, 7, 4, 2,  4500, 11200, 16800, 25200 },
+	{ 503,  4, 7, 4, 2, 10000, 11200, 16800, 25200 },
+	{ 503,  7, 7, 4, 2, 16000, 11200, 16800, 25200 },
+	{ 111,  2, 7, 4, 2, 27000, 11200, 16800, 25200 }
 };
 
 const unsigned short pll_array_size = sizeof(pll_conf) / sizeof(struct avl6222_pllconf);
@@ -124,7 +124,7 @@ static u16 avl6222_i2c_writereg(struct avl6222_state *state, u8 *data, u16 *size
 #endif
 	if ((err = i2c_transfer(state->i2c, &msg, 1)) != 1)
 	{
-		eprintk("%s(): error: %i, size %d\n", __func__, err, *size);
+		dprintk(1, "%s: Error: %i, size %d\n", __func__, err, *size);
 		return AVL6222_ERROR_I2C; //return -EREMOTEIO;
 	}
 	return AVL6222_OK;
@@ -154,7 +154,7 @@ static u16 avl6222_i2c_readreg(struct avl6222_state *state, u8 *data, u16 *size)
 	}
 	else
 	{
-		eprintk("%s(): Unsupported data size: %d\n", __func__, *size);
+		dprintk(1, "%s: Error: unsupported data size %d\n", __func__, *size);
 		return AVL6222_ERROR_I2C;
 	}
 
@@ -176,7 +176,7 @@ static u16 avl6222_i2c_readreg(struct avl6222_state *state, u8 *data, u16 *size)
 #endif
 	if ((ret = i2c_transfer(state->i2c, &msg, 1)) != 1)
 	{
-		eprintk("%s(): error: %i\n", __func__, ret);
+		dprintk(1, "%s: Error: %i\n", __func__, ret);
 		return AVL6222_ERROR_I2C; //return -EREMOTEIO;
 	}
 	if (*size == 2)
@@ -287,7 +287,7 @@ static u16 avl6222_i2c_write(void *_state, u8 *buf, u16 buf_size)
 	{
 		size = buf_size;
 	}
-	tmp = (I2C_MAX_WRITE - 3) & 0xfffe;/* How many bytes data we can transfer every time */
+	tmp = (I2C_MAX_WRITE - 3) & 0xfffe;  /* How many bytes data we can transfer every time */
 
 	x2 = 0;
 	while (size > tmp)
@@ -425,7 +425,7 @@ static u16 avl6222_i2c_repeater_exec(struct avl6222_state *state, u8 *buf, u8 si
 	u32 i = 0;
 	u32 cnt = 20;
 
-	dprintk(50, "%s()\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	if (useOriginTimings == 0)
 	{
@@ -451,7 +451,7 @@ static u16 avl6222_i2c_repeater_exec(struct avl6222_state *state, u8 *buf, u8 si
 	{
 		ret = avl6222_i2c_write(state, buf, size);
 	}
-	dprintk(50, "Leaving %s() with status %u useOriginTimings=%d\n", __func__, ret, useOriginTimings);
+	dprintk(100, "%s < status = %u, useOriginTimings = %d\n", __func__, ret, useOriginTimings);
 	return ret;
 }
 
@@ -519,7 +519,7 @@ static u16 avl6222_i2c_repeater_recv(void *_state, u8 *buf, u16 size)
 		}
 		ret = avl6222_i2c_read(state, REG_I2C_RSP, buf, size);
 	}
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -535,7 +535,7 @@ static u16 avl6222_i2c_repeater_init(u16 bus_clk, struct avl6222_state *state)
 	buf[3] = 0x01;
 	buf[4] = I2C_INIT;
 	ret |= avl6222_i2c_repeater_exec(state, buf, 5);
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -557,7 +557,7 @@ static u16 avl6222_get_op_status(void *_state)
 			ret = AVL6222_ERROR_PREV;
 		}
 	}
-	dprintk(50, "Leaving %s() with status buf[0]: 0x%02x, buf[1]: 0x%02x\n", __func__, buf[0], buf[1]);
+	dprintk(100, "%s < status = buf[0]: 0x%02x, buf[1]: 0x%02x\n", __func__, buf[0], buf[1]);
 	return ret;
 }
 
@@ -578,7 +578,7 @@ static u16 avl6222_send_op(u8 ucOpCmd, void *_state)
 		x1 = extract_16(buf);
 		ret |= avl6222_i2c_write16(state, REG_RX_CMD, x1);
 	}
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -591,7 +591,7 @@ u16 avl6222_cpu_halt(struct dvb_frontend *fe)
 
 	ret = avl6222_send_op(DEMOD_OP_HALT, state);
 
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -601,7 +601,7 @@ static u16 avl6222_setup_pll(struct avl6222_state *state, const struct avl6222_p
 {
 	u16 ret = 0;
 
-	dprintk(5, "%s()\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	ret = avl6222_i2c_write32(state, PLL_R1, pll_ptr->m_r1);
 	ret |= avl6222_i2c_write32(state, PLL_R6, pll_ptr->m_r1);
@@ -622,7 +622,7 @@ static u16 avl6222_setup_pll_2(struct avl6222_state *state, const struct avl6222
 {
 	u16 ret = 0;
 
-	dprintk(5, "%s()\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	ret = avl6222_i2c_write32(state, PLL_R1, pll_ptr->m_r1);
 	ret |= avl6222_i2c_write32(state, PLL_R6, pll_ptr->m_r1);
 	ret |= avl6222_i2c_write32(state, PLL_R2, pll_ptr->m_r2);
@@ -647,7 +647,7 @@ static int avl6222_load_firmware(struct dvb_frontend *fe)
 	u16 ret;
 	int fw_ret;
 
-	dprintk(5, "%s() >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	ret = avl6222_i2c_write32(state, REG_CORE_RESET_B, 0);
 	dprintk(10, "%s(): Uploading demod firmware (%s)...\n", __func__, AVL6222_DEMOD_FW);
 	fw_ret = request_firmware(&fw, AVL6222_DEMOD_FW, &state->i2c->dev);
@@ -656,11 +656,11 @@ static int avl6222_load_firmware(struct dvb_frontend *fe)
 		printk("%s(): Firmware request failed. Timeout or file not found \n", __func__);
 		return AVL6222_ERROR_GENERIC;
 	}
-	printk("%s(): firmware request done successfull\n", __func__);
+	dprintk(20, "%s: firmware request successful\n", __func__);
 	data_size = extract_32(fw->data);
 	buffer = kmalloc(fw->size, GFP_KERNEL);
 	memcpy(buffer, fw->data, fw->size);
-	printk("%s(): writing firmware... (data_size %d)\n", __func__, data_size);
+	dprintk(20, "%s: writing firmware... (data_size %d)\n", __func__, data_size);
 
 	while (i < data_size)
 	{
@@ -677,7 +677,7 @@ static int avl6222_load_firmware(struct dvb_frontend *fe)
 	ret |= avl6222_i2c_write32(state, error_msg_addr + 4, 0x00000000);
 	ret |= avl6222_i2c_write32(state, REG_CORE_RESET_B, 1);
 	kfree(buffer);
-	dprintk(10, "%s() < status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -693,7 +693,7 @@ static int avl6222_get_demod_status(struct dvb_frontend *fe)
 	r = avl6222_i2c_read32(state, REG_CORE_RESET_B, &x1);
 	r |= avl6222_i2c_read16(state, REG_CORE_RDY_WORD, (u16 *)buf);
 
-	printk("[avl6222] Demod status = 0x%02X%02X\n", buf[0], buf[1]);
+	dprintk(20, "Demod status = 0x%02X%02X\n", buf[0], buf[1]);
 
 	if ((AVL6222_OK == r))
 	{
@@ -732,7 +732,7 @@ u16 avl6222_get_version(struct avl6222_state *state, struct avl6222_ver_info *ve
 			version->patch_build = ((u16)((version->patch_build) << 8)) + buf[3];
 		}
 	}
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -805,7 +805,7 @@ static u16 avl6222_channel_lock(struct dvb_frontend *fe, struct avl6222_tuning *
 	{
 		ret = AVL6222_ERROR_GENERIC;
 	}
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -843,7 +843,7 @@ static int avl6222_demod_init(struct dvb_frontend *fe)
 
 	/* Enable MPEG output */
 	ret = avl6222_i2c_write32(state, rc_mpeg_bus_tri_enb, state->config->mpeg_tri);
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -873,7 +873,7 @@ u16 avl6222_save_config(struct dvb_frontend *fe, u32 *buf32, u16 *buf16)
 	ret |= avl6222_i2c_read16(state, REG_CARRIER_FREQ_HALF_RANGE_MHZ, buf16++);
 	ret |= avl6222_i2c_read16(state, 1536, buf16++);
 	ret |= avl6222_i2c_read16(state, REG_MPEG_PERSISTENT_CLK_MODE, buf16++);
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -905,7 +905,7 @@ u16 avl6222_restore_config(struct dvb_frontend *fe, u32 *buf32, u16 *buf16)
 	ret |= avl6222_i2c_write16(state, REG_CARRIER_FREQ_HALF_RANGE_MHZ, *buf16++);
 	ret |= avl6222_i2c_write16(state, 1536, *buf16++);
 	ret |= avl6222_i2c_write16(state, REG_MPEG_PERSISTENT_CLK_MODE, *buf16++);
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -930,7 +930,7 @@ int avl6222_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 	struct avl6222_state *state = fe->demodulator_priv;
 	int ret = 0;
 
-	dprintk(10, "%s(%p, %d)\n", __FUNCTION__, fe, voltage);
+	dprintk(10, "%s(%p, %d)\n", __func__, fe, voltage);
 	mutex_lock(&state->lock);
 	ret = state->equipment.lnb_set_voltage(state->lnb_priv, fe, voltage);
 	mutex_unlock(&state->lock);
@@ -953,7 +953,7 @@ static int avl6222_diseqc_init(struct dvb_frontend *fe)
 	u32 x1;
 	u32 diseqc_info;
 
-	dprintk(10, "%s >\n", __FUNCTION__);
+	dprintk(100, "%s >\n", __func__);
 
 #if defined(UFS913)
 	//ufs913 uses envelope mode
@@ -962,7 +962,7 @@ static int avl6222_diseqc_init(struct dvb_frontend *fe)
 	diseqc_info = DISEQC_RX_150 | DISEQC_WAVEFORM_NORMAL | DISEQC_TX_GAP_15;
 #endif
 
-	dprintk(10, "%s: diseqc_info=%d\n", __FUNCTION__, diseqc_info);
+	dprintk(10, "%s: diseqc_info = %d\n", __func__, diseqc_info);
 
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_SRST, 1);
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_SAMP_FRAC_N, 200);  /* 2M = 200 * 10kHz */
@@ -977,12 +977,12 @@ static int avl6222_diseqc_init(struct dvb_frontend *fe)
 	x1 |= ((u32)((diseqc_info & 0x0F00) >> 8) << 4);
 	x1 |= (1 << 3);  /* Enable tx gap */
 
-	dprintk(10, "%s: x1=0x%x\n", __FUNCTION__, x1);
+	dprintk(10, "%s: x1 = 0x%x\n", __func__, x1);
 
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_TX_CTRL, x1);  //ufs913 diff
 	x1 &= ~(0x20);	/* Release tx_fifo reset */
 
-	dprintk(10, "%s: x1=0x%x\n", __FUNCTION__, x1);
+	dprintk(10, "%s: x1 = 0x%x\n", __func__, x1);
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_TX_CTRL, x1);  //ufs913 diff
 
 	/* Initialize the rx_control */
@@ -990,18 +990,18 @@ static int avl6222_diseqc_init(struct dvb_frontend *fe)
 	x1 |= (1 << 1); 	/* Activate the receiver */
 	x1 |= (1 << 3);	 /* Envelop high when tone present */
 
-	dprintk(10, "%s: x1=0x%x\n", __FUNCTION__, x1);
+	dprintk(10, "%s: x1 = 0x%x\n", __func__, x1);
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_RX_CTRL, x1);  //ufs913 diff
 
 	x1 = (u32)((diseqc_info & 0xF000) >> 12);
-	dprintk(10, "%s: x1=0x%x\n", __FUNCTION__, x1);
+	dprintk(10, "%s: x1 = 0x%x\n", __func__, x1);
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_RX_MSG_TMR, x1);
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_SRST, 0);
 	if (ret == AVL6222_OK)
 	{
 		state->diseqc_status = DISEQC_STATUS_INIT;
 	}
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status = %u\n", __func__, ret);
 	return 0;
 }
 
@@ -1041,7 +1041,7 @@ u16 avl6222_diseqc_switch_mode(struct dvb_frontend *fe)
 			break;
 		}
 	}
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status= %u\n", __func__, ret);
 	return ret;
 }
 
@@ -1094,7 +1094,7 @@ u16 avl6222_diseqc_send_mod_data(struct dvb_frontend *fe, const u8 *buf, u8 size
 			}
 		}
 	}
-	dprintk(10, "%s(): ret: %u\n", __func__, ret);
+	dprintk(100, "%s: < ret = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -1122,7 +1122,7 @@ u16 avl6222_diseqc_get_tx_status(struct dvb_frontend *fe, struct avl6222_diseqc_
 	{
 		ret = AVL6222_ERROR_GENERIC;
 	}
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(100, "%s < status %u\n", __func__, ret);
 	return ret;
 }
 
@@ -1149,7 +1149,7 @@ static int avl6222_send_diseqc_msg(struct dvb_frontend *fe, struct dvb_diseqc_ma
 	ret = avl6222_diseqc_send_mod_data(fe, d->msg, d->msg_len);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("%s(): Output %u modulation bytes: fail!\n", __func__, d->msg_len);
+		dprintk(1, "%s: Output %u modulation bytes: fail!\n", __func__, d->msg_len);
 	}
 	else
 	{
@@ -1185,11 +1185,11 @@ static int avl6222_send_diseqc_msg(struct dvb_frontend *fe, struct dvb_diseqc_ma
 		}
 		if (ret != AVL6222_OK)
 		{
-			printk("%s(): Output %u modulation bytes fail!\n", __func__, d->msg_len);
+			dprintk(1, "%s: Output %u modulation bytes fail!\n", __func__, d->msg_len);
 		}
 		else
 		{
-			dprintk(20, "%s(): Output %u modulation bytes: success!\n", __func__, d->msg_len);
+			dprintk(20, "%s: Output %u modulation bytes: success!\n", __func__, d->msg_len);
 		}
 	}
 	return 0;
@@ -1214,7 +1214,7 @@ static int avl6222_diseqc_send_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 	ret = avl6222_diseqc_switch_mode(fe);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("%s(): Tone-burst failed!\n", __func__);
+		dprintk(1, "%s: Tone-burst failed!\n", __func__);
 		return 0;
 	}
 
@@ -1243,7 +1243,7 @@ static int avl6222_diseqc_send_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 	ret |= avl6222_i2c_write32(state, REG_DISEQC_TX_CTRL, x1);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("%s(): Tone-burst failed!\n", __func__);
+		dprintk(1, "%s: Tone-burst failed!\n", __func__);
 		return 0;
 	}
 	else
@@ -1253,11 +1253,11 @@ static int avl6222_diseqc_send_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 	ret = avl6222_diseqc_get_tx_status(fe, &tx_status);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("%s(): Tune-burst sent failed: %d\n", __func__, tx_status.tx_done);
+		dprintk(1, "%s: Tune-burst sent failed: %d\n", __func__, tx_status.tx_done);
 	}
 	else
 	{
-		dprintk(10, "%s(): Tune-burst sent successfully: %d\n", __func__, tx_status.tx_done);
+		dprintk(10, "%s: Tune-burst sent successfully: %d\n", __func__, tx_status.tx_done);
 	}
 	return 0;
 }
@@ -1358,12 +1358,12 @@ static int avl6222_read_status(struct dvb_frontend *fe, fe_status_t *status)
 	if (lock_status == 0) /* the orig app on ufs913 gots not 1 on success! */
 	{
 		*status = 0;
-		dprintk(50, "%s() : Could not get lock status!\n", __func__);
+		dprintk(1, "%s: Could not get lock status!\n", __func__);
 	}
 	else
 	{
 		*status |= FE_HAS_SIGNAL | FE_HAS_CARRIER | FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
-		dprintk(50, "%s(): Service locked!!!\n", __func__);
+		dprintk(50, "%s: Service locked!!!\n", __func__);
 	}
 	return 0;
 }
@@ -1420,7 +1420,7 @@ static int avl6222_read_signal_strength(struct dvb_frontend *fe, u16 *signal_str
 	else
 	{
 		*signal_strength = 0;
-		dprintk(30, "Could not get signal strength");
+		dprintk(1, "Could not get signal strength\n");
 	}
 	return -1;
 }
@@ -1442,7 +1442,7 @@ static int avl6222_read_snr(struct dvb_frontend *fe, u16 *snr)
 	ret = avl6222_i2c_read32(state, REG_SNR_DB, &r_snr);
 	if (ret != AVL6222_OK)
 	{
-		dprintk(30, "Could not get SNR\n");
+		dprintk(1, "Could not get SNR\n");
 		*snr = 0;
 	}
 	else
@@ -1485,7 +1485,7 @@ static int avl6222_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 static void avl6222_release(struct dvb_frontend *fe)
 {
 	struct avl6222_state *state = fe->demodulator_priv;
-	dprintk(10, "%s()\n", __func__);
+	dprintk(100, "%s <>\n", __func__);
 	kfree(state);
 }
 
@@ -1516,16 +1516,15 @@ static int avl6222_initfe(struct dvb_frontend *fe)
 
 	if (ret != AVL6222_OK)
 	{
-		eprintk("PLL initialization failed!");
+		dprintk(1, "%s: PLL initialization failed!\n",__func__);
 		return -1;
 	}
-
 	mdelay(1);
 
 	ret = avl6222_load_firmware(fe);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("Demod firmware load failed!");
+		dprintk(1, "%s: Demod firmware load failed!\n", __func__);
 		return -1;
 	}
 
@@ -1534,13 +1533,13 @@ static int avl6222_initfe(struct dvb_frontend *fe)
 	ret = avl6222_get_demod_status(fe);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("Boot failed!\n");
+		dprintk(1, "%s: Demodulator boot failed!\n", __func__);
 		return -1;
 	}
 	ret = avl6222_demod_init(fe);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("Demod Initialization failed!\n");
+		dprintk(1, "%s: Demod Initialization failed!\n", __func__);
 		return -1;
 	}
 
@@ -1562,17 +1561,17 @@ static int avl6222_initfe(struct dvb_frontend *fe)
 	ret |= state->equipment.tuner_init(fe);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("Tuner initialization failed!\n");
+		dprintk(1, "%s: Tuner initialization failed!\n");
 		return -1;
 	}
 	/* tuner init end */
 	ret = avl6222_diseqc_init(fe);
 	if (ret != AVL6222_OK)
 	{
-		eprintk("Diseqc initialization failed!\n");
+		dprintk(1, "%s: DiSEqC initialization failed!\n");
 		return -1;
 	}
-	dprintk(10, "AVL6222: Demod and tuner successfully initialized!\n");
+	dprintk(10, "Demodulator and tuner successfully initialized.\n");
 	state->boot_done = 1;
 	initDone = 1;
 	return 0;
@@ -1677,13 +1676,13 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	demodLock = 0;
 	tunerLock = 0;
 
-	dprintk(1, "%s: delivery system	= %d\n", __func__, c->delivery_system);
-	dprintk(1, "%s: modulation      = %d\n", __func__, c->modulation);
-	dprintk(1, "%s: frequency       = %d\n", __func__, c->frequency);
-	dprintk(1, "%s: symbol_rate     = %d\n", __func__, c->symbol_rate);
-	dprintk(1, "%s: inversion       = %d\n", __func__, c->inversion);
-	dprintk(1, "%s: rolloff         = %d\n", __func__, c->rolloff);
-	dprintk(1, "%s: pilot           = %d\n", __func__, c->pilot);
+	dprintk(20, "%s: delivery system	= %d\n", __func__, c->delivery_system);
+	dprintk(20, "%s: modulation      = %d\n", __func__, c->modulation);
+	dprintk(20, "%s: frequency       = %d\n", __func__, c->frequency);
+	dprintk(20, "%s: symbol_rate     = %d\n", __func__, c->symbol_rate);
+	dprintk(20, "%s: inversion       = %d\n", __func__, c->inversion);
+	dprintk(20, "%s: rolloff         = %d\n", __func__, c->rolloff);
+	dprintk(20, "%s: pilot           = %d\n", __func__, c->pilot);
 	cnt = 10;
 
 	do
@@ -1693,7 +1692,7 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 
 		if (ret != AVL6222_OK)
 		{
-			eprintk("%s: failed to halt cpu %d\n", __func__, cnt);
+			dprintk(1, "%s: failed to halt cpu %d\n", __func__, cnt);
 			msleep(50);
 			continue;
 		}
@@ -1711,7 +1710,7 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	if (ret != AVL6222_OK)
 	{
 		lockError |= cError2;
-		eprintk("Tuner set failed!\n");
+		dprintk(1, "%s: Tuner set failed!\n", __func__);
 		mutex_unlock(&state->lock);
 		return -1;
 	}
@@ -1749,7 +1748,7 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 			if (ret != AVL6222_OK)
 			{
 				lockError |= cError3;
-				eprintk("Failed while checking lock status!\n");
+				dprintk(1, "%s: Failed while checking lock status!\n", __func__);
 				mutex_unlock(&state->lock);
 				return -1;
 			}
@@ -1761,7 +1760,7 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	}
 	while (--cnt);
 
-	dprintk(1, "%s(): Tuner successfully set!\n", __func__);
+	dprintk(20, "%s: Tuner successfully set!\n", __func__);
 
 	/* Be sure that we are in demod status, if not, set it */
 	avl6222_get_mode(state, &func_mode);
@@ -1792,7 +1791,7 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	if (ret != AVL6222_OK)
 	{
 		lockError |= cError5;
-		eprintk("Channel set failed!\n");
+		dprintk(1, "%s: Channel set failed!\n", __func__);
 		mutex_unlock(&state->lock);
 		return -1;
 	}
@@ -1837,7 +1836,7 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	{
 		if (avl6222_i2c_read16(state, REG_FEC_LOCK, &lock_status) != AVL6222_OK)
 		{
-			dprintk(20, "%s(): Could not get lock status. Retrying %d more times\n", __func__, cnt);
+			dprintk(20, "%s: Could not get lock status. Retrying %d more times\n", __func__, cnt);
 		}
 		if (lock_status == 1)
 		{
@@ -1852,24 +1851,24 @@ static int avl6222_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 			msleep(/* 10 */ 4);  /* Wait 4ms for demod to lock the channel */ //changed from 20 to 4 by Andreas Kircher
 		}
 
-		dprintk(20, "%s(): Waiting for lock (tuner %d) c: %d\n", __func__, state->config->tuner_no, cnt);
+		dprintk(20, "%s: Waiting for lock (tuner %d) c: %d\n", __func__, state->config->tuner_no, cnt);
 	}
 	while (--cnt);
 
 	if (cnt == 0)
 	{
 		lockError |= cError1;
-		eprintk("%s(): Time out (tuner %d, 0x%02x) !\n", __func__, state->config->tuner_no, state->config->demod_address);
+		dprintk(1, "%s: Time out (tuner %d, 0x%02x) !\n", __func__, state->config->tuner_no, state->config->demod_address);
 		mutex_unlock(&state->lock);
 		return -ETIMEDOUT;
 	}
-	dprintk(1, "%s(): Service locked!!! (tuner %d)\n", __func__, state->config->tuner_no);
+	dprintk(1, "%s: Service locked!!! (tuner %d)\n", __func__, state->config->tuner_no);
 
 	ret = avl6222_reset_stats(fe);
 	if (ret != AVL6222_OK)
 	{
 		lockError |= cError6;
-		eprintk("Could not reset stats!\n");
+		dprintk(1, "%s: Could not reset stats!\n", __func__);
 	}
 	else
 	{
@@ -1891,13 +1890,13 @@ struct dvb_frontend *avl6222_attach(struct avl6222_config *config, struct i2c_ad
 	struct avl6222_state *state = NULL;
 	struct avl6222_ver_info version;
 
-	printk("%s: > \n", __FUNCTION__);
+	dprintk(100, "%s: > \n", __func__);
 
 	/* Allocate memory for the internal state */
 	state = kmalloc(sizeof(struct avl6222_state), GFP_KERNEL);
 	if (state == NULL)
 	{
-		eprintk("Unable to kmalloc\n");
+		dprintk(1, "%s: Unable to kmalloc\n", __func__);
 		return NULL;
 	}
 
@@ -1912,14 +1911,14 @@ struct dvb_frontend *avl6222_attach(struct avl6222_config *config, struct i2c_ad
 	/* Get version and patch (debug only) number */
 	if (avl6222_get_version(state, &version) != AVL6222_OK)
 	{
-		eprintk("Could not get version");
+		dprintk(1, "Could not get version");
 		kfree(state);
 		return NULL;
 	}
 	else
 	{
-		printk("AVL6222: Chip version: %u.%u.%u\n", version.major, version.minor, version.build);
-		dprintk(10, "Patch version: %u.%u.%u\n", version.patch_major, version.patch_minor, version.patch_build);
+		dprintk(20, "AVL6222: Chip version: %u.%u.%u\n", version.major, version.minor, version.build);
+		dprintk(30, "Patch version: %u.%u.%u\n", version.patch_major, version.patch_minor, version.patch_build);
 	}
 
 	state->equipment.demod_i2c_repeater_send = avl6222_i2c_repeater_send;
@@ -1948,7 +1947,7 @@ struct dvb_frontend *avl6222_attach(struct avl6222_config *config, struct i2c_ad
 	mutex_init(&state->protect);
 	memcpy(&state->frontend.ops, &avl6222_ops, sizeof(struct dvb_frontend_ops));
 	state->frontend.demodulator_priv = state;
-	printk("%s: < \n", __FUNCTION__);
+	dprintk(100, "%s: < \n", __func__);
 	return &state->frontend;
 }
 
@@ -1964,14 +1963,26 @@ static struct dvb_frontend_ops avl6222_ops =
 		.frequency_tolerance = 5000, /* 5000 kHz */
 		.symbol_rate_min     = 800000,  /* 800 kSym/s */
 		.symbol_rate_max     = 60000000,  /* 50 MSym/s */
-		.caps = FE_CAN_INVERSION_AUTO |
-		FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 | FE_CAN_FEC_3_4 |
-		FE_CAN_FEC_4_5 | FE_CAN_FEC_5_6 | FE_CAN_FEC_6_7 |
-		FE_CAN_FEC_7_8 | FE_CAN_FEC_8_9 | FE_CAN_FEC_AUTO |
-		FE_CAN_QPSK    | FE_CAN_RECOVER |
-		FE_CAN_2G_MODULATION | FE_CAN_QAM_16 | FE_CAN_QAM_32 | FE_CAN_QAM_64 |
-		FE_CAN_QAM_AUTO | FE_CAN_TRANSMISSION_MODE_AUTO | FE_CAN_GUARD_INTERVAL_AUTO |
-		FE_CAN_HIERARCHY_AUTO
+		.caps                = FE_CAN_INVERSION_AUTO
+		                     | FE_CAN_FEC_1_2
+		                     | FE_CAN_FEC_2_3
+		                     | FE_CAN_FEC_3_4
+		                     | FE_CAN_FEC_4_5
+		                     | FE_CAN_FEC_5_6
+		                     | FE_CAN_FEC_6_7
+		                     | FE_CAN_FEC_7_8
+		                     | FE_CAN_FEC_8_9
+		                     | FE_CAN_FEC_AUTO
+		                     | FE_CAN_QPSK
+		                     | FE_CAN_RECOVER
+		                     | FE_CAN_2G_MODULATION
+		                     | FE_CAN_QAM_16
+		                     | FE_CAN_QAM_32
+		                     | FE_CAN_QAM_64
+		                     | FE_CAN_QAM_AUTO
+		                     | FE_CAN_TRANSMISSION_MODE_AUTO
+		                     | FE_CAN_GUARD_INTERVAL_AUTO
+		                     | FE_CAN_HIERARCHY_AUTO
 	},
 	.init                   = avl6222_initfe,
 	.release                = avl6222_release,
@@ -1990,32 +2001,30 @@ static struct dvb_frontend_ops avl6222_ops =
 	.set_frontend           = avl6222_set_frontend,
 };
 
-//---------------------------------------------------------------------
-
 static void avl6222_register_frontend(struct dvb_adapter *dvb_adap, struct socket_s *socket)
 {
 	struct dvb_frontend *frontend;
 	struct avl6222_config *cfg;
 	struct avl_private_data_s *priv;
 
-	printk("%s\n", __func__);
+	dprintk(100, "%s\n", __func__);
 
 	if (numSockets + 1 == cMaxSockets)
 	{
-		printk("Max number sockets reached ... cannot register\n");
+		dprintk(1, "Error: maximum number of sockets reached; cannot register\n");
 		return;
 	}
 
 	socketList[numSockets] = *socket;
 	numSockets++;
 
-	priv = (struct avl_private_data_s *) frontend_cfg[numSockets - 1].private;
+	priv = (struct avl_private_data_s *)frontend_cfg[numSockets - 1].private;
 
 	cfg = kmalloc(sizeof(struct avl6222_config), GFP_KERNEL);
 
 	if (cfg == NULL)
 	{
-		printk("avl6222: error malloc\n");
+		dprintk(1, "%s: malloc error\n", __func__);
 		return;
 	}
 	cfg->tuner_no = numSockets;
@@ -2051,7 +2060,7 @@ static void avl6222_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (frontend == NULL)
 	{
-		printk("avl6222: avl6222_attach failed\n");
+		dprintk(1, "Function avl6222_attach failed\n");
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -2062,7 +2071,7 @@ static void avl6222_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	}
 	if (dvb_register_frontend(dvb_adap, frontend))
 	{
-		printk("%s: Frontend registration failed !\n", __FUNCTION__);
+		dprintk(1, "%s: Frontend registration failed !\n", __func__);
 		if (frontend->ops.release)
 		{
 			frontend->ops.release(frontend);
@@ -2072,23 +2081,22 @@ static void avl6222_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	return;
 }
 
-//---------------------------------------------------------------------
-
 static int avl6222_demod_detect(struct socket_s *socket, struct frontend_s *frontend)
 {
 	u8 b0[] = { 0x00 };
 	u8 b1[] = { 0x00 };
+	struct avl_private_data_s *priv;
 	struct stpio_pin *pin = NULL;
 
 	struct i2c_msg msg[] =
 	{
-		{.addr = frontend_cfg[numSockets].demod_i2c, .flags = 0, .buf = b0, .len = 1},
-		{.addr = frontend_cfg[numSockets].demod_i2c, .flags = I2C_M_RD, .buf = b1, .len = 1}
+		{ .addr = frontend_cfg[numSockets].demod_i2c, .flags = 0,        .buf = b0, .len = 1 },
+		{ .addr = frontend_cfg[numSockets].demod_i2c, .flags = I2C_M_RD, .buf = b1, .len = 1 }
 	};
 
 	pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], (numSockets == 0) ? "FE1_ENABLE" : "FE2_ENABLE", STPIO_OUT);
 
-	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg[numSockets].demod_i2c);
+	dprintk(100, "%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg[numSockets].demod_i2c);
 
 	if (pin != NULL)
 	{
@@ -2103,23 +2111,24 @@ static int avl6222_demod_detect(struct socket_s *socket, struct frontend_s *fron
 		msleep(250);
 
 		state.i2c = i2c_get_adapter(socket->i2c_bus);
-		printk("%s > state.i2c name = %s, i2c_bus = 0x%x\n", __func__, state.i2c->name, socket->i2c_bus);
+		dprintk(20, "%s: state.i2c name = %s, i2c_bus = 0x%x\n", __func__, state.i2c->name, socket->i2c_bus);
 		ret = i2c_transfer(state.i2c, msg, 2);
 
 		if (ret != 2)
 		{
-			printk("%s(): i2c-error: %i\n", __func__, ret);
+			dprintk(1, "%s: i2c-error: %i\n", __func__, ret);
 			stpio_free_pin(pin);
 			return -EREMOTEIO;
 		}
-		printk("%s: i2c detect reply = 0x%02X\n", __func__, b1[0]);
-		struct avl_private_data_s *priv = (struct avl_private_data_s *) frontend_cfg[numSockets].private;
-		/* so now lets try to init the demod ... */
+		dprintk(20, "%s: i2c detect reply = 0x%02X\n", __func__, b1[0]);
+		priv = (struct avl_private_data_s *)frontend_cfg[numSockets].private;
+
+		/* so now lets us try to init the demod ... */
 		state.config = kmalloc(sizeof(struct avl6222_config), GFP_KERNEL);
 		state.config->demod_address = frontend_cfg[numSockets].demod_i2c;
 		state.config->pll_config = priv->pll_config;
 		state.frontend.demodulator_priv = &state;
-		//--------------------------
+
 		ret = avl6222_setup_pll(&state, (const struct avl6222_pllconf *)(pll_conf + state.config->pll_config));
 		mdelay(1);
 		ret |= avl6222_load_firmware(&state.frontend);
@@ -2128,19 +2137,19 @@ static int avl6222_demod_detect(struct socket_s *socket, struct frontend_s *fron
 		kfree(state.config);
 		if (ret != AVL6222_OK)
 		{
-			eprintk("%s: failed to detect avl6222 0x%x\n", __func__, b1[0]);
+			dprintk(1, "%s: Failed to detect avl6222 0x%x\n", __func__, b1[0]);
 			stpio_free_pin(pin);
 			return -1;
 		}
-		printk("%s: Detected avl6222\n", __func__);
+		dprintk(20, "%s: Detected avl6222\n", __func__);
 	}
 	else
 	{
-		eprintk("failed to allocate pio pin\n");
+		dprintk(1, "%s: Failed to allocate pio pin (%d,%d)\n", __func__, socket->tuner_enable[0], socket->tuner_enable[1]);
 		return 1;
 	}
 	stpio_free_pin(pin);
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -2148,15 +2157,13 @@ static int avl6222_demod_detect(struct socket_s *socket, struct frontend_s *fron
 
 static int avl6222_demod_attach(struct dvb_adapter *adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	avl6222_register_frontend(adapter, socket);
 
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
-
-//---------------------------------------------------------------------
 
 /* ******************************* */
 /* platform device functions       */
@@ -2168,12 +2175,14 @@ static int avl6222_probe(struct platform_device *pdev)
 	struct frontend_s frontend;
 	int i;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
+
 	frontend_cfg = kmalloc(plat_data->numConfigs * sizeof(struct platform_frontend_config_s), GFP_KERNEL);
 	memcpy(frontend_cfg, plat_data->config, plat_data->numConfigs * sizeof(struct platform_frontend_config_s));
+
 	for (i = 0; i < plat_data->numConfigs; i++)
 	{
-		printk("found frontend \"%s\" in platform config\n", frontend_cfg[i].name);
+		dprintk(20,"Found frontend[%d] \"%s\" in platform config\n", i, frontend_cfg[i].name);
 	}
 	numConfigs = plat_data->numConfigs;
 
@@ -2183,9 +2192,9 @@ static int avl6222_probe(struct platform_device *pdev)
 
 	if (socket_register_frontend(&frontend) < 0)
 	{
-		printk("failed to register frontend\n");
+		dprintk(1, "Failed to register frontend\n");
 	}
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -2217,25 +2226,24 @@ int __init avl6222_init(void)
 {
 	int ret;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	ret = platform_driver_register(&avl6222_driver);
-	printk("%s < %d\n", __func__, ret);
+	dprintk(100, "%s < (ret = %d)\n", __func__, ret);
 	return ret;
 }
 
-//---------------------------------------------------------------------
-
 static void avl6222_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s <>\n", __func__);
 }
 
 //---------------------------------------------------------------------
 
+module_init(avl6222_init);
+module_exit(avl6222_cleanup);
+
 module_param(paramDebug, short, 0644);
 MODULE_PARM_DESC(paramDebug, "Activates frontend debugging (default:0)");
-
-//---------------------------------------------------------------------
 
 MODULE_DESCRIPTION("Availink AVL6222 Demod");
 MODULE_AUTHOR("Open Vision developers");
@@ -2248,9 +2256,6 @@ EXPORT_SYMBOL(avl6222_set_tone);
 EXPORT_SYMBOL(avl6222_set_voltage);
 
 //---------------------------------------------------------------------
-
-module_init(avl6222_init);
-module_exit(avl6222_cleanup);
 
 //---------------------------------------------------------------------
 // vim:ts=4

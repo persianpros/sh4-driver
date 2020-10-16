@@ -20,7 +20,7 @@
  *
  *****************************************************************************
  *
- * Spiderbox HL101 frontpanel driver.
+ * Spider-Box HL101 / Edision argus VIP (fixed tuner) frontpanel driver.
  *
  * Devices:
  *	- /dev/vfd (vfd ioctls and read/write function)
@@ -788,7 +788,6 @@ int draw_thread(void *arg)
 		count++;
 		pos++;
 	}
-//#ifdef ENABLE_SCROLL // j00zek: disabled by default, interferes with GUI's
 	if (count > DISP_SIZE && scroll_flag)
 	{
 		pos  = 0;
@@ -816,7 +815,7 @@ int draw_thread(void *arg)
 		}
 		scroll_flag = 0;
 	}
-//#endif
+
 	if (count > 0)
 	{
 		k = DISP_SIZE;
@@ -1002,7 +1001,7 @@ int protonSetTime(int hour, int minute)
 int vfd_init_func(void)
 {
 	dprintk(150, "%s >\n", __func__);
-	dprintk(0, "Spider HL101 VFD module initializing\n");
+	dprintk(0, "Spiderbox HL101 / Edision argus VIP VFD module initializing\n");
 
 	cfg.data_pin[0] = 3;  // data pin is PIO 3.2
 	cfg.data_pin[1] = 2;
@@ -1020,7 +1019,7 @@ int vfd_init_func(void)
 		dprintk(1, "%s: PIO allocation error!\n", __func__);
 		return -1;
 	}
-	vfd_brightness = 7;  // brightness is maximum
+	vfd_brightness = 5;
 	vfd_show = 1;  // display is on
 	init_rwsem(&vfd_rws);
 
@@ -1060,7 +1059,7 @@ int protonSetIcon(int which, int on)
 
 	if (which < 1 || which > ICON_LAST)
 	{
-		dprintk(1, "%s Icon number %d out of range\n", __func__, which);
+		dprintk(1, "%s Icon number %d out of range (1-%d)\n", __func__, which, ICON_LAST);
 		return -EINVAL;
 	}
 //	dprintk(20, "%s Icon %d %s\n", __func__, which, (on == 0 ? "off" : "on"));
@@ -1621,7 +1620,7 @@ static struct file_operations vfd_fops =
  * Button driver
  *
  */
-static char *button_driver_name = "Spiderbox HL101 frontpanel buttons driver";
+static char *button_driver_name = "HL101 / argus VIP front panel button driver";
 static struct input_dev *button_dev;
 static int button_value = -1;
 static int bad_polling = 1;
@@ -1845,7 +1844,7 @@ MODULE_PARM_DESC(gmt, "GMT offset (default +3600");
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
-MODULE_DESCRIPTION("VFD module for Spiderbox HL101");
+MODULE_DESCRIPTION("VFD module for Spiderbox HL101 / Edision argus VIP V1");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

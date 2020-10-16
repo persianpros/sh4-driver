@@ -60,7 +60,6 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
  || defined(SAGEMCOM88) \
- || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(FOREVER_3434HD) \
@@ -150,7 +149,6 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
  || defined(SAGEMCOM88) \
- || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(FOREVER_3434HD) \
@@ -245,7 +243,8 @@ static const char *fdma_cap_hb[] = { STM_DMA_CAP_HIGH_BW, NULL };
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(HL101)
+ || defined(HL101) \
+ || defined(VIP1_V1)
 //injecting stream from DVB-T USB driver to SWTS
 void extern_inject_data(u32 *data, off_t size)
 {
@@ -448,7 +447,7 @@ void spark_stm_tsm_init(void)
 		reinit = 1;
 	if (reinit)
 	{
-		printk(KERN_DEBUG "[Spark] reinit stream routing...\n");
+		printk("[Spark] reinit stream routing...\n");
 	}
 	else
 	{
@@ -579,8 +578,7 @@ void spark_stm_tsm_init(void)
 	ret = ctrl_inl(tsm_io + TSM_PTI_SEL);
 	ctrl_outl(ret | 0x8, tsm_io + TSM_PTI_SEL);
 	ret = ctrl_inl(tsm_io + TSM_STREAM3_CFG);
-	ctrl_outl((ret & TSM_RAM_ALLOC_START(0xff)) |
-			  TSM_PRIORITY(0x7) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES | TSM_SYNC_NOT_ASYNC | TSM_ASYNC_SOP_TOKEN, tsm_io + TSM_STREAM3_CFG);
+	ctrl_outl((ret & TSM_RAM_ALLOC_START(0xff)) | TSM_PRIORITY(0x7) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES | TSM_SYNC_NOT_ASYNC | TSM_ASYNC_SOP_TOKEN, tsm_io + TSM_STREAM3_CFG);
 	/* don't touch the DMA engine -- seems unnecessary on reinit */
 	if (reinit)
 		return;
@@ -644,15 +642,14 @@ void stm_tsm_init(int use_cimax)
 	return;
 #endif
 #endif
-#if defined(VIP2_V1) \
+#if defined(VIP2) \
  || defined(SPARK) \
  || defined(SPARK7162) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
  || defined(ADB_BOX) \
  || defined(CUBEREVO_2000HD) \
- || defined(SAGEMCOM88) \
- || defined(PACE7241) // none ci targets
+ || defined(SAGEMCOM88) // none ci targets
 	use_cimax = 0;
 #endif
 	/* first configure sysconfig */
@@ -665,7 +662,7 @@ void stm_tsm_init(int use_cimax)
 		reinit = 1;
 	if (reinit)
 	{
-		printk(KERN_DEBUG "[TSM] reinit stream routing...\n");
+		printk("[TSM] reinit stream routing...\n");
 	}
 	else
 	{
@@ -776,9 +773,13 @@ void stm_tsm_init(int use_cimax)
 		 */
 		/* from fw 202 rc ->see also pti */
 		if (camRouting == 1) // CamRouting ufs910
+		{
 			ctrl_outl(0x6, reg_sys_config + SYS_CFG0);
+		}
 		else
+		{
 			ctrl_outl(0x2, reg_sys_config + SYS_CFG0);
+		}
 #elif defined(FORTIS_HDBOX)
 		/* ->TSIN0 routes to TSIN2 */
 		ctrl_outl(0x2, reg_sys_config + SYS_CFG0);
@@ -878,6 +879,7 @@ void stm_tsm_init(int use_cimax)
  || defined(UFC960) \
  || defined(TF7700) \
  || defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2) \
  || defined(UFS912) \
  || defined(UFS913) \
@@ -917,6 +919,7 @@ void stm_tsm_init(int use_cimax)
  || defined(UFS922) \
  || defined(UFC960) \
  || defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 		ctrl_outl(0x0, tsm_io + TSM_STREAM0_CFG); //320kb (5*64)
 		ctrl_outl(0x500, tsm_io + TSM_STREAM1_CFG); //320kb (5*64)
@@ -1197,6 +1200,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(UFC960) \
  && !defined(FORTIS_HDBOX) \
  && !defined(HL101) \
+ && !defined(VIP1_V1) \
  && !defined(VIP1_V2) \
  && !defined(UFS912) \
  && !defined(UFS913) \
@@ -1249,9 +1253,13 @@ void stm_tsm_init(int use_cimax)
 			ctrl_outl(0x70014, tsm_io + TS_1394_CFG);
 #elif defined(UFS910)
 		if (camRouting == 1) // CamRouting ufs910
+		{
 			ctrl_outl(0x70014, tsm_io + TS_1394_CFG);
+		}
 		else
+		{
 			ctrl_outl(0x50014, tsm_io + TS_1394_CFG);
+		}
 #else
 		/* logged from fw 202rc ->see also pti */
 		ctrl_outl(0x50014, tsm_io + TS_1394_CFG);
@@ -1280,6 +1288,7 @@ void stm_tsm_init(int use_cimax)
  || defined(UFS922) \
  || defined(UFC960) \
  || defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(VIP1_V2)
 		/* TF7700 stream configuration */
 		/* route stream 1 to PTI */
@@ -1485,8 +1494,8 @@ void stm_tsm_init(int use_cimax)
 		ctrl_outl(ret | 0x8, tsm_io + TSM_PTI_SEL);
 		ret = ctrl_inl(tsm_io + TSM_STREAM3_CFG);
 		ctrl_outl((ret & TSM_RAM_ALLOC_START(0xff)) |
-				  TSM_PRIORITY(0x7) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES | TSM_SYNC_NOT_ASYNC | TSM_ASYNC_SOP_TOKEN
-				  , tsm_io + TSM_STREAM3_CFG);
+			  TSM_PRIORITY(0x7) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES | TSM_SYNC_NOT_ASYNC | TSM_ASYNC_SOP_TOKEN
+			  , tsm_io + TSM_STREAM3_CFG);
 		/* don't touch the DMA engine -- seems unnecessary on reinit */
 		if (reinit)
 			return;
@@ -1532,10 +1541,10 @@ void stm_tsm_init(int use_cimax)
 	{
 		/* bypass cimax */
 		int n;
-//		printk("Bypass ci\n");
+		printk("Bypass ci\n");
 		if (reinit)
 		{
-//			printk("reinit\n");
+			printk("reinit\n");
 		}
 		else
 		{
@@ -1556,7 +1565,7 @@ void stm_tsm_init(int use_cimax)
 		 j00zek: when tuner hangs starting streaming from DVB-T USB, something wrong is with this section */
 #if defined(SAGEMCOM88) \
  || defined(SPARK7162)
-//		printk(">>Init st7105 DVBT-USB\n");
+		printk(">>Init st7105 DVBT-USB\n");
 		// STi7105
 		// 0-3 - 4xTS
 		// 4-6 - 3xSWTS
@@ -1590,7 +1599,8 @@ void stm_tsm_init(int use_cimax)
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(HL101)
+ || defined(HL101) \
+ || defined(VIP1_V1)
 		printk(">>Init DVBT-USB\n");
 		tsm_handle.tsm_io = ioremap(TSMergerBaseAddress, 0x0900);
 		tsm_handle.swts_channel = 3;
@@ -1699,54 +1709,54 @@ void stm_tsm_init(int use_cimax)
 			{
 				printk("BZZB TsinMode = SERIAL*st-merger*\n\t");
 				writel((readl(tsm_io + TSM_STREAM_CONF(chan)) & TSM_RAM_ALLOC_START(0xff)) |
-					   (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 1) |
-					   (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
-					   (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
-					   TSM_ALIGN_BYTE_SOP |
-					   TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
-					   tsm_io + TSM_STREAM_CONF(chan));
+				       (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 1) |
+				       (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
+				       (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
+				       TSM_ALIGN_BYTE_SOP |
+				       TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
+				       tsm_io + TSM_STREAM_CONF(chan));
 			}
 			else if (TsinMode == PARALLEL)
 			{
 				printk("BSKA,BSLA,BXZB TsinMode = Parallel *st-merger*\n\t");
 				writel((readl(tsm_io + TSM_STREAM_CONF(chan)) & TSM_RAM_ALLOC_START(0xff)) |
-					   (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0) |
-					   (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
-					   (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
-					   TSM_ALIGN_BYTE_SOP |
-					   TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
-					   tsm_io + TSM_STREAM_CONF(chan));
+				       (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0) |
+				       (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
+				       (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
+				       TSM_ALIGN_BYTE_SOP |
+				       TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
+				       tsm_io + TSM_STREAM_CONF(chan));
 			}
 #elif defined(SAGEMCOM88)
 			writel((readl(tsm_io + TSM_STREAM_CONF(chan)) & TSM_RAM_ALLOC_START(0xff)) |
-				   (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0) |
-				   (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
-				   (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
-				   TSM_ALIGN_BYTE_SOP |
-				   TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
-				   tsm_io + TSM_STREAM_CONF(chan));
+			       (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0) |
+			       (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
+			       (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
+			       TSM_ALIGN_BYTE_SOP |
+			       TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
+			       tsm_io + TSM_STREAM_CONF(chan));
 #else
-//			printk("TsinMode = Parallel *st-merger*\n\t");
+			printk("TsinMode = Parallel *st-merger*\n\t");
 			writel((readl(tsm_io + TSM_STREAM_CONF(chan)) & TSM_RAM_ALLOC_START(0xff)) |
-				   (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0) |
-				   (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
-				   (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
-				   TSM_ALIGN_BYTE_SOP |
-				   TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
-				   tsm_io + TSM_STREAM_CONF(chan));
+			       (options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0) |
+			       (options & STM_INVERT_CLOCK ? TSM_INVERT_BYTECLK : 0) |
+			       (options & STM_PACKET_CLOCK_VALID ? TSM_SYNC_NOT_ASYNC : 0) |
+			       TSM_ALIGN_BYTE_SOP |
+			       TSM_PRIORITY(0xf) | TSM_STREAM_ON | TSM_ADD_TAG_BYTES,
+			       tsm_io + TSM_STREAM_CONF(chan));
 #endif
 #ifdef alt
 			writel(TSM_SYNC(config->channels[n].lock) |
-				   TSM_DROP(config->channels[n].drop) |
-				   TSM_SOP_TOKEN(0x47) |
-				   TSM_PACKET_LENGTH(188)
-				   , tsm_io + TSM_STREAM_SYNC(chan));
+			       TSM_DROP(config->channels[n].drop) |
+			       TSM_SOP_TOKEN(0x47) |
+			       TSM_PACKET_LENGTH(188)
+			       , tsm_io + TSM_STREAM_SYNC(chan));
 #endif // alt
 			writel(TSM_SYNC(3 /* lock */) |
-				   TSM_DROP(3 /*drop*/) |
-				   TSM_SOP_TOKEN(0x47) |
-				   TSM_PACKET_LENGTH(188)
-				   , tsm_io + TSM_STREAM_SYNC(chan));
+			       TSM_DROP(3 /*drop*/) |
+			       TSM_SOP_TOKEN(0x47) |
+			       TSM_PACKET_LENGTH(188)
+			       , tsm_io + TSM_STREAM_SYNC(chan));
 		}
 		/* Put TSMERGER into normal mode */
 		writel(TSM_CFG_BYPASS_NORMAL, tsm_io + TSM_SYSTEM_CFG);

@@ -1,23 +1,25 @@
 /*
-	STV0900/0903 Multistandard Broadcast Frontend driver
-	Copyright (C) Manu Abraham <abraham.manu@gmail.com>
-
-	Copyright (C) ST Microelectronics
-
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+ * STV0900/0903 Multistandard Broadcast Frontend driver
+ * Copyright (C) Manu Abraham <abraham.manu@gmail.com>
+ *
+ * Copyright (C) ST Microelectronics
+ *
+ * Version for Pace HDS7241/91
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #ifndef __STV090x_H
 #define __STV090x_H
@@ -28,8 +30,9 @@
 #else
 #  include <linux/stm/pio.h>
 #endif
+#include "core.h"
 
-#define	TUNER_STB6110  //TUNER_STB6100
+#define	TUNER_STV6110  // Tuner is/are STV6110
 
 enum stv090x_tuner
 {
@@ -87,53 +90,44 @@ enum stv090x_adc_range
 	STV090x_ADC_1Vpp     = 1
 };
 
-#if 0
-enum tuner_mode
-{
-	TUNER_SLEEP = 1,
-	TUNER_WAKE,
-};
-#endif
-
 struct stv090x_config
 {
-	enum stv090x_device  device;
-	enum stv090x_mode    demod_mode;
-	enum stv090x_clkmode clk_mode;
+	enum stv090x_device    device;
+	enum stv090x_mode      demod_mode;
+	enum stv090x_clkmode   clk_mode;
 
-	u32 xtal; /* default: 8000000 */
-	u8 address; /* default: 0x68 */
+	u32                    xtal;  /* default: 8000000 */
+	u8                     address;  /* default: 0x68 */
 
-	struct stpio_pin *lnb_enable;
-	struct stpio_pin *lnb_vsel;	// 13/18V select pin
+	struct stpio_pin       *lnb_enable;
+	struct stpio_pin       *lnb_vsel;  // 13/18V select pin
 
-	u8 ts1_mode;
-	u8 ts2_mode;
-	u32 ts1_clk;
-	u32 ts2_clk;
+	u8                     ts1_mode;
+	u8                     ts2_mode;
+	u32                    ts1_clk;
+	u32                    ts2_clk;
 
-	enum stv090x_i2crpt	repeater_level;
+	enum stv090x_i2crpt	   repeater_level;
 
-	u8			tuner_bbgain; /* default: 10db */
-	enum stv090x_adc_range	adc1_range; /* default: 2Vpp */
-	enum stv090x_adc_range	adc2_range; /* default: 2Vpp */
+	u8                     tuner_bbgain;  /* default: 10db */
+	enum stv090x_adc_range adc1_range;    /* default: 2Vpp */
+	enum stv090x_adc_range adc2_range;    /* default: 2Vpp */
 
-	bool diseqc_envelope_mode;
+	bool                   diseqc_envelope_mode;
 
-	int (*tuner_init)(struct dvb_frontend *fe);
-	int (*tuner_set_mode)(struct dvb_frontend *fe, enum tuner_mode mode);
-	int (*tuner_set_frequency)(struct dvb_frontend *fe, u32 frequency);
-	int (*tuner_get_frequency)(struct dvb_frontend *fe, u32 *frequency);
-	int (*tuner_set_bandwidth)(struct dvb_frontend *fe, u32 bandwidth);
-	int (*tuner_get_bandwidth)(struct dvb_frontend *fe, u32 *bandwidth);
-	int (*tuner_set_bbgain)(struct dvb_frontend *fe, u32 gain);
-	int (*tuner_get_bbgain)(struct dvb_frontend *fe, u32 *gain);
-	int (*tuner_set_refclk)(struct dvb_frontend *fe, u32 refclk);
-	int (*tuner_get_status)(struct dvb_frontend *fe, u32 *status);
+	int                    (*tuner_init)(struct dvb_frontend *fe);
+	int                    (*tuner_sleep)(struct dvb_frontend *fe);
+	int                    (*tuner_set_mode)(struct dvb_frontend *fe, enum tuner_mode mode);
+	int                    (*tuner_set_frequency)(struct dvb_frontend *fe, u32 frequency);
+	int                    (*tuner_get_frequency)(struct dvb_frontend *fe, u32 *frequency);
+	int                    (*tuner_set_bandwidth)(struct dvb_frontend *fe, u32 bandwidth);
+	int                    (*tuner_get_bandwidth)(struct dvb_frontend *fe, u32 *bandwidth);
+	int                    (*tuner_set_bbgain)(struct dvb_frontend *fe, u32 gain);
+	int                    (*tuner_get_bbgain)(struct dvb_frontend *fe, u32 *gain);
+	int                    (*tuner_set_refclk)(struct dvb_frontend *fe, u32 refclk);
+	int                    (*tuner_get_status)(struct dvb_frontend *fe, u32 *status);
 };
 
-extern struct dvb_frontend *stv090x_attach(const struct stv090x_config *config,
-					   struct i2c_adapter *i2c,
-					   enum stv090x_demodulator demod);
-
+extern struct dvb_frontend *stv090x_attach(const struct stv090x_config *config, struct i2c_adapter *i2c, enum stv090x_demodulator demod);
 #endif /* __STV090x_H */
+// vim:ts=4

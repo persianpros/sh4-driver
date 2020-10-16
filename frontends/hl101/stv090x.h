@@ -30,7 +30,7 @@
 #endif
 
 //#define	TUNER_IX7306
-#define	TUNER_STV6110
+#define	TUNER_STB6110
 
 enum stv090x_demodulator
 {

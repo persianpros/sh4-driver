@@ -11,7 +11,7 @@ struct avl_private_data_s
 	u32 mpeg_mode;
 	u16 mpeg_serial;
 	u16 mpeg_clk_mode;
-	u32 pll_config; /* pll-arrayindex */
+	u32 pll_config;  /* pll-arrayindex */
 	u32 usedTuner;
 	u32 usedLNB;
 

@@ -23,29 +23,27 @@
 #ifndef __STV6110x_PRIV_H
 #define __STV6110x_PRIV_H
 
-#define STV6110x_SETFIELD(mask, bitf, val) \
-	(mask = (mask & (~(((1 << STV6110x_WIDTH_##bitf) - 1) << STV6110x_OFFST_##bitf))) | (val << STV6110x_OFFST_##bitf))
+#define STV6110x_SETFIELD(mask, bitf, val) (mask = (mask & (~(((1 << STV6110x_WIDTH_##bitf) - 1) << STV6110x_OFFST_##bitf))) | (val << STV6110x_OFFST_##bitf))
 
-#define STV6110x_GETFIELD(bitf, val) \
-	((val >> STV6110x_OFFST_##bitf) & ((1 << STV6110x_WIDTH_##bitf) - 1))
+#define STV6110x_GETFIELD(bitf, val) ((val >> STV6110x_OFFST_##bitf) & ((1 << STV6110x_WIDTH_##bitf) - 1))
 
 #define MAKEWORD16(a, b) (((a) << 8) | (b))
 
 #define LSB(x)           ((x & 0xff))
 #define MSB(y)           ((y >> 8) & 0xff)
 
-#define TRIALS           10
-#define R_DIV(__div)     (1 << (__div + 1))
-#define REFCLOCK_kHz     (stv6110x->config->refclk /    1000)
-#define REFCLOCK_MHz     (stv6110x->config->refclk / 1000000)
+#define TRIALS       10
+#define R_DIV(__div) (1 << (__div + 1))
+#define REFCLOCK_kHz (stv6110x->config->refclk /    1000)
+#define REFCLOCK_MHz (stv6110x->config->refclk / 1000000)
 
 struct stv6110x_state
 {
-	struct i2c_adapter		*i2c;
-	const struct stv6110x_config	*config;
-	u8 				regs[8];
+	struct i2c_adapter           *i2c;
+	struct stv6110x_devctl       *devctl;
+	const struct stv6110x_config *config;
+	u8                           regs[8];
 
-	struct stv6110x_devctl		*devctl;
 };
 
 #endif /* __STV6110x_PRIV_H */

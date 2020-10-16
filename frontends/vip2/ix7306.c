@@ -4,7 +4,7 @@
  * Copyright (C) Manu Abraham <abraham.manu@gmail.com>
  *
  * Version for:
- * Edision argus VIP (1 pluggable tuner)
+ * Edision argus VIP V2 (1 pluggable tuner)
  * Edision argus VIP2 (2 pluggable tuners)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -111,7 +111,7 @@ static int ix7306_read(struct ix7306_state *state, u8 *buf)
 	err = i2c_transfer(state->i2c, &msg[1], 1);
 	if (err != 1)
 	{
-		dprintk(1, "%s: read error, err=%d\n", __func__, err);
+		dprintk(1, "%s: read error, err = %d\n", __func__, err);
 		return -1;
 	}
 	return 0;
@@ -532,8 +532,8 @@ err:
 static void tuner_set_freq(struct dvb_frontend *fe, long freq, long tuner_bw, int *byte_)
 {
 	/* set byte5 BA2 BA1 BA0 PSC DIV/TS1 */
-	dprintk(50, "%s - Frequency to tune to: %u MHz (tuner)\n", __func__, freq / 1000);
-	dprintk(50, "%s - Bandwidth to set    : %u kHz (tuner)\n", __func__, tuner_bw / 1000);
+	dprintk(50, "%s - Frequency to tune to: %u kHz (tuner)\n", __func__, freq);
+	dprintk(50, "%s - Bandwidth to set    : %u kHz (tuner)\n", __func__, tuner_bw);
 	calculate_pll_vco(freq, byte_);
 	calculate_pll_divider(freq, byte_);
 	calculate_pll_lpf_bw(tuner_bw, byte_);
@@ -562,7 +562,7 @@ static int ix7306_set_state(struct dvb_frontend *fe, enum tuner_param param, str
 	{
 		state->frequency = tstate->frequency;
 		state->bandwidth = tstate->bandwidth;
-		dprintk(20, "Frequency = %u MHz - Bandwidth = %u kHz (state)\n", state->frequency / 1000, state->bandwidth / 1000);
+		dprintk(20, "Frequency = %u kHz - Bandwidth = %u kHz (state)\n", state->frequency, state->bandwidth / 1000);
 		ix7306_set_freq(fe, state->frequency, state->bandwidth);
 	}
 	else
@@ -594,7 +594,7 @@ static int ix7306_get_state(struct dvb_frontend *fe, enum tuner_param param, str
 		}
 		default:
 		{
-			dprintk(1, "%s: Unknown parameter (param=%d)\n", __func__, param);
+			dprintk(1, "%s: Unknown parameter (param = %d)\n", __func__, param);
 			err = -EINVAL;
 			break;
 		}
@@ -894,7 +894,7 @@ int ix7306_get_frequency(struct dvb_frontend *fe, u32 *frequency)
 			return err;
 		}
 		*frequency = t_state.frequency;
-		dprintk(20, "Frequency = %d MHz\n", t_state.frequency / 1000);
+		dprintk(20, "Frequency = %u MHz\n", t_state.frequency / 1000);
 	}
 	return 0;
 }
@@ -962,7 +962,7 @@ int ix7306_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 		}
 		*bandwidth = t_state.bandwidth;
 	}
-	dprintk(20, "%s: Bandwidth = %d kHz\n", __func__, t_state.bandwidth / 1000);
+	dprintk(20, "%s: Bandwidth = %u kHz\n", __func__, t_state.bandwidth);
 	return 0;
 }
 

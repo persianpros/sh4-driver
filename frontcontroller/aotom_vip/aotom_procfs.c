@@ -97,6 +97,11 @@ static u32 wakeup_time;
 static int progress = 0;
 static int symbol_circle = 0;
 static int symbol_timeshift = 0;
+static int symbol_hdd = 0;
+//extern int scroll_repeats = 0;  // 0 = no, number is times??
+//static int scroll_delay = 0;  // // scroll speed between character shift
+//static int initial_scroll_delay = 0;  // wait time to start scrolling
+//static int final_scroll_delay = 0;  // wait time to start final display
 static u32 led0_pattern = 0;
 #if defined(FP_LEDS)
 static u32 led1_pattern = 0;
@@ -226,7 +231,6 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 		}
 		/* always return count to avoid endless loop */
 		ret = count;
-		
 	}
 
 out:
@@ -293,6 +297,230 @@ static int symbol_timeshift_read(char *page, char **start, off_t off, int count,
 	if (NULL != page)
 	{
 		len = sprintf(page, "%d", symbol_timeshift);
+	}
+	return len;
+}
+
+static int scroll_repeats_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &scroll_repeats);
+		kfree(myString);
+
+		/* always return count to avoid endless loop */
+		ret = count;
+		
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int scroll_repeats_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d", scroll_repeats);
+	}
+	return len;
+}
+
+static int scroll_delay_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &scroll_delay);
+		kfree(myString);
+
+		/* always return count to avoid endless loop */
+		ret = count;
+		
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int scroll_delay_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d", scroll_delay);
+	}
+	return len;
+}
+
+static int initial_scroll_delay_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &initial_scroll_delay);
+		kfree(myString);
+
+		/* always return count to avoid endless loop */
+		ret = count;
+		
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int initial_scroll_delay_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d", initial_scroll_delay);
+	}
+	return len;
+}
+
+static int final_scroll_delay_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &final_scroll_delay);
+		kfree(myString);
+
+		/* always return count to avoid endless loop */
+		ret = count;
+		
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int final_scroll_delay_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d", final_scroll_delay);
+	}
+	return len;
+}
+
+static int symbol_hdd_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &symbol_hdd);
+		kfree(myString);
+
+		if (symbol_hdd > 0)
+		{
+			symbol_hdd = 1;
+		}
+		else
+		{
+			symbol_hdd = 0;
+		}
+		aotomSetIcon(ICON_HDD_GRID, symbol_hdd);
+		/* always return count to avoid endless loop */
+		ret = count;
+		
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int symbol_hdd_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d", symbol_hdd);
 	}
 	return len;
 }
@@ -814,6 +1042,11 @@ struct fp_procs
 	{ "stb/fp/version", fp_version_read, NULL },
 	{ "stb/lcd/symbol_circle", symbol_circle_read, symbol_circle_write },
 	{ "stb/lcd/symbol_timeshift", symbol_timeshift_read, symbol_timeshift_write },
+	{ "stb/lcd/symbol_hdd", symbol_hdd_read, symbol_hdd_write },
+	{ "stb/lcd/scroll_repeats", scroll_repeats_read, scroll_repeats_write },
+	{ "stb/lcd/scroll_delay", scroll_delay_read, scroll_delay_write },
+	{ "stb/lcd/initial_scroll_delay", initial_scroll_delay_read, initial_scroll_delay_write },
+	{ "stb/lcd/final_scroll_delay", final_scroll_delay_read, final_scroll_delay_write },
 	{ "stb/power/standbyled", NULL, power_standbyled_write },
 };
 

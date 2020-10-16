@@ -48,6 +48,7 @@
 #include "pio.h"
 
 #define procfs_name "boxtype"
+#define procfs_name2 "stb/info/adb_variant"
 #define DEVICENAME "boxtype"
 
 int boxtype = 0;
@@ -87,7 +88,7 @@ static int _read_reg_boxtype(unsigned int reg, unsigned char nr)
 
 	struct i2c_adapter *i2c_adap = i2c_get_adapter (I2C_BUS);
 
-//	dprintk("[boxtype] stb0899 read reg = %x\n", reg);
+	dprintk("[boxtype] stb0899 read reg = %x\n", reg);
 	ret = i2c_transfer(i2c_adap, msg, 2);
 	if (ret != 2)
 	{
@@ -252,7 +253,7 @@ int __init boxtype_init(void)
 #else // ADB_BOX
 //		first, check AVS for a STV6412, if not -> BXZB model 
 		ret = stv6412_boxtype();
-//		dprintk("[boxtype] %s ret1 = %d\n", __func__, ret);  //ret 1 = ok -> STV6412 present
+		dprintk("[boxtype] %s ret1 = %d\n", __func__, ret);  //ret 1 = ok -> STV6412 present
 		if (ret != 1)
 		{
 			boxtype = 3;	// no STV6412 --> BXZB model
@@ -284,6 +285,7 @@ int __init boxtype_init(void)
 					boxtype = 4;  // STV090X demodulator --> BZZB model
 					dprintk("[boxtype] BZZB model detected\n");
 				}
+//				TODO: add cable model
 				else
 				{
 					boxtype = 0;
@@ -295,6 +297,7 @@ int __init boxtype_init(void)
 	}
 	dprintk("[boxtype] boxtype = %d\n", boxtype);
 	BT_Proc_File = create_proc_read_entry(procfs_name, 0644, NULL, procfile_read, NULL);
+	BT_Proc_File = create_proc_read_entry(procfs_name2, 0644, NULL, procfile_read, NULL);
 	return 0;
 }
 

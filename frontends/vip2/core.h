@@ -57,7 +57,7 @@ struct tuner_config
 struct core_config
 {
 	struct tuner_config *tuner;
-	struct i2c_adapter	*i2c_adap;   /* i2c bus of the tuner */
+	struct i2c_adapter  *i2c_adap;   /* i2c bus of the tuner */
 	u8                  i2c_addr;    /* i2c address of the tuner */
 	u8                  i2c_addr_lnb_supply;  /* i2c address of the lnb_supply */
 	u8                  vertical;    /* i2c value */
@@ -68,7 +68,6 @@ struct fe_core_state
 {
 	struct dvb_frontend_ops  ops;
 	struct dvb_frontend      frontend;
-
 	const struct core_config *config;
 	int                      thread_id;
 	int                      not_responding;
@@ -119,7 +118,7 @@ struct core
 
 	struct dvb_adapter    *dvb_adapter;
 	struct dvb_frontend   *frontend[MAX_TUNERS_PER_ADAPTER];
-	int (*read_fe_status)(struct dvb_frontend *fe, fe_status_t *status);
+	int                   (*read_fe_status)(struct dvb_frontend *fe, fe_status_t *status);
 	int                   fe_synced;
 
 	void                  *priv;

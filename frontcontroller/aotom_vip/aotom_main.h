@@ -25,8 +25,7 @@ do \
 #define LOG_OFF                       0
 #define LOG_ON                        1
 #define LED_RED                       0
-#define LED_GREEN                     1
-#define LASTLED                       2
+#define LASTLED                       1
 /* Uncomment next line to enable lower case letters on VFD */
 //#define VFD_LOWER_CASE                1
 
@@ -54,7 +53,7 @@ do \
 #define VFDGETTIME                    0xc0425afa
 #define VFDSETTIME                    0xc0425afb
 #define VFDSTANDBY                    0xc0425afc
-#define VFDSETTIME2                   0xc0425afd // seife, set 'complete' time...
+#define VFDSETTIME2                   0xc0425afd  // seife, set 'complete' time...
 #define VFDSETLED                     0xc0425afe
 #define VFDSETMODE                    0xc0425aff
 #define VFDDISPLAYCLR                 0xc0425b00
@@ -75,11 +74,11 @@ do \
 
 #define YWPANEL_KEYBOARD
 
-#define	REMOTE_SLAVE_ADDRESS          0x40bd0000  /* slave address is 5 */
-#define	REMOTE_SLAVE_ADDRESS_NEW      0xc03f0000  /* sz 2008-06-26 add new remote*/
-#define	REMOTE_SLAVE_ADDRESS_EDISION1 0x22dd0000
-#define	REMOTE_SLAVE_ADDRESS_EDISION2 0XCC330000
-#define	REMOTE_SLAVE_ADDRESS_GOLDEN   0x48b70000  /* slave address is 5 */
+#define REMOTE_SLAVE_ADDRESS          0x40bd0000  /* slave address is 5 */
+#define REMOTE_SLAVE_ADDRESS_NEW      0xc03f0000  /* sz 2008-06-26 add new remote*/
+#define REMOTE_SLAVE_ADDRESS_EDISION1 0x22dd0000
+#define REMOTE_SLAVE_ADDRESS_EDISION2 0XCC330000
+#define REMOTE_SLAVE_ADDRESS_GOLDEN   0x48b70000  /* slave address is 5 */
 #define REMOTE_TOPFIELD_MASK          0x4fb0000
 
 typedef unsigned int YWOS_ClockMsec;
@@ -142,7 +141,7 @@ struct set_key_s
 };
 
 /* This changes the mode temporarily (for one IOCTL)
- * to the desired mode. Crrently the "normal" mode
+ * to the desired mode. Currently the "normal" mode
  * is the compatible VFD mode
  */
 struct set_mode_s
@@ -800,9 +799,13 @@ extern void remove_proc_fp(void);
 extern int YWPANEL_width;
 #define THREAD_STATUS_RUNNING 0
 #define THREAD_STATUS_STOPPED 1
-#define THREAD_STATUS_INIT 2
+#define THREAD_STATUS_INIT    2
 extern tThreadState led_state[LASTLED + 1];
 extern tThreadState spinner_state;
+extern int scroll_repeats;  // 0 = no, number is times??
+extern int scroll_delay;  // // scroll speed between character shift
+extern int initial_scroll_delay;  // wait time to start scrolling
+extern int final_scroll_delay;  // wait time to start final display
 
 //int YWPANEL_FP_GetRevision(char * version);
 YWPANEL_FPSTATE_t YWPANEL_FP_GetFPStatus(void);

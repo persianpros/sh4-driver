@@ -1,5 +1,5 @@
 /*
- * Driver for Zarlink DVB-T ZL10353 demodulator
+ * Driver for Intel DVB-T CE6353 demodulator
  *
  * Copyright (C) 2006, 2007 Christopher Pascoe <c.pascoe@itee.uq.edu.au>
  *
@@ -28,15 +28,15 @@
 #include <asm/div64.h>
 
 #include "dvb_frontend.h"
-#include "zl10353_priv.h"
-#include "zl10353.h"
+#include "ce6353_priv.h"
+#include "ce6353.h"
 #include "core.h"
 
 extern short paramDebug;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
 #if defined TAGDEBUG
 #undef TAGDEBUG
 #endif
-#define TAGDEBUG "[zl10353] "
+#define TAGDEBUG "[ce6353] "
 #if !defined dprintk
 //#undef dprintk
 //#endif
@@ -48,21 +48,21 @@ do \
 } while (0)
 #endif
 
-struct zl10353_state
+struct ce6353_state
 {
-	struct i2c_adapter    *i2c;
-	struct dvb_frontend   frontend;
+	struct i2c_adapter   *i2c;
+	struct dvb_frontend  frontend;
 
-	struct zl10353_config config;
+	struct ce6353_config config;
 
-	enum fe_bandwidth     bandwidth;
-	u32                   ucblocks;
-	u32                   frequency;
+	enum fe_bandwidth    bandwidth;
+	u32                  ucblocks;
+	u32                  frequency;
 };
 
-static int zl10353_single_write(struct dvb_frontend *fe, u8 reg, u8 val)
+static int ce6353_single_write(struct dvb_frontend *fe, u8 reg, u8 val)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	u8 buf[2] = { reg, val };
 	struct i2c_msg msg =
 	{ .addr = state->config.demod_address, .flags = 0, .buf = buf, .len = 2 };
@@ -70,19 +70,19 @@ static int zl10353_single_write(struct dvb_frontend *fe, u8 reg, u8 val)
 
 	if (err != 1)
 	{
-		dprintk(1, "zl10353: write to reg %x failed (err = %d)!\n", reg, err);
+		dprintk(1, "ce6353: write to reg %x failed (err = %d)!\n", reg, err);
 		return err;
 	}
 	return 0;
 }
 
-static int zl10353_write(struct dvb_frontend *fe, u8 *ibuf, int ilen)
+static int ce6353_write(struct dvb_frontend *fe, u8 *ibuf, int ilen)
 {
 	int err, i;
 
 	for (i = 0; i < ilen - 1; i++)
 	{
-		if ((err = zl10353_single_write(fe, ibuf[0] + i, ibuf[i + 1])))
+		if ((err = ce6353_single_write(fe, ibuf[0] + i, ibuf[i + 1])))
 		{
 			return err;
 		}
@@ -90,7 +90,7 @@ static int zl10353_write(struct dvb_frontend *fe, u8 *ibuf, int ilen)
 	return 0;
 }
 
-static int zl10353_read_register(struct zl10353_state *state, u8 reg)
+static int ce6353_read_register(struct ce6353_state *state, u8 reg)
 {
 	int ret;
 	u8 b0[1] = { reg };
@@ -111,9 +111,9 @@ static int zl10353_read_register(struct zl10353_state *state, u8 reg)
 }
 
 #if 1
-static void zl10353_dump_regs(struct dvb_frontend *fe)
+static void ce6353_dump_regs(struct dvb_frontend *fe)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	int ret;
 	u8 reg;
 
@@ -128,7 +128,7 @@ static void zl10353_dump_regs(struct dvb_frontend *fe)
 			}
 			printk(KERN_DEBUG "%02x:", reg);
 		}
-		ret = zl10353_read_register(state, reg);
+		ret = ce6353_read_register(state, reg);
 		if (ret >= 0)
 		{
 			printk(KERN_CONT " %02x", (u8)ret);
@@ -146,9 +146,9 @@ static void zl10353_dump_regs(struct dvb_frontend *fe)
 }
 #endif
 
-static void zl10353_calc_nominal_rate(struct dvb_frontend *fe, enum fe_bandwidth bandwidth, u16 *nominal_rate)
+static void ce6353_calc_nominal_rate(struct dvb_frontend *fe, enum fe_bandwidth bandwidth, u16 *nominal_rate)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	u32 adc_clock = 450560; /* 45.056 MHz */
 	u64 value;
 	u8 bw;
@@ -184,9 +184,9 @@ static void zl10353_calc_nominal_rate(struct dvb_frontend *fe, enum fe_bandwidth
 	dprintk(50, "%s: bw %d, adc_clock %d => 0x%x\n", __func__, bw, adc_clock, *nominal_rate);
 }
 
-static void zl10353_calc_input_freq(struct dvb_frontend *fe, u16 *input_freq)
+static void ce6353_calc_input_freq(struct dvb_frontend *fe, u16 *input_freq)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	u32 adc_clock = 450560;	/* 45.056  MHz */
 	int if2 = 361667;	/* 36.1667 MHz */
 	int ife;
@@ -219,15 +219,15 @@ static void zl10353_calc_input_freq(struct dvb_frontend *fe, u16 *input_freq)
 	dprintk(50, "%s: if2 %d, ife %d, adc_clock %d => %d / 0x%x\n", __func__, if2, ife, adc_clock, -(int)value, *input_freq);
 }
 
-static int zl10353_sleep(struct dvb_frontend *fe)
+static int ce6353_sleep(struct dvb_frontend *fe)
 {
-	static u8 zl10353_softdown[] = { 0x50, 0x0C, 0x44 };
+	static u8 ce6353_softdown[] = { 0x50, 0x0C, 0x44 };
 
-	zl10353_write(fe, zl10353_softdown, sizeof(zl10353_softdown));
+	ce6353_write(fe, ce6353_softdown, sizeof(ce6353_softdown));
 	return 0;
 }
 
-static int zl10353_get_property(struct dvb_frontend *fe, struct dtv_property *tvp)
+static int ce6353_get_property(struct dvb_frontend *fe, struct dtv_property *tvp)
 {
 	struct stv090x_state *state = fe->demodulator_priv;
 
@@ -249,9 +249,9 @@ static int zl10353_get_property(struct dvb_frontend *fe, struct dtv_property *tv
 	return 0;
 }
 
-static int zl10353_set_parameters(struct dvb_frontend *fe, struct dvb_frontend_parameters *param)
+static int ce6353_set_parameters(struct dvb_frontend *fe, struct dvb_frontend_parameters *param)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	u16 nominal_rate, input_freq;
 	u8 pllbuf[6] = { 0x67 }, acq_ctl = 0;
 	u16 tps = 0;
@@ -259,13 +259,13 @@ static int zl10353_set_parameters(struct dvb_frontend *fe, struct dvb_frontend_p
 
 	state->frequency = param->frequency;
 
-	zl10353_single_write(fe, RESET, 0x80);
+	ce6353_single_write(fe, RESET, 0x80);
 	udelay(200);
-	zl10353_single_write(fe, 0xEA, 0x01);
+	ce6353_single_write(fe, 0xEA, 0x01);
 	udelay(200);
-	zl10353_single_write(fe, 0xEA, 0x00);
+	ce6353_single_write(fe, 0xEA, 0x00);
 
-	zl10353_single_write(fe, AGC_TARGET, 0x28);
+	ce6353_single_write(fe, AGC_TARGET, 0x28);
 
 	if (op->transmission_mode != TRANSMISSION_MODE_AUTO)
 	{
@@ -275,41 +275,41 @@ static int zl10353_set_parameters(struct dvb_frontend *fe, struct dvb_frontend_p
 	{
 		acq_ctl |= (1 << 1);
 	}
-	zl10353_single_write(fe, ACQ_CTL, acq_ctl);
+	ce6353_single_write(fe, ACQ_CTL, acq_ctl);
 
 	switch (op->bandwidth)
 	{
 		case BANDWIDTH_6_MHZ:
 		{
 			/* These are extrapolated from the 7 and 8MHz values */
-			zl10353_single_write(fe, MCLK_RATIO, 0x97);
-			zl10353_single_write(fe, 0x64, 0x34);
-			zl10353_single_write(fe, 0xcc, 0xdd);
+			ce6353_single_write(fe, MCLK_RATIO, 0x97);
+			ce6353_single_write(fe, 0x64, 0x34);
+			ce6353_single_write(fe, 0xcc, 0xdd);
 			break;
 		}
 		case BANDWIDTH_7_MHZ:
 		{
-			zl10353_single_write(fe, MCLK_RATIO, 0x86);
-			zl10353_single_write(fe, 0x64, 0x35);
-			zl10353_single_write(fe, 0xcc, 0x73);
+			ce6353_single_write(fe, MCLK_RATIO, 0x86);
+			ce6353_single_write(fe, 0x64, 0x35);
+			ce6353_single_write(fe, 0xcc, 0x73);
 			break;
 		}
 		case BANDWIDTH_8_MHZ:
 		default:
 		{
-			zl10353_single_write(fe, MCLK_RATIO, 0x75);
-			zl10353_single_write(fe, 0x64, 0x36);
-			zl10353_single_write(fe, 0xcc, 0x73);
+			ce6353_single_write(fe, MCLK_RATIO, 0x75);
+			ce6353_single_write(fe, 0x64, 0x36);
+			ce6353_single_write(fe, 0xcc, 0x73);
 		}
 	}
-	zl10353_calc_nominal_rate(fe, op->bandwidth, &nominal_rate);
-	zl10353_single_write(fe, TRL_NOMINAL_RATE_1, msb(nominal_rate));
-	zl10353_single_write(fe, TRL_NOMINAL_RATE_0, lsb(nominal_rate));
+	ce6353_calc_nominal_rate(fe, op->bandwidth, &nominal_rate);
+	ce6353_single_write(fe, TRL_NOMINAL_RATE_1, msb(nominal_rate));
+	ce6353_single_write(fe, TRL_NOMINAL_RATE_0, lsb(nominal_rate));
 	state->bandwidth = op->bandwidth;
 
-	zl10353_calc_input_freq(fe, &input_freq);
-	zl10353_single_write(fe, INPUT_FREQ_1, msb(input_freq));
-	zl10353_single_write(fe, INPUT_FREQ_0, lsb(input_freq));
+	ce6353_calc_input_freq(fe, &input_freq);
+	ce6353_single_write(fe, INPUT_FREQ_1, msb(input_freq));
+	ce6353_single_write(fe, INPUT_FREQ_0, lsb(input_freq));
 
 	/* Hint at TPS settings */
 	switch (op->code_rate_HP)
@@ -477,8 +477,8 @@ static int zl10353_set_parameters(struct dvb_frontend *fe, struct dvb_frontend_p
 			return -EINVAL;
 		}
 	}
-	zl10353_single_write(fe, TPS_GIVEN_1, msb(tps));
-	zl10353_single_write(fe, TPS_GIVEN_0, lsb(tps));
+	ce6353_single_write(fe, TPS_GIVEN_1, msb(tps));
+	ce6353_single_write(fe, TPS_GIVEN_0, lsb(tps));
 
 	if (fe->ops.i2c_gate_ctrl)
 	{
@@ -504,25 +504,25 @@ static int zl10353_set_parameters(struct dvb_frontend *fe, struct dvb_frontend_p
 	{
 		fe->ops.tuner_ops.calc_regs(fe, param, pllbuf + 1, 5);
 		pllbuf[1] <<= 1;
-		zl10353_write(fe, pllbuf, sizeof(pllbuf));
+		ce6353_write(fe, pllbuf, sizeof(pllbuf));
 	}
-	zl10353_single_write(fe, 0x5F, 0x13);
+	ce6353_single_write(fe, 0x5F, 0x13);
 
 	/* If no attached tuner or invalid PLL registers, just start the FSM. */
 	if (state->config.no_tuner || fe->ops.tuner_ops.calc_regs == NULL)
 	{
-		zl10353_single_write(fe, FSM_GO, 0x01);
+		ce6353_single_write(fe, FSM_GO, 0x01);
 	}
 	else
 	{
-		zl10353_single_write(fe, TUNER_GO, 0x01);
+		ce6353_single_write(fe, TUNER_GO, 0x01);
 	}
 	return 0;
 }
 
-static int zl10353_get_parameters(struct dvb_frontend *fe, struct dvb_frontend_parameters *param)
+static int ce6353_get_parameters(struct dvb_frontend *fe, struct dvb_frontend_parameters *param)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	struct dvb_ofdm_parameters *op = &param->u.ofdm;
 	int s6, s9;
 	u16 tps;
@@ -538,8 +538,8 @@ static int zl10353_get_parameters(struct dvb_frontend *fe, struct dvb_frontend_p
 		FEC_AUTO
 	};
 
-	s6 = zl10353_read_register(state, STATUS_6);
-	s9 = zl10353_read_register(state, STATUS_9);
+	s6 = ce6353_read_register(state, STATUS_6);
+	s9 = ce6353_read_register(state, STATUS_9);
 	if (s6 < 0 || s9 < 0)
 	{
 		return -EREMOTEIO;
@@ -548,8 +548,8 @@ static int zl10353_get_parameters(struct dvb_frontend *fe, struct dvb_frontend_p
 	{
 		return -EINVAL;	/* no FE or TPS lock */
 	}
-	tps = zl10353_read_register(state, TPS_RECEIVED_1) << 8
-	    | zl10353_read_register(state, TPS_RECEIVED_0);
+	tps = ce6353_read_register(state, TPS_RECEIVED_1) << 8
+	    | ce6353_read_register(state, TPS_RECEIVED_0);
 
 	op->code_rate_HP = tps_fec_to_api[(tps >> 7) & 7];
 	op->code_rate_LP = tps_fec_to_api[(tps >> 4) & 7];
@@ -642,20 +642,20 @@ static int zl10353_get_parameters(struct dvb_frontend *fe, struct dvb_frontend_p
 	return 0;
 }
 
-static int zl10353_read_status(struct dvb_frontend *fe, fe_status_t *status)
+static int ce6353_read_status(struct dvb_frontend *fe, fe_status_t *status)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	int s6, s7, s8;
 
-	if ((s6 = zl10353_read_register(state, STATUS_6)) < 0)
+	if ((s6 = ce6353_read_register(state, STATUS_6)) < 0)
 	{
 		return -EREMOTEIO;
 	}
-	if ((s7 = zl10353_read_register(state, STATUS_7)) < 0)
+	if ((s7 = ce6353_read_register(state, STATUS_7)) < 0)
 	{
 		return -EREMOTEIO;
 	}
-	if ((s8 = zl10353_read_register(state, STATUS_8)) < 0)
+	if ((s8 = ce6353_read_register(state, STATUS_8)) < 0)
 	{
 		return -EREMOTEIO;
 	}
@@ -687,56 +687,56 @@ static int zl10353_read_status(struct dvb_frontend *fe, fe_status_t *status)
 	return 0;
 }
 
-static int zl10353_read_ber(struct dvb_frontend *fe, u32 *ber)
+static int ce6353_read_ber(struct dvb_frontend *fe, u32 *ber)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 
-	*ber = zl10353_read_register(state, RS_ERR_CNT_2) << 16
-	     | zl10353_read_register(state, RS_ERR_CNT_1) << 8
-	     | zl10353_read_register(state, RS_ERR_CNT_0);
+	*ber = ce6353_read_register(state, RS_ERR_CNT_2) << 16
+	     | ce6353_read_register(state, RS_ERR_CNT_1) << 8
+	     | ce6353_read_register(state, RS_ERR_CNT_0);
 	return 0;
 }
 
-static int zl10353_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
+static int ce6353_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 
-	u16 signal = zl10353_read_register(state, AGC_GAIN_1) << 10
-	           | zl10353_read_register(state, AGC_GAIN_0) << 2
+	u16 signal = ce6353_read_register(state, AGC_GAIN_1) << 10
+	           | ce6353_read_register(state, AGC_GAIN_0) << 2
 	           | 3;
 	*strength = ~signal;
 	return 0;
 }
 
-static int zl10353_read_snr(struct dvb_frontend *fe, u16 *snr)
+static int ce6353_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	u8 _snr;
 
 #if 1
 	if (paramDebug >= 100)
 	{
-		zl10353_dump_regs(fe);
+		ce6353_dump_regs(fe);
 	}
 #endif
-	_snr = zl10353_read_register(state, SNR);
+	_snr = ce6353_read_register(state, SNR);
 	*snr = (_snr << 8) | _snr;
 	return 0;
 }
 
-static int zl10353_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
+static int ce6353_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	u32 ubl = 0;
 
-	ubl = zl10353_read_register(state, RS_UBC_1) << 8
-	    | zl10353_read_register(state, RS_UBC_0);
+	ubl = ce6353_read_register(state, RS_UBC_1) << 8
+	    | ce6353_read_register(state, RS_UBC_0);
 	state->ucblocks += ubl;
 	*ucblocks = state->ucblocks;
 	return 0;
 }
 
-static int zl10353_get_tune_settings(struct dvb_frontend *fe, struct dvb_frontend_tune_settings *fe_tune_settings)
+static int ce6353_get_tune_settings(struct dvb_frontend *fe, struct dvb_frontend_tune_settings *fe_tune_settings)
 {
 	fe_tune_settings->min_delay_ms = 1000;
 	fe_tune_settings->step_size = 0;
@@ -744,44 +744,44 @@ static int zl10353_get_tune_settings(struct dvb_frontend *fe, struct dvb_fronten
 	return 0;
 }
 
-static int zl10353_init(struct dvb_frontend *fe)
+static int ce6353_init(struct dvb_frontend *fe)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
-	u8 zl10353_reset_attach[6] = { 0x50, 0x03, 0x64, 0x46, 0x15, 0x0F };
+	struct ce6353_state *state = fe->demodulator_priv;
+	u8 ce6353_reset_attach[6] = { 0x50, 0x03, 0x64, 0x46, 0x15, 0x0F };
 	int rc = 0;
 
 	if (paramDebug >= 100)
 	{
-		zl10353_dump_regs(fe);
+		ce6353_dump_regs(fe);
 	}
 	if (state->config.parallel_ts)
 	{
-		zl10353_reset_attach[2] &= ~0x20;
+		ce6353_reset_attach[2] &= ~0x20;
 	}
 	if (state->config.clock_ctl_1)
 	{
-		zl10353_reset_attach[3] = state->config.clock_ctl_1;
+		ce6353_reset_attach[3] = state->config.clock_ctl_1;
 	}
 	if (state->config.pll_0)
 	{
-		zl10353_reset_attach[4] = state->config.pll_0;
+		ce6353_reset_attach[4] = state->config.pll_0;
 	}
 	/* Do a "hard" reset if not already done */
-	if (zl10353_read_register(state, 0x50) != zl10353_reset_attach[1]
-	||  zl10353_read_register(state, 0x51) != zl10353_reset_attach[2])
+	if (ce6353_read_register(state, 0x50) != ce6353_reset_attach[1]
+	||  ce6353_read_register(state, 0x51) != ce6353_reset_attach[2])
 	{
-		rc = zl10353_write(fe, zl10353_reset_attach, sizeof(zl10353_reset_attach));
+		rc = ce6353_write(fe, ce6353_reset_attach, sizeof(ce6353_reset_attach));
 		if (paramDebug >= 100)
 		{
-			zl10353_dump_regs(fe);
+			ce6353_dump_regs(fe);
 		}
 	}
 	return 0;
 }
 
-static int zl10353_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
+static int ce6353_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	u8 val = 0x0a;
 
 	if (state->config.disable_i2c_gate_ctrl)
@@ -795,40 +795,40 @@ static int zl10353_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	{
 		val |= 0x10;
 	}
-	return zl10353_single_write(fe, 0x62, val);
+	return ce6353_single_write(fe, 0x62, val);
 }
 
-static void zl10353_release(struct dvb_frontend *fe)
+static void ce6353_release(struct dvb_frontend *fe)
 {
-	struct zl10353_state *state = fe->demodulator_priv;
+	struct ce6353_state *state = fe->demodulator_priv;
 	kfree(state);
 }
 
-static struct dvb_frontend_ops zl10353_ops;
+static struct dvb_frontend_ops ce6353_ops;
 
-struct dvb_frontend *zl10353_attach(const struct zl10353_config *config, struct i2c_adapter *i2c)
+struct dvb_frontend *ce6353_attach(const struct ce6353_config *config, struct i2c_adapter *i2c)
 {
-	struct zl10353_state *state = NULL;
+	struct ce6353_state *state = NULL;
 	int id;
 
 	/* allocate memory for the internal state */
-	state = kzalloc(sizeof(struct zl10353_state), GFP_KERNEL);
+	state = kzalloc(sizeof(struct ce6353_state), GFP_KERNEL);
 	if (state == NULL)
 	{
 		goto error;
 	}
 	/* setup the state */
 	state->i2c = i2c;
-	memcpy(&state->config, config, sizeof(struct zl10353_config));
+	memcpy(&state->config, config, sizeof(struct ce6353_config));
 
 	/* check if the demod is there */
-	id = zl10353_read_register(state, CHIP_ID);
-	if ((id != ID_ZL10353) && (id != ID_CE6230) && (id != ID_CE6231))
+	id = ce6353_read_register(state, CHIP_ID);
+	if ((id != ID_CE6353) && (id != ID_CE6230) && (id != ID_CE6231))
 	{
 		goto error;
 	}
 	/* create dvb_frontend */
-	memcpy(&state->frontend.ops, &zl10353_ops, sizeof(struct dvb_frontend_ops));
+	memcpy(&state->frontend.ops, &ce6353_ops, sizeof(struct dvb_frontend_ops));
 	state->frontend.demodulator_priv = state;
 	return &state->frontend;
 
@@ -837,11 +837,11 @@ error:
 	return NULL;
 }
 
-static struct dvb_frontend_ops zl10353_ops =
+static struct dvb_frontend_ops ce6353_ops =
 {
 	.info =
 	{
-		.name                = "Zarlink ZL10353 DVB-T",
+		.name                = "Intel CE6353 DVB-T",
 		.type                = FE_OFDM,
 		.frequency_min       = 174000000,
 		.frequency_max       = 862000000,
@@ -863,21 +863,21 @@ static struct dvb_frontend_ops zl10353_ops =
 		                     | FE_CAN_RECOVER
 		                     | FE_CAN_MUTE_TS
 	},
-	.release                 = zl10353_release,
-	.init                    = zl10353_init,
-	.sleep                   = zl10353_sleep,
-	.i2c_gate_ctrl           = zl10353_i2c_gate_ctrl,
-	.write                   = zl10353_write,
-	.set_frontend            = zl10353_set_parameters,
-	.get_frontend            = zl10353_get_parameters,
-	.get_tune_settings       = zl10353_get_tune_settings,
-	.read_status             = zl10353_read_status,
-	.read_ber                = zl10353_read_ber,
-	.read_signal_strength    = zl10353_read_signal_strength,
-	.read_snr                = zl10353_read_snr,
-	.read_ucblocks           = zl10353_read_ucblocks,
-	.get_property            = zl10353_get_property,
+	.release                 = ce6353_release,
+	.init                    = ce6353_init,
+	.sleep                   = ce6353_sleep,
+	.i2c_gate_ctrl           = ce6353_i2c_gate_ctrl,
+	.write                   = ce6353_write,
+	.set_frontend            = ce6353_set_parameters,
+	.get_frontend            = ce6353_get_parameters,
+	.get_tune_settings       = ce6353_get_tune_settings,
+	.read_status             = ce6353_read_status,
+	.read_ber                = ce6353_read_ber,
+	.read_signal_strength    = ce6353_read_signal_strength,
+	.read_snr                = ce6353_read_snr,
+	.read_ucblocks           = ce6353_read_ucblocks,
+	.get_property            = ce6353_get_property,
 };
 
-EXPORT_SYMBOL(zl10353_attach);
+EXPORT_SYMBOL(ce6353_attach);
 // vim:ts=4

@@ -120,7 +120,7 @@ static struct stmcore_display_pipeline_data platform_data[] = {
 #if defined(UFS922)
 /* Dagobert: for stlinux23 this is mb422 but i2c is on bus 2 instead! */
     .hdmi_i2c_adapter_id      = 2,
-#elif defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1)
+#elif defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2)
 /*nassar: spider-box hl-101 uses id 1  */
     .hdmi_i2c_adapter_id      = 1,
 #elif defined(CONFIG_SH_STB7100_REF) || defined(CONFIG_SH_ST_MB442) || defined(CONFIG_SH_RELOOK511) || \
@@ -232,7 +232,7 @@ static const int chromaScale = 112500; // 112.500%, from DENC validation report
 
 #if defined(UFS922)
 #define GPIO_PIN_HOTPLUG stm_gpio(2,3)
-#elif defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1) || defined(FORTIS_HDBOX) || defined(OCTAGON1008)
+#elif defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2) || defined(FORTIS_HDBOX) || defined(OCTAGON1008)
 #define GPIO_PIN_HOTPLUG stm_gpio(4,7)
 #else
 #define GPIO_PIN_HOTPLUG stm_gpio(2,2)
@@ -307,8 +307,13 @@ int __init stmcore_probe_device(struct stmcore_display_pipeline_data **pd,
         claimed_gpio_hotplug = true;
 
 #ifdef __TDT__
-#if defined(UFS922) || defined(HL101) || defined(VIP1_V2) || defined(VIP2_V1) || \
-    defined(FORTIS_HDBOX) || defined(OCTAGON1008)
+#if defined(UFS922) \
+ || defined(HL101) \
+ || defined(VIP1_V1) \
+ || defined(VIP1_V2) \
+ || defined(VIP2) \
+ || defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008)
       gpio_direction_input(GPIO_PIN_HOTPLUG);
 #endif
 #endif

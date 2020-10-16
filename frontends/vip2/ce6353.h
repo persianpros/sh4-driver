@@ -1,5 +1,5 @@
 /*
- *  Driver for Zarlink DVB-T ZL10353 demodulator
+ *  Driver for Zarlink DVB-T CE6353 demodulator
  *
  *  Copyright (C) 2006, 2007 Christopher Pascoe <c.pascoe@itee.uq.edu.au>
  *
@@ -19,12 +19,12 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.=
  */
 
-#ifndef ZL10353_H
-#define ZL10353_H
+#ifndef CE6353_H
+#define CE6353_H
 
 #include <linux/dvb/frontend.h>
 
-struct zl10353_config
+struct ce6353_config
 {
 	/* demodulator's I2C address */
 	u8 demod_address;
@@ -47,7 +47,7 @@ struct zl10353_config
 	u8 pll_0;        /* default: 0x15 */
 };
 
-extern struct dvb_frontend *zl10353_attach(const struct zl10353_config *config, struct i2c_adapter *i2c);
+extern struct dvb_frontend *ce6353_attach(const struct ce6353_config *config, struct i2c_adapter *i2c);
 
-#endif /* ZL10353_H */
+#endif /* CE6353_H */
 // vim:ts=4

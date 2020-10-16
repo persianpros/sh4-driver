@@ -52,11 +52,14 @@ endif
 ifdef HL101
 CCFLAGSY += -DHL101
 endif
+ifdef VIP1_V1
+CCFLAGSY += -DVIP1_V1
+endif
 ifdef VIP1_V2
 CCFLAGSY += -DVIP1_V2
 endif
-ifdef VIP2_V1
-CCFLAGSY += -DVIP2_V1
+ifdef VIP2
+CCFLAGSY += -DVIP2
 endif
 ifdef UFS922
 CCFLAGSY+=-DUFS922
@@ -270,7 +273,7 @@ obj-y += cec_adb_box/
 #obj-y += dvbt/siano/
 endif
 
-ifndef VIP2_V1
+ifndef VIP2
 ifndef SPARK
 ifndef SPARK7162
 obj-y += cic/
@@ -486,15 +489,20 @@ obj-y += dvbt/siano/
 endif
 
 ifdef PACE7241
+obj-y += cec/
 obj-y += smartcard/
 obj-y += fan_pace7241/
+endif
+
+ifdef VIP1_V1
+obj-y += smartcard/
 endif
 
 ifdef VIP1_V2
 obj-y += smartcard/
 endif
 
-ifdef VIP2_V1
+ifdef VIP2
 obj-y += smartcard/
 endif
 
