@@ -38,7 +38,7 @@
 do \
 { \
 	if ((paramDebug) && (paramDebug >= level) || level == 0) \
-	printk(TAGDEBUG x); \
+		printk(TAGDEBUG x); \
 } while (0)
 
 
@@ -149,7 +149,7 @@ do \
 #define cMaxAckAttempts  150
 #define cMaxQueueCount   5
 
-#define BUFFERSIZE       256     //must be 2 ^ n
+#define BUFFERSIZE       256  // must be 2 ^ n
 
 //#define ENABLE_SCROLL
 //#define ENABLE_CLOCK_SECTION
@@ -528,4 +528,6 @@ enum
 #define VFD_ShowTime    _IOWR('s',(BASE_VFD_PRIVATE + 2), VFD_Time_t)
 #define VFD_ShowStr     _IOWR('s',(BASE_VFD_PRIVATE + 3), char *)
 #define VFD_ClearTime   _IOWR('s',(BASE_VFD_PRIVATE + 4), int)
+
+#endif  // __PROTON_H___
 // vim:ts=4

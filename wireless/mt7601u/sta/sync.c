@@ -2172,7 +2172,7 @@ VOID PeerBeacon(
 											ie_list->HtCapabilityLen, 
 											&ie_list->AddHtInfo,
 											ie_list->AddHtInfoLen,
-											ie_list,
+											(IE_LISTS *)ie_list,
 											ie_list->CapabilityInfo) == FALSE)
 					{
 						DBGPRINT(RT_DEBUG_TRACE, ("ADHOC - Add Entry failed.\n"));

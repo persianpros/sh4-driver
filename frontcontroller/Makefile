@@ -198,3 +198,7 @@ endif
 ifdef PACE7241
 obj-y += pace_7241_fp/
 endif
+
+ifdef OPT9600
+obj-y += opt9600_fp/
+endif

@@ -5357,7 +5357,7 @@ next:
 				sprintf(msg+strlen(msg), "%d %03d %02X\n", bank_Id, rfId, regRF);
 			}
 		}
-		RtmpDrvAllRFPrint(NULL, msg, strlen(msg));
+		RtmpDrvAllRFPrint(NULL, (UINT32 *)msg, strlen(msg));
 		/* Copy the information into the user buffer */
 
 #ifdef LINUX
@@ -7608,7 +7608,7 @@ RtmpIoctl_rt_ioctl_siwgenie(
 				pAd->StaCfg.WpaAssocIeLen = length;
 				NdisMoveMemory(pAd->StaCfg.pWpaAssocIe, pData, pAd->StaCfg.WpaAssocIeLen);
 				pAd->StaCfg.bRSN_IE_FromWpaSupplicant = TRUE;
-				eid_ptr = pAd->StaCfg.pWpaAssocIe;
+				eid_ptr = (PEID_STRUCT)pAd->StaCfg.pWpaAssocIe;
 				while (((UCHAR *)eid_ptr + eid_ptr->Len + 1) < ((UCHAR *)pAd->StaCfg.pWpaAssocIe + pAd->StaCfg.WpaAssocIeLen))
 				{
 					if ( eid_ptr->Eid == IE_WPA )

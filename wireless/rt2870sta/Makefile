@@ -29,7 +29,11 @@ EXTRA_CFLAGS += -I$(src)/include
 EXTRA_CFLAGS += -Wall -O2 -Wundef -Wstrict-prototypes
 EXTRA_CFLAGS += -Wno-trigraphs -Wdeclaration-after-statement 
 EXTRA_CFLAGS += -Wno-pointer-sign -fno-strict-aliasing -fno-common 
+ifeq ($(BS_GCC_VER), $(filter $(BS_GCC_VER), 4.6.3 4.8.4))
 EXTRA_CFLAGS += -fomit-frame-pointer -ffreestanding -m4-nofpu
+else
+EXTRA_CFLAGS += -fomit-frame-pointer -ffreestanding
+endif
 
 WFLAGS := -DAGGREGATION_SUPPORT -DPIGGYBACK_SUPPORT -DWMM_SUPPORT  -DLINUX -Wall -Wstrict-prototypes -Wno-trigraphs 
 WFLAGS += -DSYSTEM_LOG_SUPPORT  -DRT28xx_MODE=$(RT28xx_MODE) -DCHIPSET=$(MODULE)

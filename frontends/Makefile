@@ -457,3 +457,13 @@ fe_core-objs += pace7241/stv6110x.o
 fe_core-objs += pace7241/core.o
 obj-m += fe_core.o
 endif
+
+ifdef OPT9600
+opt9600-objs += opt9600/avl2108.o
+opt9600-objs += opt9600/ix2470.o
+opt9600-objs += opt9600/lnb_pio.o
+obj-m += opt9600.o
+
+opt9600_platform-objs += opt9600/avl2108_platform.o
+obj-m += opt9600_platform.o
+endif

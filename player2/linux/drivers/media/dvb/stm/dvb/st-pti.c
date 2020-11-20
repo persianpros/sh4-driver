@@ -114,7 +114,8 @@ extern void fe_core_register_frontend(struct dvb_adapter *dvb_adap);
  || defined(CUBEREVO_MINI_FTA) \
  || defined(CUBEREVO_3000HD)
 extern void socket_register_adapter(struct dvb_adapter *dvb_adap);
-#elif defined(OCTAGON1008)
+#elif defined(OCTAGON1008) \
+ ||   defined(OPT9600)
 extern void avl2108_register_frontend(struct dvb_adapter *dvb_adap);
 #elif defined(ATEVIO7500)
 extern void socket_register_adapter(struct dvb_adapter *dvb_adap);
@@ -412,7 +413,7 @@ static int convert_source(const dmx_source_t source)
 			tag = TSIN0;
 #endif
 			break;
-		case DMX_SOURCE_FRONT1:  // handle FRONT2
+		case DMX_SOURCE_FRONT1:  // handle FRONT1
 #if defined(ADB_BOX)
 			if (tuner == SINGLE)
 			{
@@ -425,7 +426,7 @@ static int convert_source(const dmx_source_t source)
 #elif defined(SPARK7162)
 			tag = TSIN0;
 #elif defined(UFS913)
-			tag = 3;//TSIN2; //TSIN3
+			tag = 3;  //TSIN2; //TSIN3
 #elif defined(SAGEMCOM88)
 			tag = TSIN3;
 #elif defined(ARIVALINK200)
@@ -581,7 +582,8 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(IPBOX55) \
  || defined(ADB_BOX) \
  || defined(UFS913) \
- || defined(SAGEMCOM88)
+ || defined(SAGEMCOM88) \
+ || defined(OPT9600)
 		pti_hal_init(&pti, &pContext->DvbDemux, demultiplexDvbPackets, 2);
 #elif defined(SPARK7162) \
  ||   defined(PACE7241)
@@ -627,7 +629,8 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(CUBEREVO_MINI_FTA) \
  || defined(CUBEREVO_3000HD)
 		socket_register_adapter(&pContext->DvbContext->DvbAdapter);
-#elif defined(OCTAGON1008)
+#elif defined(OCTAGON1008) \
+ ||   defined(OPT9600)
 		avl2108_register_frontend(&pContext->DvbContext->DvbAdapter);
 #elif defined(ATEVIO7500)
 		socket_register_adapter(&pContext->DvbContext->DvbAdapter);
@@ -637,7 +640,6 @@ void ptiInit(struct DeviceContext_s *pContext)
 		fe_core_register_frontend(&pContext->DvbContext->DvbAdapter);
 #elif defined(UFS922)
 		cx24116_register_frontend(&pContext->DvbContext->DvbAdapter);
-		avl2108_register_frontend(&pContext->DvbContext->DvbAdapter);
 #elif defined(UFS913)
 		socket_register_adapter(&pContext->DvbContext->DvbAdapter);
 #else
