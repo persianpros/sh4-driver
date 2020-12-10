@@ -717,9 +717,9 @@ enum
 	ICON_MAX  // 29
 };
 #elif defined(CUBEREVO_MINI) \
- ||   defined(CUBEREVO_MINI2) \
- ||   defined(CUBEREVO_2000HD) \
- ||   defined(CUBEREVO_3000HD)
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD)
 enum
 {
 	ICON_MIN,  // 0
@@ -782,9 +782,9 @@ struct iconToInternal micomIcons[] =
 	{ "ICON_TV",        ICON_TV,         0x02, 0x03, 1 }
 };
 #elif defined(CUBEREVO_MINI) \
- ||   defined(CUBEREVO_MINI2) \
- ||   defined(CUBEREVO_2000HD) \
- ||   defined(CUBEREVO_3000HD)
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD)
 // 14 segment icons
 struct iconToInternal micom_14seg_Icons[] =
 {
@@ -1263,7 +1263,7 @@ int micomSetIcon(int which, int on)
 		dprintk(1, "%s: This model has no icons.\n", __func__);
 	}
 #elif defined(CUBEREVO_250HD) \
- ||   defined(CUBEREVO_MINI_FTA)
+ || defined(CUBEREVO_MINI_FTA)
 	dprintk(1, "%s: This model has no icons.\n", __func__);
 #endif
 	dprintk(100, "%s < %d\n", __func__, res);
@@ -1588,9 +1588,9 @@ int micomGetVersion(void)
 	special2seg_size = ARRAY_SIZE(special2seg_7seg);
 #else  // VFD models
 #if defined(CUBEREVO_MINI) \
- ||   defined(CUBEREVO_MINI2) \
- ||   defined(CUBEREVO_3000HD) \
- ||   defined(CUBEREVO_2000HD)
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO_2000HD)
 	if ((micom_year == 2008) && (micom_minor == 4 || micom_minor == 6))
 	{
 		front_seg_num    = 14;

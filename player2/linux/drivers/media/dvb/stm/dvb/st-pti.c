@@ -115,7 +115,7 @@ extern void fe_core_register_frontend(struct dvb_adapter *dvb_adap);
  || defined(CUBEREVO_3000HD)
 extern void socket_register_adapter(struct dvb_adapter *dvb_adap);
 #elif defined(OCTAGON1008) \
- ||   defined(OPT9600)
+ || defined(OPT9600)
 extern void avl2108_register_frontend(struct dvb_adapter *dvb_adap);
 #elif defined(ATEVIO7500)
 extern void socket_register_adapter(struct dvb_adapter *dvb_adap);
@@ -586,7 +586,7 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(OPT9600)
 		pti_hal_init(&pti, &pContext->DvbDemux, demultiplexDvbPackets, 2);
 #elif defined(SPARK7162) \
- ||   defined(PACE7241)
+ || defined(PACE7241)
 		pti_hal_init(&pti, &pContext->DvbDemux, demultiplexDvbPackets, 3);
 #else
 		pti_hal_init(&pti, &pContext->DvbDemux, demultiplexDvbPackets, 1);
@@ -630,7 +630,7 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(CUBEREVO_3000HD)
 		socket_register_adapter(&pContext->DvbContext->DvbAdapter);
 #elif defined(OCTAGON1008) \
- ||   defined(OPT9600)
+ || defined(OPT9600)
 		avl2108_register_frontend(&pContext->DvbContext->DvbAdapter);
 #elif defined(ATEVIO7500)
 		socket_register_adapter(&pContext->DvbContext->DvbAdapter);

@@ -103,11 +103,11 @@
 #include <linux/i2c.h>
 #include "fortis_4g_fp_et6226.h"
 #elif defined(FOREVER_3434HD) \
- ||   defined(FOREVER_9898HD) \
- ||   defined(DP7001) \
- ||   defined(GPV8000) \
- ||   defined(EP8000) \
- ||   defined(EPP8000)
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 //#include "fortis_4g_fp_utf.h"
 #include "fortis_4g_fp_et16315.h"
 #else
@@ -597,13 +597,13 @@ int fortis_4gInit_func(void)
 	// logo on, power LED blue
 	// done already by I/O init
 #elif defined(FOREVER_9898HD) \
- ||   defined(FOREVER_2424HD)
+ || defined(FOREVER_2424HD)
 	// all LEDs off
 	// done already by I/O init
 #elif defined(DP7001) \
- ||   defined(GPV8000) \
- ||   defined(EP8000) \
- ||   defined(EPP8000)
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	// logo on, other LEDs off
 	// done already by I/O init 
 #elif defined(FOREVER_NANOSMART)
@@ -670,10 +670,10 @@ int fortis_4gInit_func(void)
  || defined(FOREVER_2424HD)  // LED models
 	res |= fortis_4gWriteString("----", 4);
 #elif defined(FOREVER_3434HD) \
- ||   defined(FOREVER_9898HD) \
- ||   defined(GPV8000) \
- ||   defined(EP8000) \
- ||   defined(EPP8000)  // VFD models
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)  // VFD models
 //	res |= fortis_4gWriteString("Audioniek", strlen("Audioniek"));
 	res |= fortis_4gWriteString(" ", strlen(" "));
 //	res |= clear_display();

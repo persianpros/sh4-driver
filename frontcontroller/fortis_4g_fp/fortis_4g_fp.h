@@ -115,8 +115,8 @@ do \
 #define LED_LOGO       4
 #define MAX_LED        7
 #elif defined(GPV8000) \
- ||   defined(EP8000) \
- ||   defined(EPP8000)  // 1: standby (red), 2: logo
+ || defined(EP8000) \
+ || defined(EPP8000)  // 1: standby (red), 2: logo
 #define LED_RED        1
 #define LED_LOGO       2
 #define MAX_LED        3
@@ -149,10 +149,10 @@ do \
  || defined(FOREVER_2424HD)
 #define DISP_SIZE      4
 #elif defined(FOREVER_3434HD) \
- ||   defined(FOREVER_9898HD) \
- ||   defined(GPV8000) \
- ||   defined(EP8000) \
- ||   defined(EPP8000)
+ || defined(FOREVER_9898HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 #define DISP_SIZE      8
 #endif
 

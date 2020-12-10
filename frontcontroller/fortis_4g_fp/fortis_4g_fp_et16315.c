@@ -472,8 +472,8 @@ static struct et16315_platform_data et16315_init_values =
 #elif defined(FOREVER_9898HD)
 	.led         = LED_RED,  // all LEDs off
 #elif defined(GPV8000) \
- ||   defined(EP8000) \
- ||   defined(EPP8000)
+ || defined(EP8000) \
+ || defined(EPP8000)
 	.led         = LED_LOGO,  // logo on, rest off
 #else
 	.led         = 0,  // all LEDs off
