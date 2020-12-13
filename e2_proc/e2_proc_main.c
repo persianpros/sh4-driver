@@ -708,7 +708,7 @@ out:
 
 static int info_chipset_read(char *page, char **start, off_t off, int count, int *eof, void *data)
 {
-#if defined(UFS910) || defined(ADB_BOX) || defined(OPT9600)
+#if defined(UFS910) || defined(ADB_BOX)
 	int len = sprintf(page, "STi7100\n");
 #elif defined(ATEVIO7500) || defined(UFS913) || defined(SAGEMCOM88) || defined(PACE7241)
 	int len = sprintf(page, "STi7105\n");
@@ -732,7 +732,8 @@ static int info_chipset_read(char *page, char **start, off_t off, int count, int
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(ARIVALINK200)
+ || defined(ARIVALINK200) \
+ || defined(OPT9600)
 	int len = sprintf(page, "STi7109\n");
 #elif defined(UFS912) \
  || defined(HS7110) \
@@ -958,8 +959,7 @@ int proc_misc_12V_output_write(struct file *file, const char __user *buf, unsign
 	}
 #if defined(HL101) \
  || defined(VIP1_V1) \
- || defined(VIP1_V2) \
- || defined(VIP2)
+ || defined(OPT9600)
 //	set_12v(_12v_isON);  // set 12V output
 #endif
 	ret = count;
@@ -1152,7 +1152,7 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/tsmux/ci1_input"                                              , NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/tsmux/lnb_b_input"                                            , NULL, NULL, NULL, NULL, ""},
 	{cProcDir  , "stb/misc"                                                         , NULL, NULL, NULL, NULL, ""},
-#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V1) || defined(VIP2)
+#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V1) || defined(OPT9600)
 	{cProcEntry, "stb/misc/12V_output"                                              , NULL, proc_misc_12V_output_read, proc_misc_12V_output_write, NULL, ""},
 #else
 	{cProcEntry, "stb/misc/12V_output"                                              , NULL, NULL, NULL, NULL, ""},
