@@ -405,10 +405,9 @@ static int convert_source(const dmx_source_t source)
  || defined(UFS912) \
  || defined(ADB_BOX) \
  || defined(SPARK) \
+ || defined(SPARK7162) \
  || defined(SAGEMCOM88)
 			tag = TSIN2;
-#elif defined(SPARK7162)
-			tag = TSIN1;
 #else
 			tag = TSIN0;
 #endif
@@ -423,8 +422,6 @@ static int convert_source(const dmx_source_t source)
 			{
 				tag = TSIN0;
 			}
-#elif defined(SPARK7162)
-			tag = TSIN0;
 #elif defined(UFS913)
 			tag = 3;  //TSIN2; //TSIN3
 #elif defined(SAGEMCOM88)
