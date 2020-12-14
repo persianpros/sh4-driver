@@ -1,15 +1,23 @@
 #ifndef _SCI_7100_H
 #define _SCI_7100_H
 
-#if defined(CUBEREVO) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || \
-    defined(CUBEREVO_250HD) || defined(CUBEREVO_9500HD) || \
-    defined(CUBEREVO_2000HD) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO_3000HD)
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_250HD) \
+ || defined(CUBEREVO_9500HD) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_MINI_FTA) \
+ || defined(CUBEREVO_3000HD)
 #define CUBEBOX
 #else
 #undef  CUBEBOX
 #endif
 
-#if defined(IPBOX9900) || defined(IPBOX99) || defined(IPBOX55) || defined(ARIVALINK200) || defined(HL101)
+#if defined(IPBOX9900) \
+ || defined(IPBOX99) \
+ || defined(IPBOX55) \
+ || defined(ARIVALINK200)
 #define IPBOX
 #else
 #undef IPBOX
@@ -17,7 +25,10 @@
 
 /* Hellmaster1024 Octagon1008 and Fortis HDBOX need these defines, maybe other sti7100/sti7101 based STB need this defines too
 */
-#if defined(OCTAGON1008) || defined(FORTIS_HDBOX) || defined(CUBEBOX) || defined(IPBOX)
+#if defined(OCTAGON1008) \
+ || defined(FORTIS_HDBOX) \
+ || defined(CUBEBOX) \
+ || defined(IPBOX)
 #define SUPPORT_NO_VOLTAGE
 #define SUPPORT_NO_AUTOSET
 #endif

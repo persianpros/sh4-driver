@@ -3,7 +3,7 @@
  *
  *  sh4 smartcard driver
  *
- *  this driver ported from QboxHd open source and csctapi together
+ *  This driver ported from QboxHd open source and csctapi together
  *  tested on spark STX7111 and HL101 STi7101 boxes
  *
  *
@@ -98,9 +98,13 @@ void *checked_ioremap(unsigned long offset, unsigned long size)
 {
 	void *rv = ioremap(offset, size);
 	if (rv == NULL)
+	{
 		PERROR("IOREMAP %lx failed.\n", offset);
+	}
 	else
+	{
 		PDEBUG("IOREMAP %lx-%lx ok.\n", offset, offset + size);
+	}
 	return rv;
 }
 #else
@@ -127,34 +131,52 @@ ULONG get_reg(SCI_CONTROL_BLOCK *sci, BASE_ADDR base_address, ULONG reg)
 	switch (base_address)
 	{
 		case BASE_ADDRESS_SYSCFG:
+		{
 			reg_address = (ULONG)(sci->base_address_syscfg + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO0:
+		{
 			reg_address = (ULONG)(sci->base_address_pio0 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO1:
+		{
 			reg_address = (ULONG)(sci->base_address_pio1 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO3:
+		{
 			reg_address = (ULONG)(sci->base_address_pio3 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO4:
+		{
 			reg_address = (ULONG)(sci->base_address_pio4 + reg);
 			break;
+		}
 		case BASE_ADDRESS_ASC0:
 		case BASE_ADDRESS_ASC1:
+		{
 			reg_address = (ULONG)(sci->base_address_asc + reg);
 			break;
+		}
 		case BASE_ADDRESS_SCI0:
 		case BASE_ADDRESS_SCI1:
+		{
 			reg_address = (ULONG)(sci->base_address_sci + reg);
 			break;
+		}
 		default:
+		{
 			return 0;
+		}
 	}
 	map_base = (ULONG)checked_ioremap(reg_address, 4);
 	if (!map_base)
+	{
 		return 0;
+	}
 	val = ctrl_inl(map_base);
 	iounmap((void *)map_base);
 	return val;
@@ -176,34 +198,52 @@ void set_reg(SCI_CONTROL_BLOCK *sci, BASE_ADDR base_address, ULONG reg, UINT bit
 	switch (base_address)
 	{
 		case BASE_ADDRESS_SYSCFG:
+		{
 			reg_address = (ULONG)(sci->base_address_syscfg + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO0:
+		{
 			reg_address = (ULONG)(sci->base_address_pio0 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO1:
+		{
 			reg_address = (ULONG)(sci->base_address_pio1 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO3:
+		{
 			reg_address = (ULONG)(sci->base_address_pio3 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO4:
+		{
 			reg_address = (ULONG)(sci->base_address_pio4 + reg);
 			break;
+		}
 		case BASE_ADDRESS_ASC0:
 		case BASE_ADDRESS_ASC1:
+		{
 			reg_address = (ULONG)(sci->base_address_asc + reg);
 			break;
+		}
 		case BASE_ADDRESS_SCI0:
 		case BASE_ADDRESS_SCI1:
+		{
 			reg_address = (ULONG)(sci->base_address_sci + reg);
 			break;
+		}
 		default:
+		{
 			return;
+		}
 	}
 	map_base = (ULONG)checked_ioremap(reg_address, 4);
 	if (!map_base)
+	{
 		return;
+	}
 	val = ctrl_inl(map_base);
 	val &= ~(mask);
 	val |= bits;
@@ -226,34 +266,52 @@ void set_reg_writeonly(SCI_CONTROL_BLOCK *sci, BASE_ADDR base_address, ULONG reg
 	switch (base_address)
 	{
 		case BASE_ADDRESS_SYSCFG:
+		{
 			reg_address = (ULONG)(sci->base_address_syscfg + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO0:
+		{
 			reg_address = (ULONG)(sci->base_address_pio0 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO1:
+		{
 			reg_address = (ULONG)(sci->base_address_pio1 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO3:
+		{
 			reg_address = (ULONG)(sci->base_address_pio3 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO4:
+		{
 			reg_address = (ULONG)(sci->base_address_pio4 + reg);
 			break;
+		}
 		case BASE_ADDRESS_ASC0:
 		case BASE_ADDRESS_ASC1:
+		{
 			reg_address = (ULONG)(sci->base_address_asc + reg);
 			break;
+		}
 		case BASE_ADDRESS_SCI0:
 		case BASE_ADDRESS_SCI1:
+		{
 			reg_address = (ULONG)(sci->base_address_sci + reg);
 			break;
+		}
 		default:
+		{
 			return;
+		}
 	}
 	map_base = (ULONG)checked_ioremap(reg_address, 4);
 	if (!map_base)
+	{
 		return;
+	}
 	PDEBUG("reg_address=%lx, bits=%x\n", map_base, bits);
 	ctrl_outl(bits, map_base);
 	iounmap((void *)map_base);
@@ -274,34 +332,52 @@ void set_reg_writeonly16(SCI_CONTROL_BLOCK *sci, BASE_ADDR base_address, ULONG r
 	switch (base_address)
 	{
 		case BASE_ADDRESS_SYSCFG:
+		{
 			reg_address = (ULONG)(sci->base_address_syscfg + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO0:
+		{
 			reg_address = (ULONG)(sci->base_address_pio0 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO1:
+		{
 			reg_address = (ULONG)(sci->base_address_pio1 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO3:
+		{
 			reg_address = (ULONG)(sci->base_address_pio3 + reg);
 			break;
+		}
 		case BASE_ADDRESS_PIO4:
+		{
 			reg_address = (ULONG)(sci->base_address_pio4 + reg);
 			break;
+		}
 		case BASE_ADDRESS_ASC0:
 		case BASE_ADDRESS_ASC1:
+		{
 			reg_address = (ULONG)(sci->base_address_asc + reg);
 			break;
+		}
 		case BASE_ADDRESS_SCI0:
 		case BASE_ADDRESS_SCI1:
+		{
 			reg_address = (ULONG)(sci->base_address_sci + reg);
 			break;
+		}
 		default:
+		{
 			return;
+		}
 	}
 	map_base = (ULONG)checked_ioremap(reg_address, 4);
 	if (!map_base)
+	{
 		return;
+	}
 	PDEBUG("reg_address=%lx, bits=%x\n", map_base, bits);
 	ctrl_outw(bits, map_base);
 	iounmap((void *)map_base);
@@ -339,7 +415,9 @@ static void set_serial_irq(SCI_CONTROL_BLOCK *sci, unsigned char type)
 			PDEBUG(" ### Set RX_FULL_TX_EMPTY_IRQ and TX_HALF_EMPTY_IRQ interrupt\n");
 		}
 		else
+		{
 			PDEBUG("Type of interrupt is not implemented\n");
+		}
 	}
 	else if (sci->id == 1)
 	{
@@ -368,7 +446,9 @@ static void set_serial_irq(SCI_CONTROL_BLOCK *sci, unsigned char type)
 			PDEBUG(" ### Set RX_FULL_TX_EMPTY_IRQ and TX_HALF_EMPTY_IRQ interrupt\n");
 		}
 		else
+		{
 			PDEBUG("Type of interrupt is not implemented\n");
+		}
 	}
 }
 
@@ -485,7 +565,12 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_B;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX) && !defined(VITAMIN_HD5000)  // no votage control
+#if !defined(SPARK) \
+ && !defined(HL101) \
+ && !defined(VIP1_V1) \
+ && !defined(ATEVIO7500) \
+ && !defined(ADB_BOX) \
+ && !defined(VITAMIN_HD5000)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO4, PIO_CLR_P4OUT, 0x40);
 #endif
 #endif
@@ -494,7 +579,12 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX) && !defined(VITAMIN_HD5000)  // no votage control
+#if !defined(SPARK) \
+ && !defined(HL101) \
+ && !defined(VIP1_V1) \
+ && !defined(ATEVIO7500) \
+ && !defined(ADB_BOX) \
+ && !defined(VITAMIN_HD5000)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO4, PIO_SET_P4OUT, 0x40);
 #endif
 #endif
@@ -504,7 +594,11 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 			PERROR("Invalid Vcc value '%d', set Vcc 5V", vcc);
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX) // no voltage control
+#if !defined(SPARK) \
+ && !defined(HL101) \
+ && !defined(VIP1_V1) \
+ && !defined(ATEVIO7500) \
+ && !defined(ADB_BOX) // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO4, PIO_SET_P4OUT, 0x40);
 #endif
 #endif
@@ -517,7 +611,11 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_B;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no voltage control
+#if !defined(SPARK) \
+ && !defined(HL101) \
+ && !defined(VIP1_V1) \
+ && !defined(ATEVIO7500) \
+ && !defined(ADB_BOX)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO3, PIO_CLR_P3OUT, 0x40);
 #endif
 #endif
@@ -526,7 +624,11 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 		{
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no voltage control
+#if !defined(SPARK) \
+ && !defined(HL101) \
+ && !defined(VIP1_V1) \
+ && !defined(ATEVIO7500) \
+ && !defined(ADB_BOX)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO3, PIO_SET_P3OUT, 0x40);
 #endif
 #endif
@@ -536,7 +638,11 @@ INT smartcard_voltage_config(SCI_CONTROL_BLOCK *sci, UINT vcc)
 			PERROR("Invalid Vcc value '%d', set Vcc 5V", vcc);
 			sci->sci_atr_class = SCI_CLASS_A;
 #if !defined(SUPPORT_NO_VOLTAGE)
-#if !defined(SPARK) && !defined(HL101) && !defined(VIP1_V1) && !defined(ATEVIO7500) && !defined(ADB_BOX)  // no voltage control
+#if !defined(SPARK) \
+ && !defined(HL101) \
+ && !defined(VIP1_V1) \
+ && !defined(ATEVIO7500) \
+ && !defined(ADB_BOX)  // no voltage control
 			set_reg_writeonly(sci, BASE_ADDRESS_PIO3, PIO_CLR_P3OUT, 0x40);
 #endif
 #endif
@@ -564,7 +670,9 @@ static INT smartcard_clock_config(SCI_CONTROL_BLOCK *sci, UINT clock)
 	PDEBUG(" ...\n");
 	sci->clk = clock;
 	if (!SCI_Set_Clock(sci))
+	{
 		return SCI_ERROR_VCC_INVALID;
+	}
 	//mdelay(3);
 	//change to non Busy-Waiting
 	msleep(3);
@@ -599,11 +707,17 @@ void red_read(SCI_CONTROL_BLOCK *sci)
 	for (nv = 0; nv < 16; nv++)
 	{
 		if (sci->id == 0)
+		{
 			data = get_reg(sci, BASE_ADDRESS_ASC0, ASC0_RX_BUF);
+		}
 		else if (sci->id == 1)
+		{
 			data = get_reg(sci, BASE_ADDRESS_ASC1, ASC1_RX_BUF);
+		}
 		else
+		{
 			continue;
+		}
 		if ((sci->atr_status != SCI_ATR_READY) && (sci->byte_invert == NO_DEFINED))
 		{
 			if ((UCHAR)data == 0x03)
@@ -616,7 +730,9 @@ void red_read(SCI_CONTROL_BLOCK *sci)
 			}
 		}
 		if (sci->byte_invert == INVERT)
+		{
 			data = byte_invert[(UCHAR)data];
+		}
 		sci->read_buf[sci->rx_rptr] = (UCHAR)data;
 		sci->rx_rptr++;
 	}
@@ -679,7 +795,9 @@ irqreturn_t sci_irq1_rx_tx_handler(int irq, void *dev_id)
 						}
 					}
 					if (sci->byte_invert == INVERT)
+					{
 						data = byte_invert[(UCHAR)data];
+					}
 					sci->read_buf[sci->rx_rptr] = (UCHAR)data;
 					sci->rx_rptr++;
 				}
@@ -698,9 +816,13 @@ irqreturn_t sci_irq1_rx_tx_handler(int irq, void *dev_id)
 		{
 			unsigned char i = 0, size = 0;
 			if ((sci->tx_rptr - sci->tx_wptr) > HW_FIFO_SIZE)
+			{
 				size = HW_FIFO_SIZE;
+			}
 			else
+			{
 				size = (sci->tx_rptr - sci->tx_wptr);
+			}
 			for (i = 0; i < size; i++)
 			{
 				if (sci->byte_invert == INVERT)
@@ -715,7 +837,9 @@ irqreturn_t sci_irq1_rx_tx_handler(int irq, void *dev_id)
 				sci->rx_wptr++;
 			}
 			if (sci->tx_rptr == sci->tx_wptr)
+			{
 				set_serial_irq(sci, RX_FULL_IRQ);
+			}
 		}
 	}
 	else if ((res & TX_HALF_EMPTY_IRQ) && ((sci->irq_mode == (TX_HALF_EMPTY_IRQ | RX_FULL_TX_EMPTY_IRQ)))) /* Tx HALF interrupt active */
@@ -724,9 +848,13 @@ irqreturn_t sci_irq1_rx_tx_handler(int irq, void *dev_id)
 		{
 			unsigned char i = 0, size = 0;
 			if ((sci->tx_rptr - sci->tx_wptr) > (HW_FIFO_SIZE / 2))
+			{
 				size = (HW_FIFO_SIZE / 2);
+			}
 			else
+			{
 				size = (sci->tx_rptr - sci->tx_wptr);
+			}
 			for (i = 0; i < size; i++)
 			{
 				if (sci->byte_invert == INVERT)
@@ -741,7 +869,9 @@ irqreturn_t sci_irq1_rx_tx_handler(int irq, void *dev_id)
 				sci->rx_wptr++;
 			}
 			if (sci->tx_rptr == sci->tx_wptr)
+			{
 				set_serial_irq(sci, RX_FULL_IRQ);
+			}
 		}
 	}
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
@@ -815,7 +945,9 @@ irqreturn_t sci_irq0_rx_tx_handler(int irq, void *dev_id)
 						}
 					}
 					if (sci->byte_invert == INVERT)
+					{
 						data = byte_invert[(UCHAR)data];
+					}
 					sci->read_buf[sci->rx_rptr] = (UCHAR)data;
 					sci->rx_rptr++;
 				}
@@ -833,9 +965,13 @@ irqreturn_t sci_irq0_rx_tx_handler(int irq, void *dev_id)
 		{
 			unsigned char i = 0, size = 0;
 			if ((sci->tx_rptr - sci->tx_wptr) > HW_FIFO_SIZE)
+			{
 				size = HW_FIFO_SIZE;
+			}
 			else
+			{
 				size = (sci->tx_rptr - sci->tx_wptr);
+			}
 			for (i = 0; i < size; i++)
 			{
 				if (sci->byte_invert == INVERT)
@@ -850,7 +986,9 @@ irqreturn_t sci_irq0_rx_tx_handler(int irq, void *dev_id)
 				sci->rx_wptr++;
 			}
 			if (sci->tx_rptr == sci->tx_wptr)
+			{
 				set_serial_irq(sci, RX_FULL_IRQ);
+			}
 		}
 	}
 	else if ((res & TX_HALF_EMPTY_IRQ) && ((sci->irq_mode == (TX_HALF_EMPTY_IRQ | RX_FULL_TX_EMPTY_IRQ)))) /* Tx HALF interrupt active */
@@ -859,9 +997,13 @@ irqreturn_t sci_irq0_rx_tx_handler(int irq, void *dev_id)
 		{
 			unsigned char i = 0, size = 0;
 			if ((sci->tx_rptr - sci->tx_wptr) > (HW_FIFO_SIZE / 2))
+			{
 				size = (HW_FIFO_SIZE / 2);
+			}
 			else
+			{
 				size = (sci->tx_rptr - sci->tx_wptr);
+			}
 			for (i = 0; i < size; i++)
 			{
 				if (sci->byte_invert == INVERT)
@@ -876,7 +1018,9 @@ irqreturn_t sci_irq0_rx_tx_handler(int irq, void *dev_id)
 				sci->rx_wptr++;
 			}
 			if (sci->tx_rptr == sci->tx_wptr)
+			{
 				set_serial_irq(sci, RX_FULL_IRQ);
+			}
 		}
 	}
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
@@ -1014,7 +1158,6 @@ SCI_ERROR sci_hw_init(SCI_CONTROL_BLOCK *sci)
 	return rc;
 }
 
-
 static void sci_cb_init(SCI_CONTROL_BLOCK *sci)
 {
 	PDEBUG(" ...\n");
@@ -1072,9 +1215,13 @@ void sci_exit(void)
 		}
 		PDEBUG("[SCI %d] thread stopped\n", sci->id);
 		if (i == 0)
+		{
 			free_irq(SCI0_INT_RX_TX, NULL);
+		}
 		if (i == 1)
+		{
 			free_irq(SCI1_INT_RX_TX, NULL);
+		}
 		SCI_ClockDisable(sci);
 		//mdelay(10);
 		//change to non Busy-Waiting
@@ -1147,10 +1294,13 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
  || defined(EPP8000)
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG7, 4);
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	val |= 0x1B0;
-#if defined(CUBEBOX) || defined(IPBOX)
+#if defined(CUBEBOX) \
+ || defined(IPBOX)
 	/* configure SC0_nSETVCC: derived from SC0_DETECT input */
 	val |= (1 << 7);
 #else
@@ -1179,13 +1329,16 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
  || defined(EPP8000)
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG5, 4);
 	if (!reg_address)
+	{
 		return 0;
+	}
 #endif
 	val = ctrl_inl(reg_address);
 	ctrl_outl(val & ~(1 << 23), reg_address);
 	iounmap((void *)reg_address);
 #endif
-#if defined(CONFIG_CPU_SUBTYPE_STX7105) || defined(ATEVIO7500)
+#if defined(CONFIG_CPU_SUBTYPE_STX7105) \
+ || defined(ATEVIO7500)
 	reg_address = (U32)checked_ioremap(EPLD_BASE_ADDRESS / +EPLD_SCREG, 4);
 	if (reg_address)
 	{
@@ -1196,7 +1349,9 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
 	}
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG7, 4);
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	val = (val & ~0xdf8) | 0xdf8;
 #ifdef STX7105_SETPOWERLOW
@@ -1209,14 +1364,18 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
 	iounmap((void *)reg_address);
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG19, 4);
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	val = (val & ~0xff00) | 0xff00;
 	ctrl_outl(val, reg_address);
 	iounmap((void *)reg_address);
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG20, 4);
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	val = (val & ~0xff00) | 0xff00;
 	ctrl_outl(val, reg_address);
@@ -1224,7 +1383,9 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
 #ifdef STX7105_SETPOWERLOW
 	reg_address = (U32)checked_ioremap(SYS_CFG_BASE_ADDRESS + SYS_CFG7, 4);
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	ctrl_outl(val & ~(1 << 23), reg_address);
 	iounmap((void *)reg_address);
@@ -1233,7 +1394,9 @@ static int SCI_SetClockSource(SCI_CONTROL_BLOCK *sci)
 	/* Configure smartcard control register */
 	reg_address = (U32)checked_ioremap(sci->base_address_sci + 4, 4); // SCI_n_CLK_CTRL
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	ctrl_outl(val & (~(U32)CLOCK_SOURCE_MASK), reg_address);
 	val = ctrl_inl(reg_address);
@@ -1251,7 +1414,9 @@ static int SCI_ClockEnable(SCI_CONTROL_BLOCK *sci)
 	PDEBUG(" ...\n");
 	reg_address = (U32)checked_ioremap(sci->base_address_sci + 4, 4); // SCI_n_CLK_CTRL
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	ctrl_outl(val | ((U32)CLOCK_ENABLE_MASK), reg_address);
 	iounmap((void *)reg_address);
@@ -1267,7 +1432,9 @@ static int SCI_ClockDisable(SCI_CONTROL_BLOCK *sci)
 	PDEBUG(" ...\n");
 	reg_address = (U32)checked_ioremap(sci->base_address_sci + 4, 4); // SCI_n_CLK_CTRL
 	if (!reg_address)
+	{
 		return 0;
+	}
 	val = ctrl_inl(reg_address);
 	ctrl_outl(val | (~(U32)CLOCK_ENABLE_MASK), reg_address);
 	iounmap((void *)reg_address);
@@ -1285,13 +1452,19 @@ static int SCI_Set_Clock(SCI_CONTROL_BLOCK *sci)
 	dprintk(1, "Setting clock to: %u.%02uMhz\n", sci->clk / 100, sci->clk % 100);
 
 	if ((clkdiv > 0) && (clkdiv < 0x1F))
+	{
 		val = clkdiv;
+	}
 	else
+	{
 		val = 0x0e;  /* 3.578 Mhz */
+	}
 	dprintk(2, "clkdiv = 0x%02X\n", (unsigned int)val);
 	reg_address = (U32)checked_ioremap(sci->base_address_sci, 4); // SCI_n_CLK_VAL
 	if (!reg_address)
+	{
 		return 0;
+	}
 	ctrl_outl(val, reg_address);
 	iounmap((void *)reg_address);
 	PDEBUG(" OK\n");
@@ -1308,9 +1481,13 @@ static int SCI_IO_init(SCI_CONTROL_BLOCK *sci)
 	sci->detect = stpio_request_pin(sci->pio_port, 7, "sc_detect", STPIO_IN);
 	sci->cmdvcc = stpio_request_pin(sci->pio_port, 5, "sc_cmdvcc", STPIO_OUT); // must be after detect
 	if (!SCI_SetClockSource(sci))
+	{
 		return 0;
+	}
 	if (!SCI_ClockEnable(sci))
+	{
 		return 0;
+	}
 	PDEBUG(" OK\n");
 	return 1;
 }
@@ -1335,9 +1512,13 @@ void sci_detect_handler(void *params)
 		{
 			last_status = status;
 			if (status)
+			{
 				sci->card_detect = SCI_CARD_PRESENT;
+			}
 			else
+			{
 				sci->card_detect = SCI_CARD_NOT_PRESENT;
+			}
 			sci_detect_change(sci);
 			dprintk(1, "[SCI %d] card %s\n", sci->id, status ? "detected" : "ejected");
 		}
@@ -1474,7 +1655,9 @@ SCI_ERROR sci_read_buf(SCI_CONTROL_BLOCK *sci, UCHAR **p_buffer, ULONG num_bytes
 	{
 		real_num_bytes = sci->rx_rptr - sci->rx_wptr;
 		if (real_num_bytes > num_bytes)
+		{
 			real_num_bytes = num_bytes;
+		}
 		*p_bytes_read = real_num_bytes;
 		*p_buffer = &(sci->read_buf[sci->rx_wptr]);
 		sci->rx_wptr += real_num_bytes;
@@ -1584,7 +1767,9 @@ SCI_ERROR sci_is_card_present(SCI_CONTROL_BLOCK *sci)
 {
 	UCHAR rc;
 	if (sci_driver_init == 1)
+	{
 		rc = sci->card_detect;
+	}
 	else
 	{
 		/* sc not present or an error occurred while detecting the sc */
@@ -1937,7 +2122,9 @@ static ssize_t sci_read(struct file *file, char *buffer, size_t length, loff_t *
 		msleep(57);
 	}
 	if (sci->card_detect != SCI_CARD_PRESENT)
+	{
 		return 0;
+	}
 	real_num_bytes = sci->rx_rptr - sci->rx_wptr;
 	if (!((file->f_flags & O_NONBLOCK) >> 0xB))
 	{
@@ -1956,9 +2143,13 @@ static ssize_t sci_read(struct file *file, char *buffer, size_t length, loff_t *
 		}
 	}
 	if (real_num_bytes > length)
+	{
 		real_num_bytes = length;
+	}
 	if (length > SCI_BUFFER_SIZE)
+	{
 		real_num_bytes = SCI_BUFFER_SIZE;
+	}
 	dprintk(7, "Request bytes: %d , Available bytes: %ld\n", length, real_num_bytes);
 	copy_to_user((void *)buffer, (const void *) & (sci->read_buf[sci->rx_wptr]), real_num_bytes);
 	sci->rx_wptr += real_num_bytes;
@@ -1970,7 +2161,7 @@ static ssize_t sci_read(struct file *file, char *buffer, size_t length, loff_t *
 		//change to non Busy-Waiting
 		msleep(3);
 	}
-	return (ssize_t) real_num_bytes;
+	return (ssize_t)real_num_bytes;
 }
 
 /**
@@ -2002,15 +2193,25 @@ static ssize_t sci_write(struct file *file, const char *buffer, size_t length, l
 		msleep(57);
 	}
 	if (sci->card_detect != SCI_CARD_PRESENT)
+	{
 		return 0;
+	}
 	if (sci_id == 0)
+	{
 		disable_irq(SCI0_INT_RX_TX);
+	}
 	else if (sci_id == 1)
+	{
 		disable_irq(SCI1_INT_RX_TX);
+	}
 	if (length <= SCI_BUFFER_SIZE)
+	{
 		count = length;
+	}
 	else
+	{
 		count = SCI_BUFFER_SIZE;
+	}
 	memset(&(sci->write_buf), 0, SCI_BUFFER_SIZE);
 	copy_from_user((void *) & (sci->write_buf), (const void *)buffer, count);
 	if (sci_id == 0)
@@ -2030,13 +2231,21 @@ static ssize_t sci_write(struct file *file, const char *buffer, size_t length, l
 	sci->rx_wptr = 0;
 	//  set_serial_irq(sci,TX_EMPTY_IRQ);
 	if (count <= HW_FIFO_SIZE)
+	{
 		set_serial_irq(sci, RX_FULL_TX_EMPTY_IRQ);
+	}
 	else
+	{
 		set_serial_irq(sci, (TX_HALF_EMPTY_IRQ | RX_FULL_TX_EMPTY_IRQ));
+	}
 	if (sci_id == 0)
+	{
 		enable_irq(SCI0_INT_RX_TX);
+	}
 	else if (sci_id == 1)
+	{
 		enable_irq(SCI1_INT_RX_TX);
+	}
 	return count;
 }
 
@@ -2054,9 +2263,9 @@ void parse_atr(SCI_CONTROL_BLOCK *sci)
 
 void check_atr(SCI_CONTROL_BLOCK *sci)
 {
-	if ((sci->read_buf[sci->rx_wptr] == 0x3F) &&
-			(sci->read_buf[sci->rx_wptr + 1] == 0xFD) &&
-			(sci->read_buf[sci->rx_wptr + 2] == 0x13))
+	if ((sci->read_buf[sci->rx_wptr] == 0x3F)
+	&&  (sci->read_buf[sci->rx_wptr + 1] == 0xFD)
+	&&  (sci->read_buf[sci->rx_wptr + 2] == 0x13))
 	{
 		smartcard_voltage_config(sci, SCI_VCC_3);
 	}
@@ -2092,9 +2301,13 @@ static int detect_ATR(SCI_CONTROL_BLOCK *sci)
 		return -1;
 	}
 	if (sci_reset(sci) == SCI_ERROR_OK)
+	{
 		rc = 0;
+	}
 	else
+	{
 		rc = -1;
+	}
 	//mdelay(1100);
 	//change to non Busy-Waiting
 	msleep(1100);
@@ -2104,14 +2317,22 @@ static int detect_ATR(SCI_CONTROL_BLOCK *sci)
 		memset(sci->read_buf, 0, SCI_BUFFER_SIZE);
 		smartcard_clock_config(sci, 625);
 		if (sci->id == 0)
+		{
 			set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, 0x271, 0xFFFF);
+		}
 		else if (sci->id == 1)
+		{
 			set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, 0x271, 0xFFFF);
+		}
 		sci->sci_parameters.ETU = 372;
 		if (sci_reset(sci) == SCI_ERROR_OK)
+		{
 			rc = 0;
+		}
 		else
+		{
 			rc = -1;
+		}
 		//mdelay(750);
 		//change to non Busy-Waiting
 		msleep(750);
@@ -2145,21 +2366,30 @@ int sci_ioctl(struct inode *inode,
 
 	sci_id = MINOR(inode->i_rdev);
 	if (sci_id >= SCI_NUMBER_OF_CONTROLLERS)
+	{
 		return -1;
+	}
 	sci = &sci_cb[sci_id];
 	switch (ioctl_num)
 	{
 		case IOCTL_SET_ONLY_RESET: // 100
+		{
 			dprintk(3, "ioctl IOCTL_SET_ONLY_RESET: sci_id[%d]\n", sci->id);
 			if (sci->card_detect != SCI_CARD_PRESENT)
+			{
 				return -1;
+			}
 			smartcard_reset(sci, 1);
 			rc = 0;
 			break;
+		}
 		case IOCTL_SET_RESET: //1
+		{
 			dprintk(1, "ioctl IOCTL_SET_RESET: sci_id[%d]\n", sci->id);
 			if (sci->card_detect != SCI_CARD_PRESENT)
+			{
 				return -1;
+			}
 			rc = detect_ATR(sci);
 			// Check the ATR and change the voltage for hw security
 			check_atr(sci);
@@ -2196,7 +2426,9 @@ int sci_ioctl(struct inode *inode,
 				dprintk(1, "no atr detected!\n");
 			}
 			break;
+		}
 		case IOCTL_SET_MODES: //2
+		{
 			dprintk(3, "ioctl IOCTL_SET_MODES (dummy): sci_id[%d]\n", sci->id);
 			copy_from_user((void *) &sci_param,
 						   (const void *) ioctl_param,
@@ -2211,7 +2443,9 @@ int sci_ioctl(struct inode *inode,
 			}
 			rc = 0;
 			break;
+		}
 		case IOCTL_GET_MODES: //3
+		{
 			dprintk(3, "ioctl IOCTL_GET_MODES (dummy): sci_id[%d]\n", sci->id);
 			if (sci_get_modes(sci, &sci_mode) == SCI_ERROR_OK)
 			{
@@ -2226,7 +2460,9 @@ int sci_ioctl(struct inode *inode,
 			}
 			rc = 0;
 			break;
+		}
 		case IOCTL_SET_PARAMETERS: //4
+		{
 			dprintk(1, "ioctl IOCTL_SET_PARAMETERS: sci_id[%d]\n", sci->id);
 			copy_from_user((void *)&sci_param, (const void *)ioctl_param, sizeof(SCI_PARAMETERS));
 			if (sci_set_parameters(sci, &sci_param) == SCI_ERROR_OK)
@@ -2236,17 +2472,25 @@ int sci_ioctl(struct inode *inode,
 				switch (sci_param.f)
 				{
 					case 3:
+					{
 						smartcard_clock_config(sci, 357);
 						break;
+					}
 					default:
+					{
 						smartcard_clock_config(sci, sci_param.f * 100);
 						break;
+					}
 				}
 			}
 			else
+			{
 				rc = -1;
+			}
 			break;
+		}
 		case IOCTL_GET_PARAMETERS: //5
+		{
 			dprintk(1, "ioctl IOCTL_GET_PARAMETERS: sci_id[%d]\n", sci->id);
 			if (sci_get_parameters(sci, &sci_param) == SCI_ERROR_OK)
 			{
@@ -2260,22 +2504,24 @@ int sci_ioctl(struct inode *inode,
 				rc = -1;
 			}
 			break;
+		}
 		case IOCTL_SET_CLOCK: //13
+		{
+			ULONG clock;
+			dprintk(1, "ioctl IOCTL_SET_CLOCK: sci_id[%d]\n", sci->id);
+			copy_from_user((void *)&clock, (const void *)ioctl_param, sizeof(clock));
+			if (smartcard_clock_config(sci, clock) == SCI_ERROR_OK)
 			{
-				ULONG clock;
-				dprintk(1, "ioctl IOCTL_SET_CLOCK: sci_id[%d]\n", sci->id);
-				copy_from_user((void *)&clock, (const void *)ioctl_param, sizeof(clock));
-				if (smartcard_clock_config(sci, clock) == SCI_ERROR_OK)
-				{
-					rc = 0;
-				}
-				else
-				{
-					rc = -1;
-				}
+				rc = 0;
+			}
+			else
+			{
+				rc = -1;
 			}
 			break;
+		}
 		case IOCTL_SET_CLOCK_START: //6
+		{
 			dprintk(3, "ioctl IOCTL_SET_CLOCK_START: sci_id[%d]\n", sci->id);
 			if (sci_clock_start(sci) == SCI_ERROR_OK)
 			{
@@ -2286,7 +2532,9 @@ int sci_ioctl(struct inode *inode,
 				rc = -1;
 			}
 			break;
+		}
 		case IOCTL_SET_CLOCK_STOP: //7
+		{
 			dprintk(3, "ioctl IOCTL_IOCTL_SET_CLOCK_STOP: sci_id[%d]\n", sci->id);
 			if (sci_clock_stop(sci) == SCI_ERROR_OK)
 			{
@@ -2297,19 +2545,25 @@ int sci_ioctl(struct inode *inode,
 				rc = -1;
 			}
 			break;
+		}
 		case IOCTL_GET_IS_CARD_PRESENT: //8
+		{
 			dprintk(12, "ioctl IOCTL_GET_IS_CARD_PRESENT: sci_id[%d]\n", sci->id);
 			sci_rc = sci_is_card_present(sci);
 			copy_to_user((void *)ioctl_param, (const void *)&sci_rc, sizeof(UINT));
 			rc = 0;
 			break;
+		}
 		case IOCTL_GET_IS_CARD_ACTIVATED: //9
+		{
 			dprintk(3, "ioctl IOCTL_GET_IS_CARD_ACTIVATED: sci_id[%d]\n", sci->id);
 			sci_rc = sci_is_card_present(sci);
 			copy_to_user((void *)ioctl_param, (const void *)&sci_rc, sizeof(UINT));
 			rc = 0;
 			break;
+		}
 		case IOCTL_SET_DEACTIVATE: //10
+		{
 			dprintk(3, "ioctl IOCTL_SET_DEACTIVATE (dummy): sci_id[%d]\n", sci->id);
 			if (sci_deactivate(sci) == SCI_ERROR_OK)
 			{
@@ -2320,25 +2574,34 @@ int sci_ioctl(struct inode *inode,
 				rc = -1;
 			}
 			break;
+		}
 		case IOCTL_SET_ATR_READY: //11
+		{
 			dprintk(1, "ioctl IOCTL_SET_ATR_READY: sci_id[%d]\n", sci->id);
 			sci->atr_status = SCI_ATR_READY;
 			rc = 0;
 			break;
+		}
 		case IOCTL_GET_ATR_STATUS: //12
+		{
 			dprintk(3, "ioctl IOCTL_GET_ATR_STATUS: sci_id[%d]\n", sci->id);
 			copy_to_user((void *)ioctl_param,
 						 (const void *) & (sci->atr_status),
 						 sizeof(SCI_ATR_STATUS));
 			rc = 0;
 			break;
+		}
 		case IOCTL_DUMP_REGS: //20
+		{
 			dprintk(3, "ioctl IOCTL_DUMP_REGS: sci_id[%d]\n", sci->id);
 			rc = 0;
 			break;
+		}
 		default:
+		{
 			dprintk(1, "error ioctl_num %d\n", ioctl_num);
 			rc = -1;
+		}
 	}
 	if (rc != 0)
 	{
@@ -2357,7 +2620,9 @@ static unsigned int sci_poll(struct file *file, poll_table *wait)
 	sci = &sci_cb[sci_id];
 	dprintk(7, "POLL is done, ret=%d\n", (sci->rx_rptr != sci->rx_wptr));
 	if (sci->rx_rptr != sci->rx_wptr)
+	{
 		return (POLLIN | POLLRDNORM);
+	}
 	return 0;
 }
 
@@ -2431,7 +2696,7 @@ static struct file_operations Fops =
 	.llseek  = NULL
 };
 
-#define SMARTCARD_VERSION       "1.0.1"
+#define SMARTCARD_VERSION "1.0.1"
 
 /**************************************************************************
  * Module init/exit
@@ -2461,11 +2726,13 @@ static int __init sci_module_init(void)
 		// Register with sysfs so udev can create the proper devices
 		sci_module_class = class_create(THIS_MODULE, DEVICE_NAME);
 		for (i = 0; i < SCI_NUMBER_OF_CONTROLLERS; i++)
+		{
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30))
 			device_create(sci_module_class, NULL, MKDEV(MAJOR_NUM, MINOR_START + i), NULL, "sci%d", i);
 #else
 			class_device_create(sci_module_class, NULL, dev, NULL, "sci%d", i);
 #endif
+		}
 	}
 	else
 	{
@@ -2494,11 +2761,13 @@ static void __exit sci_module_cleanup(void)
 	cdev_del(&sci_cdev);
 	unregister_chrdev_region(dev, SCI_NUMBER_OF_CONTROLLERS);
 	for (i = 0; i < SCI_NUMBER_OF_CONTROLLERS; i++)
+	{
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30)
 		device_destroy(sci_module_class, dev);
 #else
 		class_device_destroy(sci_module_class, dev);
 #endif
+	}
 	class_destroy(sci_module_class);
 	printk("Smartcard Driver v.[%s] removed. \n", SMARTCARD_VERSION);
 }
@@ -2514,4 +2783,4 @@ MODULE_PARM_DESC(debug, "Turn on/off SmartCard debugging (default:off)");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_DESCRIPTION("SmartCard Interface driver");
 MODULE_LICENSE("GPL");
-
+// vim:ts=4

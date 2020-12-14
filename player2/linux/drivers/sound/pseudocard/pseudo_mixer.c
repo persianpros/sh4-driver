@@ -113,11 +113,11 @@ static struct platform_device *devices[SNDRV_CARDS];
 	_CARD(n, major, minor, freq, chan, SND_PSEUDO_TOPOLOGY_FLAGS_ENABLE_SPDIF_FORMATING)
 #define CARD_FATPIPE(n, major, minor, freq, chan) \
 	_CARD(n, major, minor, freq, chan, SND_PSEUDO_TOPOLOGY_FLAGS_ENABLE_SPDIF_FORMATING | \
-		  SND_PSEUDO_TOPOLOGY_FLAGS_FATPIPE)
+	      SND_PSEUDO_TOPOLOGY_FLAGS_FATPIPE)
 // the following macro indicates the card is connected to a hdmi cell through the spdif player
 #define CARD_SPDIF_HDMI(n, major, minor, freq, chan) \
 	_CARD(n, major, minor, freq, chan, SND_PSEUDO_TOPOLOGY_FLAGS_ENABLE_SPDIF_FORMATING | \
-		  SND_PSEUDO_TOPOLOGY_FLAGS_ENABLE_HDMI_FORMATING)
+	      SND_PSEUDO_TOPOLOGY_FLAGS_ENABLE_HDMI_FORMATING)
 
 // the following macro indicates the card is connected to a hdmi cell through the pcm player
 #define CARD_HDMI(n, major, minor, freq, chan) \
@@ -240,6 +240,7 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 };
 
 #elif defined CONFIG_CPU_SUBTYPE_STX7108 && !defined CONFIG_DUAL_DISPLAY
+#warning "7108 values haven't been tested"
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -460,11 +461,13 @@ static int snd_card_pseudo_pcm_trigger(struct snd_pcm_substream *substream, int 
 	{
 		case SNDRV_PCM_TRIGGER_START:
 		case SNDRV_PCM_TRIGGER_RESUME:
-			err = pseudo->backend_ops->mixer_start_substream(pseudo->backend_mixer, ppcm->substream_identifier);
+			err = pseudo->backend_ops->mixer_start_substream(
+				      pseudo->backend_mixer, ppcm->substream_identifier);
 			break;
 		case SNDRV_PCM_TRIGGER_STOP:
 		case SNDRV_PCM_TRIGGER_SUSPEND:
-			err = pseudo->backend_ops->mixer_stop_substream(pseudo->backend_mixer, ppcm->substream_identifier);
+			err = pseudo->backend_ops->mixer_stop_substream(
+				      pseudo->backend_mixer, ppcm->substream_identifier);
 			break;
 		default:
 			err = -EINVAL;
@@ -483,7 +486,8 @@ static int snd_card_pseudo_pcm_prepare(struct snd_pcm_substream *substream)
 	ppcm->pcm_count = snd_pcm_lib_period_bytes(substream);
 	ppcm->pcm_irq_pos = 0;
 	ppcm->pcm_buf_pos = 0;
-	return pseudo->backend_ops->mixer_prepare_substream(pseudo->backend_mixer, ppcm->substream_identifier);
+	return pseudo->backend_ops->mixer_prepare_substream(
+		       pseudo->backend_mixer, ppcm->substream_identifier);
 }
 
 static snd_pcm_uframes_t snd_card_pseudo_pcm_pointer(struct snd_pcm_substream *substream)
@@ -496,7 +500,7 @@ static snd_pcm_uframes_t snd_card_pseudo_pcm_pointer(struct snd_pcm_substream *s
 static struct snd_pcm_hardware snd_card_pseudo_playback =
 {
 	.info = (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
-			 SNDRV_PCM_INFO_RESUME | SNDRV_PCM_INFO_MMAP_VALID),
+	SNDRV_PCM_INFO_RESUME | SNDRV_PCM_INFO_MMAP_VALID),
 	.formats = USE_FORMATS,
 	.rates = USE_RATE,
 	.rate_min = USE_RATE_MIN,
@@ -538,7 +542,7 @@ static int snd_card_pseudo_alloc_pages(
 	int num_pages;
 	num_pages = (size + (PAGE_SIZE - 1)) / PAGE_SIZE;
 	runtime->dma_addr = bpa2_alloc_pages(pseudo->allocator,
-										 num_pages, 0, GFP_KERNEL);
+					     num_pages, 0, GFP_KERNEL);
 	if (!runtime->dma_addr)
 		return -ENOMEM;
 	runtime->dma_area = ioremap_nocache(runtime->dma_addr, size);
@@ -555,7 +559,7 @@ static int snd_card_pseudo_alloc_pages(
 static int snd_card_pseudo_hw_free(struct snd_pcm_substream *substream);
 
 static int snd_card_pseudo_hw_params(struct snd_pcm_substream *substream,
-									 struct snd_pcm_hw_params *hw_params)
+				     struct snd_pcm_hw_params *hw_params)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_pseudo_pcm *ppcm = runtime->private_data;
@@ -580,7 +584,9 @@ static int snd_card_pseudo_hw_params(struct snd_pcm_substream *substream,
 	descriptor.channels = params_channels(hw_params);
 	descriptor.sampling_freq = params_rate(hw_params);
 	descriptor.bytes_per_sample = snd_pcm_format_width(params_format(hw_params)) / 8;
-	err = pseudo->backend_ops->mixer_setup_substream(pseudo->backend_mixer, ppcm->substream_identifier, &descriptor);
+	err = pseudo->backend_ops->mixer_setup_substream(
+		      pseudo->backend_mixer, ppcm->substream_identifier,
+		      &descriptor);
 	if (err < 0)
 	{
 		snd_card_pseudo_free_pages(substream);
@@ -599,7 +605,8 @@ static int snd_card_pseudo_hw_free(struct snd_pcm_substream *substream)
 	if (ppcm->backend_is_setup)
 	{
 		/* must bring the backend to a halt before releasing the h/ware buffer */
-		err = pseudo->backend_ops->mixer_prepare_substream(pseudo->backend_mixer, ppcm->substream_identifier);
+		err = pseudo->backend_ops->mixer_prepare_substream(
+			      pseudo->backend_mixer, ppcm->substream_identifier);
 		if (err < 0)
 			return err;
 	}
@@ -644,7 +651,8 @@ static int snd_card_pseudo_pcm_mmap_data_nopage(struct vm_area_struct *vma, stru
 /*
  * Copied verbaitum from snd_pcm_mmap_data_nopage()
  */
-static struct page *snd_card_pseudo_pcm_mmap_data_nopage(struct vm_area_struct *area, unsigned long address, int *type)
+static struct page *snd_card_pseudo_pcm_mmap_data_nopage(struct vm_area_struct *area,
+							 unsigned long address, int *type)
 {
 	struct snd_pcm_substream *substream = area->vm_private_data;
 	struct snd_pcm_runtime *runtime;
@@ -691,7 +699,7 @@ static struct vm_operations_struct snd_card_pseudo_pcm_vm_ops_data =
  * is not cached.
  */
 static int snd_card_pseudo_pcm_mmap(struct snd_pcm_substream *substream,
-									struct vm_area_struct *area)
+				    struct vm_area_struct *area)
 {
 	area->vm_page_prot = pgprot_noncached(area->vm_page_prot);
 	area->vm_ops = &snd_card_pseudo_pcm_vm_ops_data;
@@ -710,7 +718,7 @@ static struct snd_pseudo_pcm *new_pcm_stream(struct snd_pcm_substream *substream
 	spin_lock_init(&ppcm->lock);
 	ppcm->substream = substream;
 	ppcm->substream_identifier = -1; /* invalid */
-	/* ppcm->backend_is_setup = 0; */ /* kzalloc... */
+	/*ppcm->backend_is_setup = 0;*/ /* kzalloc... */
 	return ppcm;
 }
 
@@ -740,7 +748,7 @@ static int snd_card_pseudo_playback_open(struct snd_pcm_substream *substream)
 	sigfillset(&allset);
 	sigprocmask(SIG_BLOCK, &allset, &oldset);
 	err = pseudo->backend_ops->mixer_alloc_substream(
-			  pseudo->backend_mixer, &ppcm->substream_identifier);
+		      pseudo->backend_mixer, &ppcm->substream_identifier);
 	sigprocmask(SIG_SETMASK, &oldset, NULL);
 	if (err < 0)
 		return err;
@@ -778,7 +786,8 @@ static int __init snd_card_pseudo_pcm(struct snd_pseudo *pseudo, int device, int
 {
 	struct snd_pcm *pcm;
 	int err;
-	if ((err = snd_pcm_new(pseudo->card, "Pseudo PCM", device, substreams, 0, &pcm)) < 0)
+	if ((err = snd_pcm_new(pseudo->card, "Pseudo PCM", device,
+			       substreams, 0, &pcm)) < 0)
 		return err;
 	pseudo->pcm = pcm;
 	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &snd_card_pseudo_playback_ops);
@@ -791,7 +800,8 @@ static int __init snd_card_pseudo_pcm(struct snd_pseudo *pseudo, int device, int
 static void snd_pseudo_mixer_update(struct snd_pseudo *pseudo)
 {
 	int err;
-	err = pseudo->backend_ops->mixer_set_module_parameters(pseudo->backend_mixer, &pseudo->mixer, sizeof(pseudo->mixer));
+	err = pseudo->backend_ops->mixer_set_module_parameters(
+		      pseudo->backend_mixer, &pseudo->mixer, sizeof(pseudo->mixer));
 	if (0 != err)
 		printk(KERN_ERR "%s: Could not update mixer parameters\n", pseudo->card->shortname);
 	/* lock prevents the observer from being deregistered whilst we update the observer */
@@ -813,7 +823,7 @@ static void snd_pseudo_mixer_update(struct snd_pseudo *pseudo)
 // *INDENT-ON*
 
 static int snd_pseudo_integer_info(struct snd_kcontrol *kcontrol,
-								   struct snd_ctl_elem_info *uinfo)
+				   struct snd_ctl_elem_info *uinfo)
 {
 	int addr = kcontrol->private_value;
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -930,7 +940,7 @@ static unsigned int remap_channels[SND_PSEUDO_MIXER_CHANNELS] =
 };
 
 static int snd_pseudo_integer_get(struct snd_kcontrol *kcontrol,
-								  struct snd_ctl_elem_value *ucontrol)
+				  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -957,7 +967,7 @@ EXPORT_SYMBOL(snd_pseudo_integer_get);
 #endif
 
 static int snd_pseudo_integer_put(struct snd_kcontrol *kcontrol,
-								  struct snd_ctl_elem_value *ucontrol)
+				  struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -1007,7 +1017,7 @@ EXPORT_SYMBOL(snd_pseudo_integer_put);
 // *INDENT-ON*
 
 static int snd_pseudo_switch_info(struct snd_kcontrol *kcontrol,
-								  struct snd_ctl_elem_info *uinfo)
+				  struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
 	uinfo->count = 1;
@@ -1017,7 +1027,7 @@ static int snd_pseudo_switch_info(struct snd_kcontrol *kcontrol,
 }
 
 static int snd_pseudo_switch_get(struct snd_kcontrol *kcontrol,
-								 struct snd_ctl_elem_value *ucontrol)
+				 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -1032,7 +1042,7 @@ EXPORT_SYMBOL(snd_pseudo_switch_get);
 #endif
 
 static int snd_pseudo_switch_put(struct snd_kcontrol *kcontrol,
-								 struct snd_ctl_elem_value *ucontrol)
+				 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -1065,7 +1075,7 @@ EXPORT_SYMBOL(snd_pseudo_switch_put);
  * snd_pseudo_route_put to determine safe bounds for enumerations.
  */
 static int snd_pseudo_route_info(struct snd_kcontrol *kcontrol,
-								 struct snd_ctl_elem_info *uinfo)
+				 struct snd_ctl_elem_info *uinfo)
 {
 	static char *metadata_update[] =
 	{
@@ -1125,12 +1135,12 @@ static int snd_pseudo_route_info(struct snd_kcontrol *kcontrol,
 	if (uinfo->value.enumerated.item > (num_texts - 1))
 		uinfo->value.enumerated.item = (num_texts - 1);
 	strcpy(uinfo->value.enumerated.name,
-		   texts[uinfo->value.enumerated.item]);
+	       texts[uinfo->value.enumerated.item]);
 	return 0;
 }
 
 static int snd_pseudo_route_get(struct snd_kcontrol *kcontrol,
-								struct snd_ctl_elem_value *ucontrol)
+				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -1141,7 +1151,7 @@ static int snd_pseudo_route_get(struct snd_kcontrol *kcontrol,
 }
 
 static int snd_pseudo_route_put(struct snd_kcontrol *kcontrol,
-								struct snd_ctl_elem_value *ucontrol)
+				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -1214,7 +1224,7 @@ static int snd_pseudo_blob_size(unsigned long private_value)
 }
 
 static int snd_pseudo_blob_info(struct snd_kcontrol *kcontrol,
-								struct snd_ctl_elem_info *uinfo)
+				struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
 	uinfo->count = snd_pseudo_blob_size(kcontrol->private_value);
@@ -1222,7 +1232,7 @@ static int snd_pseudo_blob_info(struct snd_kcontrol *kcontrol,
 }
 
 static int snd_pseudo_iec958_info(struct snd_kcontrol *kcontrol,
-								  struct snd_ctl_elem_info *uinfo)
+				  struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_IEC958;
 	uinfo->count = 1;
@@ -1230,7 +1240,7 @@ static int snd_pseudo_iec958_info(struct snd_kcontrol *kcontrol,
 }
 
 static int snd_pseudo_blob_get(struct snd_kcontrol *kcontrol,
-							   struct snd_ctl_elem_value *ucontrol)
+			       struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -1244,7 +1254,7 @@ static int snd_pseudo_blob_get(struct snd_kcontrol *kcontrol,
 }
 
 static int snd_pseudo_blob_put(struct snd_kcontrol *kcontrol,
-							   struct snd_ctl_elem_value *ucontrol)
+			       struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_pseudo *pseudo = snd_kcontrol_chip(kcontrol);
 	int addr = kcontrol->private_value;
@@ -1274,7 +1284,7 @@ static int snd_pseudo_blob_put(struct snd_kcontrol *kcontrol,
 			up_read(&card->controls_rwsem);
 			if ((err = snd_card_pseudo_register_dynamic_controls_locked(pseudo)) < 0)
 				printk(KERN_ERR "%s: Failed to update dynamic controls (%d)\n",
-					   card->shortname, err);
+				       card->shortname, err);
 			down_read(&card->controls_rwsem);
 		}
 	}
@@ -1564,7 +1574,7 @@ static int snd_card_pseudo_register_dynamic_controls_locked(struct snd_pseudo *p
 			return -ENOMEM;
 		/* generate the name (this is the dynamic bit) */
 		snprintf(kctl->id.name, sizeof(kctl->id.name),
-				 "%s %s", name, snd_pseudo_dynamic_controls[idx].name);
+			 "%s %s", name, snd_pseudo_dynamic_controls[idx].name);
 		if ((err = snd_ctl_add(card, kctl)) < 0)
 			return err;
 		pseudo->dynamic_controls[idx] = kctl;
@@ -1587,7 +1597,7 @@ static int snd_pseudo_default_backend_get_instance(int StreamId, component_handl
 }
 
 static int snd_pseudo_default_backend_set_module_parameters(component_handle_t Classoid,
-															void *Data, unsigned int Size)
+							    void *Data, unsigned int Size)
 {
 	return 0;
 }
@@ -1655,8 +1665,8 @@ static int __init snd_pseudo_probe(struct platform_device *devptr)
 	int dev = devptr->id;
 	int result;
 	result = snd_card_create(index[dev], id[dev], THIS_MODULE,
-							 sizeof(struct snd_pseudo),
-							 &card);
+				 sizeof(struct snd_pseudo),
+				 &card);
 	if (result != 0)
 		return result;
 	pseudo = card->private_data;
@@ -1768,7 +1778,7 @@ static struct platform_driver snd_pseudo_driver =
 };
 
 static int snd_card_pseudo_register_backend(struct platform_device *pdev,
-											struct alsa_backend_operations *alsa_backend_ops)
+					    struct alsa_backend_operations *alsa_backend_ops)
 {
 	struct snd_card *card = platform_get_drvdata(pdev);
 	struct snd_pseudo *pseudo = card->private_data;
@@ -1788,8 +1798,8 @@ static int snd_card_pseudo_register_backend(struct platform_device *pdev,
 	if (pseudo->downmix_firmware)
 	{
 		err = pseudo->backend_ops->mixer_set_module_parameters(
-				  pseudo->backend_mixer,
-				  (void *)pseudo->downmix_firmware->data, pseudo->downmix_firmware->size);
+			      pseudo->backend_mixer,
+			      (void *)pseudo->downmix_firmware->data, pseudo->downmix_firmware->size);
 		if (0 != err)
 			printk(KERN_ERR "%s: Can not pass downmix firmware to mixer\n", pseudo->card->shortname);
 		/* do not propagate error */
@@ -1801,7 +1811,8 @@ static int snd_card_pseudo_register_backend(struct platform_device *pdev,
 	return 0;
 }
 
-int register_alsa_backend(char *name, struct alsa_backend_operations *alsa_backend_ops)
+int register_alsa_backend(char *name,
+			  struct alsa_backend_operations *alsa_backend_ops)
 {
 	int i;
 	for (i = 0; i < SNDRV_CARDS; i++)
@@ -1822,7 +1833,7 @@ EXPORT_SYMBOL_GPL(register_alsa_backend);
  * supports only one because there is only a single client at the moment.
  */
 int snd_pseudo_register_mixer_observer(int mixer_num,
-									   snd_pseudo_mixer_observer_t *observer, void *ctx)
+				       snd_pseudo_mixer_observer_t *observer, void *ctx)
 {
 	struct snd_card *card;
 	struct snd_pseudo *pseudo;
@@ -1845,7 +1856,7 @@ int snd_pseudo_register_mixer_observer(int mixer_num,
 EXPORT_SYMBOL_GPL(snd_pseudo_register_mixer_observer);
 
 int snd_pseudo_deregister_mixer_observer(int mixer_num,
-										 snd_pseudo_mixer_observer_t *observer, void *ctx)
+					 snd_pseudo_mixer_observer_t *observer, void *ctx)
 {
 	struct snd_card *card;
 	struct snd_pseudo *pseudo;
@@ -1901,7 +1912,7 @@ static int __init alsa_card_pseudo_init(void)
 		if (! enable[i])
 			continue;
 		device = platform_device_register_simple(SND_PSEUDO_DRIVER,
-												 i, NULL, 0);
+							 i, NULL, 0);
 		if (IS_ERR(device))
 			continue;
 		devices[i] = device;
@@ -1911,14 +1922,14 @@ static int __init alsa_card_pseudo_init(void)
 	{
 #ifdef MODULE
 		printk(KERN_ERR "%s: Pseudo soundcard not found or device busy\n",
-			   KBUILD_MODNAME);
+		       KBUILD_MODNAME);
 #endif
 		snd_pseudo_unregister_all();
 		return -ENODEV;
 	}
 #ifdef MODULE
 	printk(KERN_INFO "%s: %d pseudo soundcard(s) found\n",
-		   KBUILD_MODNAME, cards);
+	       KBUILD_MODNAME, cards);
 #endif
 	return 0;
 }

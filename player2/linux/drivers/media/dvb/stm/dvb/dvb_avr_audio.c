@@ -219,11 +219,11 @@ static enum eAccAcMode TranslateChannelAssignmentToAudioMode(
 	struct snd_pseudo_mixer_channel_assignment ChannelAssignment);
 
 static void MMECallbackLL(MME_Event_t Event,
-						  MME_Command_t *CallbackData,
-						  void *UserData);
+			  MME_Command_t *CallbackData,
+			  void *UserData);
 
 static int SetGlobalTransformParameters(avr_v4l2_audio_handle_t *AudioContext,
-										MME_LowlatencySpecializedGlobalParams_t *GlobalParams);
+					MME_LowlatencySpecializedGlobalParams_t *GlobalParams);
 
 static void AvrAudioLLStateReset(avr_v4l2_audio_handle_t *AudioContext);
 static int AvrAudioLLThreadCleanup(avr_v4l2_audio_handle_t *AudioContext);
@@ -233,10 +233,10 @@ static void FillOutLLSetGlobalCommand(avr_v4l2_audio_handle_t *AudioContext);
 static void FillOutLLTransformCommand(avr_v4l2_audio_handle_t *AudioContext);
 
 static unsigned int FillOutDevicePcmParameters(avr_v4l2_audio_handle_t *AudioContext,
-											   MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
-											   int dev_num,
-											   OutputEncoding_t *OutputEncoding,
-											   bool DeployEmergencyMute);
+					       MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
+					       int dev_num,
+					       OutputEncoding_t *OutputEncoding,
+					       bool DeployEmergencyMute);
 
 static int ProcessSpecializedTransformStatus(MME_LowlatencySpecializedTransformStatus_t *TransformStatus);
 
@@ -280,13 +280,13 @@ static void DiscloseLatencyTargets(avr_v4l2_audio_handle_t *AudioContext, const 
 {
 	avr_v4l2_shared_handle_t *SharedContext = AudioContext->SharedContext;
 	DVB_TRACE("[%s] %dms latency with %lums Vsync compensation and [%d, %d, %d, %d] extra per output\n",
-			  Why,
-			  (int) SharedContext->target_latency + AudioContext->MasterLatencyWhenInitialized,
-			  AudioContext->CompensatoryLatency,
-			  SharedContext->mixer_settings.chain_latency[0],
-			  SharedContext->mixer_settings.chain_latency[1],
-			  SharedContext->mixer_settings.chain_latency[2],
-			  SharedContext->mixer_settings.chain_latency[3]);
+		  Why,
+		  (int) SharedContext->target_latency + AudioContext->MasterLatencyWhenInitialized,
+		  AudioContext->CompensatoryLatency,
+		  SharedContext->mixer_settings.chain_latency[0],
+		  SharedContext->mixer_settings.chain_latency[1],
+		  SharedContext->mixer_settings.chain_latency[2],
+		  SharedContext->mixer_settings.chain_latency[3]);
 }
 
 /******************************
@@ -318,7 +318,7 @@ static const char *LookupMmeCommandCode(MME_CommandCode_t Code)
 #define VIDEO_PES_START_CODE(C) ((C&0xf0)==0xe0)
 #define AUDIO_PES_START_CODE(C) ((C&0xc0)==0xc0)
 #define PES_START_CODE(C) (VIDEO_PES_START_CODE(C) || AUDIO_PES_START_CODE(C) || \
-						   ((C>=FIRST_PES_START_CODE) && (C<=LAST_PES_START_CODE)))
+			   ((C>=FIRST_PES_START_CODE) && (C<=LAST_PES_START_CODE)))
 #define PES_HEADER_SIZE 32 //bytes
 #define MAX_PES_PACKET_SIZE 65400
 
@@ -564,7 +564,7 @@ static ssize_t show_input_format(struct class_device *class_dev, char *buf)
 					 * sampling frequency.
 					 */
 					int sfreq = TranslateDiscreteSamplingFrequencyToInteger(
-									(enum eAccFsCode) AudioContext->LLDecoderStatus.CurrentSpdifStatus.SamplingFreq);
+							    (enum eAccFsCode) AudioContext->LLDecoderStatus.CurrentSpdifStatus.SamplingFreq);
 					if (sfreq > 48000)
 					{
 						DVB_TRACE("Deploying DTS 96/24 reporting workaround (sfreq %d)\n", sfreq);
@@ -682,17 +682,17 @@ static struct
 };
 
 void count_speakers(struct snd_pseudo_mixer_channel_assignment channel_assignment,
-					int *pfront, int *pback, int *plfe, int *pmisc)
+		    int *pfront, int *pback, int *plfe, int *pmisc)
 {
 	int i;
 	int front = 0, back = 0, lfe = 0, misc = 0;
 	for (i = 0; i < 5; i++)
 	{
 		enum snd_pseudo_mixer_channel_pair pair = 0 == i ? channel_assignment.pair0 :
-												  1 == i ? channel_assignment.pair1 :
-												  2 == i ? channel_assignment.pair2 :
-												  3 == i ? channel_assignment.pair3 :
-												  channel_assignment.pair4;
+							  1 == i ? channel_assignment.pair1 :
+							  2 == i ? channel_assignment.pair2 :
+							  3 == i ? channel_assignment.pair3 :
+							  channel_assignment.pair4;
 		if (SND_PSEUDO_MIXER_CHANNEL_PAIR_DEFAULT == pair)
 		{
 			// treat specially (intepreted differently based on position with a pair)
@@ -756,7 +756,7 @@ static ssize_t show_number_channels(struct class_device *class_dev, char *buf)
 		return sprintf(buf, "1+1/0.0\n");
 #if SPDIFIN_API_VERSION >= 0x090623
 	report_audio(&AudioContext->LLDecoderStatus.CurrentSpdifStatus,
-				 &firmware_front, &firmware_back, &firmware_lfe, &firmware_misc);
+		     &firmware_front, &firmware_back, &firmware_lfe, &firmware_misc);
 	nchan = front + back + lfe + misc;
 	if (nchan <= 0 || nchan > 8)
 	{
@@ -778,8 +778,8 @@ static ssize_t show_number_channels(struct class_device *class_dev, char *buf)
 	count_speakers(ChannelAssignment, &front, &back, &lfe, &misc);
 #endif
 	DVB_TRACE("%s (0x%02x) %d/%d+%d.%d -> %d/%d.%d\n",
-			  LookupAudioMode(AudioMode), AudioMode,
-			  firmware_front, firmware_back, firmware_misc, firmware_lfe, front, back + misc, lfe);
+		  LookupAudioMode(AudioMode), AudioMode,
+		  firmware_front, firmware_back, firmware_misc, firmware_lfe, front, back + misc, lfe);
 	return sprintf(buf, "%d/%d.%d\n", front, back + misc, lfe);
 }
 
@@ -869,7 +869,7 @@ static bool is_supported(avr_v4l2_audio_handle_t *AudioContext)
 static bool is_supported_in_game_mode(avr_v4l2_audio_handle_t *AudioContext)
 {
 	int sfreq = TranslateDiscreteSamplingFrequencyToInteger(
-					(enum eAccFsCode) AudioContext->LLDecoderStatus.CurrentDecoderFrequency);
+			    (enum eAccFsCode) AudioContext->LLDecoderStatus.CurrentDecoderFrequency);
 	switch (AudioContext->LLDecoderStatus.CurrentSpdifStatus.PC)
 	{
 		case SPDIFIN_DTRUEHD:
@@ -1078,7 +1078,7 @@ static int CreateSysFsStreamAndAttributes(avr_v4l2_audio_handle_t *AudioContext)
 	memset(stream_class_device, 0, sizeof(struct class_device));
 	// retrieve the already created playback class device
 	result = DvbPlaybackGetPlayerEnvironment(AudioContext->DeviceContext->Playback,
-											 &playerplayback);
+						 &playerplayback);
 	if (result < 0)
 	{
 		DVB_ERROR("PlaybackGetPlayerEnvironment failed\n");
@@ -1218,8 +1218,8 @@ static int AvrAudioXrunRecovery(ksnd_pcm_t *handle, int err)
 }
 
 static int AvrAudioCalculateSampleRate(avr_v4l2_audio_handle_t *AudioContext,
-									   snd_pcm_sframes_t initial_delay, snd_pcm_sframes_t final_delay,
-									   unsigned long long initial_time, unsigned long long final_time)
+				       snd_pcm_sframes_t initial_delay, snd_pcm_sframes_t final_delay,
+				       unsigned long long initial_time, unsigned long long final_time)
 {
 	int ret = 0;
 	unsigned int SampleRate;
@@ -1325,9 +1325,9 @@ static int AvrAudioCalculateSampleRate(avr_v4l2_audio_handle_t *AudioContext,
 }
 
 static int AvrAudioSendPacketToPlayer(avr_v4l2_audio_handle_t *AudioContext,
-									  snd_pcm_uframes_t capture_frames, snd_pcm_uframes_t capture_offset,
-									  const snd_pcm_channel_area_t *capture_areas,
-									  snd_pcm_sframes_t DelayInSamples, unsigned long long time_average)
+				      snd_pcm_uframes_t capture_frames, snd_pcm_uframes_t capture_offset,
+				      const snd_pcm_channel_area_t *capture_areas,
+				      snd_pcm_sframes_t DelayInSamples, unsigned long long time_average)
 {
 	unsigned char PesHeader[PES_AUDIO_HEADER_SIZE];
 	int Result = 0;
@@ -1348,8 +1348,8 @@ static int AvrAudioSendPacketToPlayer(avr_v4l2_audio_handle_t *AudioContext,
 	// Enable external time mapping
 	NativeTime = audioPts & 0x1ffffffffULL;
 	Result = avr_set_external_time_mapping(
-				 AudioContext->SharedContext, AudioContext->DeviceContext->AudioStream,
-				 NativeTime, time_absolute);
+			 AudioContext->SharedContext, AudioContext->DeviceContext->AudioStream,
+			 NativeTime, time_absolute);
 	if (Result < 0)
 	{
 		DVB_ERROR("dvp_enable_external_time_mapping failed\n");
@@ -1387,7 +1387,7 @@ static int AvrAudioInjectorThreadCleanup(avr_v4l2_audio_handle_t *AudioContext)
 			return -EINVAL;
 		}
 		ret = DvbPlaybackRemoveStream(AudioContext->DeviceContext->Playback,
-									  AudioContext->DeviceContext->AudioStream);
+					      AudioContext->DeviceContext->AudioStream);
 		if (ret != 0)
 		{
 			DVB_ERROR("PlaybackRemoveStream failed\n");
@@ -1425,12 +1425,12 @@ static int AvrAudioInjectorThread(void *data)
 	int ret = 0;
 	// Add the Stream
 	Result = DvbPlaybackAddStream(Context->Playback,
-								  BACKEND_AUDIO_ID,
-								  BACKEND_PES_ID,
-								  BACKEND_SPDIFIN_ID,
-								  DEMUX_INVALID_ID,
-								  Context->Id,
-								  &Context->AudioStream);
+				      BACKEND_AUDIO_ID,
+				      BACKEND_PES_ID,
+				      BACKEND_SPDIFIN_ID,
+				      DEMUX_INVALID_ID,
+				      Context->Id,
+				      &Context->AudioStream);
 	if (Result < 0)
 	{
 		DVB_ERROR("PlaybackAddStream failed with %d\n", Result);
@@ -1462,7 +1462,7 @@ static int AvrAudioInjectorThread(void *data)
 		goto err2;
 	}
 	Result = ksnd_pcm_set_params(capture_handle, AUDIO_CHANNELS, AUDIO_SAMPLE_DEPTH, AUDIO_DEFAULT_SAMPLE_RATE,
-								 AUDIO_PERIOD_FRAMES, AUDIO_BUFFER_FRAMES);
+				     AUDIO_PERIOD_FRAMES, AUDIO_BUFFER_FRAMES);
 	if (Result < 0)
 	{
 		DVB_ERROR("Cannot initialize ALSA parameters\n");
@@ -1663,10 +1663,10 @@ int AvrAudioLLThread(void *data)
 		// wait for any asynchronous event to come (stop, mixer settigns update or callback from transform) for 5 second...
 		// if no answer for 5 seconds, check if the transformer is still alive...
 		int result = wait_event_interruptible_timeout(AudioContext->WaitQueue,
-													  (AudioContext->ThreadShouldStop || AudioContext->UpdateMixerSettings ||
-													   AudioContext->GotTransformCommandCallback || AudioContext->GotSetGlobalCommandCallback ||
-													   AudioContext->GotSendBufferCommandCallback),
-													  (HZ * 5));
+							      (AudioContext->ThreadShouldStop || AudioContext->UpdateMixerSettings ||
+							       AudioContext->GotTransformCommandCallback || AudioContext->GotSetGlobalCommandCallback ||
+							       AudioContext->GotSendBufferCommandCallback),
+							      (HZ * 5));
 		// a timeout occurred, check if the transformer is still alive...
 		if (result == 0)
 		{
@@ -1728,15 +1728,15 @@ int AvrAudioLLThread(void *data)
 						relay_id = ST_RELAY_TYPE_DATA_TO_PCM0 + stream_nb;
 					}
 					st_relayfs_write(relay_id,
-									 ST_RELAY_SOURCE_LOW_LATENCY,
-									 (unsigned char *)TheEntry->Ptr,
-									 TheEntry->BytesUsed,
-									 0);
+							 ST_RELAY_SOURCE_LOW_LATENCY,
+							 (unsigned char *)TheEntry->Ptr,
+							 TheEntry->BytesUsed,
+							 0);
 					// we shouldn't be doing this...
 					AudioContext->SendBufferCommands[i].DataBuffers_p[0]->ScatterPages_p[0].BytesUsed = 0;
 					// send this buffer back to the firmware
 					MMEStatus = MME_SendCommand(AudioContext->LLTransformerHandle,
-												&AudioContext->SendBufferCommands[i]);
+								    &AudioContext->SendBufferCommands[i]);
 #if 0
 					DVB_DEBUG("****Dumping MME comand %x,%d ****\n", (unsigned int)&AudioContext->SendBufferCommands[i], i);
 					DumpMMECommand(&AudioContext->SendBufferCommands[i]);
@@ -1745,16 +1745,16 @@ int AvrAudioLLThread(void *data)
 					if (MMEStatus != MME_SUCCESS)
 					{
 						DVB_ERROR("Error: Call to MME_SendCommand %s (MME_SEND_BUFFER) returned %d\n",
-								  LL_MT_NAME,
-								  MMEStatus);
+							  LL_MT_NAME,
+							  MMEStatus);
 					}
 					else
 					{
 						TheEntry->IsFree = false;
 						atomic_inc(&(AudioContext->CommandsInFlight));
 						DVB_TRACE("Issued command %08x (MME_SEND_BUFFERS) - %d in flight\n",
-								  AudioContext->SendBufferCommands[i].CmdStatus.CmdId,
-								  atomic_read(&(AudioContext->CommandsInFlight)));
+							  AudioContext->SendBufferCommands[i].CmdStatus.CmdId,
+							  atomic_read(&(AudioContext->CommandsInFlight)));
 					}
 				}
 			}
@@ -1834,14 +1834,14 @@ int AvrAudioLLThread(void *data)
 				memcpy(CurrentSpdifStatus, SpdifStatus, sizeof(tMMESpdifinStatus));
 				up(&AudioContext->DecoderStatusSemaphore);
 				DVB_TRACE("LL thread: Firmware /%s%s%s%s change: /%s%s-%s/%d/%s/\n",
-						  (CodecChange ? "Codec/" : ""), (MuteChange ? "Mute/" : ""),
-						  (FrequencyChange ? "Frequency/" : ""), (TopologyChange ? "Topology/" : ""),
-						  TranslatePcToEncoding(NewPC),
-						  (NewSilence ? " SILENT" : ""),
-						  LookupSpdifInState(NewState),
-						  TranslateDiscreteSamplingFrequencyToInteger(
-							  AudioContext->LLDecoderStatus.CurrentDecoderFrequency),
-						  LookupAudioMode(LLDecoderStatus->CurrentDecoderAudioMode));
+					  (CodecChange ? "Codec/" : ""), (MuteChange ? "Mute/" : ""),
+					  (FrequencyChange ? "Frequency/" : ""), (TopologyChange ? "Topology/" : ""),
+					  TranslatePcToEncoding(NewPC),
+					  (NewSilence ? " SILENT" : ""),
+					  LookupSpdifInState(NewState),
+					  TranslateDiscreteSamplingFrequencyToInteger(
+						  AudioContext->LLDecoderStatus.CurrentDecoderFrequency),
+					  LookupAudioMode(LLDecoderStatus->CurrentDecoderAudioMode));
 				// this attribute is *always* made ready (even if the audio format didn't change so
 				// applications don't have to poll all the files)
 				sysfs_notify(&AudioContext->StreamClassDevice.kobj, NULL, "input_format");
@@ -1850,20 +1850,20 @@ int AvrAudioLLThread(void *data)
 				{
 					sysfs_notify(&AudioContext->StreamClassDevice.kobj, NULL, "supported_input_format");
 					sysfs_notify(&AudioContext->StreamClassDevice.kobj, NULL,
-								 "supported_input_format_in_game_mode");
+						     "supported_input_format_in_game_mode");
 				}
 				if (MuteChange)
 				{
 					AvrAudioSetEmergencyMuteReason(AudioContext, (FrequencyChange ?
-																  EMERGENCY_MUTE_REASON_SAMPLE_RATE_CHANGE :
-																  EMERGENCY_MUTE_REASON_ERROR));
+										      EMERGENCY_MUTE_REASON_SAMPLE_RATE_CHANGE :
+										      EMERGENCY_MUTE_REASON_ERROR));
 				}
 				if (FrequencyChange)
 				{
 					sysfs_notify(&AudioContext->StreamClassDevice.kobj, NULL, "sample_frequency");
 					if (!CodecChange)
 						sysfs_notify(&AudioContext->StreamClassDevice.kobj, NULL,
-									 "supported_input_format_in_game_mode");
+							     "supported_input_format_in_game_mode");
 				}
 				if (TopologyChange)
 				{
@@ -1938,12 +1938,12 @@ void SendLogBuffers(avr_v4l2_audio_handle_t *AudioContext)
 				i++)
 		{
 			MMEStatus = MME_SendCommand(AudioContext->LLTransformerHandle,
-										&AudioContext->SendBufferCommands[i]);
+						    &AudioContext->SendBufferCommands[i]);
 			if (MMEStatus != MME_SUCCESS)
 			{
 				DVB_ERROR("Error: Call to MME_SendCommand %s (MME_SEND_BUFFER) returned %d\n",
-						  LL_MT_NAME,
-						  MMEStatus);
+					  LL_MT_NAME,
+					  MMEStatus);
 			}
 			else
 			{
@@ -1951,8 +1951,8 @@ void SendLogBuffers(avr_v4l2_audio_handle_t *AudioContext)
 				AudioContext->BufferEntries[i]->IsFree = false;
 				atomic_inc(&(AudioContext->CommandsInFlight));
 				DVB_TRACE("Issued command %x (MME_SEND_BUFFERS) for input log - %d in flight\n",
-						  AudioContext->SendBufferCommands[i].CmdStatus.CmdId,
-						  atomic_read(&(AudioContext->CommandsInFlight)));
+					  AudioContext->SendBufferCommands[i].CmdStatus.CmdId,
+					  atomic_read(&(AudioContext->CommandsInFlight)));
 			}
 		}
 	}
@@ -1962,12 +1962,12 @@ void SendLogBuffers(avr_v4l2_audio_handle_t *AudioContext)
 		for (i = AVR_LOW_LATENCY_MAX_LOG_INPUT_SEND_BUFFERS; i < AVR_LOW_LATENCY_MAX_TOTAL_SEND_BUFFERS; i++)
 		{
 			MMEStatus = MME_SendCommand(AudioContext->LLTransformerHandle,
-										&AudioContext->SendBufferCommands[i]);
+						    &AudioContext->SendBufferCommands[i]);
 			if (MMEStatus != MME_SUCCESS)
 			{
 				DVB_ERROR("Error: Call to MME_SendCommand %s (MME_SEND_BUFFER) returned %d\n",
-						  LL_MT_NAME,
-						  MMEStatus);
+					  LL_MT_NAME,
+					  MMEStatus);
 			}
 			else
 			{
@@ -1975,16 +1975,16 @@ void SendLogBuffers(avr_v4l2_audio_handle_t *AudioContext)
 				atomic_inc(&(AudioContext->CommandsInFlight));
 				AudioContext->BufferEntries[i]->IsFree = false;
 				DVB_TRACE("Issued command %x (MME_SEND_BUFFERS) for output log - %d in flight\n",
-						  AudioContext->SendBufferCommands[i].CmdStatus.CmdId,
-						  atomic_read(&(AudioContext->CommandsInFlight)));
+					  AudioContext->SendBufferCommands[i].CmdStatus.CmdId,
+					  atomic_read(&(AudioContext->CommandsInFlight)));
 			}
 		}
 	}
 }
 
 static int CheckSinglePostMortemTransformerCapability(const char *Name,
-													  unsigned long *PhysicalAddress,
-													  MME_TimeLogPostMortem_t **Buffer)
+						      unsigned long *PhysicalAddress,
+						      MME_TimeLogPostMortem_t **Buffer)
 {
 	MME_ERROR MMEStatus;
 	MME_TransformerCapability_t Capability = { 0 };
@@ -2012,7 +2012,7 @@ static int CheckSinglePostMortemTransformerCapability(const char *Name,
 	if (Capability.Version != DRV_MULTICOM_PERFLOG_VERSION)
 	{
 		DVB_TRACE("Warning: Version skew (0x%x vs 0x%x) detected in post-mortem trace on %s\n",
-				  Capability.Version, DRV_MULTICOM_PERFLOG_VERSION, Name);
+			  Capability.Version, DRV_MULTICOM_PERFLOG_VERSION, Name);
 		return -EINVAL;
 	}
 	*Buffer = ioremap(Info.PostMortemPhysicalAddress, sizeof(**Buffer));
@@ -2032,13 +2032,13 @@ static int CheckPostMortemTransformerCapability(avr_v4l2_audio_handle_t *AudioCo
 	const char SecondaryName[] = "LOG_PERF_MT_A04";
 	int res;
 	res = CheckSinglePostMortemTransformerCapability(PrimaryName,
-													 &AudioContext->PostMortemPhysicalAddress,
-													 &AudioContext->PostMortemBuffer);
+							 &AudioContext->PostMortemPhysicalAddress,
+							 &AudioContext->PostMortemBuffer);
 	if (0 != res)
 		return res;
 	(void) CheckSinglePostMortemTransformerCapability(SecondaryName,
-													  &AudioContext->SecondaryPostMortemPhysicalAddress,
-													  &AudioContext->SecondaryPostMortemBuffer);
+							  &AudioContext->SecondaryPostMortemPhysicalAddress,
+							  &AudioContext->SecondaryPostMortemBuffer);
 	return 0;
 }
 
@@ -2110,7 +2110,7 @@ static void PostMortemReportOutstandingCommand(avr_v4l2_audio_handle_t *AudioCon
 	MME_CommandState_t State = Cmd->CmdStatus.State;
 	if (MME_COMMAND_COMPLETED != State && MME_COMMAND_FAILED != State)
 		printk(" 0x%08x (%s)\n",
-			   Cmd->CmdStatus.CmdId, LookupMmeCommandCode(Cmd->CmdCode));
+		       Cmd->CmdStatus.CmdId, LookupMmeCommandCode(Cmd->CmdCode));
 }
 
 static void IssueSinglePostMortemDiagnostics(MME_TimeLogPostMortem_t *pm, const char *name)
@@ -2128,17 +2128,17 @@ static void IssueSinglePostMortemDiagnostics(MME_TimeLogPostMortem_t *pm, const 
 	if (pm->Status != POSTMORTEM_RUNNING)
 	{
 		printk("\nPC 0x%08x SP 0x%08x LINK 0x%08x PSW 0x%08x\n",
-			   pm->PC, pm->SP, pm->LINK, pm->PSW);
+		       pm->PC, pm->SP, pm->LINK, pm->PSW);
 		for (i = 1; i < 60; i += 4)
 			printk("R%-2d 0x%08x R%-2d 0x%08x R%-2d 0x%08x R%-2d 0x%08x\n",
-				   i, pm->Regs[i], i + 1, pm->Regs[i + 1], i + 2, pm->Regs[i + 2], i + 3, pm->Regs[i + 3]);
+			       i, pm->Regs[i], i + 1, pm->Regs[i + 1], i + 2, pm->Regs[i + 2], i + 3, pm->Regs[i + 3]);
 		printk("R61 0x%08x R62 0x%08x R63 0x%08x\n\n", pm->Regs[61], pm->Regs[62], pm->Regs[63]);
 		printk("BR0 0x%08x BR1 0x%08x BR2 0x%08x BR3 0x%08x\n",
-			   (pm->BranchBits & 0x01 ? 1 : 0), (pm->BranchBits & 0x02 ? 1 : 0),
-			   (pm->BranchBits & 0x04 ? 1 : 0), (pm->BranchBits & 0x08 ? 1 : 0));
+		       (pm->BranchBits & 0x01 ? 1 : 0), (pm->BranchBits & 0x02 ? 1 : 0),
+		       (pm->BranchBits & 0x04 ? 1 : 0), (pm->BranchBits & 0x08 ? 1 : 0));
 		printk("BR4 0x%08x BR5 0x%08x BR6 0x%08x BR7 0x%08x\n",
-			   (pm->BranchBits & 0x10 ? 1 : 0), (pm->BranchBits & 0x20 ? 1 : 0),
-			   (pm->BranchBits & 0x40 ? 1 : 0), (pm->BranchBits & 0x80 ? 1 : 0));
+		       (pm->BranchBits & 0x10 ? 1 : 0), (pm->BranchBits & 0x20 ? 1 : 0),
+		       (pm->BranchBits & 0x40 ? 1 : 0), (pm->BranchBits & 0x80 ? 1 : 0));
 		printk("\nCall trace:\n");
 		if (pm->BackTrace[0])
 		{
@@ -2157,8 +2157,8 @@ static void IssuePostMortemDiagnostics(avr_v4l2_audio_handle_t *AudioContext)
 {
 #if DRV_MULTICOM_PERFLOG_VERSION >= 0x090617
 	MME_TimeLogPostMortem_t *pm[2] = { AudioContext->PostMortemBuffer,
-									   AudioContext->SecondaryPostMortemBuffer
-									 };
+					   AudioContext->SecondaryPostMortemBuffer
+					 };
 	const char *name_map[2] = { "sti7200_audio0", "sti7200_audio1" };
 	int kill_map[2] = { 3, 4 };
 	unsigned int kill_mask, dead_mask, trap_mask;
@@ -2166,7 +2166,7 @@ static void IssuePostMortemDiagnostics(avr_v4l2_audio_handle_t *AudioContext)
 	if (!pm[0] || 0 != test_and_set_bit(0, &AudioContext->PostMortemAlreadyIssued))
 	{
 		DVB_DEBUG("No post-mortem because %s\n", (pm[0] ? "it is not supported by firmware"
-												  : "post-mortem already issued"));
+							  : "post-mortem already issued"));
 		return;
 	}
 	/* Try to figure out which, if any firmware, has died (killing any which haven't so we can
@@ -2207,10 +2207,10 @@ static void IssuePostMortemDiagnostics(avr_v4l2_audio_handle_t *AudioContext)
 		schedule_timeout(HZ / 10);
 	}
 	printk("\n"
-		   "Audio firmware post-mortem report\n"
-		   "=================================\n");
+	       "Audio firmware post-mortem report\n"
+	       "=================================\n");
 	printk("\nFound %d crashed processors and killed %d more (guru meditation #%x/%x/%x)\n",
-		   hweight8(dead_mask), hweight8(kill_mask), dead_mask, kill_mask, trap_mask);
+	       hweight8(dead_mask), hweight8(kill_mask), dead_mask, kill_mask, trap_mask);
 	for (i = 0; i < lengthof(pm); i++)
 	{
 		if ((dead_mask ? dead_mask : kill_mask) & (1 << i))
@@ -2223,10 +2223,10 @@ static void IssuePostMortemDiagnostics(avr_v4l2_audio_handle_t *AudioContext)
 	PostMortemReportOutstandingCommand(AudioContext, &AudioContext->SetGlobalCommand);
 	if (atomic_read(&(AudioContext->ReuseOfGlobals)) != 0)
 		printk("SetGlobalsCommand structure reused %d times\n",
-			   atomic_read(&(AudioContext->ReuseOfGlobals)));
+		       atomic_read(&(AudioContext->ReuseOfGlobals)));
 	if (atomic_read(&(AudioContext->ReuseOfTransform)) != 0)
 		printk("TransformCommand structure reused %d times\n",
-			   atomic_read(&(AudioContext->ReuseOfTransform)));
+		       atomic_read(&(AudioContext->ReuseOfTransform)));
 	printk("\nEnd of post-mortem report\n\n");
 	sysfs_notify(&AudioContext->StreamClassDevice.kobj, NULL, "post_mortem");
 #else
@@ -2253,10 +2253,10 @@ static int CheckLLTransformerCapability(avr_v4l2_audio_handle_t *AudioContext)
 	}
 	DVB_TRACE("Found %s transformer (version %x)\n", LL_MT_NAME, Capability.Version);
 	DVB_DEBUG("%s capabilities:%s%s%s%s\n", LL_MT_NAME,
-			  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_DD) ? " DD" : ""),
-			  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_DTS) ? " DTS" : ""),
-			  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_MPG) ? " MP2AAC" : ""),
-			  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_WMA) ? " WMA" : ""));
+		  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_DD) ? " DD" : ""),
+		  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_DTS) ? " DTS" : ""),
+		  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_MPG) ? " MP2AAC" : ""),
+		  (ACC_DECODER_CAPABILITY_EXT_FLAGS(LLInfo, ACC_SPDIFIN) & (1 << ACC_SPDIFIN_WMA) ? " WMA" : ""));
 	return 0;
 }
 
@@ -2308,13 +2308,13 @@ static int InitLLTransformer(avr_v4l2_audio_handle_t *AudioContext)
 		return -EINVAL;
 	}
 	MMEStatus = MME_InitTransformer(LL_MT_NAME,
-									&InitParams,
-									&AudioContext->LLTransformerHandle);
+					&InitParams,
+					&AudioContext->LLTransformerHandle);
 	if (MMEStatus != MME_SUCCESS)
 	{
 		DVB_ERROR("Error: Call to MME_InitTransformer %s returned %d\n",
-				  LL_MT_NAME,
-				  MMEStatus);
+			  LL_MT_NAME,
+			  MMEStatus);
 		return -EINVAL;
 	}
 	return 0;
@@ -2325,14 +2325,14 @@ static int InitLLTransformer(avr_v4l2_audio_handle_t *AudioContext)
 /// Handle a callback from MME.
 ///
 static void MMECallbackLL(MME_Event_t Event,
-						  MME_Command_t *CallbackData,
-						  void *UserData)
+			  MME_Command_t *CallbackData,
+			  void *UserData)
 {
 	avr_v4l2_audio_handle_t *AudioContext = (avr_v4l2_audio_handle_t *) UserData;
 	atomic_dec(&(AudioContext->CommandsInFlight));
 	DVB_TRACE("Event %d for CmdId %08x (%s) - %d in flight\n",
-			  Event, CallbackData->CmdStatus.CmdId, LookupMmeCommandCode(CallbackData->CmdCode),
-			  atomic_read(&(AudioContext->CommandsInFlight)));
+		  Event, CallbackData->CmdStatus.CmdId, LookupMmeCommandCode(CallbackData->CmdCode),
+		  atomic_read(&(AudioContext->CommandsInFlight)));
 	switch (Event)
 	{
 		case MME_COMMAND_COMPLETED_EVT:
@@ -2366,13 +2366,13 @@ static void MMECallbackLL(MME_Event_t Event,
 						else
 						{
 							DVB_ERROR("Strange: Got a SendBuffer callback but buffer (%d) is empty\n",
-									  BufferIndex);
+								  BufferIndex);
 						}
 					}
 					else
 					{
 						DVB_ERROR("Strange: Got a SendBuffer callback but buffer has a wrong index (%d - %x)\n",
-								  BufferIndex, (unsigned int)TheEntry);
+							  BufferIndex, (unsigned int)TheEntry);
 					}
 					break;
 				}
@@ -2402,7 +2402,7 @@ static int LaunchLLSetGlobalCommand(avr_v4l2_audio_handle_t *AudioContext)
 			AudioContext->SetGlobalCommand.CmdStatus.State != MME_COMMAND_FAILED)
 	{
 		DVB_TRACE("Refusing to reuse SetGlobalCommand structure (CmdId %08x still pending)\n",
-				  AudioContext->SetGlobalCommand.CmdStatus.CmdId);
+			  AudioContext->SetGlobalCommand.CmdStatus.CmdId);
 		atomic_inc(&(AudioContext->ReuseOfGlobals));
 		return MME_COMMAND_STILL_EXECUTING;
 	}
@@ -2415,19 +2415,19 @@ static int LaunchLLSetGlobalCommand(avr_v4l2_audio_handle_t *AudioContext)
 	DVB_DEBUG("Launch a SetGlobal command to LL transformer\n");
 	// DumpMMECommand( &AudioContext->SetGlobalCommand );
 	MMEStatus = MME_SendCommand(AudioContext->LLTransformerHandle,
-								&AudioContext->SetGlobalCommand);
+				    &AudioContext->SetGlobalCommand);
 	if (MMEStatus != MME_SUCCESS)
 	{
 		DVB_ERROR("Error: Call to MME_SendCommand %s returned %d\n",
-				  LL_MT_NAME,
-				  MMEStatus);
+			  LL_MT_NAME,
+			  MMEStatus);
 	}
 	else
 	{
 		atomic_inc(&(AudioContext->CommandsInFlight));
 		DVB_TRACE("Issued command %x (MME_SET_GLOBAL_TRANSFORM_PARAMS) - %d in flight\n",
-				  AudioContext->SetGlobalCommand.CmdStatus.CmdId,
-				  atomic_read(&(AudioContext->CommandsInFlight)));
+			  AudioContext->SetGlobalCommand.CmdStatus.CmdId,
+			  atomic_read(&(AudioContext->CommandsInFlight)));
 	}
 	return MMEStatus;
 }
@@ -2444,19 +2444,19 @@ static int LaunchLLTransformCommand(avr_v4l2_audio_handle_t *AudioContext)
 	}
 	FillOutLLTransformCommand(AudioContext);
 	MMEStatus = MME_SendCommand(AudioContext->LLTransformerHandle,
-								&AudioContext->TransformCommand);
+				    &AudioContext->TransformCommand);
 	if (MMEStatus != MME_SUCCESS)
 	{
 		DVB_ERROR("Error: Call to MME_SendCommand %s returned %d\n",
-				  LL_MT_NAME,
-				  MMEStatus);
+			  LL_MT_NAME,
+			  MMEStatus);
 	}
 	else
 	{
 		atomic_inc(&(AudioContext->CommandsInFlight));
 		DVB_TRACE("Issued command %x (MME_TRANSFORM) - %d in flight\n",
-				  AudioContext->TransformCommand.CmdStatus.CmdId,
-				  atomic_read(&(AudioContext->CommandsInFlight)));
+			  AudioContext->TransformCommand.CmdStatus.CmdId,
+			  atomic_read(&(AudioContext->CommandsInFlight)));
 	}
 	return (MMEStatus);
 }
@@ -2471,7 +2471,7 @@ static int LaunchLLTransformCommand(avr_v4l2_audio_handle_t *AudioContext)
  * ignore the failure.
  */
 static int SetGlobalTransformParameters(avr_v4l2_audio_handle_t *AudioContext,
-										MME_LowlatencySpecializedGlobalParams_t *GlobalParams)
+					MME_LowlatencySpecializedGlobalParams_t *GlobalParams)
 {
 	avr_v4l2_shared_handle_t *SharedContext = AudioContext->SharedContext;
 	unsigned int ActualOutputCards = 0;
@@ -2555,8 +2555,8 @@ static int SetGlobalTransformParameters(avr_v4l2_audio_handle_t *AudioContext,
 			IoCfg->Connect.SBOutEnable = ll_input_log_enable;
 #endif
 			DVB_DEBUG("Input card %sconnected card hw:%d,%d (source %d)\n",
-					  IoCfg->Connect.Connect == IO_CONNECT ? "" : "dis",
-					  IoCfg->ID.CardId, IoCfg->ID.DevId, IoCfg->Connect.Source);
+				  IoCfg->Connect.Connect == IO_CONNECT ? "" : "dis",
+				  IoCfg->ID.CardId, IoCfg->ID.DevId, IoCfg->Connect.Source);
 			IoCfg++;
 		}
 		for (ActualOutputCards = 0;
@@ -2624,8 +2624,8 @@ static int SetGlobalTransformParameters(avr_v4l2_audio_handle_t *AudioContext,
 			else
 			{
 				DVB_DEBUG("Configured output card %s (idx %d) DevId %d CardId %d, NbChan %d SamplingFreq %d Connected %d\n",
-						  alsaname, out_idx, IoCfg->ID.DevId, IoCfg->ID.CardId, IoCfg->Params.NbChannels,
-						  IoCfg->Params.SamplingFreq, IoCfg->Connect.Connect);
+					  alsaname, out_idx, IoCfg->ID.DevId, IoCfg->ID.CardId, IoCfg->Params.NbChannels,
+					  IoCfg->Params.SamplingFreq, IoCfg->Connect.Connect);
 			}
 			IoCfg++;
 		}
@@ -2641,11 +2641,11 @@ static int SetGlobalTransformParameters(avr_v4l2_audio_handle_t *AudioContext,
 			IoCfg->Params.SamplingFreq = ACC_FS48k;
 			IoCfg->Connect.Connect = IO_DISCONNECT;
 			IoCfg->Connect.Source = 0;
-			IoCfg->Connect.Sink = out_idx + ActualOutputCards;;
+			IoCfg->Connect.Sink = out_idx + ActualOutputCards;
 			AudioContext->SoundcardHandle[out_idx + ActualOutputCards] = NULL;
 			DVB_DEBUG("Configured output card (idx %d) DevId %d CardId %d, NbChan %d SamplingFreq %d Connected %d\n",
-					  out_idx, IoCfg->ID.DevId, IoCfg->ID.CardId, IoCfg->Params.NbChannels,
-					  IoCfg->Params.SamplingFreq, IoCfg->Connect.Connect);
+				  out_idx, IoCfg->ID.DevId, IoCfg->ID.CardId, IoCfg->Params.NbChannels,
+				  IoCfg->Params.SamplingFreq, IoCfg->Connect.Connect);
 			IoCfg++;
 		}
 		// then configure PCM post processings...
@@ -2664,7 +2664,7 @@ static int SetGlobalTransformParameters(avr_v4l2_audio_handle_t *AudioContext,
 			for (n = 0; n < ActualOutputCards; n++)
 			{
 				PcmParamsSize += FillOutDevicePcmParameters(AudioContext, &PcmProcessingsCfg[n], n, &OutputEncoding,
-															(AudioContext->EmergencyMuteReason != EMERGENCY_MUTE_REASON_NONE));
+									    (AudioContext->EmergencyMuteReason != EMERGENCY_MUTE_REASON_NONE));
 				if (OutputEncoding == OUTPUT_FATPIPE)
 				{
 					IoCfg = (MME_LowLatencyIO_t *) &GlobalParams->SPDIFin;
@@ -2872,7 +2872,7 @@ enum eAccAcMode TranslateChannelAssignmentToAudioMode(struct snd_pseudo_mixer_ch
 	{
 		for (i = 0; ACC_MODE_ID != ChannelAssignmentLookupTable[i].AccAcMode; i++)
 			if (0 == memcmp(&ChannelAssignmentLookupTable[i].ChannelAssignment,
-							&ChannelAssignment, sizeof(ChannelAssignment)) &&
+					&ChannelAssignment, sizeof(ChannelAssignment)) &&
 					ChannelAssignmentLookupTable[i].SuitableForDirectOutput)
 				return ChannelAssignmentLookupTable[i].AccAcMode;
 		// Progressively disconnect pairs of outputs until we find something that matches
@@ -2939,8 +2939,8 @@ struct snd_pseudo_mixer_channel_assignment TranslateAudioModeToChannelAssignment
 /// a seperate method.
 ///
 static int FillOutDeviceDownmixParameters(avr_v4l2_audio_handle_t *AudioContext,
-										  MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
-										  int dev_num)
+					  MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
+					  int dev_num)
 {
 	// put these are the top because their values are very transient - don't expect them to maintain their
 	// values between blocks...
@@ -3024,7 +3024,7 @@ static int FillOutDeviceDownmixParameters(avr_v4l2_audio_handle_t *AudioContext,
 		{
 			OutputMode = TranslateChannelAssignmentToAudioMode(OutputId.ca);
 			DVB_TRACE("Downmix firmware requested %s as malleable output surface\n",
-					  LookupAudioMode(OutputMode));
+				  LookupAudioMode(OutputMode));
 			// update the CMC configuration with the value found in the firmware
 			PcmParams->CMC.Config[CMC_OUTMODE_MAIN] = OutputMode;
 			// update the target value since now we know what we were looking for
@@ -3034,7 +3034,7 @@ static int FillOutDeviceDownmixParameters(avr_v4l2_audio_handle_t *AudioContext,
 		{
 			const struct snd_pseudo_mixer_downmix_index *index = DownmixFirmware->index + low;
 			const snd_pseudo_mixer_downmix_Q15 *data = (snd_pseudo_mixer_downmix_Q15 *)
-													   (DownmixFirmware->index + DownmixFirmware->header.num_index_entries);
+								   (DownmixFirmware->index + DownmixFirmware->header.num_index_entries);
 			const snd_pseudo_mixer_downmix_Q15 *table = data + index->offset;
 			int x, y, i;
 			DMix->Config[DMIX_USER_DEFINED] = ACC_MME_TRUE;
@@ -3059,19 +3059,19 @@ static int FillOutDeviceDownmixParameters(avr_v4l2_audio_handle_t *AudioContext,
 				}
 			}
 			DVB_DEBUG("Found custom downmix table for %s to %s\n",
-					  LookupAudioMode(EffectiveInputMode), LookupAudioMode(OutputMode));
+				  LookupAudioMode(EffectiveInputMode), LookupAudioMode(OutputMode));
 			for (i = 0; i < DMIX_NB_IN_CHANNELS; i++)
 				DVB_DEBUG("%04x %04x %04x %04x %04x %04x %04x %04x\n",
-						  DMix->MainMixTable[i][0], DMix->MainMixTable[i][1],
-						  DMix->MainMixTable[i][2], DMix->MainMixTable[i][3],
-						  DMix->MainMixTable[i][4], DMix->MainMixTable[i][5],
-						  DMix->MainMixTable[i][6], DMix->MainMixTable[i][7]);
+					  DMix->MainMixTable[i][0], DMix->MainMixTable[i][1],
+					  DMix->MainMixTable[i][2], DMix->MainMixTable[i][3],
+					  DMix->MainMixTable[i][4], DMix->MainMixTable[i][5],
+					  DMix->MainMixTable[i][6], DMix->MainMixTable[i][7]);
 		}
 		else
 		{
 			// not an error but certainly worthy of note
 			DVB_TRACE("Downmix firmware has no entry for %s to %s - using defaults\n",
-					  LookupAudioMode(EffectiveInputMode), LookupAudioMode(OutputMode));
+				  LookupAudioMode(EffectiveInputMode), LookupAudioMode(OutputMode));
 		}
 	}
 	return struct_size;
@@ -3099,9 +3099,9 @@ static int FillOutDeviceDownmixParameters(avr_v4l2_audio_handle_t *AudioContext,
 /// to validate their correctness.
 ///
 static int FillOutDeviceSpdifParameters(avr_v4l2_audio_handle_t *AudioContext,
-										MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
-										struct snd_pseudo_mixer_settings *mixer_settings,
-										int dev_num, OutputEncoding_t OutputEncoding)
+					MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
+					struct snd_pseudo_mixer_settings *mixer_settings,
+					int dev_num, OutputEncoding_t OutputEncoding)
 {
 	unsigned int struct_size = 0;
 	//
@@ -3174,15 +3174,15 @@ static int FillOutDeviceSpdifParameters(avr_v4l2_audio_handle_t *AudioContext,
 		//
 		for (i = 0; i < STSZ; i++)
 			ChannelStatusMask[i] = mixer_settings->iec958_mask.status[i * 4 + 0] << 24 |
-								   mixer_settings->iec958_mask.status[i * 4 + 1] << 16 |
-								   mixer_settings->iec958_mask.status[i * 4 + 2] << 8 |
-								   mixer_settings->iec958_mask.status[i * 4 + 3] << 0;
+					       mixer_settings->iec958_mask.status[i * 4 + 1] << 16 |
+					       mixer_settings->iec958_mask.status[i * 4 + 2] << 8 |
+					       mixer_settings->iec958_mask.status[i * 4 + 3] << 0;
 		// these should never be overlaid
 		ChannelStatusMask[0] &= ~(use_of_channel_status_block |
-								  linear_pcm_identification |
-								  additional_format_information | /* auto fill in for PCM, 000 for coded data */
-								  mode |
-								  sampling_frequency); /* auto fill in */
+					  linear_pcm_identification |
+					  additional_format_information | /* auto fill in for PCM, 000 for coded data */
+					  mode |
+					  sampling_frequency); /* auto fill in */
 		ChannelStatusMask[1] &= ~(word_length);
 		//
 		// Handle, in a unified manner, all the IEC SPDIF formatings
@@ -3227,10 +3227,10 @@ static int FillOutDeviceSpdifParameters(avr_v4l2_audio_handle_t *AudioContext,
 /// Fill out the PCM post-processing required for a single physical output.
 ///
 unsigned int FillOutDevicePcmParameters(avr_v4l2_audio_handle_t *AudioContext,
-										MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
-										int dev_num,
-										OutputEncoding_t *OutputEncoding,
-										bool DeployEmergencyMute)
+					MME_LLChainPcmProcessingGlobalParams_t *PcmParams,
+					int dev_num,
+					OutputEncoding_t *OutputEncoding,
+					bool DeployEmergencyMute)
 {
 	avr_v4l2_shared_handle_t *SharedContext = AudioContext->SharedContext;
 	struct snd_pseudo_mixer_settings *mixer_settings = &SharedContext->mixer_settings;
@@ -3285,9 +3285,9 @@ unsigned int FillOutDevicePcmParameters(avr_v4l2_audio_handle_t *AudioContext,
 			BassMgt->CutOffFrequency = 100; // within [50, 200] Hz
 			BassMgt->FilterOrder = 2; // could be 1 or 2 .
 			DVB_DEBUG("BassMgt[%d]: %d %d %d %d %d %d\n", dev_num,
-					  BassMgt->Volume[0], BassMgt->Volume[1],
-					  BassMgt->Volume[2], BassMgt->Volume[3],
-					  BassMgt->Volume[4], BassMgt->Volume[5]);
+				  BassMgt->Volume[0], BassMgt->Volume[1],
+				  BassMgt->Volume[2], BassMgt->Volume[3],
+				  BassMgt->Volume[4], BassMgt->Volume[5]);
 		}
 	}
 	{
@@ -3348,7 +3348,7 @@ unsigned int FillOutDevicePcmParameters(avr_v4l2_audio_handle_t *AudioContext,
 	struct_size += FillOutDeviceDownmixParameters(AudioContext, PcmParams, dev_num);
 	//
 	struct_size += FillOutDeviceSpdifParameters(AudioContext, PcmParams, mixer_settings,
-												dev_num, *OutputEncoding);
+						    dev_num, *OutputEncoding);
 	//
 	{
 		MME_LimiterGlobalParams_t *Limiter = &PcmParams->Limiter;
@@ -3383,7 +3383,7 @@ unsigned int FillOutDevicePcmParameters(avr_v4l2_audio_handle_t *AudioContext,
 			Limiter->EmergencyMute.bits.Chains = 0xF; // apply to all chains
 			Limiter->EmergencyMute.bits.Override = ACC_MME_TRUE; // unmute irrespective of MuteID
 			Limiter->EmergencyMute.bits.AutoUnmute = SND_PSEUDO_MIXER_EMERGENCY_MUTE_NO_MUTE == mixer_settings->emergency_mute ?
-													 ACC_MME_TRUE : ACC_MME_FALSE; // Let the FW unmute by itself if it triggers emergency mute
+								 ACC_MME_TRUE : ACC_MME_FALSE; // Let the FW unmute by itself if it triggers emergency mute
 			Limiter->EmergencyMute.bits.MuteId = 0;
 #endif
 		}
@@ -3405,7 +3405,7 @@ unsigned int FillOutDevicePcmParameters(avr_v4l2_audio_handle_t *AudioContext,
 		Limiter->DelayBuffer = NULL; // delay buffer will be allocated by firmware
 		Limiter->DelayBufSize = 0;
 		Limiter->Delay = mixer_settings->chain_latency[dev_num] +
-						 AudioContext->CompensatoryLatency; //in ms
+				 AudioContext->CompensatoryLatency; //in ms
 		DVB_DEBUG("Limiter[%d] Gain %d Delay %d\n", dev_num, Limiter->Gain, Limiter->Delay);
 	}
 #if DRV_MULTICOM_PERFLOG_VERSION >= 0x090605
@@ -3441,7 +3441,7 @@ int ProcessSpecializedTransformStatus(MME_LowlatencySpecializedTransformStatus_t
 	while (BytesRemaining > 0 && Template->StructSize > 0)
 	{
 		DVB_DEBUG("Template %p BytesRemaining %d Id %08x StructSize %d\n",
-				  Template, BytesRemaining, Template->Id, Template->StructSize);
+			  Template, BytesRemaining, Template->Id, Template->StructSize);
 		switch (Template->Id)
 		{
 // TODO: Can't find this macro in the ACF headers
@@ -3454,12 +3454,12 @@ int ProcessSpecializedTransformStatus(MME_LowlatencySpecializedTransformStatus_t
 				{
 					DVB_DEBUG("Got CMC reply for chain %d\n", PCMPROCESS_GET_ID(Template->Id));
 					memcpy(&(NewStatus.OutputChainStatus[PCMPROCESS_GET_ID(Template->Id)]),
-						   Template, sizeof(MME_PcmProcessingOutputChainStatus_t));
+					       Template, sizeof(MME_PcmProcessingOutputChainStatus_t));
 				}
 				else
 				{
 					DVB_ERROR("Bad MME_PcmProcessingOutputChainStatus_t size "
-							  "(firmware version skew?)\n");
+						  "(firmware version skew?)\n");
 					Result = -1;
 				}
 				break;
@@ -3471,7 +3471,7 @@ int ProcessSpecializedTransformStatus(MME_LowlatencySpecializedTransformStatus_t
 				{
 					DVB_DEBUG("Got limiter reply for chain %d\n", PCMPROCESS_GET_ID(Template->Id));
 					memcpy(&(NewStatus.LimiterStatus[PCMPROCESS_GET_ID(Template->Id)]),
-						   Template, sizeof(MME_LimiterStatus_t));
+					       Template, sizeof(MME_LimiterStatus_t));
 				}
 				else
 				{
@@ -3481,7 +3481,7 @@ int ProcessSpecializedTransformStatus(MME_LowlatencySpecializedTransformStatus_t
 				break;
 			default:
 				DVB_ERROR("Unknown structure in reply - Id %08x, Size %d\n",
-						  Template->Id, Template->StructSize);
+					  Template->Id, Template->StructSize);
 				break;
 #undef PCMPROCESS_GET_ID
 		}
@@ -3502,11 +3502,11 @@ static void AvrAudioLLConditionalAbort(avr_v4l2_audio_handle_t *AudioContext, MM
 	if (MME_COMMAND_COMPLETED != State && MME_COMMAND_FAILED != State)
 	{
 		DVB_TRACE("Aborting command %x (%s)\n",
-				  Cmd->CmdStatus.CmdId, LookupMmeCommandCode(Cmd->CmdCode));
+			  Cmd->CmdStatus.CmdId, LookupMmeCommandCode(Cmd->CmdCode));
 		Err = MME_AbortCommand(AudioContext->LLTransformerHandle, Cmd->CmdStatus.CmdId);
 		if (MME_SUCCESS != Err)
 			DVB_ERROR("Failure whilst aborting command %x (%s)\n",
-					  Cmd->CmdStatus.CmdId, LookupMmeCommandCode(Cmd->CmdCode));
+				  Cmd->CmdStatus.CmdId, LookupMmeCommandCode(Cmd->CmdCode));
 		// no recovery possible
 	}
 }
@@ -3576,13 +3576,13 @@ static int AvrAudioLLThreadCleanup(avr_v4l2_audio_handle_t *AudioContext)
 				break;
 			}
 			DVB_DEBUG("Waiting to terminate transformer %s (MME_TermTransformer returned %d)\n",
-					  LL_MT_NAME, MMEStatus);
+				  LL_MT_NAME, MMEStatus);
 			// wait for one of the commands to return before looping round
 			(void) wait_event_timeout(AudioContext->WaitQueue,
-									  AudioContext->GotTransformCommandCallback ||
-									  AudioContext->GotSetGlobalCommandCallback ||
-									  AudioContext->GotSendBufferCommandCallback,
-									  (HZ / 10));
+						  AudioContext->GotTransformCommandCallback ||
+						  AudioContext->GotSetGlobalCommandCallback ||
+						  AudioContext->GotSendBufferCommandCallback,
+						  (HZ / 10));
 			// we don't really care whether the wait reported timeout or not - we're going
 			// to do the same thing anyway...
 		}
@@ -3596,7 +3596,7 @@ static int AvrAudioLLThreadCleanup(avr_v4l2_audio_handle_t *AudioContext)
 	if (retries <= 0)
 	{
 		DVB_ERROR("Timed out after ~%dms whilst trying to terminate transformer %s\n",
-				  (int) ktime_to_almost_ms(elapsed), LL_MT_NAME);
+			  (int) ktime_to_almost_ms(elapsed), LL_MT_NAME);
 		IssuePostMortemDiagnostics(AudioContext);
 		return -ETIMEDOUT;
 	}
@@ -3737,9 +3737,9 @@ int InitLLLogBuffers(avr_v4l2_audio_handle_t *AudioContext)
 	{
 		// initialize the pools used to log buffers
 		if (CreateBufferPool(&AudioContext->InputPool.Pool,
-							 &AudioContext->InputPool.Entries[0],
-							 AVR_LOW_LATENCY_MAX_LOG_INPUT_SEND_BUFFERS,
-							 AVR_LOW_LATENCY_BUFFER_INPUT_SIZE))
+				     &AudioContext->InputPool.Entries[0],
+				     AVR_LOW_LATENCY_MAX_LOG_INPUT_SEND_BUFFERS,
+				     AVR_LOW_LATENCY_BUFFER_INPUT_SIZE))
 		{
 			DVB_ERROR("Unable to allocate input buffers for logging\n");
 			return 1;
@@ -3752,9 +3752,9 @@ int InitLLLogBuffers(avr_v4l2_audio_handle_t *AudioContext)
 	if (ll_output_log_enable)
 	{
 		if (CreateBufferPool(&AudioContext->OutputPool.Pool,
-							 &AudioContext->OutputPool.Entries[0],
-							 AVR_LOW_LATENCY_MAX_LOG_OUTPUT_SEND_BUFFERS,
-							 AVR_LOW_LATENCY_BUFFER_OUTPUT_SIZE))
+				     &AudioContext->OutputPool.Entries[0],
+				     AVR_LOW_LATENCY_MAX_LOG_OUTPUT_SEND_BUFFERS,
+				     AVR_LOW_LATENCY_BUFFER_OUTPUT_SIZE))
 		{
 			DVB_ERROR("Unable to allocate output buffers for logging\n");
 			return 1;
@@ -4162,7 +4162,7 @@ int AvrAudioGetHdmiAudioMode(avr_v4l2_audio_handle_t *AudioContext)
 }
 
 void AvrAudioSetChannelSelect(avr_v4l2_audio_handle_t *AudioContext,
-							  enum v4l2_avr_audio_channel_select ChannelSelect)
+			      enum v4l2_avr_audio_channel_select ChannelSelect)
 {
 	AudioContext->ChannelSelect = ChannelSelect;
 	AvrAudioLLInstantApply(AudioContext);
@@ -4258,12 +4258,12 @@ int AvrAudioIoctlOverlayStop(avr_v4l2_audio_handle_t *AudioContext)
 		if (AudioContext->ThreadShouldStop)
 		{
 			DVB_ERROR("%s after ~%dms waiting for audio thread to terminate\n",
-					  0 == res ? "Timed out" : "Error whilst", (int) ktime_to_almost_ms(elapsed));
+				  0 == res ? "Timed out" : "Error whilst", (int) ktime_to_almost_ms(elapsed));
 			IssuePostMortemDiagnostics(AudioContext);
 			return -ETIMEDOUT;
 		}
 		DVB_DEBUG("Stop completed OK after ~%dms: res %d ThreadShouldstop %d\n",
-				  (int) ktime_to_almost_ms(elapsed), res, AudioContext->ThreadShouldStop);
+			  (int) ktime_to_almost_ms(elapsed), res, AudioContext->ThreadShouldStop);
 		// mark the thread as not running
 		AudioContext->ThreadHandle = NULL;
 	}

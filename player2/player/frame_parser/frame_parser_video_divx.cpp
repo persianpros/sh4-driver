@@ -404,7 +404,7 @@ FrameParserStatus_t FrameParser_VideoDivx_c::ReadHeaders(void)
 			// Nick changed this to sanitize the frame rate (4..120)
 			if ((CurrentMicroSecondsPerFrame == 0) || !inrange(Rational_t(1000000, CurrentMicroSecondsPerFrame), 4, 120))
 			{
-				report(severity_error, "Current ms per frame not valid (%d) defaulting to 25fps\n");
+				report(severity_error, "Current ms per frame not valid (%d) defaulting to 25fps\n", CurrentMicroSecondsPerFrame);
 				CurrentMicroSecondsPerFrame = 40000;
 			}
 			//report (severity_error,"CurrentMicroSecondsPerFrame %d\n",CurrentMicroSecondsPerFrame);
@@ -934,8 +934,8 @@ FrameParserStatus_t FrameParser_VideoDivx_c::ReadVopHeader(Mpeg4VopHeader_t *Vop
 			Vop->alternate_vertical_scan_flag = Bits.Get(1);
 #if 0
 			report(severity_error, "interlaced info : tff %d, avsf %d\n",
-				   Vop->top_field_first,
-				   Vop->alternate_vertical_scan_flag);
+			       Vop->top_field_first,
+			       Vop->alternate_vertical_scan_flag);
 #endif
 			// 25fps is a frame rate of 40ms per frame
 			if ((CurrentMicroSecondsPerFrame == 40000) && (Vop->top_field_first == 0))
@@ -968,10 +968,10 @@ FrameParserStatus_t FrameParser_VideoDivx_c::ReadVopHeader(Mpeg4VopHeader_t *Vop
 		{
 #if 0
 			report(severity_info, "DivX NVOP detected %d %d %d %d\n",
-				   Vop->prediction_type,
-				   LastPredictionType,
-				   LastTimeIncrement,
-				   Vop->time_inc);
+			       Vop->prediction_type,
+			       LastPredictionType,
+			       LastTimeIncrement,
+			       Vop->time_inc);
 #endif
 			Vop->divx_nvop = 1;
 		}
@@ -979,10 +979,10 @@ FrameParserStatus_t FrameParser_VideoDivx_c::ReadVopHeader(Mpeg4VopHeader_t *Vop
 		else
 		{
 			report(severity_info, "real NVOP detected %d %d %d %d\n",
-				   Vop->prediction_type,
-				   LastPredictionType,
-				   LastTimeIncrement,
-				   Vop->time_inc);
+			       Vop->prediction_type,
+			       LastPredictionType,
+			       LastTimeIncrement,
+			       Vop->time_inc);
 		}
 #endif
 	}

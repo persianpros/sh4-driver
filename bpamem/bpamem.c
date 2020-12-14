@@ -12,24 +12,24 @@
 #include <linux/ctype.h>
 #include <linux/mm.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
 #include <linux/semaphore.h>
 #else
 #include <asm/semaphore.h>
 #endif
 #include <linux/major.h>
 
-#include <linux/device.h> /* class_creatre */
-#include <linux/cdev.h> /* cdev_init */
+#include <linux/device.h>  /* class_creatre */
+#include <linux/cdev.h>    /* cdev_init */
 
 #define MAX_BPA_ALLOCS 32
 
 typedef struct
 {
-	int               used;
+	int              used;
 	struct bpa2_part *part;
-	unsigned long     phys_addr;
-	unsigned long     size;
+	unsigned long    phys_addr;
+	unsigned long    size;
 } bpamem_dev_private;
 
 bpamem_dev_private bpamem_dev[MAX_BPA_ALLOCS];
@@ -38,11 +38,11 @@ struct semaphore sem_find_dev;
 unsigned int find_next_device(void)
 {
 	unsigned int i, dev = -1;
-	
+
 	down(&sem_find_dev);
-	for(i = 0; i < MAX_BPA_ALLOCS; i++)
+	for (i = 0; i < MAX_BPA_ALLOCS; i++)
 	{
-		if (bpamem_dev[i].used == 0)
+		if(bpamem_dev[i].used == 0)
 		{
 			dev = i;
 			break;
@@ -65,41 +65,38 @@ int bpamemio_allocmem(BPAMemAllocMemData *in_data)
 	dev = find_next_device();
 	if (dev == -1)	// nothing left
 	{
-		DEBUG_PRINTK("memory already allocated\n");
+		DEBUG_PRINTK("Memory already allocated\n");
 		return -1;
 	}
-	
-	if (copy_from_user(&data, in_data, sizeof(BPAMemAllocMemData)))
+
+	if(copy_from_user(&data, in_data, sizeof(BPAMemAllocMemData)))
 	{
 		bpamem_dev[dev].used = 0;
 		return -1;
 	}
-		
 	DEBUG_PRINTK("data.bpa_part = %s\n", data.bpa_part);
-	
+
 	data.device_num = dev;
-	if(data.mem_size % PAGE_SIZE != 0) 
+	if (data.mem_size % PAGE_SIZE != 0) 
 	{
 		data.mem_size = (data.mem_size / PAGE_SIZE + 1) * PAGE_SIZE;
 	}
 	bpamem_dev[dev].part = bpa2_find_part(data.bpa_part);
 	if (!bpamem_dev[dev].part)
 	{
-		DEBUG_PRINTK("bpa part %s not found\n", data.bpa_part);
+		DEBUG_PRINTK("BPA part %s not found\n", data.bpa_part);
 		bpamem_dev[dev].used = 0;
 		return -1;
 	}
-		
 	bpamem_dev[dev].phys_addr = bpa2_alloc_pages(bpamem_dev[dev].part, data.mem_size / PAGE_SIZE, 1, GFP_KERNEL);
 	if (!bpamem_dev[dev].phys_addr)
 	{
-		DEBUG_PRINTK("could not alloc bpa mem\n");
+		DEBUG_PRINTK("Could not allocate BPA memory\n");
 		bpamem_dev[dev].used = 0;
 		return -ENOMEM;
 	}
-		
 	bpamem_dev[dev].size = data.mem_size;
-	
+
 	if (copy_to_user(in_data, &data, sizeof(BPAMemAllocMemData)))
 	{
 		bpa2_free_pages(bpamem_dev[dev].part, bpamem_dev[dev].phys_addr);
@@ -114,12 +111,12 @@ int bpamemio_mapmem(BPAMemMapMemData *in_data)
 {
 	BPAMemMapMemData data;
 	unsigned int dev;
-	
+
 	// reserve a device
 	dev = find_next_device();
-	if (dev == -1)	// nothing left
+	if (dev == -1)  // nothing left
 	{
-		DEBUG_PRINTK("memory already allocated\n");
+		DEBUG_PRINTK("Memory already allocated\n");
 		return -1;
 	}
 	if (copy_from_user(&data, in_data, sizeof(BPAMemMapMemData)))
@@ -130,11 +127,11 @@ int bpamemio_mapmem(BPAMemMapMemData *in_data)
 	DEBUG_PRINTK("data.bpa_part = %s\n", data.bpa_part);
 
 	data.device_num = dev;
-	
+
 	bpamem_dev[dev].part = bpa2_find_part(data.bpa_part);
 	if (!bpamem_dev[dev].part)
 	{
-		DEBUG_PRINTK("bpa part %s not found\n", data.bpa_part);
+		DEBUG_PRINTK("BPA part %s not found\n", data.bpa_part);
 		bpamem_dev[dev].used = 0;
 		return -1;
 	}
@@ -175,6 +172,7 @@ int bpamemio_unmapmem(unsigned int dev)
 static int bpamem_ioctl(struct inode *inode, struct file *filp, unsigned int ioctl_num, unsigned long ioctl_param)
 {
 	unsigned int dev;
+
 	dev = MINOR(inode->i_rdev);
 	switch (ioctl_num) 
 	{
@@ -213,24 +211,22 @@ static int bpamem_mmap(struct file *file, struct vm_area_struct *vma)
 	unsigned long start;
 	unsigned int dev;
 	dev = MINOR(file->f_dentry->d_inode->i_rdev);
-	
+
 	if (bpamem_dev[dev].used && bpamem_dev[dev].phys_addr == 0)
 	{
-		DEBUG_PRINTK("no bpa mem allocated but mmap requested for dev %d\n", dev);
+		DEBUG_PRINTK("No BPA memory allocated but mmap requested for dev %d\n", dev);
 		return -1;	// Not allocated
 	}
-
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 	vma->vm_flags |= VM_IO | VM_RESERVED | VM_DONTEXPAND;
 
-  	start = bpamem_dev[dev].phys_addr + (vma->vm_pgoff << PAGE_SHIFT);
+	start = bpamem_dev[dev].phys_addr + (vma->vm_pgoff << PAGE_SHIFT);
 
-  	if (io_remap_pfn_range(vma, vma->vm_start, start >> PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot))
-  	{
-  		DEBUG_PRINTK("remap_pfn_range failed\n");
+	if (io_remap_pfn_range(vma, vma->vm_start, start >> PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot))
+	{
+		DEBUG_PRINTK("remap_pfn_range failed\n");
 		return -EIO;
-
-  	}
+	}
 	return 0;  	
 }
 
@@ -245,13 +241,14 @@ static struct file_operations bpamem_devops =
 
 #define DEVICE_NAME "bpamem"
 
-static struct cdev   bpamem_cdev;
+static struct cdev  bpamem_cdev;
 static struct class *bpamem_class = 0;
 
 static int __init bpamem_init(void)
 {
 	int result;
 	unsigned int i;
+
 	for (i = 0; i < MAX_BPA_ALLOCS; i++)
 	{
 		bpamem_dev[i].used = 0;
@@ -268,7 +265,7 @@ static int __init bpamem_init(void)
 	bpamem_cdev.ops = &bpamem_devops;
 	if (cdev_add(&bpamem_cdev, MKDEV(BPAMEM_MAJOR, 0), MAX_BPA_ALLOCS) < 0)
 	{
-		printk("BPAMem couldn't register '%s' driver\n", DEVICE_NAME);
+		printk("BPAMem could not register '%s' driver\n", DEVICE_NAME);
 		return -1;
 	}
 	bpamem_class = class_create(THIS_MODULE, DEVICE_NAME);
@@ -300,7 +297,7 @@ static void __exit bpamem_exit(void)
 
 	unregister_chrdev_region(MKDEV(BPAMEM_MAJOR, 0), MAX_BPA_ALLOCS);
 
-	for (i = 0; i < MAX_BPA_ALLOCS; i++)
+	for(i = 0; i < MAX_BPA_ALLOCS; i++)
 	{
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30)
 		device_destroy(bpamem_class, MKDEV(BPAMEM_MAJOR, i));
@@ -314,7 +311,7 @@ static void __exit bpamem_exit(void)
 module_init(bpamem_init);
 module_exit(bpamem_exit);
 
-MODULE_DESCRIPTION("Alloc bpa2 mem from user space");
+MODULE_DESCRIPTION("Alloc BPA2 memory from user space");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

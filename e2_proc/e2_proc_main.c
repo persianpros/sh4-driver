@@ -122,8 +122,6 @@
  *  |           |
  *  |           --------- led0_pattern
  *  |           |
- *  |           --------- led1_pattern
- *  |           |
  *  |           --------- led_pattern_speed
  *  |           |
  *  |           |
@@ -135,8 +133,6 @@
  *  |
  *  |
  *  ---------- hdmi
- *  |           |
- *  |           --------- bypass_edid_checking
  *  |           |
  *  |           --------- enable_hdmi_resets
  *  |           |
@@ -166,7 +162,7 @@
  *  |
  *  ---------- misc
  *  |           |
- *  |           --------- 12V_output
+ *  |           --------- 12V_output <- VIP1_V1, HL101, OPT9600, IPBOX9900 only
  *  |
  *  ---------- tuner (dagoberts tuner entry ;-) )
  *  |           |
@@ -232,15 +228,12 @@
  *  |           --------- symbol_circle <- control for spinner (if spinner available)
  *  |           |
  *  |           --------- symbol_timeshift <- control for timeshift icon (if present)
- *  |
- *  ---------- power
- *  |           |
- *  |           --------- standbyled
  *
  */
 
 #include <linux/proc_fs.h>  	/* proc fs */
 #include <asm/uaccess.h>    	/* copy_from_user */
+
 #include <linux/version.h>
 #include <linux/string.h>
 #include <linux/module.h>
@@ -321,6 +314,8 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "vip1_v2\n");
 #elif defined(VIP2)
 	int len = sprintf(page, "vip2\n");
+#elif defined(UFS910)
+	int len = sprintf(page, "ufs910\n");
 #elif defined(UFS922)
 	int len = sprintf(page, "ufs922\n");
 #elif defined(UFC960)
@@ -335,12 +330,6 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "spark7162\n");
 #elif defined(FORTIS_HDBOX)
 	int len = sprintf(page, "fortis_hdbox\n");
-#elif defined(QBOXHD)
-	int len = sprintf(page, "qboxhd\n");
-#elif defined(QBOXHD_MINI)
-	int len = sprintf(page, "qboxhd_mini\n");
-#elif defined(HOMECAST5101)
-	int len = sprintf(page, "hs5101\n");
 #elif defined(OCTAGON1008)
 	int len = sprintf(page, "octagon1008\n");
 #elif defined(ATEVIO7500)
@@ -357,6 +346,36 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "hs7810a\n");
 #elif defined(HS7819)
 	int len = sprintf(page, "hs7819\n");
+#elif defined(ATEMIO520)
+	int len = sprintf(page, "atemio520\n");
+#elif defined(ATEMIO530)
+	int len = sprintf(page, "atemio530\n");
+#elif defined(IPBOX9900)
+	int len = sprintf(page, "ipbox9900\n");
+#elif defined(IPBOX99)
+	int len = sprintf(page, "ipbox99\n");
+#elif defined(IPBOX55)
+	int len = sprintf(page, "ipbox55\n");
+#elif defined(ADB_BOX)
+	int len = sprintf(page, "adb_box\n");
+#elif defined(VITAMIN_HD5000)
+	int len = sprintf(page, "vitamin_hd5000\n");
+#elif defined(SAGEMCOM88)
+	int len = sprintf(page, "sagemcom88\n");
+#elif defined(ARIVALINK200)
+	int len = sprintf(page, "arivalink200\n");
+#elif defined(PACE7241)
+	int len = sprintf(page, "pace7241\n");
+#elif defined(OPT9600)
+	int len = sprintf(page, "opt9600\n");
+#elif defined(ADB_2850)
+	int len = sprintf(page, "adb_2850\n");
+#elif defined(QBOXHD)
+	int len = sprintf(page, "qboxhd\n");
+#elif defined(QBOXHD_MINI)
+	int len = sprintf(page, "qboxhd_mini\n");
+#elif defined(HOMECAST5101)
+	int len = sprintf(page, "hs5101\n");
 #elif defined(FOREVER_NANOSMART)
 	int len = sprintf(page, "forever_nanosmart\n");
 #elif defined(FOREVER_9898HD)
@@ -373,32 +392,6 @@ static int info_model_read(char *page, char **start, off_t off, int count, int *
 	int len = sprintf(page, "ep8000\n");
 #elif defined(EPP8000)
 	int len = sprintf(page, "epp8000\n");
-#elif defined(ATEMIO520)
-	int len = sprintf(page, "atemio520\n");
-#elif defined(ATEMIO530)
-	int len = sprintf(page, "atemio530\n");
-#elif defined(IPBOX9900)
-	int len = sprintf(page, "ipbox9900\n");
-#elif defined(IPBOX99)
-	int len = sprintf(page, "ipbox99\n");
-#elif defined(IPBOX55)
-	int len = sprintf(page, "ipbox55\n");
-#elif defined(ADB_BOX)
-	int len = sprintf(page, "adb_box\n");
-#elif defined(ADB_2850)
-	int len = sprintf(page, "adb_2850\n");
-#elif defined(VITAMIN_HD5000)
-	int len = sprintf(page, "vitamin_hd5000\n");
-#elif defined(SAGEMCOM88)
-	int len = sprintf(page, "sagemcom88\n");
-#elif defined(UFS910)
-	int len = sprintf(page, "ufs910\n");
-#elif defined(ARIVALINK200)
-	int len = sprintf(page, "arivalink200\n");
-#elif defined(PACE7241)
-	int len = sprintf(page, "pace7241\n");
-#elif defined(OPT9600)
-	int len = sprintf(page, "opt9600\n");
 #else
 	int len = sprintf(page, "unknown\n");
 #endif
@@ -708,9 +701,13 @@ out:
 
 static int info_chipset_read(char *page, char **start, off_t off, int count, int *eof, void *data)
 {
-#if defined(UFS910) || defined(ADB_BOX)
+#if defined(UFS910) \
+ || defined(ADB_BOX)
 	int len = sprintf(page, "STi7100\n");
-#elif defined(ATEVIO7500) || defined(UFS913) || defined(SAGEMCOM88) || defined(PACE7241)
+#elif defined(ATEVIO7500) \
+ || defined(UFS913) \
+ || defined(SAGEMCOM88) \
+ || defined(PACE7241)
 	int len = sprintf(page, "STi7105\n");
 #elif defined(FORTIS_HDBOX) \
  || defined(HL101) \
@@ -902,7 +899,10 @@ out:
 	return ret;
 }
 
-#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V1) || defined(OPT9600)
+#if defined(IPBOX9900) \
+ || defined(HL101) \
+ || defined(VIP1_V1) \
+ || defined(OPT9600)
 int _12v_isON = 0;
 
 void set_12v(int onoff)
@@ -963,6 +963,7 @@ int proc_misc_12V_output_write(struct file *file, const char __user *buf, unsign
 //	set_12v(_12v_isON);  // set 12V output
 #endif
 	ret = count;
+
 out:
 	free_page((unsigned long)page);
 	return ret;
@@ -1002,38 +1003,60 @@ static int default_write_proc(struct file *file, const char __user *buf, unsigne
 
 struct ProcStructure_s e2Proc[] =
 {
-	{cProcEntry, "progress"                                                         , NULL, NULL, NULL, NULL, ""},
-#if defined(HL101)
-	{cProcEntry, "vfd"                                                              , NULL, NULL, NULL, NULL, ""},
+#if defined(UFS910)
+	{cProcEntry, "boxtype",                                                          NULL, NULL, NULL, NULL, ""},
 #endif
-	{cProcEntry, "bus/nim_sockets"                                                  , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb"                                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/audio"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/audio/ac3"                                                    , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/audio/audio_delay_pcm"                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/audio/audio_delay_bitstream"                                  , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/audio/j1_mute"                                                , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/audio/ac3_choices"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/info"                                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/info/model"                                                   , NULL, info_model_read, NULL, NULL, ""},
-	{cProcEntry, "stb/info/chipset"                                                 , NULL, info_chipset_read, NULL, NULL, ""},
-	{cProcEntry, "stb/info/boxtype"                                                 , NULL, info_model_read, NULL, NULL, ""},
-#if defined(ADB_BOX) || defined(ADB_2850)
-	{cProcEntry, "stb/info/adb_variant"                                             , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "progress",                                                         NULL, NULL, NULL, NULL, ""},
+
+	{cProcEntry, "bus/nim_sockets",                                                  NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb",                                                              NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb/audio",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/audio/ac3",                                                    NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/audio/audio_delay_pcm",                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/audio/audio_delay_bitstream",                                  NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/audio/j1_mute",                                                NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/audio/ac3_choices",                                            NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/info",                                                         NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/info/model",                                                   NULL, info_model_read, NULL, NULL, ""},
+	{cProcEntry, "stb/info/chipset",                                                 NULL, info_chipset_read, NULL, NULL, ""},
+	{cProcEntry, "stb/info/boxtype",                                                 NULL, info_model_read, NULL, NULL, ""},
+#if defined(ADB_BOX)
+	{cProcEntry, "stb/info/adb_variant",                                             NULL, NULL, NULL, NULL, ""},
 #endif
-#if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7119) || defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
+#if defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008) \
+ || defined(ATEVIO7500) \
+ || defined(HS7110) \
+ || defined(HS7119) \
+ || defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819)
 	{cProcEntry, "stb/info/model_name",                                              NULL, NULL, NULL, NULL, ""},
 #endif
-	{cProcDir  , "stb/ir"                                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/ir/rc"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/ir/rc/type"                                                   , NULL, info_rctype_read, info_rctype_write, NULL, ""},
-	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/ir",                                                           NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb/ir/rc",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/ir/rc/type",                                                   NULL, info_rctype_read, info_rctype_write, NULL, ""},
+
+	{cProcDir,   "stb/lcd",                                                          NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/lcd/scroll_repeats",                                           NULL, info_scroll_repeats_read, info_scroll_repeats_write, NULL, ""},
 	{cProcEntry, "stb/lcd/scroll_delay",                                             NULL, info_scroll_delay_read, info_scroll_delay_write, NULL, ""},
 	{cProcEntry, "stb/lcd/initial_scroll_delay",                                     NULL, info_initial_scroll_delay_read, info_initial_scroll_delay_write, NULL, ""},
 	{cProcEntry, "stb/lcd/final_scroll_delay",                                       NULL, info_final_scroll_delay_read, info_final_scroll_delay_write, NULL, ""},
-#if defined(ADB_BOX) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(SPARK7162) || defined(TF7700) || defined(VITAMIN_HD5000) || defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2)
-	{cProcEntry, "stb/lcd/symbol_circle"                                            , NULL, NULL, NULL, NULL, ""},
+
+#if defined(ADB_BOX) \
+ || defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500) \
+ || defined(SPARK7162) \
+ || defined(TF7700) \
+ || defined(VITAMIN_HD5000) \
+ || defined(HL101) \
+ || defined(VIP1_V1) \
+ || defined(VIP1_V2) \
+ || defined(VIP2)
+	{cProcEntry, "stb/lcd/symbol_circle",                                            NULL, NULL, NULL, NULL, ""},
 #endif
 #if defined(SPARK7162) \
  || defined(TF7700) \
@@ -1043,73 +1066,100 @@ struct ProcStructure_s e2Proc[] =
  || defined(VIP2)
 	{cProcEntry, "stb/lcd/symbol_hdd",                                               NULL, NULL, NULL, NULL, ""},
 #endif
-#if defined(ADB_BOX) || defined(FORTIS_HDBOX) || defined(ATEVIO7500) || defined(CUBEREVO) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_3000HD) || defined(SPARK7162) || defined(TF7700) || defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2)
+#if defined(ADB_BOX) \
+ || defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500) \
+ || defined(CUBEREVO) \
+ || defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(SPARK7162) \
+ || defined(TF7700) \
+ || defined(HL101) \
+ || defined(VIP1_V1) \
+ || defined(VIP1_V2) \
+ || defined(VIP2)
 	{cProcEntry, "stb/lcd/symbol_timeshift",                                         NULL, NULL, NULL, NULL, ""},
 #endif
-	{cProcDir  , "stb/video"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/alpha"                                                  , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/aspect"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/aspect_choices"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/hdmi_colorspace"                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/hdmi_colorspace_choices"                                , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/force_dvi"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/policy"                                                 , NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/video",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/alpha",                                                  NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/aspect",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/aspect_choices",                                         NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/hdmi_colorspace",                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/hdmi_colorspace_choices",                                NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/force_dvi",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/policy",                                                 NULL, NULL, NULL, NULL, ""},
 #if defined QBOXHD || defined QBOXHD_MINI
 	{cProcEntry, "stb/video/policy2"                                                , NULL, NULL, NULL, NULL, ""},
 #endif
-	{cProcEntry, "stb/video/policy_choices"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/videomode"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/3d_mode"                                                , NULL, three_d_mode_read, three_d_mode_write, NULL, ""},
-	{cProcEntry, "stb/video/videomode_50hz"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/videomode_60hz"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/videomode_choices"                                      , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/videomode_preferred"                                    , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/pal_v_start"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/pal_v_end"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/pal_h_start"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/pal_h_end"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/avs"                                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/avs/0"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/colorformat"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/colorformat_choices"                                    , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/fb"                                                     , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/input"                                                  , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/sb"                                                     , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/volume"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/input_choices"                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/avs/0/standby"                                                , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/denc"                                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/denc/0"                                                       , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/denc/0/wss"                                                   , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/fb"                                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fb/dst_left"                                                  , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fb/dst_top"                                                   , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fb/dst_width"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fb/dst_height"                                                , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fb/3dmode"                                                    , NULL, three_d_mode_read, three_d_mode_write, NULL, ""},
-	{cProcEntry, "stb/fb/znorm"                                                     , NULL, NULL, default_write_proc, NULL, ""},
-	{cProcDir  , "stb/fp"                                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/lnb_sense1"                                                , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/lnb_sense2"                                                , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/led0_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/video/policy_choices",                                         NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/videomode",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/3d_mode",                                                NULL, three_d_mode_read, three_d_mode_write, NULL, ""},
+	{cProcEntry, "stb/video/videomode_50hz",                                         NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/videomode_60hz",                                         NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/videomode_choices",                                      NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/videomode_preferred",                                    NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/pal_v_start",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/pal_v_end",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/pal_h_start",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/pal_h_end",                                              NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/avs",                                                          NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb/avs/0",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/colorformat",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/colorformat_choices",                                    NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/fb",                                                     NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/input",                                                  NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/sb",                                                     NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/volume",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/input_choices",                                          NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/avs/0/standby",                                                NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/denc",                                                         NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb/denc/0",                                                       NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/denc/0/wss",                                                   NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/fb",                                                           NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fb/dst_left",                                                  NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fb/dst_top",                                                   NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fb/dst_width",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fb/dst_height",                                                NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fb/3dmode",                                                    NULL, three_d_mode_read, three_d_mode_write, NULL, ""},
+	{cProcEntry, "stb/fb/znorm",                                                     NULL, NULL, default_write_proc, NULL, ""},
+
+	{cProcDir,   "stb/fp",                                                           NULL, NULL, NULL, NULL, ""},
+//	{cProcEntry, "stb/fp/lnb_sense1",                                                NULL, NULL, NULL, NULL, ""},
+//	{cProcEntry, "stb/fp/lnb_sense2",                                                NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/led0_pattern",                                              NULL, NULL, default_write_proc, NULL, ""},
 #if !defined(VIP1_V2) \
  && !defined(VIP2)
 	{cProcEntry, "stb/fp/led1_pattern",                                              NULL, NULL, default_write_proc, NULL, ""},
 #endif
 #if defined(ADB_BOX)
-	{cProcEntry, "stb/fp/led2_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
-	{cProcEntry, "stb/fp/led3_pattern"                                              , NULL, NULL, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/led2_pattern",                                              NULL, NULL, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/led3_pattern",                                              NULL, NULL, default_write_proc, NULL, ""},
 #endif
-	{cProcEntry, "stb/fp/led_pattern_speed"                                         , NULL, NULL, default_write_proc, NULL, ""},
-	{cProcEntry, "stb/fp/oled_brightness"                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/text"                                                      , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/version"                                                   , NULL, zero_read, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/wakeup_time"                                               , NULL, wakeup_time_read, wakeup_time_write, NULL, ""},
-	{cProcEntry, "stb/fp/was_timer_wakeup"                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fp/rtc"                                                       , NULL, zero_read, default_write_proc, NULL, ""},
-	{cProcEntry, "stb/fp/rtc_offset"                                                , NULL, zero_read, default_write_proc, NULL, ""},
-#if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7119) || defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
-	{cProcEntry, "stb/fp/resellerID"                                                , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/led_pattern_speed",                                         NULL, NULL, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/oled_brightness",                                           NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/rtc",                                                       NULL, zero_read, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/rtc_offset",                                                NULL, zero_read, default_write_proc, NULL, ""},
+	{cProcEntry, "stb/fp/text",                                                      NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/version",                                                   NULL, zero_read, NULL, NULL, ""},
+	{cProcEntry, "stb/fp/wakeup_time",                                               NULL, wakeup_time_read, wakeup_time_write, NULL, ""},
+	{cProcEntry, "stb/fp/was_timer_wakeup",                                          NULL, NULL, NULL, NULL, ""},
+
+#if defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008) \
+ || defined(ATEVIO7500) \
+ || defined(HS7110) \
+ || defined(HS7119) \
+ || defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819)
+	{cProcEntry, "stb/fp/resellerID",                                                NULL, NULL, NULL, NULL, ""},
 #endif
 
 #if defined(SPARK) \
@@ -1123,98 +1173,83 @@ struct ProcStructure_s e2Proc[] =
 	{cProcDir,   "stb/power",                                                        NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/power/standbyled",                                             NULL, NULL, NULL, NULL, ""},
 #endif
-#if defined(HL101)
-	{cProcEntry, "stb/fp/aotom"                                                     , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/lcd"                                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/scroll_delay"                                             , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/show_symbols"                                             , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_network"                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_usb"                                               , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_hdd"                                               , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_hddprogress"                                       , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_signal"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_timeshift"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_tv"                                                , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_recording"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_record_1"                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_record_2"                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_smartcard"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_parent_rating"                                     , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/symbol_play"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/lcd/oled_brightness"                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/power"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/power/standbyled"                                             , NULL, NULL, NULL, NULL, ""},
+
+   	{cProcDir,   "stb/tsmux",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/tsmux/input0",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/tsmux/input1",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/tsmux/ci0_input",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/tsmux/ci1_input",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/tsmux/lnb_b_input",                                            NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir, "stb/misc",                                                           NULL, NULL, NULL, NULL, ""},
+#if defined(IPBOX9900) \
+ || defined(HL101) \
+ || defined(VIP1_V1) \
+ || defined(OPT9600)
+	{cProcEntry, "stb/misc/12V_output",                                              NULL, proc_misc_12V_output_read, proc_misc_12V_output_write, NULL, ""},
 #endif
-	{cProcDir  , "stb/tsmux"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/tsmux/input0"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/tsmux/input1"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/tsmux/ci0_input"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/tsmux/ci1_input"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/tsmux/lnb_b_input"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/misc"                                                         , NULL, NULL, NULL, NULL, ""},
-#if !defined(IPBOX9900) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO) || defined(CUBEREVO_250HD) || defined(CUBEREVO_3000HD) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500) || defined(HL101) || defined(VIP1_V1) || defined(OPT9600)
-	{cProcEntry, "stb/misc/12V_output"                                              , NULL, proc_misc_12V_output_read, proc_misc_12V_output_write, NULL, ""},
-#else
-	{cProcEntry, "stb/misc/12V_output"                                              , NULL, NULL, NULL, NULL, ""},
-#endif
-	{cProcDir  , "stb/vmpeg"                                                        , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/vmpeg/0"                                                      , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/dst_apply"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/dst_left"                                             , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/dst_top"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/dst_width"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/dst_height"                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/dst_all"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/yres"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/xres"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/aspect"                                               , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/framerate"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/0/pep_apply"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/vmpeg/1"                                                      , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/dst_apply"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/dst_left"                                             , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/dst_top"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/dst_width"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/dst_height"                                           , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/dst_all"                                              , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/yres"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/xres"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/aspect"                                               , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/framerate"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/vmpeg/1/pep_apply"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcDir  , "stb/hdmi"                                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/bypass_edid_checking"                                    , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/enable_hdmi_resets"                                      , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/output"                                                  , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/output_choices"                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/audio_source"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/audio_source_choices"                                    , NULL, NULL, NULL, NULL, ""},
-	{cProcDir,   "stb/stream"                                                       , NULL, NULL, NULL, NULL, ""},
-	{cProcDir,   "stb/stream/policy"                                                , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/stream/policy/AV_SYNC"                                        , NULL, NULL, NULL, NULL, "AV_SYNC"},
-	{cProcEntry, "stb/stream/policy/TRICK_MODE_AUDIO"                               , NULL, NULL, NULL, NULL, "TRICK_MODE_AUDIO"},
-	{cProcEntry, "stb/stream/policy/PLAY_24FPS_VIDEO_AT_25FPS"                      , NULL, NULL, NULL, NULL, "PLAY_24FPS_VIDEO_AT_25FPS"},
-	{cProcEntry, "stb/stream/policy/MASTER_CLOCK"                                   , NULL, NULL, NULL, NULL, "MASTER_CLOCK"},
-	{cProcEntry, "stb/stream/policy/EXTERNAL_TIME_MAPPING"                          , NULL, NULL, NULL, NULL, "EXTERNAL_TIME_MAPPING"},
-	{cProcEntry, "stb/stream/policy/DISPLAY_FIRST_FRAME_EARLY"                      , NULL, NULL, NULL, NULL, "DISPLAY_FIRST_FRAME_EARLY"},
-	{cProcEntry, "stb/stream/policy/STREAM_ONLY_KEY_FRAMES"                         , NULL, NULL, NULL, NULL, "STREAM_ONLY_KEY_FRAMES"},
-	{cProcEntry, "stb/stream/policy/STREAM_SINGLE_GROUP_BETWEEN_DISCONTINUITIES"    , NULL, NULL, NULL, NULL, "STREAM_SINGLE_GROUP_BETWEEN_DISCONTINUITIES"},
-	{cProcEntry, "stb/stream/policy/PLAYOUT_ON_TERMINATE"                           , NULL, NULL, NULL, NULL, "PLAYOUT_ON_TERMINATE"},
-	{cProcEntry, "stb/stream/policy/PLAYOUT_ON_SWITCH"                              , NULL, NULL, NULL, NULL, "PLAYOUT_ON_SWITCH"},
-	{cProcEntry, "stb/stream/policy/PLAYOUT_ON_DRAIN"                               , NULL, NULL, NULL, NULL, "PLAYOUT_ON_DRAIN"},
-	{cProcEntry, "stb/stream/policy/TRICK_MODE_DOMAIN"                              , NULL, NULL, NULL, NULL, "TRICK_MODE_DOMAIN"},
-	{cProcEntry, "stb/stream/policy/DISCARD_LATE_FRAMES"                            , NULL, NULL, NULL, NULL, "DISCARD_LATE_FRAMES"},
-	{cProcEntry, "stb/stream/policy/REBASE_ON_DATA_DELIVERY_LATE"                   , NULL, NULL, NULL, NULL, "REBASE_ON_DATA_DELIVERY_LATE"},
-	{cProcEntry, "stb/stream/policy/REBASE_ON_FRAME_DECODE_LATE"                    , NULL, NULL, NULL, NULL, "REBASE_ON_FRAME_DECODE_LATE"},
-	{cProcEntry, "stb/stream/policy/LOWER_CODEC_DECODE_LIMITS_ON_FRAME_DECODE_LATE" , NULL, NULL, NULL, NULL, "LOWER_CODEC_DECODE_LIMITS_ON_FRAME_DECODE_LATE"},
-	{cProcEntry, "stb/stream/policy/H264_ALLOW_NON_IDR_RESYNCHRONIZATION"           , NULL, NULL, NULL, NULL, "H264_ALLOW_NON_IDR_RESYNCHRONIZATION"},
-	{cProcEntry, "stb/stream/policy/MPEG2_IGNORE_PROGESSIVE_FRAME_FLAG"             , NULL, NULL, NULL, NULL, "MPEG2_IGNORE_PROGESSIVE_FRAME_FLAG"},
-	{cProcDir,   "stb/video/plane"                                                  , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/plane/psi_brightness"                                   , NULL, NULL, NULL, NULL, "psi_brightness"},
-	{cProcEntry, "stb/video/plane/psi_saturation"                                   , NULL, NULL, NULL, NULL, "psi_saturation"},
-	{cProcEntry, "stb/video/plane/psi_contrast"                                     , NULL, NULL, NULL, NULL, "psi_contrast"},
-	{cProcEntry, "stb/video/plane/psi_tint"                                         , NULL, NULL, NULL, NULL, "psi_tint"},
-	{cProcEntry, "stb/video/plane/psi_apply"                                        , NULL, NULL, NULL, NULL, "psi_apply"},
+
+	{cProcDir,   "stb/vmpeg",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb/vmpeg/0",                                                      NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/dst_apply",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/dst_left",                                             NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/dst_top",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/dst_width",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/dst_height",                                           NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/dst_all",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/yres",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/xres",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/aspect",                                               NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/framerate",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/0/pep_apply",                                            NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/vmpeg/1",                                                      NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/dst_apply",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/dst_left",                                             NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/dst_top",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/dst_width",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/dst_height",                                           NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/dst_all",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/yres",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/xres",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/aspect",                                               NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/framerate",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/vmpeg/1/pep_apply",                                            NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/hdmi",                                                         NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/enable_hdmi_resets",                                      NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/output",                                                  NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/output_choices",                                          NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/audio_source",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/audio_source_choices",                                    NULL, NULL, NULL, NULL, ""},
+
+	{cProcDir,   "stb/stream",                                                       NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb/stream/policy",                                                NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/stream/policy/AV_SYNC",                                        NULL, NULL, NULL, NULL, "AV_SYNC"},
+	{cProcEntry, "stb/stream/policy/TRICK_MODE_AUDIO",                               NULL, NULL, NULL, NULL, "TRICK_MODE_AUDIO"},
+	{cProcEntry, "stb/stream/policy/PLAY_24FPS_VIDEO_AT_25FPS",                      NULL, NULL, NULL, NULL, "PLAY_24FPS_VIDEO_AT_25FPS"},
+	{cProcEntry, "stb/stream/policy/MASTER_CLOCK",                                   NULL, NULL, NULL, NULL, "MASTER_CLOCK"},
+	{cProcEntry, "stb/stream/policy/EXTERNAL_TIME_MAPPING",                          NULL, NULL, NULL, NULL, "EXTERNAL_TIME_MAPPING"},
+	{cProcEntry, "stb/stream/policy/DISPLAY_FIRST_FRAME_EARLY",                      NULL, NULL, NULL, NULL, "DISPLAY_FIRST_FRAME_EARLY"},
+	{cProcEntry, "stb/stream/policy/STREAM_ONLY_KEY_FRAMES",                         NULL, NULL, NULL, NULL, "STREAM_ONLY_KEY_FRAMES"},
+	{cProcEntry, "stb/stream/policy/STREAM_SINGLE_GROUP_BETWEEN_DISCONTINUITIES",    NULL, NULL, NULL, NULL, "STREAM_SINGLE_GROUP_BETWEEN_DISCONTINUITIES"},
+	{cProcEntry, "stb/stream/policy/PLAYOUT_ON_TERMINATE",                           NULL, NULL, NULL, NULL, "PLAYOUT_ON_TERMINATE"},
+	{cProcEntry, "stb/stream/policy/PLAYOUT_ON_SWITCH",                              NULL, NULL, NULL, NULL, "PLAYOUT_ON_SWITCH"},
+	{cProcEntry, "stb/stream/policy/PLAYOUT_ON_DRAIN",                               NULL, NULL, NULL, NULL, "PLAYOUT_ON_DRAIN"},
+	{cProcEntry, "stb/stream/policy/TRICK_MODE_DOMAIN",                              NULL, NULL, NULL, NULL, "TRICK_MODE_DOMAIN"},
+	{cProcEntry, "stb/stream/policy/DISCARD_LATE_FRAMES",                            NULL, NULL, NULL, NULL, "DISCARD_LATE_FRAMES"},
+	{cProcEntry, "stb/stream/policy/REBASE_ON_DATA_DELIVERY_LATE",                   NULL, NULL, NULL, NULL, "REBASE_ON_DATA_DELIVERY_LATE"},
+	{cProcEntry, "stb/stream/policy/REBASE_ON_FRAME_DECODE_LATE",                    NULL, NULL, NULL, NULL, "REBASE_ON_FRAME_DECODE_LATE"},
+	{cProcEntry, "stb/stream/policy/LOWER_CODEC_DECODE_LIMITS_ON_FRAME_DECODE_LATE", NULL, NULL, NULL, NULL, "LOWER_CODEC_DECODE_LIMITS_ON_FRAME_DECODE_LATE"},
+	{cProcEntry, "stb/stream/policy/H264_ALLOW_NON_IDR_RESYNCHRONIZATION",           NULL, NULL, NULL, NULL, "H264_ALLOW_NON_IDR_RESYNCHRONIZATION"},
+	{cProcEntry, "stb/stream/policy/MPEG2_IGNORE_PROGESSIVE_FRAME_FLAG",             NULL, NULL, NULL, NULL, "MPEG2_IGNORE_PROGESSIVE_FRAME_FLAG"},
+
+	{cProcDir,   "stb/video/plane",                                                  NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/plane/psi_brightness",                                   NULL, NULL, NULL, NULL, "psi_brightness"},
+	{cProcEntry, "stb/video/plane/psi_saturation",                                   NULL, NULL, NULL, NULL, "psi_saturation"},
+	{cProcEntry, "stb/video/plane/psi_contrast",                                     NULL, NULL, NULL, NULL, "psi_contrast"},
+	{cProcEntry, "stb/video/plane/psi_tint",                                         NULL, NULL, NULL, NULL, "psi_tint"},
+	{cProcEntry, "stb/video/plane/psi_apply",                                        NULL, NULL, NULL, NULL, "psi_apply"},
 #if defined(UFS912) \
  || defined(UFS913) \
  || defined(ATEVIO7500) \
@@ -1230,7 +1265,6 @@ struct ProcStructure_s e2Proc[] =
  || defined(SPARK7162) \
  || defined(SAGEMCOM88) \
  || defined(VITAMIN_HD5000) \
- || defined(PACE7241) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
@@ -1239,25 +1273,48 @@ struct ProcStructure_s e2Proc[] =
  || defined(GPV8000) \
  || defined(EP8000) \
  || defined(EPP8000)
-	{cProcDir  , "stb/cec"                                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/cec/state_activesource"                                       , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/cec/state_standby"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/cec/state_cecaddress"                                         , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/cec/onetouchplay"                                             , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/cec/systemstandby"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/cec/event_poll"                                               , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/cec/send"                                                     , NULL, NULL, NULL, NULL, ""},
+	{cProcDir,   "stb/cec",                                                          NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/cec/state_activesource",                                       NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/cec/state_standby",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/cec/state_cecaddress",                                         NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/cec/onetouchplay",                                             NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/cec/systemstandby",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/cec/event_poll",                                               NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/cec/send",                                                     NULL, NULL, NULL, NULL, ""},
 #endif
 	/* dagobert: the dei settings can be used for all 7109 architectures to affect the de-interlacer */
-#if defined(FORTIS_HDBOX) || defined(HL101) || defined(OCTAGON1008) || defined(TF7700) || defined(UFS922) || defined(UFC960) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2) || defined(CUBEREVO) || defined(CUBEREVO_MINI) || defined(CUBEREVO_MINI2) || defined(CUBEREVO_250HD) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO_2000HD) || defined(CUBEREVO_9500HD) || defined(CUBEREVO_3000HD) || defined(IPBOX9900) || defined(IPBOX99) || defined(IPBOX55) || defined(ARIVALINK200)
-	/* dagobert: the dei settings can be used for all 7109 architectures to affec the de-interlacer */
-	{cProcEntry, "stb/video/plane/dei_fmd"                                          , NULL, NULL, NULL, NULL, "dei_fmd"},
-	{cProcEntry, "stb/video/plane/dei_mode"                                         , NULL, NULL, NULL, NULL, "dei_mode"},
-	{cProcEntry, "stb/video/plane/dei_ctrl"                                         , NULL, NULL, NULL, NULL, "dei_ctrl"},
+#if defined(FORTIS_HDBOX) \
+ || defined(HL101) \
+ || defined(OCTAGON1008) \
+ || defined(TF7700) \
+ || defined(UFS922) \
+ || defined(UFC960) \
+ || defined(VIP1_V1) \
+ || defined(VIP1_V2) \
+ || defined(VIP2) \
+ || defined(CUBEREVO) \
+ || defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_250HD) \
+ || defined(CUBEREVO_MINI_FTA) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_9500HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(IPBOX9900) \
+ || defined(IPBOX99) \
+ || defined(IPBOX55) \
+ || defined(ARIVALINK200)
+	/* dagobert: the dei settings can be used for all 7109 architectures to affect the de-interlacer */
+	{cProcEntry, "stb/video/plane/dei_fmd",                                          NULL, NULL, NULL, NULL, "dei_fmd"},
+	{cProcEntry, "stb/video/plane/dei_mode",                                         NULL, NULL, NULL, NULL, "dei_mode"},
+	{cProcEntry, "stb/video/plane/dei_ctrl",                                         NULL, NULL, NULL, NULL, "dei_ctrl"},
 #endif
-#if defined(IPBOX9900) || defined(IPBOX99)
-	{cProcEntry, "stb/misc/fan"                                                     , NULL, NULL, NULL, NULL, ""},
+
+#if defined(IPBOX9900) \
+ || defined(IPBOX99)
+	{cProcEntry, "stb/misc/fan",                                                     NULL, NULL, NULL, NULL, ""},
 #endif
+
 // Enigma2 implementation of fan control, doubles the historic various SH4 ones... (TODO: add these)
 #if defined(CUBEREVO) \
  || defined(IPBOX9900) \
@@ -1273,18 +1330,21 @@ struct ProcStructure_s e2Proc[] =
  || defined(IPBOX99)
 	{cProcEntry, "stb/fp/fan_pwm",                                                   NULL, NULL, NULL, NULL, ""},
 #endif
-#if defined(ADB_BOX) || defined(SAGEMCOM88)
-	{cProcDir  , "stb/fan"                                                          , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/fan/fan_ctrl"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/hdmi/cec"                                                     , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/switch_type"                                            , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/switch"                                                 , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/video/switch_choices"                                         , NULL, NULL, NULL, NULL, ""},
+
+#if defined(ADB_BOX) \
+ || defined(SAGEMCOM88)
+	{cProcDir,   "stb/fan",                                                          NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/fan/fan_ctrl",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/cec",                                                     NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/switch_type",                                            NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/switch",                                                 NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/video/switch_choices",                                         NULL, NULL, NULL, NULL, ""},
 #elif defined(ARIVALINK200)
-        {cProcEntry, "stb/hdmi/cec"                                                     , NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/hdmi/cec",                                                     NULL, NULL, NULL, NULL, ""},
 #endif
-	{cProcDir  , "stb/player"                                                       , NULL, NULL, NULL, NULL, ""},
-	{cProcEntry, "stb/player/version"                                               , NULL, get_player_version, NULL, NULL, ""}
+
+	{cProcDir,   "stb/player",                                                       NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/player/version",                                               NULL, get_player_version, NULL, NULL, ""}
 };
 
 static int cpp_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
@@ -1411,7 +1471,8 @@ int install_e2_procs(char *path, read_proc_t *read_func, write_proc_t *write_fun
 	/* find the entry */
 	for (i = 0; i < sizeof(e2Proc) / sizeof(e2Proc[0]); i++)
 	{
-		if ((e2Proc[i].type == cProcEntry) && (strcmp(path, e2Proc[i].name) == 0))
+		if ((e2Proc[i].type == cProcEntry)
+		&& (strcmp(path, e2Proc[i].name) == 0))
 		{
 			if (e2Proc[i].entry == NULL)
 			{
@@ -1541,7 +1602,8 @@ int cpp_remove_e2_procs(const char *path, read_proc_t *read_func, write_proc_t *
 	/* find the entry */
 	for (i = 0; i < sizeof(e2Proc) / sizeof(e2Proc[0]); i++)
 	{
-		if ((e2Proc[i].type == cProcEntry) && (strcmp(path, e2Proc[i].name) == 0))
+		if ((e2Proc[i].type == cProcEntry)
+		&& (strcmp(path, e2Proc[i].name) == 0))
 		{
 			if (e2Proc[i].entry == NULL)
 			{
@@ -1582,7 +1644,6 @@ int cpp_remove_e2_procs(const char *path, read_proc_t *read_func, write_proc_t *
 	}
 	return 0;
 }
-
 EXPORT_SYMBOL(cpp_remove_e2_procs);
 
 static int __init e2_proc_init_module(void)
@@ -1640,9 +1701,14 @@ static int __init e2_proc_init_module(void)
 			}
 		}
 	}
-#if defined(VIP1_V1) \
+#if defined(HL101) \
+ || defined(VIP1_V1) \
  || defined(OPT9600)
+#if !defined(OPT9600)
 	_12v_pin = stpio_request_pin(4, 6, "12V_CTL", STPIO_OUT);
+#else
+	_12v_pin = stpio_request_pin(4, 6, "12V_CTL", STPIO_OUT); // TODO: find pin
+#endif
 	if (_12v_pin == NULL)
 	{
 		printk("Allocating PIO 4.6 for 12V output failed\n");
@@ -1671,5 +1737,6 @@ module_init(e2_proc_init_module);
 module_exit(e2_proc_cleanup_module);
 
 MODULE_DESCRIPTION("procfs module with enigma2 support");
-MODULE_AUTHOR("Open Vision developers");
+MODULE_AUTHOR("Team Ducktales");
 MODULE_LICENSE("GPL");
+// vim:ts=4

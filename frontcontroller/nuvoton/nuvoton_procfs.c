@@ -102,7 +102,8 @@ extern int nuvotonSetWakeUpTime(char *time);
 
 /* Globals */
 static int progress = 0;
-#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)
 static int symbol_circle = 0;
 static int timeshift = 0;
 static int old_icon_state;
@@ -153,7 +154,8 @@ static int progress_read(char *page, char **start, off_t off, int count, int *eo
 	return len;
 }	
 
-#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)
 static int symbol_circle_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
 	char* page;
@@ -952,7 +954,8 @@ struct fp_procs
 	{ "stb/fp/was_timer_wakeup", was_timer_wakeup_read, NULL },
 	{ "stb/fp/version", fp_version_read, NULL },
 	{ "stb/fp/resellerID", fp_reseller_read, NULL },
-#if defined(FORTIS_HDBOX) || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) \
+ || defined(ATEVIO7500)
 	{ "stb/lcd/symbol_circle", symbol_circle_read, symbol_circle_write },
 	{ "stb/lcd/symbol_timeshift", timeshift_read, timeshift_write }
 #endif

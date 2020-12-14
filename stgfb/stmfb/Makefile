@@ -27,14 +27,14 @@ CORESOURCEFILES := $(addprefix $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredispla
 			coredisplay.c)
 
 # Base class files and C API implementation
-GENINITSRCS := $(addprefix $(SRC_TOPDIR)/Generic/,                             \
+GENINITSRCS := $(addprefix $(SRC_TOPDIR)/Generic/,                 \
 			DisplayDevice.cpp                                      \
 			DisplayPlane.cpp                                       \
 			Output.cpp                                             \
 			MetaDataQueue.cpp)
 
 # Classes common to all ST SoCs regardless of the display architecture
-STM_COMMON := $(addprefix $(SRC_TOPDIR)/STMCommon/,                            \
+STM_COMMON := $(addprefix $(SRC_TOPDIR)/STMCommon/,                \
 			stmmasteroutput.cpp                                    \
 			stmawg.cpp                                             \
 			stmdenc.cpp                                            \
@@ -43,13 +43,13 @@ STM_COMMON := $(addprefix $(SRC_TOPDIR)/STMCommon/,                            \
 			stmblitter.cpp                                         \
 			stmteletext.cpp)
 
-STM_HDMI_COMMON := $(addprefix $(SRC_TOPDIR)/STMCommon/,                       \
+STM_HDMI_COMMON := $(addprefix $(SRC_TOPDIR)/STMCommon/,           \
 			stmhdmi.cpp                                            \
 			stmiframemanager.cpp)
 
 # Classes required for all SoCs containing Gamma based hardware video
 # composition
-STM_GAMMA := $(addprefix $(SRC_TOPDIR)/Gamma/,                                 \
+STM_GAMMA := $(addprefix $(SRC_TOPDIR)/Gamma/,                     \
 			GenericGammaDevice.cpp                                 \
 			GammaMixer.cpp                                         \
 			GammaCompositorPlane.cpp                               \
@@ -65,11 +65,11 @@ STM_BDISP := $(addprefix $(SRC_TOPDIR)/STMCommon/, stmbdisp.cpp stmbdispaq.cpp \
 			stmbdispoutput.cpp stmvirtplane.cpp )
 
 # Classes for SoCs containing the HDFormatter/TVOut style video output stage.
-STM_HDF_TVOUT := $(addprefix $(SRC_TOPDIR)/STMCommon/,                         \
+STM_HDF_TVOUT := $(addprefix $(SRC_TOPDIR)/STMCommon/,             \
 			stmsdvtg.cpp                                           \
 			stmfdvo.cpp)
 
-STM_HDF_TVOUT += $(addprefix $(SRC_TOPDIR)/HDTVOutFormatter/,                  \
+STM_HDF_TVOUT += $(addprefix $(SRC_TOPDIR)/HDTVOutFormatter/,      \
 			stmhdfoutput.cpp                                       \
 			stmauxtvoutput.cpp                                     \
 			stmhdfhdmi.cpp                                         \
@@ -78,7 +78,7 @@ STM_HDF_TVOUT += $(addprefix $(SRC_TOPDIR)/HDTVOutFormatter/,                  \
 			stmtvoutdenc.cpp                                       \
 			stmtvoutteletext.cpp)
 
-STM_DEI += $(addprefix $(SRC_TOPDIR)/Gamma/,                                   \
+STM_DEI += $(addprefix $(SRC_TOPDIR)/Gamma/,                       \
 			DEIVideoPipe.cpp                                       \
 			VDPFilter.cpp)
 
@@ -97,7 +97,7 @@ STX710XSRCS = $(STM_BDISP) $(STM_HDMI_COMMON) $(STM_HDMI_DMA_IFRAME)
 
 STX710XSRCS += $(addprefix $(SRC_TOPDIR)/STMCommon/, stmdmaiframes.cpp)
 
-STX710XSRCS += $(addprefix $(SRC_TOPDIR)/Gamma/,                               \
+STX710XSRCS += $(addprefix $(SRC_TOPDIR)/Gamma/,                   \
 			GammaDisplayFilter.cpp                                 \
 			DEIVideoPipe.cpp                                       \
 			VDPFilter.cpp                                          \
@@ -105,7 +105,7 @@ STX710XSRCS += $(addprefix $(SRC_TOPDIR)/Gamma/,                               \
 			GammaBlitter.cpp                                       \
 			GDPBDispOutput.cpp)
 
-STX710XSRCS += $(addprefix $(SRC_TOPDIR)/soc/stb7100/,                         \
+STX710XSRCS += $(addprefix $(SRC_TOPDIR)/soc/stb7100/,             \
 			stb7100device.cpp                                      \
 			stb7100AWGAnalog.cpp                                   \
 			stb7100analogueouts.cpp                                \
@@ -131,8 +131,8 @@ stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/ke
 endif
 
 ifdef ARIVALINK200
-obj-m += stmcore-display-stx7100.o
-stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif
 
 ifdef CUBEREVO
@@ -234,11 +234,17 @@ ifdef VIP2
 obj-m += stmcore-display-stx7109c3.o
 stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
 endif
+
+ifdef OPT9600
+obj-m += stmcore-display-stx7109c3.o
+stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
+endif
+
 #else
 #obj-m += stmcore-display-stx7100.o
 #obj-m += stmcore-display-stx7109c2.o
 #obj-m += stmcore-display-stx7109c3.o
-#
+
 #stmcore-display-stx7100-objs   := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7100.o
 #stmcore-display-stx7109c2-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c2.o
 #stmcore-display-stx7109c3-objs := $(stx710x-display-objs) $(SRC_TOPDIR)/linux/kernel/drivers/stm/coredisplay/stx7100_7109_5202/stx7109c3.o
@@ -252,7 +258,7 @@ STI7200SRCS = $(STM_HDF_TVOUT) $(STM_HDMI_COMMON) $(STM_HDMI_DMA_IFRAME) $(STM_B
 
 STI7200SRCS += $(addprefix $(SRC_TOPDIR)/Gamma/, GDPBDispOutput.cpp)
 
-STI7200SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7200/,                         \
+STI7200SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7200/,             \
 			sti7200device.cpp                                      \
 			sti7200remoteoutput.cpp                                \
 			sti7200hdmi.cpp                                        \
@@ -263,7 +269,7 @@ STI7200SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7200/,                         \
 			sti7200flexvp.cpp                                      \
 			sti7200xvp.cpp)
 
-STI7200C2SRCS = $(addprefix $(SRC_TOPDIR)/soc/sti7200/,                        \
+STI7200C2SRCS = $(addprefix $(SRC_TOPDIR)/soc/sti7200/,            \
 			sti7200cut2devicefactory.cpp                           \
 			sti7200cut2remotedevice.cpp                            \
 			sti7200cut2bdisp.cpp                                   \
@@ -292,7 +298,7 @@ STI7111SRCS = $(STM_HDF_TVOUT) $(STM_HDMI_COMMON) $(STM_HDMI_DMA_IFRAME) $(STM_B
 
 STI7111SRCS += $(addprefix $(SRC_TOPDIR)/Gamma/, GDPBDispOutput.cpp)
 
-STI7111SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7111/,                         \
+STI7111SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7111/,             \
 			sti7111gdp.cpp                                         \
 			sti7111bdisp.cpp                                       \
 			sti7111mixer.cpp                                       \
@@ -335,7 +341,7 @@ STI7111SRCS = $(STM_HDF_TVOUT) $(STM_HDMI_COMMON) $(STM_HDMI_DMA_IFRAME) $(STM_B
 
 STI7111SRCS += $(addprefix $(SRC_TOPDIR)/Gamma/, GDPBDispOutput.cpp)
 
-STI7111SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7111/,                         \
+STI7111SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7111/,             \
 			sti7111gdp.cpp                                         \
 			sti7111bdisp.cpp                                       \
 			sti7111mixer.cpp                                       \
@@ -346,13 +352,13 @@ STI7111SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7111/,                         \
 			sti7111device.cpp)
 
 STI7105SRCS = $(STI7111SRCS)
-STI7105SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7105/,                         \
+STI7105SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7105/,             \
 			sti7105device.cpp                                      \
 			sti7105devicecreate.cpp)
 
 STI7106SRCS = $(STI7111SRCS) $(STM_HDMI_V2_9)
 STI7106SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7105/, sti7105device.cpp)
-STI7106SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7106/,                         \
+STI7106SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7106/,             \
 			sti7106hdmi.cpp                                        \
 			sti7106device.cpp)
 
@@ -380,7 +386,7 @@ ifeq ($(CONFIG_CPU_SUBTYPE_STX7108),y)
 
 STI7108SRCS = $(STM_HDF_TVOUT) $(STM_HDMI_COMMON) $(STM_HDMI_V2_9) $(STM_BDISP) $(STM_DEI)
 
-STI7108SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7108/,                         \
+STI7108SRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7108/,             \
 			sti7108bdisp.cpp                                       \
 			sti7108dvo.cpp                                         \
 			sti7108hdmi.cpp                                        \

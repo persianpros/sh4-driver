@@ -35,8 +35,12 @@
 #define dprintk(fmt, args...)
 #endif
 
-//#define STB7100
+#if defined(ADB_BOX) \
+ || defined(UFS910)
+#define STB7100
+#else
 #define STX7105
+#endif
 
 #if defined(STB7100)
 #define CKGA_BASE_ADDR          0xb9213000
@@ -58,7 +62,7 @@
 #define TMU_TSTR_INIT           0x3    /* enable both TMU0 and TMU1 */
 #endif
 
-#ifdef STX7105 
+#if defined(STX7105)
 #define CKGA_BASE_ADDR          0xFE213000
 
 /*
@@ -103,7 +107,7 @@ static struct proc_dir_entry
 *slim_ratio, 
 *sysaclkout, 
 #endif
-*m_hz; 
+*m_hz;
 
 void update_bogomips(unsigned long sh4_hz)
 {

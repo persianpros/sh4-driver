@@ -267,8 +267,8 @@ FrameParserStatus_t FrameParser_AudioVorbis_c::GeneratePostDecodeParameterSettin
 	if (ParsedFrameParameters->NormalizedDecodeTime > ParsedFrameParameters->NormalizedPlaybackTime)
 	{
 		FRAME_ERROR("DTS(%lldus) > PTS(%lldus)!!!\n",
-					ParsedFrameParameters->NormalizedDecodeTime,
-					ParsedFrameParameters->NormalizedPlaybackTime);
+			    ParsedFrameParameters->NormalizedDecodeTime,
+			    ParsedFrameParameters->NormalizedPlaybackTime);
 		ParsedFrameParameters->NormalizedDecodeTime = ParsedFrameParameters->NormalizedPlaybackTime;
 	}
 	if (ParsedFrameParameters->NormalizedDecodeTime != INVALID_TIME)

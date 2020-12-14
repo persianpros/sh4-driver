@@ -20,13 +20,21 @@
 #include "sci.h"
 #include "sci_types.h"
 
-#if defined(CONFIG_CPU_SUBTYPE_STB7100) || defined(CONFIG_CPU_SUBTYPE_STX7100) || defined(CONFIG_SH_ST_MB442) || defined(CONFIG_SH_ST_MB411)
+#if defined(CONFIG_CPU_SUBTYPE_STB7100) \
+ || defined(CONFIG_CPU_SUBTYPE_STX7100) \
+ || defined(CONFIG_SH_ST_MB442) \
+ || defined(CONFIG_SH_ST_MB411)
 #include "sci_7100.h"
-#elif defined(CONFIG_CPU_SUBTYPE_STX7111) || defined(CONFIG_SH_ST_MB618) || defined(VITAMIN_HD5000)
+#elif defined(CONFIG_CPU_SUBTYPE_STX7111) \
+ || defined(CONFIG_SH_ST_MB618) \
+ || defined(VITAMIN_HD5000)
 #include "sci_7111.h"
-#elif defined(CONFIG_CPU_SUBTYPE_STX7105) || defined(ATEVIO7500)
+#elif defined(CONFIG_CPU_SUBTYPE_STX7105) \
+ || defined(ATEVIO7500)
 #include "sci_7105.h"
-#elif defined(CONFIG_CPU_SUBTYPE_STXH205) || defined(CONFIG_SH_ST_B2064) || defined(CONFIG_SH_ST_B2067)
+#elif defined(CONFIG_CPU_SUBTYPE_STXH205) \
+ || defined(CONFIG_SH_ST_B2064) \
+ || defined(CONFIG_SH_ST_B2067)
 #include "sci_h205.h"  // CAUTION: to t\be checked!
 #endif
 
@@ -280,9 +288,9 @@ SCI_ERROR sci_set_para_f(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_parameter
 {
 	SCI_ERROR rc = SCI_ERROR_OK;
 	/* set the f of sci */
-	if ((p_sci_parameters->f >= SCI_MIN_F / 1000000) &&
-			(p_sci_parameters->f <= SCI_MAX_F / 1000000) &&
-			(p_sci_parameters->f <= (__STB_SYS_CLK / 2)))
+	if ((p_sci_parameters->f >= SCI_MIN_F / 1000000)
+	&&  (p_sci_parameters->f <= SCI_MAX_F / 1000000)
+	&&  (p_sci_parameters->f <= (__STB_SYS_CLK / 2)))
 	{
 		if (sci->sci_parameters.f != p_sci_parameters->f)
 		{
@@ -332,13 +340,17 @@ static SCI_ERROR sci_set_para_ETU_table(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *
 				switch (sci->id)
 				{
 					case 0:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0, 0x1000);
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, 0x28B, 0xFFFF);
 						break;
+					}
 					case 1:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0, 0x1000);
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, 0x28B, 0xFFFF);
 						break;
+					}
 				}
 			}
 			else if (sci->sci_parameters.ETU == 93) //38400
@@ -346,13 +358,17 @@ static SCI_ERROR sci_set_para_ETU_table(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *
 				switch (sci->id)
 				{
 					case 0:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0x1000 | 1 << 12, 0);
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, 0x193, 0xFFFF);
 						break;
+					}
 					case 1:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0x1000 | 1 << 12, 0);
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, 0x193, 0xFFFF);
 						break;
+					}
 				}
 			}
 			else if (sci->sci_parameters.ETU == 31) //115200
@@ -360,13 +376,17 @@ static SCI_ERROR sci_set_para_ETU_table(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *
 				switch (sci->id)
 				{
 					case 0:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0x1000 | 1 << 12, 0);
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, 0x4B8, 0xFFFF);
 						break;
+					}
 					case 1:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0x1000 | 1 << 12, 0);
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, 0x4B8, 0xFFFF);
 						break;
+					}
 				}
 			}
 			else /* no datasheet case -> calculate the new baud rate*/
@@ -378,13 +398,17 @@ static SCI_ERROR sci_set_para_ETU_table(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *
 					switch (sci->id)
 					{
 						case 0:
+						{
 							set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0, 0x1000);
 							set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, ASC_baud_mode_0(req_baud), 0xFFFF);
 							break;
+						}
 						case 1:
+						{
 							set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0, 0x1000);
 							set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, ASC_baud_mode_0(req_baud), 0xFFFF);
 							break;
+						}
 					}
 				}
 				else
@@ -392,13 +416,17 @@ static SCI_ERROR sci_set_para_ETU_table(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *
 					switch (sci->id)
 					{
 						case 0:
+						{
 							set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0x1000, 0);
 							set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, ASC_baud_mode_1(req_baud), 0xFFFF);
 							break;
+						}
 						case 1:
+						{
 							set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0x1000, 0);
 							set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, ASC_baud_mode_1(req_baud), 0xFFFF);
 							break;
+						}
 					}
 				}
 			}
@@ -410,15 +438,19 @@ static SCI_ERROR sci_set_para_ETU_table(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *
 				switch (sci->id)
 				{
 					case 0:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0, 0x1000);
 						set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, 0x271, 0xFFFF);
 						dprintk(3, "slot 0 --> clock 6.25mhz :: baud 10000 :: etu 625 \n");
 						break;
+					}
 					case 1:
+					{
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0, 0x1000);
 						set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, 0x271, 0xFFFF);
 						dprintk(3, "slot 1 --> clock 6.25mhz :: baud 10000 :: etu 625 \n");
 						break;
+					}
 				}
 			}
 			else /* no datasheet case -> calculate the  new baud rate*/
@@ -429,13 +461,17 @@ static SCI_ERROR sci_set_para_ETU_table(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *
 					switch (sci->id)
 					{
 						case 0:
+						{
 							set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0, 0x1000);
 							set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, ASC_baud_mode_0(req_baud), 0xFFFF);
 							break;
+						}
 						case 1:
+						{
 							set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0, 0x1000);
 							set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, ASC_baud_mode_0(req_baud), 0xFFFF);
 							break;
+						}
 					}
 				}
 			}
@@ -456,13 +492,17 @@ static void set_req_baud(SCI_CONTROL_BLOCK *sci, unsigned int req_baud)
 		switch (sci->id)
 		{
 			case 0:
+			{
 				set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0x1000, 0);
 				set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, ASC_baud_mode_1(req_baud), 0xFFFF);
 				break;
+			}
 			case 1:
+			{
 				set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0x1000, 0);
 				set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, ASC_baud_mode_1(req_baud), 0xFFFF);
 				break;
+			}
 		}
 	}
 	else    //mode 0
@@ -470,13 +510,17 @@ static void set_req_baud(SCI_CONTROL_BLOCK *sci, unsigned int req_baud)
 		switch (sci->id)
 		{
 			case 0:
+			{
 				set_reg(sci, BASE_ADDRESS_ASC0, ASC0_CTRL, 0, 0x1000);
 				set_reg(sci, BASE_ADDRESS_ASC0, ASC0_BAUDRATE, ASC_baud_mode_0(req_baud), 0xFFFF);
 				break;
+			}
 			case 1:
+			{
 				set_reg(sci, BASE_ADDRESS_ASC1, ASC1_CTRL, 0, 0x1000);
 				set_reg(sci, BASE_ADDRESS_ASC1, ASC1_BAUDRATE, ASC_baud_mode_0(req_baud), 0xFFFF);
 				break;
+			}
 		}
 	}
 }
@@ -507,23 +551,29 @@ SCI_ERROR sci_set_para_ETU(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_paramet
 			switch (p_sci_parameters->f)
 			{
 				case 4:
+				{
 					req_baud = (CLOCK_417 / sci->sci_parameters.ETU);
 					set_req_baud(sci, req_baud);
 					smartcard_reset(sci, 1);
 					action_done = 4;
 					break;
+				}
 				case 5:
+				{
 					req_baud = (CLOCK_500 / sci->sci_parameters.ETU);
 					set_req_baud(sci, req_baud);
 					smartcard_reset(sci, 1);
 					action_done = 5;
 					break;
+				}
 				case 6:
+				{
 					req_baud = (CLOCK_625 / sci->sci_parameters.ETU);
 					set_req_baud(sci, req_baud);
 					smartcard_reset(sci, 1);
 					action_done = 6;
 					break;
+				}
 			}
 		}
 		if (action_done == 0) //use the function with datasheet values
@@ -585,8 +635,8 @@ SCI_ERROR sci_set_para_WWT(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_paramet
 SCI_ERROR sci_set_para_CWT(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_parameters)
 {
 	SCI_ERROR rc = SCI_ERROR_OK;
-	if ((p_sci_parameters->CWT >= SCI_MIN_CWT) &&
-			(p_sci_parameters->CWT <= SCI_MAX_CWT))
+	if ((p_sci_parameters->CWT >= SCI_MIN_CWT)
+	&&  (p_sci_parameters->CWT <= SCI_MAX_CWT))
 	{
 		if (sci->sci_parameters.CWT != p_sci_parameters->CWT)
 		{
@@ -617,8 +667,8 @@ SCI_ERROR sci_set_para_CWT(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_paramet
 SCI_ERROR sci_set_para_BWT(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_parameters)
 {
 	SCI_ERROR rc = SCI_ERROR_OK;
-	if ((p_sci_parameters->BWT >= SCI_MIN_BWT) &&
-			(p_sci_parameters->BWT <= SCI_MAX_BWT))
+	if ((p_sci_parameters->BWT >= SCI_MIN_BWT)
+	&&  (p_sci_parameters->BWT <= SCI_MAX_BWT))
 	{
 		if (sci->sci_parameters.BWT != p_sci_parameters->BWT)
 		{
@@ -649,8 +699,8 @@ SCI_ERROR sci_set_para_BWT(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_paramet
 SCI_ERROR sci_set_para_EGT(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_parameters)
 {
 	SCI_ERROR rc = SCI_ERROR_OK;
-	if ((p_sci_parameters->EGT >= SCI_MIN_EGT) &&
-			(p_sci_parameters->EGT <= SCI_MAX_EGT))
+	if ((p_sci_parameters->EGT >= SCI_MIN_EGT)
+	&&  (p_sci_parameters->EGT <= SCI_MAX_EGT))
 	{
 		if (sci->sci_parameters.EGT != p_sci_parameters->EGT)
 		{
@@ -758,7 +808,9 @@ SCI_ERROR sci_set_para_class(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_param
 			PDEBUG("WARNING: Set 3 V\n");
 		}
 		else
+		{
 			PDEBUG("Card %d is set 5 V\n", (int)sci);
+		}
 	}
 	else if (p_sci_parameters->U == SCI_CLASS_B)
 	{
@@ -775,7 +827,9 @@ SCI_ERROR sci_set_para_class(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_param
 			PDEBUG("WARNING: Set 3 V\n");
 		}
 		else
+		{
 			PDEBUG("Card %d is set 3 V\n", sci->id);
+		}
 	}
 	else if (p_sci_parameters->U == SCI_CLASS_AB)
 	{
@@ -792,7 +846,9 @@ SCI_ERROR sci_set_para_class(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_param
 			PDEBUG("WARNING: Set 3 V\n");
 		}
 		else
+		{
 			PDEBUG("Card %d is set 3 V\n", sci->id);
+		}
 	}
 	else if (p_sci_parameters->U == SCI_UNKNOWN_CLASS)
 	{
@@ -805,5 +861,4 @@ SCI_ERROR sci_set_para_class(SCI_CONTROL_BLOCK *sci, SCI_PARAMETERS *p_sci_param
 	}
 	return (rc);
 }
-
-
+// vim:ts=4

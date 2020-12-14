@@ -592,7 +592,7 @@ module_init             (hs7110_cic_init);
 module_exit             (hs7110_cic_exit);
 
 MODULE_DESCRIPTION      ("CI Controller");
-MODULE_AUTHOR           ("konfetti");
+MODULE_AUTHOR           ("Open Vision developers");
 MODULE_LICENSE          ("GPL");
 
 module_param(debug, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

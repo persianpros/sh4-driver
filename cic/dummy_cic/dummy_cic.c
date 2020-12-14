@@ -91,7 +91,7 @@ module_init             (dummy_cic_init);
 module_exit             (dummy_cic_exit);
 
 MODULE_DESCRIPTION      ("CI Controller");
-MODULE_AUTHOR           ("Spider-Team");
+MODULE_AUTHOR           ("Open Vision developers");
 MODULE_LICENSE          ("GPL");
 
 module_param(debug, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

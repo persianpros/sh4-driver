@@ -13,7 +13,7 @@ ifeq ($(KERNELRELEASE),)
 DRIVER_TOPDIR:=$(shell pwd)
 include $(DRIVER_TOPDIR)/kernel.make
 else
-CCFLAGSY += -D__TDT__ -D__LINUX__ -D__SH4__ -D__KERNEL__ -DMODULE -DEXPORT_SYMTAB
+CCFLAGSY += -D__TDT__ -D__LINUX__ -D__SH4__ -D__KERNEL__ -DMODULE -DEXPORT_SYMTAB -Wframe-larger-than=2048
 
 
 ifdef OCTAGON1008
@@ -201,11 +201,11 @@ endif
 endif
 endif
 endif
-ifndef PACE7241 #boxtype not needed
+
 ifndef SAGEMCOM88 #Sagemcom88 has own boxtype
 obj-y += boxtype/
 endif
-endif
+
 obj-y += cpu_frequ/
 obj-y += simu_button/
 obj-y += e2_proc/
@@ -254,15 +254,15 @@ endif
 endif
 endif
 endif
+
 obj-y += bpamem/
 
 ifdef HL101
 obj-y += smartcard/
-obj-y += dvbt/as102/
 endif
 
 ifdef ADB_BOX
-obj-y += smartcard_nbox/
+obj-y += smartcard/
 obj-y += fan_adb_box/
 obj-y += cec_adb_box/
 obj-y += dvbt/as102/
@@ -272,8 +272,6 @@ endif
 ifdef ADB_2850
 obj-y += smartcard/
 obj-y += cec_adb_box/
-#obj-y += dvbt/as102/
-#obj-y += dvbt/siano/
 endif
 
 ifndef VIP2
@@ -431,20 +429,17 @@ obj-y += siinfo/
 obj-y += rmu/
 obj-y += fan_ipbox99xx/
 obj-y += smartcard/
-obj-y += dvbt/as102/
 endif
 
 ifdef IPBOX99
 obj-y += siinfo/
 obj-y += fan_ipbox99xx/
 obj-y += smartcard/
-obj-y += dvbt/as102/
 endif
 
 ifdef IPBOX55
 obj-y += siinfo/
 obj-y += smartcard/
-obj-y += dvbt/as102/
 endif
 
 ifdef CUBEREVO

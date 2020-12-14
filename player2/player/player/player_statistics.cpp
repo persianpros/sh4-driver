@@ -72,8 +72,7 @@ Date Modification Name
 // Set a playback speed.
 //
 
-void Player_Generic_c::ProcessStatistics(PlayerStream_t Stream,
-										 PlayerSequenceNumber_t *Record)
+void Player_Generic_c::ProcessStatistics(PlayerStream_t Stream, PlayerSequenceNumber_t *Record)
 {
 	unsigned char Policy;
 	unsigned int CodedBufferCount, CodedBuffersUsed, DecodeBufferCount, DecodeBuffersUsed, PosssibleDecodeBuffers;

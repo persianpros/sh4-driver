@@ -47,7 +47,7 @@ Date Modification Name
 /* --- */
 
 /*#define REPORT_KPTRACE*/
-/*#define REPORT_PRINTK*/
+#define REPORT_PRINTK
 
 static int severity_restriction_lower = 0;
 static int severity_restriction_upper = 0x7fffffff;
@@ -79,7 +79,7 @@ void report_init(void)
 /* --- */
 
 void report_restricted_severity_levels(int lower_restriction,
-									   int upper_restriction)
+				       int upper_restriction)
 {
 	severity_restriction_lower = lower_restriction;
 	severity_restriction_upper = upper_restriction;
@@ -87,11 +87,15 @@ void report_restricted_severity_levels(int lower_restriction,
 
 /* --- */
 
+//static void report_output(char *report_buffer)
+#if defined (REPORT_UART)
 static void report_output(char *report_buffer)
 {
-#if defined (REPORT_UART)
 	UartOutput(report_buffer);
+}
 #elif defined (REPORT_LOG)
+static void report_output(char *report_buffer)
+{
 	char *p = report_buffer;
 	while (0 != (*report_log_ptr++ = *p++))
 	{
@@ -106,21 +110,30 @@ static void report_output(char *report_buffer)
 #ifdef __ST200__
 	__asm__ __volatile__("prgadd 0[%0] ;;" : : "r"(report_log_ptr));
 #endif
+}
 #else
 #if defined (__KERNEL__)
 #ifdef REPORT_KPTRACE
+static void report_output(char *report_buffer)
+{
 	extern void kptrace_write_record(const char *rec);
 	kptrace_write_record(report_buffer);
+}
 #endif
 #ifdef REPORT_PRINTK
+static void report_output(char *report_buffer)
+{
 	printk("%s", report_buffer);
+}
 #endif
 #else
+static void report_output(char *report_buffer)
+{
 	printf("%s", report_buffer);
 	fflush(stdout);
-#endif
-#endif
 }
+#endif
+#endif
 
 /* -----------------------------------------------------------
  The actual report function
@@ -128,7 +141,7 @@ static void report_output(char *report_buffer)
 
 #if (!defined(__KERNEL__) || defined(CONFIG_PRINTK)) && defined(REPORT)
 void report(report_severity_t report_severity,
-			const char *format, ...)
+	    const char *format, ...)
 {
 	va_list list;
 	char report_buffer[REPORT_STRING_SIZE];
@@ -139,8 +152,8 @@ void report(report_severity_t report_severity,
 	if (report_severity >= severity_error)
 	{
 		sprintf(report_buffer, "***** %s-%s: ",
-				((report_severity >= severity_fatal) ? "Fatal" : "Error"),
-				OS_ThreadName());
+			((report_severity >= severity_fatal) ? "Fatal" : "Error"),
+			OS_ThreadName());
 		report_output(report_buffer);
 	}
 	va_start(list, format);
@@ -164,10 +177,10 @@ void report(report_severity_t report_severity,
  A useful reporting hex function
 ----------------------------------------------------------- */
 void report_dump_hex(report_severity_t level,
-					 unsigned char *data,
-					 int length,
-					 int width,
-					 void *start)
+		     unsigned char *data,
+		     int length,
+		     int width,
+		     void *start)
 {
 	int n, i;
 	char str[256];

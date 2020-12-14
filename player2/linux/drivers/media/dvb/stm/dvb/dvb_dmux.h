@@ -31,13 +31,13 @@ Date Modification Name
 #ifndef H_DVB_DEMUX
 #define H_DVB_DEMUX
 
-#include <dvbdev.h>
+#include "dvbdev.h"
 #include <dvb_demux.h>
 
 #if 0
 int DmxWrite(struct dmx_demux *Demux,
-			 const char *Buffer,
-			 size_t Count);
+	     const char *Buffer,
+	     size_t Count);
 #endif
 int StartFeed(struct dvb_demux_feed *Feed);
 int StopFeed(struct dvb_demux_feed *Feed);

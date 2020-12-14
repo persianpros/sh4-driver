@@ -1,22 +1,22 @@
 /*
-  tda18272.c - NXP TDA18272 RF IC DVB-T2/T Tuner driver
-
-  Copyright (C) 2011 duckbox
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+ * tda18272.c - NXP TDA18272 RF IC DVB-T2/T Tuner driver
+ *
+ * Copyright (C) 2011 duckbox
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #include <linux/slab.h>
 #include <linux/kernel.h>
@@ -42,8 +42,10 @@
 extern short paramDebug;
 #define TAGDEBUG "[tda18272] "
 
-#define dprintk(level, x...) do { \
-if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
+#define dprintk(level, x...) \
+do \
+{ \
+	if ((paramDebug) && (paramDebug >= level)) printk(TAGDEBUG x); \
 } while (0)
 
 /* ************************************************** */
@@ -290,18 +292,19 @@ static int tda18272_i2c_read(struct tda18272_state *state, u32 index, int num, u
 
 	if (res != 0)
 	{
-		printk("%s: writing data failed (%d)\n", __func__, res);
+		dprintk(1, "%s: writing data failed (%d)\n", __func__, res);
 		return res;
 	}
 	res |= state->config->i2c_readwrite(state->config->demod, state->config->i2c_addr, 1, buf, num);
 
 	if (res != 0)
 	{
-		printk("%s: reading data failed (%d)\n", __func__, res);
+		dprintk(1, "%s: reading data failed (%d)\n", __func__, res);
 		return res;
 	}
 	{
 		u8 i;
+
 		dstr[0] = '\0';
 		for (i = 0; i < num; i++)
 		{
@@ -327,7 +330,7 @@ static int tda18272_i2c_write(struct tda18272_state *state, u32 index, u32 num, 
 
 	if (res != 0)
 	{
-		printk("%s: writing data failed (%d)\n", __func__, res);
+		dprintk(1, "%s: writing data failed (%d)\n", __func__, res);
 		return res;
 	}
 	return 0;
@@ -364,7 +367,7 @@ static int tda18272_i2c_write_bulk(struct tda18272_state *state, const u8 *bytes
 
 				if (res != 0)
 				{
-					printk("%s: writing data failed (%d)\n", __func__, res);
+					dprintk(1, "%s: writing data failed (%d)\n", __func__, res);
 					return -1;
 				}
 			}
@@ -419,20 +422,20 @@ static int tda18272_wait_irq(struct dvb_frontend *fe)
 
 			if (res != 0)
 			{
-				printk("%s: reading data failed (%d)\n", __func__, res);
+				dprintk(1, "%s: reading data failed (%d)\n", __func__, res);
 				return res;
-		   	}
+			}
 			if (0x80 & byte)
 			{
 				break;
 			}
-			 msleep(30);
+			msleep(30);
 		}
 		if (!cnt)
 		{
 			res = -1;
-			printk("%s: timeout\n", __func__);
-	   	}
+			dprintk(1, "%s: timeout\n", __func__);
+			}
 	}
 	dprintk(10, "%s: < res %d\n", __func__, res);
 	return res;
@@ -488,7 +491,7 @@ static int tda18272_set_params_dvbt2(struct dvb_frontend *fe, struct dvb_fronten
 
 		if (res != 0)
 		{
-			printk("%s: writing data failed (%d)\n", __func__, res);
+			dprintk(1, "%s: writing data failed (%d)\n", __func__, res);
 			return res;
 		}
 	}
@@ -536,12 +539,12 @@ static int tda18272_set_params_dvbt2(struct dvb_frontend *fe, struct dvb_fronten
 	}
 	else
 	{
-		printk("%s: bandwidth wrong value\n", __func__);
+		dprintk(1, "%s: bandwidth wrong value\n", __func__);
 		return res;
 	}
 	if (res != 0)
 	{
-		printk("%s: error setting bandwidth\n", __func__);
+		dprintk(1, "%s: error setting bandwidth\n", __func__);
 		return res;
 	}
 
@@ -554,14 +557,14 @@ static int tda18272_set_params_dvbt2(struct dvb_frontend *fe, struct dvb_fronten
 
 	if (res != 0)
 	{
-		printk("%s: Write failed res %d\n", __func__, res);
+		dprintk(1, "%s: Write failed res %d\n", __func__, res);
 		return res;
 	}
 	state->freq = params->frequency;
 	res |= tda18272_wait_irq(fe);
 	if (res != 0)
 	{
-		printk("%s: wait irq failed %d\n", __func__, res);
+		dprintk(1, "%s: wait irq failed %d\n", __func__, res);
 		return res;
 	}
 	if (state->config->iic_mode == 2)
@@ -576,7 +579,7 @@ static int tda18272_set_params_dvbt2(struct dvb_frontend *fe, struct dvb_fronten
 
 		if (res != 0)
 		{
-			printk("%s: read failed %d\n", __func__, res);
+			dprintk(1, "%s: read failed %d\n", __func__, res);
 			return res;
 		}
 		state->rssi = (u16)((bytes[0] << 8));
@@ -600,7 +603,7 @@ static int tda18272_set_params_dvbt(struct dvb_frontend *fe, struct dvb_frontend
 
 		if (res != 0)
 		{
-			printk("%s: writing data failed (%d)\n", __func__, res);
+			dprintk(1, "%s: writing data failed (%d)\n", __func__, res);
 			return res;
 		}
 	}
@@ -648,12 +651,12 @@ static int tda18272_set_params_dvbt(struct dvb_frontend *fe, struct dvb_frontend
 	}
 	else
 	{
-		printk("%s: bandwidth wrong value\n", __func__);
+		dprintk(1, "%s: bandwidth wrong value\n", __func__);
 		return res;
 	}
 	if (res != 0)
 	{
-		printk("%s: error setting bandwidth\n", __func__);
+		dprintk(1, "%s: error setting bandwidth\n", __func__);
 		return res;
 	}
 	bytes[0] = (u8)((f >> 16) & 0xFF);
@@ -665,7 +668,7 @@ static int tda18272_set_params_dvbt(struct dvb_frontend *fe, struct dvb_frontend
 
 	if (res != 0)
 	{
-		printk("%s: Write failed res %d\n", __func__, res);
+		dprintk(1, "%s: Write failed res %d\n", __func__, res);
 		return res;
 	}
 	state->freq = params->frequency;
@@ -673,7 +676,7 @@ static int tda18272_set_params_dvbt(struct dvb_frontend *fe, struct dvb_frontend
 
 	if (res != 0)
 	{
-		printk("%s: wait irq failed %d\n", __func__, res);
+		dprintk(1, "%s: wait irq failed %d\n", __func__, res);
 		return res;
 	}
 	if (state->config->iic_mode == 2)
@@ -686,7 +689,7 @@ static int tda18272_set_params_dvbt(struct dvb_frontend *fe, struct dvb_frontend
 		res |= tda18272_i2c_read(state, 0x07, 1, bytes);
 		if (res != 0)
 		{
-			printk("%s: read failed %d\n", __func__, res);
+			dprintk(1, "%s: read failed %d\n", __func__, res);
 			return res;
 		}
 		state->rssi = (u16)((bytes[0] << 8));
@@ -704,7 +707,7 @@ static int tda18272_init(struct dvb_frontend *fe)
 
 	if (state->initDone)
 	{
-		printk("%s: init already done; ignoring\n", __func__);
+		dprintk(1, "%s: init already done; ignoring\n", __func__);
 		return 0;
 	}
 	res |= tda18272_i2c_write_bulk(state, tda18272_power_d0);
@@ -717,7 +720,7 @@ static int tda18272_init(struct dvb_frontend *fe)
 
 	if (res != 0)
 	{
-		printk("%s: init failed %d\n", __func__, res);
+		dprintk(1, "%s: init failed %d\n", __func__, res);
 	}
 	state->initDone  = 1;
 	dprintk(10, "%s: < %d\n", __func__, res);
@@ -777,7 +780,7 @@ static int tda18272_release(struct dvb_frontend *fe)
 
 static struct dvb_tuner_ops tda18272_tuner_ops =
 {
-	.info =
+	.info          =
 	{
 		.name           = "NXP TDA18272",
 		.frequency_min  = 47000000,
@@ -806,11 +809,11 @@ int tda18272_attach(struct dvb_frontend *fe, struct tda18272_private_data_s *tda
 	memcpy(&fe->ops.tuner_ops, &tda18272_tuner_ops, sizeof(struct dvb_tuner_ops));
 	fe->tuner_priv = state;
 
-	cfg->lt        = tda18272->lt;
-	cfg->stdby     = tda18272->stdby;
-	cfg->iic_mode  = tda18272->iic_mode;
-	cfg->xtout     = tda18272->xtout;
-	cfg->i2c_addr  = i2c_addr;
+	cfg->lt       = tda18272->lt;
+	cfg->stdby    = tda18272->stdby;
+	cfg->iic_mode = tda18272->iic_mode;
+	cfg->xtout    = tda18272->xtout;
+	cfg->i2c_addr = i2c_addr;
 
 	state->config = cfg;
 	state->config->i2c_readwrite = i2c_readwrite;

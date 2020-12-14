@@ -906,3 +906,4 @@ void sendSystemStandby(int deviceId)
 	responseBuffer[1] = STANDBY;
 	sendMessage(2, responseBuffer);
 }
+

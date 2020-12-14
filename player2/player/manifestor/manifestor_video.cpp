@@ -384,8 +384,8 @@ ManifestorStatus_t Manifestor_Video_c::GetNextQueuedManifestationTime(unsigned l
 		*Time = Vsync + Period.RoundedLongLongIntegerPart();
 		NextTimeSlot = *Time; // Initialize timeslot.
 		MANIFESTOR_DEBUG("Estimate %llu, Time from now %u, Time since Vsync %u, FrameRate %d.%06d\n", *Time,
-						 (unsigned int)(*Time - Now), (unsigned int)(Now - Vsync),
-						 SurfaceDescriptor.FrameRate.IntegerPart(), SurfaceDescriptor.FrameRate.RemainderDecimal());
+				 (unsigned int)(*Time - Now), (unsigned int)(Now - Vsync),
+				 SurfaceDescriptor.FrameRate.IntegerPart(), SurfaceDescriptor.FrameRate.RemainderDecimal());
 		Behind.Print();
 		Period.Print();
 		return ManifestorNoError;
@@ -408,8 +408,8 @@ ManifestorStatus_t Manifestor_Video_c::GetNextQueuedManifestationTime(unsigned l
 		*Time += Period.RoundedLongLongIntegerPart();
 	}
 	MANIFESTOR_DEBUG("NextTimeSlot %llu, TimeSlotOnDisplay %llu Buff.TimeOnDisplay %llu Estimate %llu, Now %llu diff %llu\n",
-					 NextTimeSlot, TimeSlotOnDisplay, StreamBuffer[BufferOnDisplay].TimeOnDisplay,
-					 *Time, Now, *Time - Now);
+			 NextTimeSlot, TimeSlotOnDisplay, StreamBuffer[BufferOnDisplay].TimeOnDisplay,
+			 *Time, Now, *Time - Now);
 	Behind.Print();
 	Period.Print();
 	return ManifestorNoError;
@@ -508,7 +508,7 @@ ManifestorStatus_t Manifestor_Video_c::InitialFrame(class Buffer_c *Buffer)
 	return ManifestorError;
 }
 //}}}
-//{{{ QueueDecodeBuffer
+//{{{ _QueueDecodeBuffer
 //{{{ doxynote
 /// \brief Receive a decode buffer for display and send it with appropraite
 /// flags to the driver
@@ -590,14 +590,14 @@ ManifestorStatus_t Manifestor_Video_c::_QueueDecodeBuffer(class Buffer_c *Buffer
 		StreamBuff->DecimateIfAvailable = DecimateIfAvailable;
 		//memcpy ((void*)&StreamPanScan, (void*)&VideoParameters->PanScan, sizeof(struct PanScan_s));
 		StreamBuff->TimeSlot = ValidTime(VideoOutputTiming->SystemPlaybackTime) ?
-							   VideoOutputTiming->SystemPlaybackTime :
-							   NextTimeSlot;
+				       VideoOutputTiming->SystemPlaybackTime :
+				       NextTimeSlot;
 		StreamBuff->NativePlaybackTime = FrameParameters->NativePlaybackTime;
 		Status = QueueBuffer(BufferIndex,
-							 FrameParameters,
-							 VideoParameters,
-							 VideoOutputTiming,
-							 BufferStructure);
+				     FrameParameters,
+				     VideoParameters,
+				     VideoOutputTiming,
+				     BufferStructure);
 		if (Status != ManifestorNoError)
 		{
 			NotQueuedBufferCount++;
@@ -674,9 +674,9 @@ ManifestorStatus_t Manifestor_Video_c::GetNativeTimeOfCurrentlyManifestedFrame(u
 /// \param The coordinates and size of desired window
 //}}}
 ManifestorStatus_t Manifestor_Video_c::SetOutputWindow(unsigned int X,
-													   unsigned int Y,
-													   unsigned int Width,
-													   unsigned int Height)
+						       unsigned int Y,
+						       unsigned int Width,
+						       unsigned int Height)
 {
 	OS_LockMutex(&BufferLock);
 	if ((X == 0) && (Y == 0) && (Width == 0) && (Height == 0))
@@ -721,9 +721,9 @@ ManifestorStatus_t Manifestor_Video_c::SetOutputWindow(unsigned int X,
 /// \param Places to save coordinates and size of desired window
 //}}}
 ManifestorStatus_t Manifestor_Video_c::GetOutputWindow(unsigned int *X,
-													   unsigned int *Y,
-													   unsigned int *Width,
-													   unsigned int *Height)
+						       unsigned int *Y,
+						       unsigned int *Width,
+						       unsigned int *Height)
 {
 	*X = SurfaceWindow.X;
 	*Y = SurfaceWindow.Y;
@@ -739,9 +739,9 @@ ManifestorStatus_t Manifestor_Video_c::GetOutputWindow(unsigned int *X,
 /// \param The coordinates and size of desired window
 //}}}
 ManifestorStatus_t Manifestor_Video_c::SetInputWindow(unsigned int X,
-													  unsigned int Y,
-													  unsigned int Width,
-													  unsigned int Height)
+						      unsigned int Y,
+						      unsigned int Width,
+						      unsigned int Height)
 {
 	ManifestorStatus_t Status;
 	MANIFESTOR_DEBUG("%dx%d at %d,%d\n", Width, Height, X, Y);
@@ -797,7 +797,7 @@ ManifestorStatus_t Manifestor_Video_c::RequeueBufferOnDisplayIfNecessary(void)
 		if ((StreamBuffer[i].BufferState == BufferStateQueued) || (StreamBuffer[i].BufferState == BufferStateMultiQueue))
 		{
 			MANIFESTOR_DEBUG("Buffer %d queued state = %x QueueCount = %d Timeslot = %llu\n",
-							 StreamBuffer[i].BufferIndex, StreamBuffer[i].BufferState, StreamBuffer[i].QueueCount, StreamBuffer[i].TimeSlot);
+					 StreamBuffer[i].BufferIndex, StreamBuffer[i].BufferState, StreamBuffer[i].QueueCount, StreamBuffer[i].TimeSlot);
 			if (StreamBuffer[i].TimeSlot > TimeSlot)
 			{
 				TimeSlot = StreamBuffer[i].TimeSlot;
@@ -977,15 +977,15 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 		// Prints have been changed to reduce time taken to do them and lock interrupts for shorter periods as
 		// on occasion this has effected our AV sync calculations on startup.
 		report(severity_info, "Incoming Source %dx%d @ %d,%d\n",
-			   VideoParameters->Width, VideoParameters->Height,
-			   SourceX, SourceY);
+		       VideoParameters->Width, VideoParameters->Height,
+		       SourceX, SourceY);
 		report(severity_info, "Display Size %dx%d @ %d,%d\n",
-			   DestWidth, DestHeight,
-			   DestX, DestY);
+		       DestWidth, DestHeight,
+		       DestX, DestY);
 		report(severity_info, "%s Content, FrameRate %d.%02d, PixelAspectRatio %d.%02d\n",
-			   VideoParameters->Progressive ? "Progressive" : "Interlaced",
-			   VideoParameters->FrameRate.IntegerPart(), VideoParameters->FrameRate.RemainderDecimal(),
-			   VideoParameters->PixelAspectRatio.IntegerPart(), VideoParameters->PixelAspectRatio.RemainderDecimal());
+		       VideoParameters->Progressive ? "Progressive" : "Interlaced",
+		       VideoParameters->FrameRate.IntegerPart(), VideoParameters->FrameRate.RemainderDecimal(),
+		       VideoParameters->PixelAspectRatio.IntegerPart(), VideoParameters->PixelAspectRatio.RemainderDecimal());
 		/*
 		 MANIFESTOR_DEBUG("Incoming Source %dx%d (%dx%d), at %d,%d, Dest %dx%d at %d,%d\n",
 		 VideoParameters->Width, VideoParameters->Height,
@@ -1011,7 +1011,7 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 		WindowAspectRatio = (DestWidth * DisplayPixelAspectRatio) / DestHeight;
 	}
 	//if ((EventMask & EventSourceSizeChangeManifest) != 0) // Create an event record indicating that size/shape has changed
-/* #warning "Not checking EventMask in SetDisplayWindows" */
+	/* #warning "Not checking EventMask in SetDisplayWindows" */
 	if ((VideoParameters->Width != StreamDisplayParameters.Width) || (VideoParameters->Height != StreamDisplayParameters.Height) ||
 			(VideoParameters->DisplayWidth != StreamDisplayParameters.DisplayWidth) || (VideoParameters->DisplayHeight != StreamDisplayParameters.DisplayHeight) ||
 			(VideoParameters->PixelAspectRatio != StreamDisplayParameters.PixelAspectRatio))
@@ -1046,7 +1046,7 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					Rational_t   NewHeight;
 					NewHeight =  DestHeight * ( WindowAspectRatio / PictureAspectRatio );
 #else
-					Rational_t   NewHeight =  (DestHeight * WindowAspectRatio) / PictureAspectRatio;
+					Rational_t NewHeight = (DestHeight * WindowAspectRatio) / PictureAspectRatio;
 #endif
 					DestHeight = NewHeight.IntegerPart();
 #endif
@@ -1067,7 +1067,7 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					Rational_t   NewWidth; 
 					NewWidth = DestWidth * (PictureAspectRatio / WindowAspectRatio);
 #else
-					Rational_t   NewWidth = (DestWidth * PictureAspectRatio) / WindowAspectRatio;
+					Rational_t NewWidth = (DestWidth * PictureAspectRatio) / WindowAspectRatio;
 #endif
 					DestWidth = NewWidth.IntegerPart();
 #endif
@@ -1088,12 +1088,12 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					Rational_t wRatioR = WindowAspectRatio * 1000;
 					int wRatio = wRatioR.IntegerPart();
 					SourceWidth = (SourceWidth * wRatio) / pRatio;
-#else PictureAspectRatio;
+#else
 #if defined(QBOXHD) || defined(QBOXHD_MINI)
 					Rational_t   NewWidth;
 					NewWidth = SourceWidth * ( WindowAspectRatio / PictureAspectRatio );
 #else
-					Rational_t   NewWidth = (SourceWidth * WindowAspectRatio) / PictureAspectRatio;
+					Rational_t NewWidth = (SourceWidth * WindowAspectRatio) / PictureAspectRatio;
 #endif
 					SourceWidth = NewWidth.IntegerPart();
 #endif
@@ -1115,7 +1115,7 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 					Rational_t   NewHeight;
 					NewHeight = SourceHeight * ( PictureAspectRatio / WindowAspectRatio );
 #else
-					Rational_t   NewHeight = (SourceHeight * PictureAspectRatio) / WindowAspectRatio;
+					Rational_t NewHeight = (SourceHeight * PictureAspectRatio) / WindowAspectRatio;
 #endif
 					SourceHeight = NewHeight.IntegerPart();
 #endif
@@ -1252,8 +1252,8 @@ ManifestorStatus_t Manifestor_Video_c::SetDisplayWindows(struct VideoDisplayPara
 	CroppedWindow.Height = SourceHeight;
 	if (!Stepping)
 		MANIFESTOR_DEBUG("Outgoing Source %dx%d, at %d,%d(16ths), Dest %dx%d at %d,%d\n",
-						 InputWindow.Width, InputWindow.Height, InputWindow.X, InputWindow.Y,
-						 OutputWindow.Width, OutputWindow.Height, OutputWindow.X, OutputWindow.Y);
+				 InputWindow.Width, InputWindow.Height, InputWindow.X, InputWindow.Y,
+				 OutputWindow.Width, OutputWindow.Height, OutputWindow.X, OutputWindow.Y);
 	return UpdateDisplayWindows();
 }
 //}}}
@@ -1396,7 +1396,7 @@ ManifestorStatus_t Manifestor_Video_c::FillOutBufferStructure(BufferStructure_t 
 			RequestedStructure->Strides[0][0] = RequestedStructure->Dimension[0];
 			RequestedStructure->Strides[0][1] = RequestedStructure->Dimension[0];
 			RequestedStructure->Size = RequestedStructure->ComponentOffset[1] +
-									   ((RequestedStructure->Dimension[0] * RequestedStructure->Dimension[1]) / 2);
+						   ((RequestedStructure->Dimension[0] * RequestedStructure->Dimension[1]) / 2);
 			RequestedStructure->ComponentCount = 2;
 			if (RequestedStructure->DecimationRequired)
 			{
@@ -1408,13 +1408,13 @@ ManifestorStatus_t Manifestor_Video_c::FillOutBufferStructure(BufferStructure_t 
 				RequestedStructure->Strides[0][2] = RequestedStructure->Dimension[2];
 				RequestedStructure->Strides[0][3] = RequestedStructure->Dimension[2];
 				RequestedStructure->ComponentOffset[2] = RequestedStructure->ComponentOffset[1] +
-														 ((RequestedStructure->Dimension[0] * RequestedStructure->Dimension[1]) / 2);
+									 ((RequestedStructure->Dimension[0] * RequestedStructure->Dimension[1]) / 2);
 				RequestedStructure->ComponentOffset[3] = RequestedStructure->ComponentOffset[2] +
-														 (RequestedStructure->Dimension[2] * RequestedStructure->Dimension[3]);
+									 (RequestedStructure->Dimension[2] * RequestedStructure->Dimension[3]);
 				// Force a 1k alignment, to support the 7109 hardware mpeg2 decoder
 				RequestedStructure->ComponentOffset[3] = (RequestedStructure->ComponentOffset[3] + 0x3ff) & 0xfffffc00;
 				RequestedStructure->DecimatedSize += (RequestedStructure->Dimension[2] * RequestedStructure->Dimension[3]) +
-													 ((RequestedStructure->Dimension[2] * RequestedStructure->Dimension[3]) / 2);
+								     ((RequestedStructure->Dimension[2] * RequestedStructure->Dimension[3]) / 2);
 				RequestedStructure->Size += RequestedStructure->DecimatedSize;
 			}
 			break;

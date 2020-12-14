@@ -40,7 +40,7 @@ Date Modification Name
 #include <linux/kthread.h>
 #include <asm/uaccess.h>
 #include <linux/timer.h>
-#include <linux/clk.h>
+#include <asm/clock.h>
 #include <linux/delay.h>
 
 #include "mme.h"
@@ -55,13 +55,13 @@ static int MonitorMMEThread(void *Param);
 static int TransformerInitialize(struct MMEContext_s *Context);
 static int TransformerTerminate(struct MMEContext_s *Context);
 static void TransformerCallback(MME_Event_t Event,
-								MME_Command_t *CallbackData,
-								void *UserData);
+				MME_Command_t *CallbackData,
+				void *UserData);
 
 /*{{{ MonitorMMEInit*/
 int MonitorMMEInit(struct DeviceContext_s *DeviceContext,
-				   struct MMEContext_s *Context,
-				   unsigned int Id)
+		   struct MMEContext_s *Context,
+		   unsigned int Id)
 {
 	struct sched_param Param;
 	struct task_struct *Taskp;
@@ -219,8 +219,8 @@ static int TransformerGetLogEvent(struct MMEContext_s *Context)
 /*}}} */
 /*{{{ TransformerCallback*/
 static void TransformerCallback(MME_Event_t Event,
-								MME_Command_t *CallbackData,
-								void *UserData)
+				MME_Command_t *CallbackData,
+				void *UserData)
 {
 	struct MMEContext_s *Context = (struct MMEContext_s *)UserData;
 	if (CallbackData == NULL)
@@ -271,11 +271,11 @@ static int MonitorMMEThread(void *Param)
 		}
 		if (Context->Monitoring)
 			MonitorRecordEvent(Context->DeviceContext,
-							   Context->Id,
-							   Context->MMECommandStatus.EventID,
-							   TimeStamp,
-							   Context->MMECommandStatus.Parameters,
-							   Context->MMECommandStatus.Message);
+					   Context->Id,
+					   Context->MMECommandStatus.EventID,
+					   TimeStamp,
+					   Context->MMECommandStatus.Parameters,
+					   Context->MMECommandStatus.Message);
 	}
 	MONITOR_DEBUG("Terminating\n");
 	up(&(Context->ThreadTerminated));

@@ -80,6 +80,7 @@ static int ix7306_read(struct ix7306_state *state, u8 *buf)
 	const struct ix7306_config *config = state->config;
 	int err = 0;
 	u8 tmp = 1;
+
 	struct i2c_msg msg[] =
 	{
 		{ .addr = config->addr, .flags = 0, .buf = &tmp, .len = 1 },
@@ -100,13 +101,12 @@ static int ix7306_read(struct ix7306_state *state, u8 *buf)
 
 /*-------------------------------------------------------------*
 
- bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
-
+        bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
  byte1
  byte2
  byte3
  byte4
- byte5 BA2 BA1 BA0 PSC DIV/TS1
+ byte5   BA2  BA1      BA0   PSC            DIV/TS1
 
 *--------------------------------------------------------------*/
 
@@ -170,12 +170,25 @@ static void calculate_pll_divider_byte_QM1D1B0004(long freq, int *byte_)
 {
 	long data;
 	int P, N, A;
-	if (freq < 1024000) byte_[3] |= 0x01;
-	else byte_[3] &= 0xfe;
+
+	if (freq < 1024000)
+	{
+		byte_[3] |= 0x01;
+	}
+	else
+	{
+		byte_[3] &= 0xfe;
+	}
 	if (freq < 1450000)
 	{
-		if (freq < 1300000) byte_[3] &= 0xbf;
-		else if (freq < 1375000) byte_[3] &= 0xdf;
+		if (freq < 1300000)
+		{
+			byte_[3] &= 0xbf;
+		}
+		else if (freq < 1375000)
+		{
+			byte_[3] &= 0xdf;
+		}
 	}
 	else
 	{
@@ -183,9 +196,11 @@ static void calculate_pll_divider_byte_QM1D1B0004(long freq, int *byte_)
 		else if (freq < 2045000) byte_[3] &= 0xdf;
 	}
 	data = (long)((freq * 10LL) / calculate_pll_step_QM1D1B0004(*(byte_ + 3)) + 5) / 10 ;
+
 	P = calculate_dividing_factor_of_prescaler(byte_);
 	N = data / P;
 	A = data - P * N;
+
 	data = (N << 5) | A;
 	//040408
 	//BG should not be changed...
@@ -199,9 +214,16 @@ static int calculate_pll_step_QM1D1B0004(int byte4)
 	int REF;
 	int R;
 	int pll_step;
+
 	REF = byte4 & 0x01;
-	if (REF == 0) R = 4;
-	else R = 8;
+	if (REF == 0)
+	{
+		R = 4;
+	}
+	else
+	{
+		R = 8;
+	}
 	pll_step = calculate_pll_xtal_QM1D1B0004() / R;
 	return pll_step;
 }
@@ -214,15 +236,23 @@ static int calculate_pll_xtal_QM1D1B0004()
 static int calculate_dividing_factor_of_prescaler(int *byte_)
 {
 	int PSC;
+
 	PSC = (*(byte_ + 4) >> 4);
 	PSC &= 0x01;
-	if (PSC) return 16; //PSC=1
-	else return 32; //PSC=0
+	if (PSC)
+	{
+		return 16; //PSC=1
+	}
+	else
+	{
+		return 32; //PSC=0
+	}
 }
 
 static void calculate_pll_lpf_bw_from_baud_QM1D1B0004(long baud, int *byte_)
 {
 	long LPF;
+
 	if (baud > 0) //calculate LPF automatically
 	{
 		LPF = calculate_LPF_from_baud(baud);
@@ -233,31 +263,90 @@ static void calculate_pll_lpf_bw_from_baud_QM1D1B0004(long baud, int *byte_)
 static long calculate_LPF_from_baud(long baud)
 {
 	long LPF;
-	if ((34000 < baud)) LPF = 34000;
-	if ((32000 < baud) && (baud <= 34000)) LPF = 34000;
-	if ((30000 < baud) && (baud <= 32000)) LPF = 32000;
-	if ((28000 < baud) && (baud <= 30000)) LPF = 30000;
-	if ((26000 < baud) && (baud <= 28000)) LPF = 28000;
-	if ((24000 < baud) && (baud <= 26000)) LPF = 26000;
-	if ((22000 < baud) && (baud <= 24000)) LPF = 24000;
-	if ((20000 < baud) && (baud <= 22000)) LPF = 22000;
-	if ((18000 < baud) && (baud <= 20000)) LPF = 20000;
-	if ((16000 < baud) && (baud <= 18000)) LPF = 18000;
-	if ((14000 < baud) && (baud <= 16000)) LPF = 16000;
-	if ((12000 < baud) && (baud <= 14000)) LPF = 16000;
-	if ((10000 < baud) && (baud <= 12000)) LPF = 14000;
-	if ((8000 < baud) && (baud <= 10000)) LPF = 14000;
-	if ((6000 < baud) && (baud <= 8000)) LPF = 12000;
-	if ((4000 < baud) && (baud <= 6000)) LPF = 10000;
-	if (baud <= 4000) LPF = 10000;
-//	if(baud>=20000) LPF=34000;
-//	else LPF=20000;
+
+	if ((34000 < baud))
+	{
+		LPF = 34000;
+	}
+	if ((32000 < baud) && (baud <= 34000))
+	{
+		LPF = 34000;
+	}
+	if ((30000 < baud) && (baud <= 32000))
+	{
+		LPF = 32000;
+	}
+	if ((28000 < baud) && (baud <= 30000))
+	{
+		LPF = 30000;
+	}
+	if ((26000 < baud) && (baud <= 28000))
+	{
+		LPF = 28000;
+	}
+	if ((24000 < baud) && (baud <= 26000))
+	{
+		LPF = 26000;
+	}
+	if ((22000 < baud) && (baud <= 24000))
+	{
+		LPF = 24000;
+	}
+	if ((20000 < baud) && (baud <= 22000))
+	{
+		LPF = 22000;
+	}
+	if ((18000 < baud) && (baud <= 20000))
+	{
+		LPF = 20000;
+	}
+	if ((16000 < baud) && (baud <= 18000))
+	{
+		LPF = 18000;
+	}
+	if ((14000 < baud) && (baud <= 16000))
+	{
+		LPF = 16000;
+	}
+	if ((12000 < baud) && (baud <= 14000))
+	{
+		LPF = 16000;
+	}
+	if ((10000 < baud) && (baud <= 12000))
+	{
+		LPF = 14000;
+	}
+	if ((8000 < baud) && (baud <= 10000))
+	{
+		LPF = 14000;
+	}
+	if ((6000 < baud) && (baud <= 8000))
+	{
+		LPF = 12000;
+	}
+	if ((4000 < baud) && (baud <= 6000))
+	{
+		LPF = 10000;
+	}
+	if (baud <= 4000)
+	{
+		LPF = 10000;
+	}
+//	if(baud >= 20000)
+//	{
+//		LPF = 34000;
+//	}
+//	else
+//	{
+//		LPF = 20000;
+//	}
 	return LPF;
 }
 
 static void calculate_pll_lpf_to_byte(long LPF, int *byte)
 {
 	int data, PD2, PD3, PD4, PD5;
+
 	data = (int)(LPF / 1000 / 2 - 2);
 	PD2 = (data >> 3) & 0x01;
 	PD3 = (data >> 2) & 0x01;
@@ -274,6 +363,7 @@ static void pll_setdata_QM1D1B0004(struct dvb_frontend *fe, int *byte_)
 	struct ix7306_state *state = fe->tuner_priv;
 	u8 ucOperData[5];
 	u8 byte1,/*byte2,*/byte3, byte4;
+
 	//in this function ,we operator ucOperData instead of byte_
 	memset(ucOperData, 0, sizeof(ucOperData));
 	ucOperData[0] = *(byte_ + 1);
@@ -290,21 +380,33 @@ static void pll_setdata_QM1D1B0004(struct dvb_frontend *fe, int *byte_)
 	ucOperData[0] |= 0x20;
 	/*open i2c repeater gate*/
 //	if (fe->ops.i2c_gate_ctrl(fe,1) < 0)
+//	{
 //		goto err;
+//	}
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData, 4) < 0)
+	{
 		goto err;
+	}
 	if (fe->ops.i2c_gate_ctrl(fe, 0) < 0)
+	{
 		goto err;
+	}
 	ucOperData[2] |= 0x04; //TM=1
 	/*open i2c repeater gate*/
 	if (fe->ops.i2c_gate_ctrl(fe, 1) < 0)
+	{
 		goto err;
+	}
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData + 2, 1) < 0)
+	{
 		goto err;
+	}
 	if (fe->ops.i2c_gate_ctrl(fe, 0) < 0)
+	{
 		goto err;
+	}
 	msleep(12);
 	ucOperData[2] = byte3;
 	//[040108] TM bit always finis with "1".
@@ -316,19 +418,29 @@ static void pll_setdata_QM1D1B0004(struct dvb_frontend *fe, int *byte_)
 	ucOperData[3] = byte4; //byte_5 original value
 	/*open i2c repeater gate*/
 	if (fe->ops.i2c_gate_ctrl(fe, 1) < 0)
+	{
 		goto err;
+	}
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData + 2, 2) < 0)
+	{
 		goto err;
+	}
 	if (fe->ops.i2c_gate_ctrl(fe, 0) < 0)
+	{
 		goto err;
+	}
 	ucOperData[0] = byte1;
 	/*open i2c repeater gate*/
 	if (fe->ops.i2c_gate_ctrl(fe, 1) < 0)
+	{
 		goto err;
+	}
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData, 1) < 0)
+	{
 		goto err;
+	}
 	return;
 err:
 	printk("%s: write i2c failed\n", __func__);
@@ -337,6 +449,7 @@ err:
 static int ix7306_set_freq(struct dvb_frontend *fe, u32 freq_KHz, u32 tuner_BW)
 {
 	u32 tuner_bw_K = tuner_BW / 1000;
+
 #if defined(IX7306_DEBUG)
 	printk("[%s][%d]\n", __FUNCTION__, __LINE__);
 #endif
@@ -352,11 +465,10 @@ static int ix7306_set_freq(struct dvb_frontend *fe, u32 freq_KHz, u32 tuner_BW)
 	return 0;
 }
 
-static int ix7306_set_state(struct dvb_frontend *fe,
-							enum tuner_param param,
-							struct tuner_state *tstate)
+static int ix7306_set_state(struct dvb_frontend *fe, enum tuner_param param, struct tuner_state *tstate)
 {
 	struct ix7306_state *state = fe->tuner_priv;
+
 #if defined(IX7306_DEBUG)
 	printk("[%s][%d]\n", __FUNCTION__, __LINE__);
 #endif
@@ -377,24 +489,29 @@ static int ix7306_set_state(struct dvb_frontend *fe,
 	return 0;
 }
 
-static int ix7306_get_state(struct dvb_frontend *fe,
-							enum tuner_param param,
-							struct tuner_state *tstate)
+static int ix7306_get_state(struct dvb_frontend *fe, enum tuner_param param, struct tuner_state *tstate)
 {
 	struct ix7306_state *state = fe->tuner_priv;
 	int err = 0;
+
 	switch (param)
 	{
 		case DVBFE_TUNER_FREQUENCY:
+		{
 			tstate->frequency = state->frequency;
 			break;
+		}
 		case DVBFE_TUNER_BANDWIDTH:
+		{
 			tstate->bandwidth = state->bandwidth; /* FIXME! need to calculate Bandwidth */
 			break;
+		}
 		default:
+		{
 			printk("%s: Unknown parameter (param=%d)\n", __func__, param);
 			err = -EINVAL;
 			break;
+		}
 	}
 	return err;
 }
@@ -404,6 +521,7 @@ static int ix7306_get_status(struct dvb_frontend *fe, u32 *status)
 	struct ix7306_state *state = fe->tuner_priv;
 	u8 result[2];
 	int err = 0;
+
 	*status = 0;
 	err = ix7306_read(state, result);
 	if (err < 0)
@@ -430,14 +548,14 @@ static int ix7306_get_status(struct dvb_frontend *fe, u32 *status)
 static int ix7306_release(struct dvb_frontend *fe)
 {
 	struct ix7306_state *state = fe->tuner_priv;
+
 	fe->tuner_priv = NULL;
 	kfree(state);
 	return 0;
 }
 
 #define REF_OSC_FREQ 4000 /* 4MHZ */
-static int ix7306_set_params(struct dvb_frontend *fe,
-							 struct dvb_frontend_parameters *p)
+static int ix7306_set_params(struct dvb_frontend *fe, struct dvb_frontend_parameters *p)
 {
 	struct ix7306_state *state = fe->tuner_priv;
 	int err = 0;
@@ -450,6 +568,7 @@ static int ix7306_set_params(struct dvb_frontend *fe,
 	u8 BA = 1;
 	u8 DIV = 0;
 	int result = 0;
+
 	freq = p->frequency;
 	sym = p->u.qpsk.symbol_rate;
 #if 0
@@ -457,72 +576,132 @@ static int ix7306_set_params(struct dvb_frontend *fe,
 #endif
 	Rs = sym;
 	if (Rs == 0)
+	{
 		Rs = 45000;
+	}
 #if 1
 	BW = Rs * 135 / 200;
 	BW = BW * 130 / 100;
 	if (Rs < 6500)
+	{
 		BW = BW + 3000;
+	}
 	BW = BW + 2000;
 	BW = BW * 108 / 100;
 #else
 	if (ratio == 0)
+	{
 		BW = 34000;
+	}
 	else
+	{
 		BW = Rs * ratio / 100;
+	}
 #endif
 	if (BW < 10000)
+	{
 		BW = 10000;
+	}
 	if (BW > 34000)
+	{
 		BW = 34000;
+	}
 	if (BW <= 10000)
+	{
 		LPF = 3;
+	}
 	else if (BW <= 12000)
+	{
 		LPF = 4;
+	}
 	else if (BW <= 14000)
+	{
 		LPF = 5;
+	}
 	else if (BW <= 16000)
+	{
 		LPF = 6;
+	}
 	else if (BW <= 18000)
+	{
 		LPF = 7;
+	}
 	else if (BW <= 20000)
+	{
 		LPF = 8;
+	}
 	else if (BW <= 22000)
+	{
 		LPF = 9;
+	}
 	else if (BW <= 24000)
+	{
 		LPF = 10;
+	}
 	else if (BW <= 26000)
+	{
 		LPF = 11;
+	}
 	else if (BW <= 28000)
+	{
 		LPF = 12;
+	}
 	else if (BW <= 30000)
+	{
 		LPF = 13;
+	}
 	else if (BW <= 32000)
+	{
 		LPF = 14;
+	}
 	else
+	{
 		LPF = 15;
+	}
 	if (freq <= 1154)
+	{
 		DIV = 1;
+	}
 	else
+	{
 		DIV = 0;
+	}
 	if (freq <= 986)
+	{
 		BA = 5;
+	}
 	else if (freq <= 1073)
+	{
 		BA = 6;
+	}
 	else if (freq <= 1154)
+	{
 		BA = 7;
+	}
 	else if (freq <= 1291)
+	{
 		BA = 1;
+	}
 	else if (freq <= 1447)
+	{
 		BA = 2;
+	}
 	else if (freq <= 1615)
+	{
 		BA = 3;
+	}
 	else if (freq <= 1791)
+	{
 		BA = 4;
+	}
 	else if (freq <= 1972)
+	{
 		BA = 5;
+	}
 	else //if (freq <= 2150)
+	{
 		BA = 6;
+	}
 	tmp = freq * 1000 * 8 / REF_OSC_FREQ;
 	Nswa = tmp % 32;
 	Npro = tmp / 32;
@@ -561,6 +740,7 @@ static int ix7306_init(struct dvb_frontend *fe)
 {
 	int result = 0;
 	struct ix7306_state *state = fe->tuner_priv;
+
 	if (fe->ops.i2c_gate_ctrl(fe, 1) < 0)
 	{
 		printk("ix7306_init i2c_gate_ctrl 1 error\n");
@@ -590,7 +770,8 @@ static int ix7306_init(struct dvb_frontend *fe)
 static struct dvb_tuner_ops ix7306_ops =
 {
 
-	.info = {
+	.info =
+	{
 		.name = "IX7306",
 		.frequency_min = 950000,
 		.frequency_max = 2150000,
@@ -611,13 +792,18 @@ int ix7306_get_frequency(struct dvb_frontend *fe, u32 *frequency)
 	struct dvb_tuner_ops *tuner_ops = NULL;
 	struct tuner_state t_state;
 	int err = 0;
+
 	if (&fe->ops)
+	{
 		frontend_ops = &fe->ops;
+	}
 #if defined(IX7306_DEBUG)
 	printk("[%s][%d]\n", __FUNCTION__, __LINE__);
 #endif
 	if (&frontend_ops->tuner_ops)
+	{
 		tuner_ops = &frontend_ops->tuner_ops;
+	}
 #if defined(IX7306_DEBUG)
 	printk("[%s][%d]\n", __FUNCTION__, __LINE__);
 #endif
@@ -643,12 +829,17 @@ int ix7306_set_frequency(struct dvb_frontend *fe, u32 frequency)
 	struct dvb_tuner_ops *tuner_ops = NULL;
 	struct tuner_state t_state;
 	int err = 0;
+
 	t_state.frequency = frequency;
 	t_state.bandwidth = state->bandwidth;
 	if (&fe->ops)
+	{
 		frontend_ops = &fe->ops;
+	}
 	if (&frontend_ops->tuner_ops)
+	{
 		tuner_ops = &frontend_ops->tuner_ops;
+	}
 	if (tuner_ops && tuner_ops->set_state)
 	{
 		if ((err = tuner_ops->set_state(fe, DVBFE_TUNER_FREQUENCY, &t_state)) < 0)
@@ -666,20 +857,27 @@ int ix7306_set_frequency(struct dvb_frontend *fe, u32 frequency)
 int ix7306_set_bandwidth(struct dvb_frontend *fe, u32 bandwidth)
 {
 	struct ix7306_state *state = fe->tuner_priv;
+
 	state->bandwidth = bandwidth;
 //	ix7306_set_freq (fe, state->frequency, state->bandwidth);
 	return 0;
 }
+
 int ix7306_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 {
 	struct dvb_frontend_ops *frontend_ops = &fe->ops;
 	struct dvb_tuner_ops *tuner_ops = &frontend_ops->tuner_ops;
 	struct tuner_state t_state;
 	int err = 0;
+
 	if (&fe->ops)
+	{
 		frontend_ops = &fe->ops;
+	}
 	if (&frontend_ops->tuner_ops)
+	{
 		tuner_ops = &frontend_ops->tuner_ops;
+	}
 	if (tuner_ops->get_state)
 	{
 		if ((err = tuner_ops->get_state(fe, DVBFE_TUNER_BANDWIDTH, &t_state)) < 0)
@@ -695,35 +893,34 @@ int ix7306_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 	return 0;
 }
 
-struct dvb_frontend *ix7306_attach(struct dvb_frontend *fe,
-								   const struct ix7306_config *config,
-								   struct i2c_adapter *i2c)
+struct dvb_frontend *ix7306_attach(struct dvb_frontend *fe, const struct ix7306_config *config, struct i2c_adapter *i2c)
 {
 	struct ix7306_state *state = NULL;
+
 	if ((state = kzalloc(sizeof(struct ix7306_state), GFP_KERNEL)) == NULL)
+	{
 		goto exit;
+	}
 	state->config = config;
 	state->i2c = i2c;
 	state->fe = fe;
 	state->bandwidth = 125000;
 	fe->tuner_priv = state;
 	fe->ops.tuner_ops = ix7306_ops;
-	printk("%s: Attaching %s IX7306 8PSK/QPSK tuner\n",
-		   __func__, config->name);
+	printk("%s: Attaching %s IX7306 8PSK/QPSK tuner\n", __func__, config->name);
 	return fe;
 exit:
 	kfree(state);
 	return NULL;
 }
 
-int tuner_Sharp7306_Identify(struct dvb_frontend *fe,
-							 const struct ix7306_config *config,
-							 struct i2c_adapter *i2c)//lwj change
+int tuner_Sharp7306_Identify(struct dvb_frontend *fe, const struct ix7306_config *config, struct i2c_adapter *i2c)//lwj change
 {
 	int Err = 0;
 	unsigned char ucIOBuffer[4 + 1];
 	unsigned char ucData = 0;
 	struct ix7306_state state;
+
 	memset(&state, 0, sizeof(struct ix7306_state));
 	state.config = config;
 	state.i2c = i2c;
@@ -732,6 +929,7 @@ int tuner_Sharp7306_Identify(struct dvb_frontend *fe,
 	ucIOBuffer[1] = 0x7e;
 	ucIOBuffer[2] = 0xe1;
 	ucIOBuffer[3] = 0x42;
+
 	if (fe->ops.i2c_gate_ctrl(fe, 1) < 0)
 	{
 		printk("i2c_gate_ctrl 1 error\n");
@@ -804,3 +1002,4 @@ int tuner_Sharp7306_Identify(struct dvb_frontend *fe,
 }
 
 EXPORT_SYMBOL(ix7306_attach);
+

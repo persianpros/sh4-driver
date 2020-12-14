@@ -1,8 +1,7 @@
 
-CCFLAGSY += \
-	-I./linux/components/inline \
-	-I./components/include \
-	-I./components/infrastructure
+CCFLAGSY+=-I./linux/components/inline         \
+          -I./components/include              \
+          -I./components/infrastructure
 
 CCFLAGSY+=-D__SH4__
 
@@ -12,3 +11,5 @@ ccflags-y += $(CCFLAGSY)
 endif
 
 obj-y += infrastructure/
+
+

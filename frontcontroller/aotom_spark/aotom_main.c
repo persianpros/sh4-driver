@@ -119,7 +119,7 @@ short paramDebug = 0;  //debug print level is zero as default (0=nothing, 1= ope
 #define KEY_PRESS_DOWN    1
 #define KEY_PRESS_UP      0
 
-static char *gmt = "+0000";  //GMT offset is zero as default
+static char *gmt = "+0000";  // GMT offset is zero as default
 
 static int open_count = 0;
 

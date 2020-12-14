@@ -156,7 +156,7 @@ PcmPlayer_Ksound_c::PcmPlayer_Ksound_c(unsigned int Soundcard, unsigned int Subs
 		}
 	}
 	PCMPLAYER_DEBUG("ALSA device (hw:%d,%d) %s support IEC60958 channel status control\n",
-					Soundcard, Substream, (iec958_elem ? "does" : "doesn't"));
+			Soundcard, Substream, (iec958_elem ? "does" : "doesn't"));
 	/*
 	 * set up access to the validity bits (if available)
 	 */
@@ -178,7 +178,7 @@ PcmPlayer_Ksound_c::PcmPlayer_Ksound_c(unsigned int Soundcard, unsigned int Subs
 		}
 	}
 	PCMPLAYER_DEBUG("ALSA device (hw:%d,%d) %s support IEC60958 validity bits control\n",
-					Soundcard, Substream, (iec958_val_elem ? "does" : "doesn't"));
+			Soundcard, Substream, (iec958_val_elem ? "does" : "doesn't"));
 	InitializationStatus = PlayerNoError;
 }
 
@@ -200,7 +200,7 @@ PcmPlayer_Ksound_c::~PcmPlayer_Ksound_c()
 ///
 ///
 PlayerStatus_t PcmPlayer_Ksound_c::MapSamples(unsigned int SampleCount, bool NonBlock,
-											  void **MappedSamplesPP)
+					      void **MappedSamplesPP)
 {
 	PlayerStatus_t Status;
 	snd_pcm_uframes_t Avail;
@@ -212,7 +212,7 @@ PlayerStatus_t PcmPlayer_Ksound_c::MapSamples(unsigned int SampleCount, bool Non
 		if (Avail < 0)
 		{
 			PCMPLAYER_ERROR("Underrun before checking sample availability (%d) for %s\n",
-							-Avail, Identity);
+					-Avail, Identity);
 			Status = DeployUnderrunRecovery();
 			if (PlayerNoError != Status)
 				return Status;
@@ -220,7 +220,7 @@ PlayerStatus_t PcmPlayer_Ksound_c::MapSamples(unsigned int SampleCount, bool Non
 		if (NonBlock)
 		{
 			PCMPLAYER_ERROR("Insufficient samples available for mapping (%s). Wanted %u Found %u\n",
-							Identity, SampleCount, Avail);
+					Identity, SampleCount, Avail);
 			return PlayerError;
 		}
 #if defined(QBOXHD) || defined(QBOXHD_MINI)
@@ -231,7 +231,7 @@ PlayerStatus_t PcmPlayer_Ksound_c::MapSamples(unsigned int SampleCount, bool Non
 		if (Result <= 0)
 		{
 			PCMPLAYER_ERROR("Underrun before waiting for period expiry (%d) for %s\n",
-							-Result, Identity);
+					-Result, Identity);
 			Status = DeployUnderrunRecovery();
 			if (PlayerNoError != Status)
 				return Status;
@@ -239,7 +239,7 @@ PlayerStatus_t PcmPlayer_Ksound_c::MapSamples(unsigned int SampleCount, bool Non
 	}
 	SoundcardMappedSamples = SampleCount;
 	Result = ksnd_pcm_mmap_begin(SoundcardHandle, &SoundcardMappedBuffer,
-								 &SoundcardMappedOffset, &SoundcardMappedSamples);
+				     &SoundcardMappedOffset, &SoundcardMappedSamples);
 	if (Result < 0)
 	{
 		PCMPLAYER_ERROR("Underrun before mapping buffer (%d) for %s\n", -Result, Identity);
@@ -269,9 +269,9 @@ PlayerStatus_t PcmPlayer_Ksound_c::CommitMappedSamples()
 		 (SoundcardMappedBuffer->first / 8) +
 		 (SoundcardMappedOffset * (SoundcardMappedBuffer->step / 8)));
 	st_relayfs_write(BufferType, PCMPLAYER_COMMIT_MAPPED_SAMPLES,
-					 FirstMappedSample,
-					 (unsigned int) SamplesToBytes((SoundcardMappedSamples * Q11_5_UNITY) / ResamplingFactor_x32),
-					 0);
+			 FirstMappedSample,
+			 (unsigned int) SamplesToBytes((SoundcardMappedSamples * Q11_5_UNITY) / ResamplingFactor_x32),
+			 0);
 	Result = ksnd_pcm_mmap_commit(SoundcardHandle, SoundcardMappedOffset, SoundcardMappedSamples);
 	if (Result < 0 || (snd_pcm_uframes_t) Result != SoundcardMappedSamples)
 	{
@@ -314,7 +314,7 @@ PlayerStatus_t PcmPlayer_Ksound_c::GetTimeOfNextCommit(unsigned long long *TimeP
 		{
 #if 0
 			PCMPLAYER_ERROR("Cannot read the sound card timestamp (%d) for %s\n",
-							-Result, Identity);
+					-Result, Identity);
 #endif
 			// error recovery...
 			TimeStamp = OS_GetTimeInMicroSeconds();
@@ -350,7 +350,7 @@ PlayerStatus_t PcmPlayer_Ksound_c::SetParameters(PcmPlayerSurfaceParameters_t *P
 	}
 	// calculate the resampling factor
 	ResamplingFactor_x32 = (SurfaceParameters.ActualSampleRateHz * Q11_5_UNITY) /
-						   SurfaceParameters.PeriodParameters.SampleRateHz;
+			       SurfaceParameters.PeriodParameters.SampleRateHz;
 	// being connected to a FatPipe output has the same affect as a 4x downsample on the mappings and
 	// the period
 	if (SPDIFmode == OUTPUT_FATPIPE)
@@ -361,11 +361,11 @@ PlayerStatus_t PcmPlayer_Ksound_c::SetParameters(PcmPlayerSurfaceParameters_t *P
 	}
 	SurfaceParameters.PeriodSize = (SurfaceParameters.PeriodSize * ResamplingFactor_x32) / Q11_5_UNITY;
 	Result = ksnd_pcm_set_params(SoundcardHandle,
-								 SurfaceParameters.PeriodParameters.ChannelCount,
-								 SurfaceParameters.PeriodParameters.BitsPerSample,
-								 SurfaceParameters.ActualSampleRateHz,
-								 SurfaceParameters.PeriodSize,
-								 (SurfaceParameters.PeriodSize * SurfaceParameters.NumPeriods));
+				     SurfaceParameters.PeriodParameters.ChannelCount,
+				     SurfaceParameters.PeriodParameters.BitsPerSample,
+				     SurfaceParameters.ActualSampleRateHz,
+				     SurfaceParameters.PeriodSize,
+				     (SurfaceParameters.PeriodSize * SurfaceParameters.NumPeriods));
 	if (0 != Result)
 	{
 		PCMPLAYER_ERROR("Cannot set ALSA parameters for %s\n", Identity);
@@ -390,10 +390,10 @@ PlayerStatus_t PcmPlayer_Ksound_c::SetParameters(PcmPlayerSurfaceParameters_t *P
 	SurfaceParameters.PeriodSize = PeriodSize;
 	SurfaceParameters.NumPeriods = BufferSize / PeriodSize;
 	PCMPLAYER_DEBUG("%s: SampleRate %d PeriodSize %d (%dus) BufferSize %d (%dus) NumPeriods %d\n",
-					Identity, SurfaceParameters.ActualSampleRateHz,
-					PeriodSize, PeriodSize * 1000 / SurfaceParameters.ActualSampleRateHz,
-					BufferSize, BufferSize * 1000 / SurfaceParameters.ActualSampleRateHz,
-					SurfaceParameters.NumPeriods);
+			Identity, SurfaceParameters.ActualSampleRateHz,
+			PeriodSize, PeriodSize * 1000 / SurfaceParameters.ActualSampleRateHz,
+			BufferSize, BufferSize * 1000 / SurfaceParameters.ActualSampleRateHz,
+			SurfaceParameters.NumPeriods);
 	*ParamsP = SurfaceParameters;
 	// ensure the surface parameters reflect the nominal behavior rather than the resampled/fatpipe
 	// behavior (but we must ensure our own copy of the surface parameters accurately reflects the
@@ -421,12 +421,12 @@ PlayerStatus_t PcmPlayer_Ksound_c::SetOutputRateAdjustment(int Rate, int *Actual
 		if (adjust != fsynth_adjust)
 		{
 			PCMPLAYER_DEBUG("Setting output rate adjustment to %d parts per million for %s\n",
-							adjust - FSYNTH_CONTROL_UNITY, Identity);
+					adjust - FSYNTH_CONTROL_UNITY, Identity);
 			ksnd_ctl_elem_value_set_integer(&control, 0, adjust);
 			res = ksnd_hctl_elem_write(elem, &control);
 			if (res < 0)
 				PCMPLAYER_ERROR("Cannot set output rate adjustment (%d) for %s\n",
-								res, Identity);
+						res, Identity);
 			fsynth_adjust = adjust;
 		}
 	}
@@ -521,7 +521,7 @@ unsigned int PcmPlayer_Ksound_c::SamplesToBytes(unsigned int SampleCount)
 	// Adjust the sample count to switch between the nominal and actual sampling frequency
 	SampleCount = (SampleCount * ResamplingFactor_x32) / Q11_5_UNITY;
 	return SampleCount * SurfaceParameters.PeriodParameters.ChannelCount *
-		   (SurfaceParameters.PeriodParameters.BitsPerSample / 8);
+	       (SurfaceParameters.PeriodParameters.BitsPerSample / 8);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -533,7 +533,7 @@ unsigned int PcmPlayer_Ksound_c::BytesToSamples(unsigned int ByteCount)
 	// Adjust the sample count to switch between the nominal and actual sampling frequency
 	ByteCount = (ByteCount * Q11_5_UNITY) / ResamplingFactor_x32;
 	return (ByteCount * 8) / (SurfaceParameters.PeriodParameters.ChannelCount *
-							  SurfaceParameters.PeriodParameters.BitsPerSample);
+				  SurfaceParameters.PeriodParameters.BitsPerSample);
 }
 
 ////////////////////////////////////////////////////////////////////////////

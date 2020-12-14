@@ -278,7 +278,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::RegisterStream(
 	OS_LockMutex(&Lock);
 	MasterClock = Player->PolicyValue(Playback, Stream, PolicyMasterClock);
 	PossibleMaster = ((MasterClock == PolicyValueVideoClockMaster) && (StreamType == StreamTypeVideo)) ||
-					 ((MasterClock == PolicyValueAudioClockMaster) && (StreamType == StreamTypeAudio));
+			 ((MasterClock == PolicyValueAudioClockMaster) && (StreamType == StreamTypeAudio));
 	PossibleAlternateMaster = (MasterClock != PolicyValueSystemClockMaster);
 	if (PossibleMaster && GotAnAlternateMasterClock)
 	{
@@ -820,7 +820,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 #endif
 	OS_LockMutex(&Lock);
 	AlternateTimeMappingExists = MasterTimeMappingEstablished &&
-								 (Context->BasedOnMasterMappingVersion != MasterTimeMappingVersion);
+				     (Context->BasedOnMasterMappingVersion != MasterTimeMappingVersion);
 	if (AlternateTimeMappingExists)
 	{
 		Now = OS_GetTimeInMicroSeconds();
@@ -832,7 +832,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 		OS_LockMutex(&Lock);
 #endif
 		AlternateMappingIsReasonable = ((MasterMappingNow - Now) > NEGATIVE_REASONABLE_LIMIT) ||
-									   ((MasterMappingNow - Now) < POSITIVE_REASONABLE_LIMIT);
+					       ((MasterMappingNow - Now) < POSITIVE_REASONABLE_LIMIT);
 		if (AlternateMappingIsReasonable)
 		{
 			Context->AccumulatedPlaybackTimeJumpsSinceSynchronization = 0;
@@ -874,7 +874,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SynchronizeStreams(
 	if (Direction == PlayForward)
 	{
 		StartupDelay = (NormalizedDecodeTime != UNSPECIFIED_TIME) ?
-					   ((NormalizedPlaybackTime - NormalizedDecodeTime) / 1000) : DEFAULT_STARTUP_DELAY;
+			       ((NormalizedPlaybackTime - NormalizedDecodeTime) / 1000) : DEFAULT_STARTUP_DELAY;
 		if (NormalizedPlaybackTime < NormalizedDecodeTime)
 		{
 			report(severity_error, "OutputCoordinator_Base_c::SynchronizeStreams - Startup delay calculated to be negative! Bad DTS? (%lldms) (%016llx - %016llx).\n", StartupDelay, NormalizedPlaybackTime, NormalizedDecodeTime);
@@ -1177,8 +1177,8 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::HandlePlaybackTimeDeltas(
 	// Now evaluate the delta and handle any jump in the playback time
 	//
 	DeltaPlaybackTime = (Direction == PlayBackward) ?
-						(long long)(ExpectedPlaybackTime - ActualPlaybackTime) :
-						(long long)(ActualPlaybackTime - ExpectedPlaybackTime);
+			    (long long)(ExpectedPlaybackTime - ActualPlaybackTime) :
+			    (long long)(ActualPlaybackTime - ExpectedPlaybackTime);
 	if (!inrange(DeltaPlaybackTime, -PlaybackTimeReverseJumpThreshold, PlaybackTimeForwardJumpThreshold) || KnownJump)
 	{
 		report(severity_info, "Spotted a delta(%s) %12lld\n", StreamType(), DeltaPlaybackTime);
@@ -1247,8 +1247,8 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::HandlePlaybackTimeDeltas(
 	// Here we check that if there is an ongoing cascading change that we are not part of,
 	// then we have not reached a point when we really should have been part of it
 	//
-	if (ValidTime(JumpSeenAtPlaybackTime) &&
-			(AccumulatedPlaybackTimeJumpsSinceSynchronization != Context->AccumulatedPlaybackTimeJumpsSinceSynchronization))
+	if (ValidTime(JumpSeenAtPlaybackTime)
+	&& (AccumulatedPlaybackTimeJumpsSinceSynchronization != Context->AccumulatedPlaybackTimeJumpsSinceSynchronization))
 	{
 		DeltaPlaybackTime = (long long)(ActualPlaybackTime - JumpSeenAtPlaybackTime);
 		if (!inrange(DeltaPlaybackTime, -PlaybackTimeForwardJumpThreshold, OTHER_STREAMS_MUST_FOLLOW_JUMP_BY))
@@ -1317,8 +1317,8 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::CalculateOutputRateAdjustmen
 	{
 		ExternalMapping = Player->PolicyValue(Playback, Context->Stream, PolicyExternalTimeMapping);
 		Context->OutputRateAdjustmentParameters = (ExternalMapping == PolicyValueApply) ?
-												  ((Context->StreamType == StreamTypeVideo) ? ORAInputFollowingVideo : ORAInputFollowingAudio) :
-												  ((Context->StreamType == StreamTypeVideo) ? ORAOutputDrivenVideo : ORAOutputDrivenAudio);
+							  ((Context->StreamType == StreamTypeVideo) ? ORAInputFollowingVideo : ORAInputFollowingAudio) :
+							  ((Context->StreamType == StreamTypeVideo) ? ORAOutputDrivenVideo : ORAOutputDrivenAudio);
 		Context->OutputRateAdjustmentType = (ExternalMapping == PolicyValueApply) ? OutputRateAdjustmentInputFollowing : OutputRateAdjustmentOutputDriven;
 		Context->IntegratingClockDrift = Context->ClockMaster && (ExternalMapping == PolicyValueApply);
 		Context->FramesToIntegrateOver = Context->OutputRateAdjustmentParameters.ClockDriftMinimumIntegrationFrames;
@@ -1353,7 +1353,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::CalculateOutputRateAdjustmen
 		{
 			for (C = 0; C < COUNT; C += 8)
 				report(severity_info, "%4d - %6d %6d %6d %6d %6d %6d %6d %6d\n", C,
-					   D[C + 0], D[C + 1], D[C + 2], D[C + 3], D[C + 4], D[C + 5], D[C + 6], D[C + 7]);
+				       D[C + 0], D[C + 1], D[C + 2], D[C + 3], D[C + 4], D[C + 5], D[C + 6], D[C + 7]);
 			report(severity_fatal, "Thats all folks\n");
 		}
 	}
@@ -1385,10 +1385,10 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::CalculateOutputRateAdjustmen
 			AdjustmentMultiplier = Context->LeastSquareFit.Gradient();
 #if 0
 			report(severity_info, "AAA 0 (%d) Clock adjustment %4d %d.%09d %d.%09d - %06lld\n", Context->StreamType,
-				   Context->IntegrationCount,
-				   AdjustmentMultiplier.IntegerPart(), AdjustmentMultiplier.RemainderDecimal(9),
-				   SystemClockAdjustment.IntegerPart(), SystemClockAdjustment.RemainderDecimal(9),
-				   CurrentError);
+			       Context->IntegrationCount,
+			       AdjustmentMultiplier.IntegerPart(), AdjustmentMultiplier.RemainderDecimal(9),
+			       SystemClockAdjustment.IntegerPart(), SystemClockAdjustment.RemainderDecimal(9),
+			       CurrentError);
 #endif
 			ClampChange = (Context->OutputRateAdjustmentParameters.ClockDriftMaximumIntegrationFrames / Context->FramesToIntegrateOver);
 			ClampChange = min(128, 4 * (ClampChange * ClampChange));
@@ -1397,7 +1397,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::CalculateOutputRateAdjustmen
 			// Now apply this to the clock adjustment
 			//
 			Context->ClockAdjustment = Context->ClockAdjustmentEstablished ?
-									   (Context->ClockAdjustment * AdjustmentMultiplier) : AdjustmentMultiplier;
+						   (Context->ClockAdjustment * AdjustmentMultiplier) : AdjustmentMultiplier;
 			Context->ClockAdjustmentEstablished = true;
 			//
 			// Now we calculate a long term drift corrector, clamp it,
@@ -1420,8 +1420,8 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::CalculateOutputRateAdjustmen
 			{
 				AnticipatedDriftCorrection = -CurrentError / 2;
 				AnticipatedDriftCorrectionPeriod = (Context->FramesToIntegrateOver < Context->OutputRateAdjustmentParameters.ClockDriftMaximumIntegrationFrames) ?
-												   (2 * Context->LeastSquareFit.Y()) :
-												   Context->LeastSquareFit.Y();
+								   (2 * Context->LeastSquareFit.Y()) :
+								   Context->LeastSquareFit.Y();
 				AnticipatedDriftAdjustment = Rational_t(AnticipatedDriftCorrection, AnticipatedDriftCorrectionPeriod);
 				Clamp(AnticipatedDriftAdjustment, Rational_t(-4, 1000000), Rational_t(4, 1000000));
 				AnticipatedDriftCorrection = IntegerPart(AnticipatedDriftCorrectionPeriod * AnticipatedDriftAdjustment);
@@ -1435,10 +1435,10 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::CalculateOutputRateAdjustmen
 				Rational_t Tmp;
 				Tmp = Context->LeastSquareFit.Gradient();
 				report(severity_info, "RateAdjuster (%d) Clock adjustment %d.%09d (%d.%09d) (%5d) %4lld (%5lld %5lld %5lld %5lld)\n", Context->StreamType,
-					   Context->ClockAdjustment.IntegerPart(), Context->ClockAdjustment.RemainderDecimal(9),
-					   Tmp.IntegerPart(), Tmp.RemainderDecimal(9),
-					   Context->FramesToIntegrateOver, AnticipatedDriftCorrection,
-					   Context->CurrentErrorHistory[0], Context->CurrentErrorHistory[1], Context->CurrentErrorHistory[2], Context->CurrentErrorHistory[3]);
+				       Context->ClockAdjustment.IntegerPart(), Context->ClockAdjustment.RemainderDecimal(9),
+				       Tmp.IntegerPart(), Tmp.RemainderDecimal(9),
+				       Context->FramesToIntegrateOver, AnticipatedDriftCorrection,
+				       Context->CurrentErrorHistory[0], Context->CurrentErrorHistory[1], Context->CurrentErrorHistory[2], Context->CurrentErrorHistory[3]);
 			}
 #endif
 			//
@@ -1653,7 +1653,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::MonitorVsyncOffset(
 				//
 				// Vsync locked, so just report, and signal zero
 				//
-				report(severity_info, "Vsync Offset = %lld, as vsync is locked we will not adjust the mapping.\n");
+//				report(severity_info, "Vsync Offset = %lld us, as vsync is locked we will not adjust the mapping.\n");
 				CorrectedOffset = 0;
 			}
 			//
@@ -1811,7 +1811,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::ClockRecoveryDataPoint(
 					((SourceTime & WrapMask) == 0))
 				ClockRecoveryPtsBaseLine += WrapOffset;
 			else if (((ClockRecoveryLastPts & WrapMask) == 0) &&
-					 ((SourceTime & WrapMask) == WrapMask))
+					((SourceTime & WrapMask) == WrapMask))
 				ClockRecoveryPtsBaseLine -= WrapOffset;
 			ClockRecoveryLastPts = SourceTime;
 			NormalizedSourceTime = (((ClockRecoveryPtsBaseLine + SourceTime) * 300) + 13) / 27;

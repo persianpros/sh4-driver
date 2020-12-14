@@ -178,7 +178,7 @@ static OSDEV_MmapEntrypoint(AllocatorMmap)
 // The ioctl function to handle allocating the memory
 
 static OSDEV_Status_t AllocatorIoctlAllocateData(AllocatorContext_t *AllocatorContext,
-												 unsigned int ParameterAddress)
+						 unsigned int ParameterAddress)
 {
 	allocator_ioctl_allocate_t params;
 //
@@ -188,7 +188,7 @@ static OSDEV_Status_t AllocatorIoctlAllocateData(AllocatorContext_t *AllocatorCo
 	memcpy(AllocatorContext->PartitionName, params.PartitionName, ALLOCATOR_MAX_PARTITION_NAME_SIZE);
 //
 	AllocatorContext->Memory = OSDEV_MallocPartitioned(AllocatorContext->PartitionName,
-													   AllocatorContext->Size);
+							   AllocatorContext->Size);
 	if (AllocatorContext->Memory == NULL)
 	{
 		OSDEV_Print("AllocatorIoctlAllocateData : Unable to allocate memory\n");

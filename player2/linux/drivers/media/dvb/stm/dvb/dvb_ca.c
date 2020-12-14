@@ -44,13 +44,13 @@ Date Modification Name
 #endif
 
 static int CaOpen(struct inode *Inode,
-				  struct file *File);
+		  struct file *File);
 static int CaRelease(struct inode *Inode,
-					 struct file *File);
+		     struct file *File);
 static int CaIoctl(struct inode *Inode,
-				   struct file *File,
-				   unsigned int IoctlCode,
-				   void *ParamAddress);
+		   struct file *File,
+		   unsigned int IoctlCode,
+		   void *ParamAddress);
 
 // *INDENT-OFF*
 static struct file_operations CaFops =
@@ -88,11 +88,11 @@ extern int init_ci_controller(struct dvb_adapter *dvb_adap);
 struct dvb_device *CaInit(struct DeviceContext_s *DeviceContext)
 {
 #ifdef __TDT__
-	printk(KERN_DEBUG "CaInit()\n");
+	printk("CaInit()\n");
 	if (!caInitialized)
 	{
 		/* the following call creates ca0 associated with the cimax hardware */
-		printk(KERN_DEBUG "Initializing CI Controller\n");
+		printk("Initializing CI Controller\n");
 #if !defined(VIP2) \
  && !defined (SPARK) \
  && !defined (SPARK7162) \
@@ -108,8 +108,7 @@ struct dvb_device *CaInit(struct DeviceContext_s *DeviceContext)
 	return &CaDevice;
 }
 
-static int CaOpen(struct inode *Inode,
-				  struct file *File)
+static int CaOpen(struct inode *Inode, struct file *File)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
@@ -122,8 +121,7 @@ static int CaOpen(struct inode *Inode,
 	return 0;
 }
 
-static int CaRelease(struct inode *Inode,
-					 struct file *File)
+static int CaRelease(struct inode *Inode, struct file *File)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
@@ -133,9 +131,9 @@ static int CaRelease(struct inode *Inode,
 }
 
 static int CaIoctl(struct inode *Inode,
-				   struct file *File,
-				   unsigned int IoctlCode,
-				   void *Parameter)
+		   struct file *File,
+		   unsigned int IoctlCode,
+		   void *Parameter)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
@@ -155,7 +153,7 @@ static int CaIoctl(struct inode *Inode,
 			int vLoop;
 			unsigned short pid = service_pid->pid;
 			int descramble_index = service_pid->index;
-			printk(KERN_DEBUG "CA_SET_PID index = %d pid %d\n", descramble_index, pid);
+			printk("CA_SET_PID index = %d pid %d\n", descramble_index, pid);
 			if (descramble_index >= 0)
 			{
 				if (descramble_index >= NUMBER_OF_DESCRAMBLERS)
@@ -166,7 +164,8 @@ static int CaIoctl(struct inode *Inode,
 				pSession->descramblerForPid[pid] = descramble_index;
 				for (vLoop = 0; vLoop < pSession->num_pids; vLoop++)
 				{
-					if (((unsigned short) pSession->pidtable[vLoop] == (unsigned short) pid))
+					if (((unsigned short) pSession->pidtable[vLoop] ==
+							(unsigned short) pid))
 					{
 						if (pSession->type[vLoop] == DMX_TYPE_TS)
 						{
@@ -180,22 +179,22 @@ static int CaIoctl(struct inode *Inode,
 								{
 									pSession->descramblerindex[vLoop] = descramble_index;
 									if ((err = pti_hal_descrambler_link(pSession->session,
-																		pSession->descramblers[pSession->descramblerindex[vLoop]],
-																		pSession->slots[vLoop])) != 0)
+													    pSession->descramblers[pSession->descramblerindex[vLoop]],
+													    pSession->slots[vLoop])) != 0)
 										printk("Error linking slot %d to descrambler %d, err = %d\n",
-											   pSession->slots[vLoop],
-											   pSession->descramblers[pSession->descramblerindex[vLoop]],
-											   err);
+										       pSession->slots[vLoop],
+										       pSession->descramblers[pSession->descramblerindex[vLoop]],
+										       err);
 									else
 										dprintk("linking pid %d slot %d to descrambler %d, session = %d pSession %p\n",
-												pid, pSession->slots[vLoop],
-												pSession->descramblers[pSession->descramblerindex[vLoop]],
-												pSession->session, pSession);
+											pid, pSession->slots[vLoop],
+											pSession->descramblers[pSession->descramblerindex[vLoop]],
+											pSession->session, pSession);
 									return 0;
 								}
 								else
 								{
-									printk(KERN_DEBUG "pid %x is already linked to descrambler %d\n", pid, descramble_index);
+									printk("pid %x is already linked to descrambler %d\n", pid, descramble_index);
 									return 0;
 								}
 							}
@@ -212,34 +211,8 @@ static int CaIoctl(struct inode *Inode,
 						}
 					}
 				}
-				printk(KERN_DEBUG "pid %x not found in pidtable, it might be inactive\n", pid);
+				printk("pid %x not found in pidtable, it might be inactive\n", pid);
 			}
-			return 0;
-			break;
-		}
-		case CA_SET_DESCR_MODE:
-		{
-			ca_descr_mode_t *descr_mode = (ca_descr_mode_t*) Parameter;
-			dprintk("CA_SET_DESCR_MODE\n");
-			if (descr_mode->index >= 16)
-				return -EINVAL;
-			if (descr_mode->algo > 2)
-				return -EINVAL;
-			dprintk("index = %d algo = %d\n", descr_mode->index, descr_mode->algo);
-			if(descr_mode->index < 0 || descr_mode->index >= NUMBER_OF_DESCRAMBLERS){
-				printk("Error descrambler %d not supported! needs to be in range 0 - %d\n", descr_mode->index, NUMBER_OF_DESCRAMBLERS-1);
-				return -1;
-			}
-			if (&Context->DvbContext->Lock != NULL)
-				mutex_lock (&Context->DvbContext->Lock);
-			if (pSession->algo[descr_mode->index] != descr_mode->algo) {
-				printk("Session = %d index = %d new algo = %d\n",pSession->session, descr_mode->index, descr_mode->algo);
-				if (pti_hal_descrambler_set_mode(pSession->session, pSession->descramblers[descr_mode->index], descr_mode->algo) != 0)
-					printk("Error while setting descrambler mode\n");
-				else pSession->algo[descr_mode->index] = descr_mode->algo;
-			}
-			if (&Context->DvbContext->Lock != NULL)
-				mutex_unlock (&Context->DvbContext->Lock);
 			return 0;
 			break;
 		}
@@ -251,7 +224,7 @@ static int CaIoctl(struct inode *Inode,
 				return -EINVAL;
 			if (descr->parity > 1)
 				return -EINVAL;
-
+#if 0
 			dprintk("index = %d\n", descr->index);
 			dprintk("parity = %d\n", descr->parity);
 			dprintk("cw[0] = %d\n", descr->cw[0]);
@@ -262,9 +235,9 @@ static int CaIoctl(struct inode *Inode,
 			dprintk("cw[5] = %d\n", descr->cw[5]);
 			dprintk("cw[6] = %d\n", descr->cw[6]);
 			dprintk("cw[7] = %d\n", descr->cw[7]);
-
+#endif
 			dprintk("Descrambler Index: %d, cw(%d) = %02x %02x %02x %02x %02x %02x %02x %02x\n", descr->index, descr->parity,
-					descr->cw[0], descr->cw[1], descr->cw[2], descr->cw[3], descr->cw[4], descr->cw[5], descr->cw[6], descr->cw[7]);
+				descr->cw[0], descr->cw[1], descr->cw[2], descr->cw[3], descr->cw[4], descr->cw[5], descr->cw[6], descr->cw[7]);
 			if (descr->index < 0 || descr->index >= NUMBER_OF_DESCRAMBLERS)
 			{
 				printk("Error descrambler %d not supported! needs to be in range 0 - %d\n", descr->index, NUMBER_OF_DESCRAMBLERS - 1);
@@ -282,7 +255,9 @@ static int CaIoctl(struct inode *Inode,
 		case CA_SET_DESCR_DATA:
 		{
 			int altDescr = 40000, sess = 10000;
+#if 0
 			int i;
+#endif
 			bool useAlt = false;
 			ca_descr_data_t *descr = (ca_descr_data_t *) Parameter;
 			dprintk("CA_SET_DESCR_DATA\n");
@@ -297,6 +272,7 @@ static int CaIoctl(struct inode *Inode,
 				return -EINVAL;
 			if (descr->parity > 1)
 				return -EINVAL;
+#if 0
 			if (debug)
 			{
 				printk("Descrambler Index: %d Parity: %d Type: %d\n", descr->index, descr->parity, descr->data_type);
@@ -304,6 +280,7 @@ static int CaIoctl(struct inode *Inode,
 					printk("%02x ", descr->data[i]);
 				printk("\n");
 			}
+#endif
 			if (descr->index < 0 || descr->index >= NUMBER_OF_DESCRAMBLERS)
 			{
 				printk("Error descrambler %d not supported! needs to be in range 0 - %d\n", descr->index, NUMBER_OF_DESCRAMBLERS - 1);

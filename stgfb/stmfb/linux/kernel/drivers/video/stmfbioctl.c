@@ -157,7 +157,7 @@ static int stmfbio_draw_rectangle_extern(stm_display_blitter_t *blitter,
     return -1;
   }
 
-  setDrawingState(&op, pData);
+  setDrawingState(&op, (STMFBIO_BLT_DATA *)pData);
 
   if (pData->operation == BLT_OP_FILL)
     ret = stm_display_blitter_fill_rect(blitter, &op, &dst);
@@ -177,10 +177,10 @@ static int stmfbio_do_blit_extern(stm_display_blitter_t *blitter,
   stm_rect_t srcrect;
   stm_rect_t dstrect;
   int ret = 0;
-#ifdef VERY_VERBOSE
-  printk("src_off = 0x%lx src_pitch = 0x%lx\n", pData->srcOffset, pData->srcPitch);
-  printk("dst_off = 0x%lx dst_pitch = 0x%lx\n", pData->dstOffset, pData->dstPitch);
-#endif
+
+  //printk("src_off = 0x%lx src_pitch = 0x%lx\n", pData->srcOffset, pData->srcPitch);
+  //printk("dst_off = 0x%lx dst_pitch = 0x%lx\n", pData->dstOffset, pData->dstPitch);
+
   if(pData->dst_left < pData->dst_right)
   {
     dstrect.left   = pData->dst_left;
@@ -249,7 +249,7 @@ static int stmfbio_do_blit_extern(stm_display_blitter_t *blitter,
     return -1;
   }
 
-  setDrawingState(&op, pData);
+  setDrawingState(&op, (STMFBIO_BLT_DATA *)pData);
 
   op.ulCLUT = clutaddress;
 
@@ -395,7 +395,7 @@ static int ValidatePagesContiguous(unsigned virtAddress, unsigned size, unsigned
 		unsigned long phys;
 		
 		/* Perform a Virtual to physical translation of the user address */
-		res = VirtToPhys((void *)virtBase, &phys);
+		res = VirtToPhys((void *)virtBase, (int *)&phys);
 		
 		if (res == VTOP_INVALID_ARG) 
 		{
@@ -413,7 +413,7 @@ static int ValidatePagesContiguous(unsigned virtAddress, unsigned size, unsigned
 		} else if (phys == (lastPhys + PAGE_SIZE)) {
 			lastPhys += PAGE_SIZE;
 		} else {
-			printk("Page discontinuous virtual 0x%08x, last phys 0x%08x, phys 0x%08x, pageCount %d\n", virtBase, lastPhys, phys, pageCount);
+			printk("Page discontinuous virtual 0x%08x, last phys 0x%08x, phys 0x%08x, pageCount %d\n", virtBase, lastPhys, (unsigned int)phys, pageCount);
 
 			result = -EFAULT;
 			break;
@@ -436,7 +436,7 @@ static int stmfbio_blt_extern(struct stmfb_info* i, u_long arg)
 
   if (!copy_from_user(&bltData,(void*)arg,sizeof(bltData)))
   {  
-    if(ValidatePagesContiguous(bltData.dstMemBase, bltData.dstMemSize, &dst.ulMemory) != 0)
+    if(ValidatePagesContiguous((unsigned int)bltData.dstMemBase, bltData.dstMemSize, (unsigned int *)&dst.ulMemory) != 0)
     {
     	printk("Could not get the physical address of your dst mem\n"); 
     	return -EINVAL;
@@ -458,7 +458,7 @@ static int stmfbio_blt_extern(struct stmfb_info* i, u_long arg)
       {
         stm_blitter_surface_t src;
 
-        if(ValidatePagesContiguous(bltData.srcMemBase, bltData.srcMemSize, &src.ulMemory) != 0)
+        if(ValidatePagesContiguous((unsigned int)bltData.srcMemBase, bltData.srcMemSize, (unsigned int *)&src.ulMemory) != 0)
 	{
 	    printk("Could not get the physical address of your src mem\n"); 
 	    return -EINVAL;

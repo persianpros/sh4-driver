@@ -6,7 +6,7 @@
 #include <asm/uaccess.h> /* copy_from_user */
 
 int proc_info_model_read(char *page, char **start, off_t off, int count,
-						 int *eof, void *data_unused)
+			 int *eof, void *data_unused)
 {
 	int len = 0;
 	printk("%s\n", __FUNCTION__);
@@ -106,10 +106,10 @@ int proc_info_model_read(char *page, char **start, off_t off, int count,
 	len = sprintf(page, "vitamin_hd5000\n");
 #elif defined(SAGEMCOM88)
 	len = sprintf(page, "sagemcom88\n");
-#elif defined(UFS910)
-	len = sprintf(page, "ufs910\n");
 #elif defined(ARIVALINK200)
 	len = sprintf(page, "arivalink200\n");
+#elif defined(UFS910)
+	len = sprintf(page, "ufs910\n");
 #elif defined(PACE7241)
 	len = sprintf(page, "pace7241\n");
 #elif defined(OPT9600)

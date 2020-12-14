@@ -17,8 +17,8 @@
 enum
 {
 	NIM_NOTFOUND = 0,
-	NIM_DVBS2_SAMSUNG_V1, // DNBU10511IST ver4.0
-	NIM_DVBT_SAMSUNG_V1, //
+	NIM_DVBS2_SAMSUNG_V1,	// DNBU10511IST ver4.0
+	NIM_DVBT_SAMSUNG_V1,	//
 	NIM_DVBC_PHILIPS_V1,
 };
 
@@ -28,89 +28,90 @@ enum
 
 static struct stv090x_config stv090x_config =
 {
-	.device = STV0903,
-	.demod_mode = STV090x_DUAL/*STV090x_SINGLE*/,
-	.clk_mode = STV090x_CLK_EXT,
+	.device			= STV0903,
+	.demod_mode		= STV090x_DUAL/*STV090x_SINGLE*/,
+	.clk_mode		= STV090x_CLK_EXT,
 
-	.xtal = 8000000,
-	.address = 0x68,
+	.xtal			= 8000000,
+	.address		= 0x68,
 
-	.ts1_mode = STV090x_TSMODE_DVBCI/*STV090x_TSMODE_SERIAL_CONTINUOUS*/,
-	.ts2_mode = STV090x_TSMODE_DVBCI/*STV090x_TSMODE_SERIAL_CONTINUOUS*/,
-	.ts1_clk = 0,
-	.ts2_clk = 0,
+	.ts1_mode		= STV090x_TSMODE_DVBCI/*STV090x_TSMODE_SERIAL_CONTINUOUS*/,
+	.ts2_mode		= STV090x_TSMODE_DVBCI/*STV090x_TSMODE_SERIAL_CONTINUOUS*/,
+	.ts1_clk		= 0,
+	.ts2_clk		= 0,
 
-	.lnb_enable = NULL,
-	.lnb_vsel = NULL,
+	.lnb_enable 	= NULL,
+	.lnb_vsel	 	= NULL,
 
-	.repeater_level = STV090x_RPTLEVEL_16,
+	.repeater_level	= STV090x_RPTLEVEL_16,
 
-	.tuner_init = NULL,
-	.tuner_set_mode = NULL,
-	.tuner_set_frequency = NULL,
-	.tuner_get_frequency = NULL,
-	.tuner_set_bandwidth = NULL,
-	.tuner_get_bandwidth = NULL,
-	.tuner_set_bbgain = NULL,
-	.tuner_get_bbgain = NULL,
-	.tuner_set_refclk = NULL,
-	.tuner_get_status = NULL,
+	.tuner_init				= NULL,
+	.tuner_set_mode			= NULL,
+	.tuner_set_frequency	= NULL,
+	.tuner_get_frequency	= NULL,
+	.tuner_set_bandwidth	= NULL,
+	.tuner_get_bandwidth	= NULL,
+	.tuner_set_bbgain		= NULL,
+	.tuner_get_bbgain		= NULL,
+	.tuner_set_refclk		= NULL,
+	.tuner_get_status		= NULL,
 };
 
 static struct stv6110x_config stv6110x_config =
 {
-	.addr = 0x60,
-	.refclk = 16000000,
-	.clk_div = 2,
+	.addr			= 0x60,
+	.refclk			= 16000000,
+	.clk_div		= 2,
 };
+
 
 // ----------------- DVB-T tuner -----------------------------
 #include "zl10353.h"
 #include "mxl5007t.h"
 static struct zl10353_config zl10353_config =
 {
-	.demod_address = 0x1A >> 1,
+	.demod_address		= 0x1A >> 1,
 
 	/* frequencies in units of 0.1kHz */
-	//.adc_clock; /* default: 450560 (45.056 MHz) */
-	.if2 = 45710, /* default: 361667 (36.1667 MHz) */
+	//.adc_clock;	/* default: 450560 (45.056  MHz) */
+	.if2 			= 45710, /* default: 361667 (36.1667 MHz) */
 
 	/* set if no pll is connected to the secondary i2c bus */
-	.no_tuner = 0,
-	//.tun_address = 0xC0,
+	.no_tuner		= 0,
+	//.tun_address		= 0xC0,
 
 	/* set if parallel ts output is required */
-	.parallel_ts = 1,
+	.parallel_ts		= 1,
 
 	/* set if i2c_gate_ctrl disable is required */
-	.disable_i2c_gate_ctrl = 0,
+	.disable_i2c_gate_ctrl	= 0,
 
 	/* clock control registers (0x51-0x54) */
-	//.clock_ctl_1 = 0, /* default: 0x46 */
-	//.pll_0 = 0, /* default: 0x15 */
+	//.clock_ctl_1		= 0,  /* default: 0x46 */
+	//.pll_0		= 0,  /* default: 0x15 */
 };
 static struct mxl5007t_config mxl5007t_config =
 {
-	.if_diff_out_level = 0,
-	.clk_out_amp = MxL_CLKOUT_AMP_0_94V,
-	.xtal_freq_hz = MxL_XTAL_20_48_MHZ,
-	.if_freq_hz = MxL_IF_4_57_MHZ,
-	.invert_if = 0,
-	.loop_thru_enable = 0,
-	.clk_out_enable = 1,
+	.if_diff_out_level	= 0,
+	.clk_out_amp 		= MxL_CLKOUT_AMP_0_94V,
+	.xtal_freq_hz		= MxL_XTAL_20_48_MHZ,
+	.if_freq_hz		= MxL_IF_4_57_MHZ,
+	.invert_if		= 0,
+	.loop_thru_enable	= 0,
+	.clk_out_enable		= 1,
 };
 
 #include "tda1002x.h"
 static struct tda10023_config tda10023_config =
 {
-	.demod_address = 0xC,
-	.invert = 0,
-	.xtal = 28920000, // defaults: 28920000
-	.pll_m = 8, // defaults: 8
-	.pll_p = 4, // defaults: 4
-	.pll_n = 1, // defaults: 1
-	.output_mode = TDA10023_OUTPUT_MODE_PARALLEL_A,
-	.deltaf = 0,
+	.demod_address	=	0xC,
+	.invert			=	0,
+	.xtal			=	28920000, // defaults: 28920000
+	.pll_m			=	8, // defaults: 8
+	.pll_p			=	4, // defaults: 4
+	.pll_n			=	1, // defaults: 1
+	.output_mode	=	TDA10023_OUTPUT_MODE_PARALLEL_A,
+	.deltaf			=	0,
 };
 // -------------------- end of tuner definitions -------------
 
@@ -118,7 +119,7 @@ short paramDebug = 1;
 
 static struct core *core[MAX_DVB_ADAPTERS];
 
-enum { VOLTAGE_13 = 1, VOLTAGE_18 = 0 };
+enum { VOLTAGE_13 = 1, VOLTAGE_18  = 0 };
 #if defined(IPBOX55)
 enum { VOLTAGE_ON = 1, VOLTAGE_OFF = 0 }; // 55 new
 #else
@@ -128,6 +129,7 @@ static int pio_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 {
 	struct core_config *cfg = fe->sec_priv;
 	//int id = stb710x->id;
+
 	switch (voltage)
 	{
 		case SEC_VOLTAGE_13:
@@ -142,47 +144,59 @@ static int pio_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 			break;
 		case SEC_VOLTAGE_OFF:
 			printk("frontend: set_voltage_off\n");
-// stpio_set_pin (cfg->lnb_enable, VOLTAGE_OFF);
+//        stpio_set_pin (cfg->lnb_enable, VOLTAGE_OFF);
 //		break;
 		default:
 			return -EINVAL;
 	}
+
 	return 0;
 }
+
 
 static struct dvb_frontend *frontend_init(struct core_config *cfg, int slot, int nimtype)
 {
 	struct stv6110x_devctl *ctl;
 	struct dvb_frontend *frontend = NULL;
+
 	printk(KERN_INFO "%s >\n", __FUNCTION__);
+
 	switch (nimtype)
 	{
 		case NIM_DVBS2_SAMSUNG_V1:
+
 			frontend = dvb_attach(stv090x_attach, &stv090x_config, cfg->i2c_adap, STV090x_DEMODULATOR_0);
+
 			if (frontend)
 			{
 				printk("%s: demod attached\n", __FUNCTION__);
+
 				ctl = dvb_attach(stv6110x_attach, frontend, &stv6110x_config, cfg->i2c_adap);
+
 				if (ctl)
 				{
+
 					printk("%s: pll attached\n", __FUNCTION__);
-					stv090x_config.tuner_init = ctl->tuner_init;
-					stv090x_config.tuner_set_mode = ctl->tuner_set_mode;
+
+					stv090x_config.tuner_init		= ctl->tuner_init;
+					stv090x_config.tuner_set_mode	= ctl->tuner_set_mode;
 					stv090x_config.tuner_set_frequency = ctl->tuner_set_frequency;
 					stv090x_config.tuner_get_frequency = ctl->tuner_get_frequency;
 					stv090x_config.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
 					stv090x_config.tuner_get_bandwidth = ctl->tuner_get_bandwidth;
-					stv090x_config.tuner_set_bbgain = ctl->tuner_set_bbgain;
-					stv090x_config.tuner_get_bbgain = ctl->tuner_get_bbgain;
-					stv090x_config.tuner_set_refclk = ctl->tuner_set_refclk;
-					stv090x_config.tuner_get_status = ctl->tuner_get_status;
+					stv090x_config.tuner_set_bbgain	= ctl->tuner_set_bbgain;
+					stv090x_config.tuner_get_bbgain	= ctl->tuner_get_bbgain;
+					stv090x_config.tuner_set_refclk	= ctl->tuner_set_refclk;
+					stv090x_config.tuner_get_status	= ctl->tuner_get_status;
+
 #if 0
-					stv090x_config.lnb_enable = cfg->lnb_enable;
-					stv090x_config.lnb_vsel = cfg->lnb_vsel;
+					stv090x_config.lnb_enable		= cfg->lnb_enable;
+					stv090x_config.lnb_vsel	  	= cfg->lnb_vsel;
 #endif
 					/* override frontend ops */
 					frontend->ops.set_voltage = pio_set_voltage;
 					frontend->sec_priv = cfg;
+
 				}
 				else
 				{
@@ -193,12 +207,15 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int slot, int
 				}
 			}
 			break;
+
 		case NIM_DVBT_SAMSUNG_V1:
+
 #if defined(IPBOX9900) || defined(IPBOX99)
 			frontend = dvb_attach(zl10353_attach, &zl10353_config, cfg->i2c_adap);
 			if (frontend)
 			{
 				printk("%s: demod attached\n", __FUNCTION__);
+
 				frontend = dvb_attach(mxl5007t_attach, frontend, cfg->i2c_adap, 0xC0 >> 1, &mxl5007t_config);
 				if (frontend)
 				{
@@ -214,8 +231,11 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int slot, int
 			frontend = NULL;
 #endif
 			break;
+
+
 		case NIM_DVBC_PHILIPS_V1:
 #if defined(IPBOX9900) || defined(IPBOX99)
+
 			frontend = dvb_attach(tda10023_attach, &tda10023_config, cfg->i2c_adap, 0);
 			if (frontend)
 			{
@@ -231,6 +251,7 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int slot, int
 			frontend = NULL;
 #endif
 			break;
+
 		default:
 			printk(KERN_INFO "%s: unknown nim type\n", __FUNCTION__);
 			if (frontend)
@@ -238,6 +259,7 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int slot, int
 			frontend = NULL;
 			break;
 	}
+
 	return frontend;
 }
 
@@ -287,6 +309,7 @@ static int i2c_autodetect(struct i2c_adapter *adapter, unsigned char i2c_addr, u
 		{ .addr = i2c_addr, .flags = I2C_M_RD, .buf = &buf[0], .len = 1 }
 	};
 	int b;
+
 #ifdef I2C_NIM_AUTODETECT
 	printk("[%s] adr %02X, id %02x\n", __FUNCTION__, i2c_addr, adapter->id);
 #endif
@@ -298,8 +321,10 @@ static int i2c_autodetect(struct i2c_adapter *adapter, unsigned char i2c_addr, u
 #ifdef I2C_NIM_AUTODETECT
 	printk("[%s] i2c_transfer=%02X\n", __FUNCTION__, b);
 #endif
+
 	if (b != 1)
 		return -1;
+
 #ifdef I2C_NIM_AUTODETECT
 	printk("[%s] buf[0]=%02X\n", __FUNCTION__, buf[0]);
 #endif
@@ -308,7 +333,7 @@ static int i2c_autodetect(struct i2c_adapter *adapter, unsigned char i2c_addr, u
 
 static struct dvb_frontend *
 init_fe_device(struct dvb_adapter *adapter,
-			   struct plat_tuner_config *tuner_cfg, int slot)
+	       struct plat_tuner_config *tuner_cfg, int slot)
 {
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,23)
 	struct _core_state *state;
@@ -318,32 +343,39 @@ init_fe_device(struct dvb_adapter *adapter,
 	struct dvb_frontend *frontend;
 	struct core_config *cfg;
 	int nim, found = -1;
+
 	printk("> (bus = %d) %s\n", tuner_cfg->i2c_bus, __FUNCTION__);
+
 	cfg = kzalloc(sizeof(struct core_config), GFP_KERNEL);
 	if (cfg == NULL)
 	{
 		printk("fe-core: kmalloc failed\n");
 		return NULL;
 	}
+
 	/* initialize the config data */
 	if ((cfg->i2c_adap = i2c_get_adapter(tuner_cfg->i2c_bus)) == NULL)
 	{
-		printk(" i2c-%d unavailable\n", tuner_cfg->i2c_bus);
+		printk("  i2c-%d unavailable\n", tuner_cfg->i2c_bus);
 		kfree(cfg);
 		return NULL;
 	}
-	printk(" i2c adapter = 0x%0x\n", (unsigned int)cfg->i2c_adap);
-	printk(" tuner reset = %d.%d\n", tuner_cfg->tuner_enable[0], tuner_cfg->tuner_enable[1]);
+
+	printk("  i2c adapter = 0x%0x\n", (unsigned int)cfg->i2c_adap);
+
+	printk("  tuner reset = %d.%d\n", tuner_cfg->tuner_enable[0], tuner_cfg->tuner_enable[1]);
+
 	cfg->tuner_reset_act = tuner_cfg->tuner_enable[2];
 	cfg->tuner_reset_pin = stpio_request_pin(tuner_cfg->tuner_enable[0],
-											 tuner_cfg->tuner_enable[1],
-											 slot ? "TUNER1 RST" : "TUNER0 RST", STPIO_OUT);
+						 tuner_cfg->tuner_enable[1],
+						 slot ? "TUNER1 RST" : "TUNER0 RST", STPIO_OUT);
 	if (cfg->tuner_reset_pin == NULL)
 	{
 		printk("fe_core: failed to allocate nim resource: RESET\n");
 		kfree(cfg);
 		return NULL;
 	}
+
 	/* set to low */
 	stpio_set_pin(cfg->tuner_reset_pin, !cfg->tuner_reset_act);
 	/* Wait for everything to die */
@@ -356,20 +388,24 @@ init_fe_device(struct dvb_adapter *adapter,
 	 * PLL state should be stable now. Ideally, we should check
 	 * for PLL LOCK status. But well, never mind!
 	 */
+
 	//
 	// do autodetection
 	//
-	for (nim = 0; nim < NIM_SUPPORTED; nim++) //FIXME: NIM_SUPPORTED change to ARRAY_SIZE(nim_db)
+	for (nim = 0; nim < NIM_SUPPORTED; nim++)  //FIXME: NIM_SUPPORTED change to ARRAY_SIZE(nim_db)
 	{
+
 		if (i2c_autodetect(cfg->i2c_adap, nim_db[nim].i2c_addr /* Address */, 0x0) != -1)
 		{
 			printk("* Autodetection on NIM#%d: Found '%s'\n", nim, nim_db[nim].brandname);
 			found = nim_db[nim].nim_type;
 			cfg->i2c_addr = nim_db[nim].i2c_addr;
-			printk(" i2c addr = %02x\n", cfg->i2c_addr);
+			printk("  i2c addr = %02x\n", cfg->i2c_addr);
 			break;
 		}
+
 	}
+
 	if (found < 0)
 	{
 		// no any known nim was detected
@@ -377,12 +413,13 @@ init_fe_device(struct dvb_adapter *adapter,
 		kfree(cfg);
 		return NULL;
 	}
+
 	switch (found)
 	{
 		case NIM_DVBS2_SAMSUNG_V1:
 			cfg->lnb_enable = stpio_request_pin(tuner_cfg->lnb_enable[0],
-												tuner_cfg->lnb_enable[1],
-												slot ? "LNB1 POWER" : "LNB0 POWER", STPIO_OUT);
+							    tuner_cfg->lnb_enable[1],
+							    slot ? "LNB1 POWER" : "LNB0 POWER", STPIO_OUT);
 			if (cfg->lnb_enable == NULL)
 			{
 				printk("fe_core: failed to allocate resource: LNB POWER\n");
@@ -390,9 +427,10 @@ init_fe_device(struct dvb_adapter *adapter,
 				kfree(cfg);
 				return NULL;
 			}
+
 			cfg->lnb_vsel = stpio_request_pin(tuner_cfg->lnb_vsel[0],
-											  tuner_cfg->lnb_vsel[1],
-											  slot ? "LNB1 13/18" : "LNB0 13/18", STPIO_OUT);
+							  tuner_cfg->lnb_vsel[1],
+							  slot ? "LNB1 13/18" : "LNB0 13/18", STPIO_OUT);
 			if (cfg->lnb_vsel == NULL)
 			{
 				printk("fe_core: failed to allocate resource: LNB 13/18\n");
@@ -402,10 +440,13 @@ init_fe_device(struct dvb_adapter *adapter,
 				return NULL;
 			}
 			break;
+
 		default:
 			break;
 	}
+
 	frontend = frontend_init(cfg, slot, found);
+
 	if (frontend == NULL)
 	{
 		printk("No frontend found !\n");
@@ -417,8 +458,10 @@ init_fe_device(struct dvb_adapter *adapter,
 		kfree(cfg);
 		return NULL;
 	}
+
 	printk(KERN_INFO "%s: Call dvb_register_frontend (adapter = 0x%x)\n",
-		   __FUNCTION__, (unsigned int) adapter);
+	       __FUNCTION__, (unsigned int) adapter);
+
 	if (dvb_register_frontend(adapter, frontend))
 	{
 		printk("%s: Frontend registration failed !\n", __FUNCTION__);
@@ -426,7 +469,9 @@ init_fe_device(struct dvb_adapter *adapter,
 			frontend->ops.release(frontend);
 		return NULL;
 	}
+
 	state = frontend->demodulator_priv;
+
 	return frontend;
 }
 
@@ -434,20 +479,20 @@ static struct plat_tuner_config tuner_resources[] =
 {
 
 	[0] = {
-		.adapter = 0,
-		.i2c_bus = 0,
-		.i2c_addr = 0x68,
-		.tuner_enable = {4, 4, 1},
-		.lnb_enable = {3, 4, 1},
-		.lnb_vsel = {3, 2, 0},
+		.adapter 	= 0,
+		.i2c_bus 	= 0,
+		.i2c_addr 	= 0x68,
+		.tuner_enable 	= {4, 4, 1},
+		.lnb_enable 	= {3, 4, 1},
+		.lnb_vsel   	= {3, 2, 0},
 	},
 	[1] = {
-		.adapter = 0,
-		.i2c_bus = 2,
-		.i2c_addr = 0x68,
-		.tuner_enable = {4, 5, 1},
-		.lnb_enable = {5, 3, 1},
-		.lnb_vsel = {5, 2, 0},
+		.adapter 	= 0,
+		.i2c_bus 	= 2,
+		.i2c_addr 	= 0x68,
+		.tuner_enable 	= {4, 5, 1},
+		.lnb_enable 	= {5, 3, 1},
+		.lnb_vsel   	= {5, 2, 0},
 	}
 };
 
@@ -455,14 +500,20 @@ void fe_core_register_frontend(struct dvb_adapter *dvb_adap)
 {
 	int i = 0;
 	int vLoop = 0;
+
 	printk(KERN_INFO "%s: DVB: Sisyfos frontend core (w/ autodetect)\n", __FUNCTION__);
+
 	core[i] = (struct core *) kmalloc(sizeof(struct core), GFP_KERNEL);
 	if (!core[i])
 		return;
+
 	memset(core[i], 0, sizeof(struct core));
+
 	core[i]->dvb_adapter = dvb_adap;
 	dvb_adap->priv = core[i];
+
 	printk("tuner = %d\n", ARRAY_SIZE(tuner_resources));
+
 	for (vLoop = 0; vLoop < ARRAY_SIZE(tuner_resources); vLoop++)
 	{
 		if (core[i]->frontend[vLoop] == NULL)
@@ -472,7 +523,9 @@ void fe_core_register_frontend(struct dvb_adapter *dvb_adap)
 				init_fe_device(core[i]->dvb_adapter, &tuner_resources[vLoop], vLoop);
 		}
 	}
+
 	printk(KERN_INFO "%s: <\n", __FUNCTION__);
+
 	return;
 }
 
@@ -493,5 +546,5 @@ module_init(fe_core_init);
 module_exit(fe_core_exit);
 
 MODULE_DESCRIPTION("Tuner driver");
-MODULE_AUTHOR("Sisyfos");
+MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

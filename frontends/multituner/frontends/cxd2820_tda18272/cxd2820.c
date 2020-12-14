@@ -1,22 +1,22 @@
 /*
- cxd2820 - Sony CXD2820 DVB-T2/T Demodulator driver
-
- Copyright (C) 2011 duckbox
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+ * cxd2820 - Sony CXD2820 DVB-T2/T Demodulator driver
+ *
+ * Copyright (C) 2011 duckbox
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #include <linux/slab.h>
 #include <linux/kernel.h>
@@ -41,11 +41,13 @@
 #include "frontend_platform.h"
 #include "socket.h"
 
-short paramDebug = 201;
+short paramDebug = 1;  // 1: always show errors
 #define TAGDEBUG "[cxd2820] "
 
-#define dprintk(level, x...) do { \
-if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
+#define dprintk(level, x...) \
+do \
+{ \
+	if ((paramDebug) && (paramDebug >= level)) printk(TAGDEBUG x); \
 } while (0)
 
 extern int tda18272_attach(struct dvb_frontend *fe, struct tda18272_private_data_s *tda18272, u8 i2c_addr, int (*i2c_readwrite)(void *p, u8 i2c_addr, u8 read, u8 *pbytes, u32 nbytes), void *private);
@@ -53,7 +55,7 @@ extern int tda18272_setup_dvbt(struct dvb_frontend *fe);
 extern int tda18272_setup_dvbt2(struct dvb_frontend *fe);
 
 /* ****************************************** */
-/* saved platform config */
+/* saved platform config                      */
 static struct platform_frontend_config_s *frontend_cfg = NULL;
 struct tda18272_private_data_s tda18272;
 struct cxd2820_private_data_s  cxd2820;
@@ -658,12 +660,12 @@ static const u32 cxd2820_fft[8] =
 {
 	TRANSMISSION_MODE_2K,
 	TRANSMISSION_MODE_8K,
-	TRANSMISSION_MODE_AUTO,  //TRANSMISSION_MODE_4K
-	TRANSMISSION_MODE_AUTO,  //TRANSMISSION_MODE_1K
-	TRANSMISSION_MODE_AUTO,  //TRANSMISSION_MODE_16K
-	TRANSMISSION_MODE_AUTO,  //TRANSMISSION_MODE_32K
+	TRANSMISSION_MODE_AUTO,  // TRANSMISSION_MODE_4K
+	TRANSMISSION_MODE_AUTO,  // TRANSMISSION_MODE_1K
+	TRANSMISSION_MODE_AUTO,  // TRANSMISSION_MODE_16K
+	TRANSMISSION_MODE_AUTO,  // TRANSMISSION_MODE_32K
 	TRANSMISSION_MODE_8K,
-	TRANSMISSION_MODE_AUTO   //TRANSMISSION_MODE_32K
+	TRANSMISSION_MODE_AUTO   // TRANSMISSION_MODE_32K
 };
 
 static const u32 cxd2820_gi[8] =
@@ -672,9 +674,9 @@ static const u32 cxd2820_gi[8] =
 	GUARD_INTERVAL_1_16,
 	GUARD_INTERVAL_1_8,
 	GUARD_INTERVAL_1_4,
-	GUARD_INTERVAL_AUTO, //1_128
-	GUARD_INTERVAL_AUTO, //19_128
-	GUARD_INTERVAL_AUTO, //19_256
+	GUARD_INTERVAL_AUTO, // 1_128
+	GUARD_INTERVAL_AUTO, // 19_128
+	GUARD_INTERVAL_AUTO, // 19_256
 	GUARD_INTERVAL_AUTO
 };
 
@@ -738,8 +740,8 @@ static int cxd2820_i2c_write(struct cxd2820_state *state, u32 index, u32 num, co
 
 		if ((res = i2c_transfer(state->i2c, msg, 1)) != 1)
 		{
-		    printk("%s: 1. error on i2c_transfer (%d)\n", __func__, res);
-		    return res;
+			dprintk(1, "%s: 1. error on i2c_transfer (%d)\n", __func__, res);
+			return res;
 		}
 	}
 	bytes[0] = (u8) index;
@@ -749,10 +751,11 @@ static int cxd2820_i2c_write(struct cxd2820_state *state, u32 index, u32 num, co
 	}
 	{
 		u8 dstr[512];
+
 		dstr[0] = '\0';
 		for (i = 0; i < num + 1; i++)
 		{
-		    sprintf(dstr, "%s 0x%02x", dstr, bytes[i]);
+			sprintf(dstr, "%s 0x%02x", dstr, bytes[i]);
 		}
 		dprintk(200, "%s(): n: %u b: %s\n", __func__, num + 1, dstr);
 	}
@@ -765,7 +768,7 @@ static int cxd2820_i2c_write(struct cxd2820_state *state, u32 index, u32 num, co
 
 	if ((res = i2c_transfer(state->i2c, msg, 1)) != 1)
 	{
-		printk("%s: 2. error on i2c_transfer 0x%02x %d (%d)\n", __func__, index, num, res);
+		dprintk(1, "%s: 2. error on i2c_transfer 0x%02x %d (%d)\n", __func__, index, num, res);
 		return res;
 	}
 	return 0;
@@ -799,7 +802,7 @@ static u8 cxd2820_i2c_read(struct cxd2820_state *state, u32 index, u32 num, u8 *
 
 		if ((ret = i2c_transfer(state->i2c, msg, 1)) != 1)
 		{
-			printk("%s: 1. error on i2c_transfer (%d)\n", __func__, ret);
+			dprintk(1, "%s: 1. error on i2c_transfer (%d)\n", __func__, ret);
 			return ret;
 		}
 	}
@@ -814,7 +817,7 @@ static u8 cxd2820_i2c_read(struct cxd2820_state *state, u32 index, u32 num, u8 *
 
 	if ((ret = i2c_transfer(state->i2c, msg, 1)) != 1)
 	{
-		printk("%s: 2. error on i2c_transfer (%d)\n", __func__, ret);
+		dprintk(1, "%s: 2. error on i2c_transfer (%d)\n", __func__, ret);
 		return ret;
 	}
 
@@ -826,7 +829,7 @@ static u8 cxd2820_i2c_read(struct cxd2820_state *state, u32 index, u32 num, u8 *
 
 	if ((ret = i2c_transfer(state->i2c, msg, 1)) != 1)
 	{
-		printk("%s: 3. error on i2c_transfer (%d)\n", __func__, ret);
+		dprintk(1, "%s: 3. error on i2c_transfer (%d)\n", __func__, ret);
 		return ret;
 	}
 	{
@@ -868,13 +871,13 @@ static int cxd2820_i2c_write_bulk(struct cxd2820_state *state, const u8 *bytes)
 		if (a + r != bytes[0])
 		{
 			if (a != 0xFF)
-	    		{
+			{
 				res |= cxd2820_i2c_write(state, a, r, buf);
-			        if (res != 0)
-	        		{
-	        			printk("%s: writing data failed (%d)\n", __func__, res);
+				if (res != 0)
+				{
+					dprintk(1, "%s: writing data failed (%d)\n", __func__, res);
 					return -1;
-	        		}
+				}
 			}
 			a = bytes[0];
 			buf[0] = bytes[1];
@@ -889,7 +892,7 @@ static int cxd2820_i2c_write_bulk(struct cxd2820_state *state, const u8 *bytes)
 		{
 			if (bytes[1] == 0xff)
 			{
-		        break;
+				break;
 			}
 			else
 			{
@@ -924,14 +927,15 @@ static int cxd2820_i2cgw_readwrite(void *p, u8 i2c_addr, u8 read, u8 *pbytes, u3
 		{
 			buf[2 + i] = pbytes[i];
 		}
+
+		dstr[0] = '\0';
+	
+		for (i = 0; i < nbytes + 2; i++)
 		{
-			dstr[0] = '\0';
-			for (i = 0; i < nbytes + 2; i++)
-			{
-				sprintf(dstr, "%s 0x%02x", dstr, buf[i]);
-			}
-			dprintk(200, "%s(): n: %u b: %s\n", __func__, nbytes + 2, dstr);
+			sprintf(dstr, "%s 0x%02x", dstr, buf[i]);
 		}
+		dprintk(200, "%s(): n: %u b: %s\n", __func__, nbytes + 2, dstr);
+
 		/* write */
 		msg[0].addr  = state->i2c_address;
 		msg[0].flags = 0;
@@ -940,7 +944,7 @@ static int cxd2820_i2cgw_readwrite(void *p, u8 i2c_addr, u8 read, u8 *pbytes, u3
 
 		if ((res = i2c_transfer(state->i2c, msg, 1)) != 1)
 		{
-			printk("%s: 1. error on i2c_transfer (%d)\n", __func__, res);
+			dprintk(1, "%s: 1. error on i2c_transfer (%d)\n", __func__, res);
 			return res;
 		}
 	}
@@ -966,15 +970,15 @@ static int cxd2820_i2cgw_readwrite(void *p, u8 i2c_addr, u8 read, u8 *pbytes, u3
 
 		if ((res = i2c_transfer(state->i2c, msg, 2)) != 2)
 		{
-		    printk("%s: 2. error on i2c_transfer (%d)\n", __func__, res);
-		    return res;
+			dprintk(1, "%s: 2. error on i2c_transfer (%d)\n", __func__, res);
+			return res;
 		}
 		{
 			u8 i;
 
 			dstr[0] = '\0';
 			for (i = 0; i < nbytes; i++)
-		        {
+			{
 				sprintf(dstr, "%s 0x%02x", dstr, pbytes[i]);
 			}
 			dprintk(200, "%s(): n: %d b: %s\n", __func__, nbytes, dstr);
@@ -1008,7 +1012,7 @@ static int cxd2820_read_status_dvbt2(struct dvb_frontend *fe, fe_status_t *statu
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 
@@ -1071,7 +1075,7 @@ static int cxd2820_read_ber_dvbt2(struct dvb_frontend *fe, u32 *ber)
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 	}
 	dprintk(40, "%s: < res %d ber %d\n", __func__, res, *ber);
 	return res;
@@ -1089,7 +1093,7 @@ static int cxd2820_read_signal_strength_dvbt2(struct dvb_frontend *fe, u16 *sign
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 
@@ -1117,7 +1121,7 @@ static int cxd2820_read_snr_dvbt2(struct dvb_frontend *fe, u16 *snr)
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 	*snr = (u16)_lookup(i, cxd2820_snr_lut_dvbt2, sizeof(cxd2820_snr_lut_dvbt2));
@@ -1138,12 +1142,12 @@ static int cxd2820_read_ucblocks_dvbt2(struct dvb_frontend *fe, u32 *ucblocks)
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 	if (bytes[0] & 0x01)
 	{
-	state->ucb += ((bytes[1] & 0x7F) <<8 ) | (bytes[2]);
+		state->ucb += ((bytes[1] & 0x7F) << 8) | (bytes[2]);
 	}
 	*ucblocks = state->ucb;
 	dprintk(40, "%s: < res %d, ucb %d\n", __func__, res, *ucblocks);
@@ -1165,7 +1169,7 @@ static int cxd2820_read_status_dvbt(struct dvb_frontend *fe, fe_status_t *status
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 
@@ -1186,7 +1190,7 @@ static int cxd2820_read_status_dvbt(struct dvb_frontend *fe, fe_status_t *status
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 	if (bytes[0] & 0x08)
@@ -1223,7 +1227,7 @@ static int cxd2820_read_ber_dvbt(struct dvb_frontend *fe, u32 *ber)
 		{
 			p = (1 << (bytes[0] & 0x1F)) * 204 * 8;
 			state->ber  = ((100 * 1000000) << 4) ;
-	    		state->ber /= ((( p / c) << 4) + ((( p % c) << 4) / c)) ;
+			state->ber /= ((( p / c) << 4) + ((( p % c) << 4) / c)) ;
 		}
 		else
 		{
@@ -1247,7 +1251,7 @@ static int cxd2820_read_signal_strength_dvbt(struct dvb_frontend *fe, u16 *signa
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 	*signal_strength = (u16) (((bytes[0] & 0x0F) << 8) | bytes[1]);
@@ -1270,7 +1274,7 @@ static int cxd2820_read_snr_dvbt(struct dvb_frontend *fe, u16 *snr)
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 	*snr = (u16)_lookup(i, cxd2820_snr_lut_dvbt, sizeof(cxd2820_snr_lut_dvbt));
@@ -1288,7 +1292,7 @@ static int cxd2820_read_ucblocks_dvbt(struct dvb_frontend *fe, u32 *ucblocks)
 	res |= cxd2820_i2c_read(state, 0xFFEA, 2, bytes);
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
 		return res;
 	}
 	state->ucb += (bytes[0] << 8) | bytes[1];
@@ -1319,7 +1323,7 @@ struct dvb_frontend* cxd2820_attach(struct cxd2820_config *config, struct tda182
 	state = kmalloc(sizeof(struct cxd2820_state), GFP_KERNEL);
 	if (state == NULL)
 	{
-		printk("Unable to kmalloc\n");
+		dprintk(1, "Unable to kmalloc\n");
 		return NULL;
 	}
 	/* Setup the state used everywhere */
@@ -1363,7 +1367,7 @@ static int cxd2820_init_dvbt2(struct dvb_frontend *fe)
 	res |= cxd2820_set_ts_out(fe);
 	if (res != 0)
 	{
-		printk("%s: error init dvb-t2 (%d)\n", __func__, res);
+		dprintk(1, "%s: error init dvb-t2 (%d)\n", __func__, res);
 		return res;
 	}
 	dprintk(40, "%s: < res %d\n", __func__, res);
@@ -1397,7 +1401,8 @@ static int cxd2820_get_property(struct dvb_frontend *fe, struct dtv_property *tv
 		switch (tvp->u.data)
 		{
 			case SYS_DVBT:
-	    		{
+			case SYS_DVBT2:  // was missing (thnx mrspeccy)
+			{
 				break;
 			}
 			default:
@@ -1414,29 +1419,33 @@ static struct dvbfe_info dvbt_info =
 {
 	.name = "Sony CXD2820 DVB-T/T2",
 	.delivery = DVBFE_DELSYS_DVBT,
-	.delsys = {
-	.dvbt.modulation = DVBFE_MOD_QAM16 | DVBFE_MOD_QAM64
-	                 | DVBFE_MOD_QAM256 | DVBFE_MOD_QAMAUTO,
-	.dvbt.stream_priority = DVBFE_STREAM_PRIORITY_HP | DVBFE_STREAM_PRIORITY_LP,
+	.delsys =
+	{
+		.dvbt.modulation      = DVBFE_MOD_QAM16
+		                      | DVBFE_MOD_QAM64
+		                      | DVBFE_MOD_QAM256
+		                      | DVBFE_MOD_QAMAUTO,
+		.dvbt.stream_priority = DVBFE_STREAM_PRIORITY_HP
+		                      | DVBFE_STREAM_PRIORITY_LP,
 	},
 
-	.frequency_min = 47000000,
-	.frequency_max = 862000000,
-	.frequency_step = 62500,
-	.frequency_tolerance = 0,
-	.symbol_rate_min = 5705357,
-	.symbol_rate_max = 7607143
+	.frequency_min            = 47000000,
+	.frequency_max            = 862000000,
+	.frequency_step           = 62500,
+	.frequency_tolerance      = 0,
+	.symbol_rate_min          = 5705357,
+	.symbol_rate_max          = 7607143
 };
 
 static int cxd2820_get_info (struct dvb_frontend *fe, struct dvbfe_info *fe_info)
 {
-	dprintk (10, "%s\n", __FUNCTION__);
+	dprintk (100, "%s\n", __func__);
 
 	switch (fe_info->delivery)
 	{
 		case DVBFE_DELSYS_DVBT:
 		{
-			dprintk (10, "%s(DVBT)\n", __FUNCTION__);
+			dprintk (10, "%s (DVBT)\n", __func__);
 			memcpy (fe_info, &dvbt_info, sizeof (dvbt_info));
 			break;
 		}
@@ -1485,7 +1494,7 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 	if (res != 0)
 	{
-		printk("%s: Tuner set failed (%d)\n", __func__, res);
+		dprintk(1, "%s: Tuner set failed (%d)\n", __func__, res);
 		return res;
 	}
 #if DVB_API_VERSION >= 5
@@ -1497,7 +1506,7 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 	if (res != 0)
 	{
-		printk("%s: 1. Demod set failed (%d)\n", __func__, res);
+		dprintk(1, "%s: 1. Demod set failed (%d)\n", __func__, res);
 		return res;
 	}
 
@@ -1510,14 +1519,14 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 	if (res != 0)
 	{
-		printk("%s: 2. Demod set failed (%d)\n", __func__, res);
+		dprintk(1, "%s: 2. Demod set failed (%d)\n", __func__, res);
 		return res;
 	}
 	res |= cxd2820_i2c_write_bulk(state, cxd2820_reset_dvbt2);
 
 	if (res != 0)
 	{
-		printk("%s: 3. Demod set failed (%d)\n", __func__, res);
+		dprintk(1, "%s: 3. Demod set failed (%d)\n", __func__, res);
 		return res;
 	}
 
@@ -1537,17 +1546,18 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 	else
 	{
 /* FIXME we could make a software automatism here by switching bandwidth manually */
-		printk("%s: non-supported bandwidth passed %d\n", __func__, p->u.ofdm.bandwidth);
+		dprintk(1, "%s: non-supported bandwidth passed %d\n", __func__, p->u.ofdm.bandwidth);
 		res = -EINVAL;
 	}
 	state->bw = p->u.ofdm.bandwidth;
 
 	if (res != 0)
 	{
-		printk("%s: 4. Demod set failed (%d)\n", __func__, res);
+		dprintk(1, "%s: 4. Demod set failed (%d)\n", __func__, res);
 		return res;
 	}
-	cnt = 7;
+//	cnt = 7;
+	cnt = 60;  // request by mrspeccy
 	do
 	{
 		fe_status_t status = 0;
@@ -1556,18 +1566,18 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 		if (res == 0)
 		{
 			if (status & FE_HAS_LOCK)
-	       		{
+       		{
 				break;
 			}
 		}
 		else
 		{
-			printk("%s: error reading status %d\n", __func__, res);
+			dprintk(1, "%s: error reading status %d\n", __func__, res);
 			break;
 		}
 		msleep(30); /* fixme: think on this */
 
-		printk("%s: waiting for lock %d ...\n", __func__, cnt);
+		dprintk(10, "%s: waiting for lock %d ...\n", __func__, cnt);
 	} while (--cnt);
 
 #if DVB_API_VERSION < 5
@@ -1576,7 +1586,7 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 	if ((cnt == 0) && (c->modulation != QAM_256))
 #endif
 	{
-		printk("%s(%d): Timeout tuning DVB-T2 now trying DVB-T...\n", __func__, res);
+		dprintk(1, "%s(%d): Timeout tuning DVB-T2 now trying DVB-T...\n", __func__, res);
 
 		tda18272_setup_dvbt(fe);
 
@@ -1596,15 +1606,17 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 		if (res != 0)
 		{
-			printk("%s: error init DVB-T (%d)\n", __func__, res);
+			dprintk(1, "%s: error init DVB-T (%d)\n", __func__, res);
 			return res;
 		}
 		res = fe->ops.tuner_ops.set_params(fe, p);
 
 		if (res != 0)
 		{
-			printk("%s: Tuner set failed (%d)\n", __func__, res);
-	    		return res;
+			dprintk(1, "%s: Tuner set failed (%d)\n", __func__, res);
+			{
+				return res;
+			}
 		}
 		state->ber = 0;
 		state->si  = INVERSION_AUTO;
@@ -1613,7 +1625,7 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 		if (res != 0)
 		{
-			printk("%s: 4. Demod set failed (%d)\n", __func__, res);
+			dprintk(1, "%s: 4. Demod set failed (%d)\n", __func__, res);
 			return res;
 		}
 
@@ -1633,8 +1645,8 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 		else
 		{
 /* FIXME we could make a software automatism here by switching bandwidth manually */
-			printk("%s: non-supported bandwidth passed %d\n", __func__, p->u.ofdm.bandwidth);
-			   res = -EINVAL;
+			dprintk(1, "%s: non-supported bandwidth passed %d\n", __func__, p->u.ofdm.bandwidth);
+			res = -EINVAL;
 		}
 		state->bw = p->u.ofdm.bandwidth;
 		/* fixme: the orig driver checks stream_selection here:
@@ -1646,10 +1658,11 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 		if (res != 0)
 		{
-			printk("%s: 6. Demod set failed (%d)\n", __func__, res);
+			dprintk(1, "%s: 6. Demod set failed (%d)\n", __func__, res);
 			return res;
 		}
-		cnt = 7;
+//		cnt = 7;
+		cnt = 60;  // request by mrspeccy
 
 		do
 		{
@@ -1657,37 +1670,37 @@ static int cxd2820_set_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 			res |= cxd2820_read_status_dvbt(fe, &status);
 
 			if (res == 0)
-	    		{
-	       			if (status & FE_HAS_LOCK)
-	           		{
+    		{
+       			if (status & FE_HAS_LOCK)
+           		{
 					break;
 				}
 			}
 			else
-	    		{
-			        printk("%s: error reading status %d\n", __func__, res);
-	        		break;
-	    		}
+    		{
+				dprintk(1, "%s: error reading status %d\n", __func__, res);
+        		break;
+    		}
 			msleep(30);
 
-			printk("%s: waiting for lock %d ...\n", __func__, cnt);
+			dprintk(10, "%s: waiting for lock %d ...\n", __func__, cnt);
 		} while (--cnt);
 
 		if (cnt == 0)
 		{
-			printk("%s(%d): timeout tuning DVB-T :(\n", __func__, res);
+			dprintk(1, "%s(%d): timeout tuning DVB-T :(\n", __func__, res);
 			return res;
 		}
-		dprintk(1, "%s(%d,%d): Tuner successfully set (DVB-T)!\n", __func__, res, cnt);
+		dprintk(10, "%s(%d,%d): Tuner successfully set (DVB-T)!\n", __func__, res, cnt);
 		return res;
 	}
 	else if (cnt == 0)
 	{
-		printk("%s(%d): timeout tuning DVB-T2 (QAM256) :(\n", __func__, res);
+		dprintk(1, "%s(%d): timeout tuning DVB-T2 (QAM256) :(\n", __func__, res);
 	}
 	else
 	{
-		dprintk(1, "%s(%d,%d): Tuner successfully set (DVB-T2)!\n", __func__, res, cnt);
+		dprintk(10, "%s(%d,%d): Tuner successfully set (DVB-T2)!\n", __func__, res, cnt);
 	}
 	return res;
 }
@@ -1709,7 +1722,7 @@ static int cxd2820_get_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 		if (res != 0)
 		{
-			printk("%s: error reading frequency %d\n", __func__, res);
+			dprintk(1, "%s: error reading frequency %d\n", __func__, res);
 			return res;
 		}
 		if (p->frequency > 1000)
@@ -1718,29 +1731,29 @@ static int cxd2820_get_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 			res |= cxd2820_i2c_read(state, 0x204C, 4, bytes + 4);
 			if (res != 0)
 			{
-				printk("%s: error reading data %d\n", __func__, res);
+				dprintk(1, "%s: error reading data %d\n", __func__, res);
 				return res;
 			}
-			val32 = ((bytes[0] & 0x0F) << 24)
-			      |  (bytes[1] << 16)
-			      |  (bytes[2] << 8)
-			      |  (bytes[3]);
+			val32  = ((bytes[0] & 0x0F) << 24)
+			       |  (bytes[1] << 16)
+			       |  (bytes[2] << 8)
+			       |  (bytes[3]);
 			val32 += ((bytes[4] & 0x0F) << 24)
-			      |   (bytes[5] << 16)
-			      |   (bytes[6] << 8)
-			      |   (bytes[7]);
+			       |   (bytes[5] << 16)
+			       |   (bytes[6] << 8)
+			       |   (bytes[7]);
 			val32 >>= 1;
 
 			if (val32 & 0x8000000)
 			{
 				val32 |= 0xF0000000;
-	    		}
+			}
 			if (state->si == INVERSION_ON)
 			{
 				p->frequency += ((val32 >> 18) * ((s32)(state->bw >> 12) * 313)) >> 8;
 			}
 			else
-	     		{
+			{
 				p->frequency -= ((val32 >> 18) * ((s32)(state->bw >> 12) * 313)) >> 8;
 			}
 		}
@@ -1765,7 +1778,7 @@ static int cxd2820_get_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 	res |= cxd2820_i2c_read(state, 0x2052, 5, bytes);
 	if (res != 0)
 	{
-		printk("%s: error reading data %d\n", __func__, res);
+		dprintk(1,"%s: error reading data %d\n", __func__, res);
 		return res;
 	}
 #ifdef have_sampling_offset
@@ -1813,7 +1826,7 @@ static int cxd2820_get_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 	res |= cxd2820_i2c_read(state, 0x227F, 1, bytes);
 	if (res != 0)
 	{
-		printk("%s: error reading data %d\n", __func__, res);
+		dprintk(1, "%s: error reading data %d\n", __func__, res);
 		return res;
 	}
 	if (bytes[0])
@@ -1828,7 +1841,8 @@ static int cxd2820_get_frontend_dvbt2(struct dvb_frontend *fe, struct dvb_fronte
 
 static struct dvb_frontend_ops cxd2820_ops_dvbt2 =
 {
-	.info = {
+	.info =
+	{
 		.name                = "Sony CXD2820 DVB-T/T2",
 		.type                = FE_OFDM,
 		.frequency_stepsize  = 62500,
@@ -1838,27 +1852,35 @@ static struct dvb_frontend_ops cxd2820_ops_dvbt2 =
 		.symbol_rate_min     = 5705357,
 		.symbol_rate_max     = 7607143,
 
-		.caps = FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 | FE_CAN_FEC_3_4
-		      | FE_CAN_FEC_5_6 | FE_CAN_FEC_7_8 | FE_CAN_FEC_AUTO
-		      | FE_CAN_QPSK    | FE_CAN_QAM_16  | FE_CAN_QAM_64
-		      | FE_CAN_QAM_256 | FE_CAN_QAM_AUTO | FE_CAN_HIERARCHY_AUTO
-		      | FE_CAN_GUARD_INTERVAL_AUTO
+		.caps                = FE_CAN_FEC_1_2
+   		                     | FE_CAN_FEC_2_3
+		                     | FE_CAN_FEC_3_4
+		                     | FE_CAN_FEC_5_6
+		                     | FE_CAN_FEC_7_8
+		                     | FE_CAN_FEC_AUTO
+		                     | FE_CAN_QPSK
+		                     | FE_CAN_QAM_16
+		                     | FE_CAN_QAM_64
+		                     | FE_CAN_QAM_256
+		                     | FE_CAN_QAM_AUTO
+		                     | FE_CAN_HIERARCHY_AUTO
+		                     | FE_CAN_GUARD_INTERVAL_AUTO
 	},
-	.release              = cxd2820_release,
-	.init                 = cxd2820_init_dvbt2,
-	.sleep                = cxd2820_sleep,
-	.set_frontend         = cxd2820_set_frontend_dvbt2,
-	.get_frontend         = cxd2820_get_frontend_dvbt2,
-	.read_status          = cxd2820_read_status_dvbt2,
-	.read_ber             = cxd2820_read_ber_dvbt2,
-	.read_signal_strength = cxd2820_read_signal_strength_dvbt2,
-	.read_snr             = cxd2820_read_snr_dvbt2,
-	.read_ucblocks        = cxd2820_read_ucblocks_dvbt2,
+	.release                 = cxd2820_release,
+	.init                    = cxd2820_init_dvbt2,
+	.sleep                   = cxd2820_sleep,
+	.set_frontend            = cxd2820_set_frontend_dvbt2,
+	.get_frontend            = cxd2820_get_frontend_dvbt2,
+	.read_status             = cxd2820_read_status_dvbt2,
+	.read_ber                = cxd2820_read_ber_dvbt2,
+	.read_signal_strength    = cxd2820_read_signal_strength_dvbt2,
+	.read_snr                = cxd2820_read_snr_dvbt2,
+	.read_ucblocks           = cxd2820_read_ucblocks_dvbt2,
 #if DVB_API_VERSION >= 5
-	.set_property         = cxd2820_set_property,
-	.get_property         = cxd2820_get_property,
+	.set_property            = cxd2820_set_property,
+	.get_property            = cxd2820_get_property,
 #else
-	.get_info             = cxd2820_get_info,
+	.get_info                = cxd2820_get_info,
 #endif
 };
 
@@ -1867,11 +1889,11 @@ static void cxd2820_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	struct dvb_frontend   *frontend;
 	struct cxd2820_config *cfg;
 
-	printk("%s\n", __func__);
+	dprintk(1, "%s\n", __func__);
 
 	if (numSockets + 1 == cMaxSockets)
 	{
-		printk("Max. number of sockets reached... cannot register\n");
+		dprintk(1, "Max. number of sockets reached... cannot register\n");
 		return;
 	}
 	socketList[numSockets] = *socket;
@@ -1881,13 +1903,13 @@ static void cxd2820_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (cfg == NULL)
 	{
-		printk("cxd2820: error malloc\n");
+		dprintk(1, "cxd2820: error malloc\n");
 		return;
 	}
 	cfg->tuner_no = numSockets + 1;
 	cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 
-	printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+	dprintk(10, "tuner_enable_pin %p\n", cfg->tuner_enable_pin);
 	stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
 	stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
 
@@ -1901,13 +1923,13 @@ static void cxd2820_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	cfg->ts_out          = cxd2820.ts_out;
 	cfg->si              = cxd2820.si;
 
-	printk("%s: ts_out %d %d\n", __func__, cfg->ts_out, cxd2820.ts_out);
+	dprintk(10, "%s: ts_out %d %d\n", __func__, cfg->ts_out, cxd2820.ts_out);
 
-	frontend =  cxd2820_attach(cfg, &tda18272, i2c_get_adapter(socket->i2c_bus));
+	frontend = cxd2820_attach(cfg, &tda18272, i2c_get_adapter(socket->i2c_bus));
 
 	if (frontend == NULL)
 	{
-		printk("cxd2820: cxd2820_attach failed\n");
+		dprintk(1, "%s: CXD2820 attach failed\n", __func__);
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -1918,7 +1940,7 @@ static void cxd2820_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	}
 	if (dvb_register_frontend (dvb_adap, frontend))
 	{
-		printk ("%s: Frontend registration failed !\n", __FUNCTION__);
+		dprintk (1, "%s: Frontend registration failed !\n", __func__);
 		if (frontend->ops.release)
 		{
 			frontend->ops.release (frontend);
@@ -1932,7 +1954,7 @@ static int cxd2820_demod_detect(struct socket_s *socket, struct frontend_s *fron
 {
 	struct stpio_pin *pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 
-	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	dprintk(10, "%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
 	if (pin != NULL)
 	{
@@ -1956,7 +1978,7 @@ static int cxd2820_demod_detect(struct socket_s *socket, struct frontend_s *fron
 
 		if (res != 0)
 		{
-			printk("%s: 1. failed to detect demod %d\n", __func__, res);
+			dprintk(1, "%s: 1. failed to detect demod %d\n", __func__, res);
 			stpio_free_pin(pin);
 			kfree(state);
 			return -1;
@@ -1964,7 +1986,7 @@ static int cxd2820_demod_detect(struct socket_s *socket, struct frontend_s *fron
 
 		if ((bytes != 0xE0) && (bytes != 0xE1))
 		{
-			printk("%s: 2. failed to detect demod 0x%0x\n", __func__, bytes);
+			dprintk(1, "%s: 2. failed to detect demod 0x%0x\n", __func__, bytes);
 			stpio_free_pin(pin);
 			kfree(state);
 			return -1;
@@ -1973,19 +1995,19 @@ static int cxd2820_demod_detect(struct socket_s *socket, struct frontend_s *fron
 	}
 	else
 	{
-		printk("%s: failed to allocate pio pin\n", __func__);
+		dprintk(1, "%s: failed to allocate pio pin\n", __func__);
 		return -1;
 	}
 	stpio_free_pin(pin);
-	printk("%s <\n", __func__);
+	dprintk(1, "%s <\n", __func__);
 	return 0;
 }
 
 static int cxd2820_demod_attach(struct dvb_adapter *adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-	printk("%s >\n", __func__);
+	dprintk(10, "%s >\n", __func__);
 	cxd2820_register_frontend(adapter, socket);
-	printk("%s <\n", __func__);
+	dprintk(10, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1999,7 +2021,7 @@ static int cxd2820_probe(struct platform_device *pdev)
 	struct frontend_s frontend;
 	struct cxd2820_s* data;
 
-	printk("%s >\n", __func__);
+	dprintk(10, "%s >\n", __func__);
 
 	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
 	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
@@ -2008,7 +2030,7 @@ static int cxd2820_probe(struct platform_device *pdev)
 	cxd2820  = *data->cxd2820;
 	tda18272 = *data->tda18272;
 
-	printk("Found frontend \"%s\" in platform config\n", frontend_cfg->name);
+	dprintk(10, "Found frontend \"%s\" in platform config\n", frontend_cfg->name);
 
 	frontend.demod_detect = cxd2820_demod_detect;
 	frontend.demod_attach = cxd2820_demod_attach;
@@ -2016,9 +2038,9 @@ static int cxd2820_probe(struct platform_device *pdev)
 
 	if (socket_register_frontend(&frontend) < 0)
 	{
-		printk("failed to register frontend\n");
+		dprintk(1, "failed to register frontend\n");
 	}
-	printk("%s <\n", __func__);
+	dprintk(10, "%s <\n", __func__);
 	return 0;
 }
 
@@ -2029,12 +2051,12 @@ static int cxd2820_remove (struct platform_device *pdev)
 
 static struct platform_driver cxd2820_driver =
 {
-	.probe = cxd2820_probe,
+	.probe  = cxd2820_probe,
 	.remove = cxd2820_remove,
 	.driver	=
 	{
-		.name	= "cxd2820",
-		.owner  = THIS_MODULE,
+		.name  = "cxd2820",
+		.owner = THIS_MODULE,
 	},
 };
 
@@ -2046,15 +2068,15 @@ int __init cxd2820_init_module(void)
 {
 	int ret;
 
-	printk("%s >\n", __func__);
+	dprintk(10, "%s >\n", __func__);
 	ret = platform_driver_register(&cxd2820_driver);
-	printk("%s < %d\n", __func__, ret);
+	dprintk(10, "%s < %d\n", __func__, ret);
 	return ret;
 }
 
 static void cxd2820_cleanup_module(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(10, "%s >\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);

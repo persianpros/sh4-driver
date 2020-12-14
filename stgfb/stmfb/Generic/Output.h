@@ -68,11 +68,11 @@ public:
   const stm_mode_line_t* FindMode(ULONG ulXRes, ULONG ulYRes, ULONG ulMinLines, ULONG ulMinPixels, ULONG ulpixclock, stm_scan_type_t) const;
 
   const stm_mode_line_t* GetCurrentDisplayMode(void)    const { return m_pCurrentMode;       }
-  ULONG                  GetCurrentTVStandard(void)     const { return m_ulTVStandard;       }
+  LONG                  GetCurrentTVStandard(void)     const { return m_ulTVStandard;       }
   TIME64                 GetFieldOrFrameDuration(void)  const { return m_fieldframeDuration; }
   static TIME64          GetFieldOrFrameDurationFromMode(const stm_mode_line_t *);
 
-  ULONG                  GetOutputFormat(void)          const { return m_ulOutputFormat;     }
+  LONG                  GetOutputFormat(void)          const { return m_ulOutputFormat;     }
 
   stm_display_status_t   GetDisplayStatus(void)         const { return m_displayStatus; }
   void                   SetDisplayStatus(stm_display_status_t s) { m_displayStatus = s; }

@@ -55,11 +55,17 @@ unsigned long GetClockRate(U32 mhz)
 	{
 		case 357:
 		case 358:
+		{
 			return (372L * 9600L);
+		}
 		case 368:
+		{
 			return (384L * 9600L);
+		}
 		default:
+		{
 			return mhz * 10000L;
+		}
 	}
 }
 
@@ -70,12 +76,16 @@ int ATR_InitFromArray(ATR *atr, UCHAR atr_buffer[ATR_MAX_SIZE], unsigned length)
 	unsigned pointer = 0, pn = 0;
 	/* Check size of buffer */
 	if (length < 2)
+	{
 		return (ATR_MALFORMED);
+	}
 	/* Check if ATR is from a inverse convention card */
 	if (atr_buffer[0] == 0x03)
 	{
 		for (pointer = 0; pointer < length; pointer++)
+		{
 			buffer[pointer] = ~(INVERT_BYTE(atr_buffer[pointer]));
+		}
 	}
 	else
 	{
@@ -138,7 +148,9 @@ int ATR_InitFromArray(ATR *atr, UCHAR atr_buffer[ATR_MAX_SIZE], unsigned length)
 			atr->ib[pn][ATR_INTERFACE_BYTE_TD].present = TRUE;
 			(atr->TCK).present = ((TDi & 0x0F) != ATR_PROTOCOL_TYPE_T0);
 			if (pn >= ATR_MAX_PROTOCOLS)
+			{
 				return (ATR_MALFORMED);
+			}
 			pn++;
 		}
 		else
@@ -151,14 +163,18 @@ int ATR_InitFromArray(ATR *atr, UCHAR atr_buffer[ATR_MAX_SIZE], unsigned length)
 	atr->pn = pn + 1;
 	/* Store historical bytes */
 	if (pointer + atr->hbn >= length)
+	{
 		return (ATR_MALFORMED);
+	}
 	memcpy(atr->hb, buffer + pointer + 1, atr->hbn);
 	pointer += (atr->hbn);
 	/* Store TCK  */
 	if ((atr->TCK).present)
 	{
 		if (pointer + 1 >= length)
+		{
 			return (ATR_MALFORMED);
+		}
 		pointer++;
 		(atr->TCK).value = buffer[pointer];
 	}
@@ -187,11 +203,17 @@ int ATR_InitFromArray(ATR *atr, UCHAR atr_buffer[ATR_MAX_SIZE], unsigned length)
 int ATR_GetConvention(ATR *atr, int *convention)
 {
 	if (atr->TS == 0x3B)
+	{
 		(*convention) = ATR_CONVENTION_DIRECT;
+	}
 	else if (atr->TS == 0x3F)
+	{
 		(*convention) = ATR_CONVENTION_INVERSE;
+	}
 	else
+	{
 		return (ATR_MALFORMED);
+	}
 	return (ATR_OK);
 }
 
@@ -210,22 +232,34 @@ int ATR_GetNumberOfProtocols(ATR *atr, unsigned *number_protocols)
 int ATR_GetProtocolType(ATR *atr, unsigned number_protocol, UCHAR *protocol_type)
 {
 	if ((number_protocol > atr->pn) || number_protocol < 2)
+	{
 		return ATR_NOT_FOUND;
+	}
 	if (atr->ib[number_protocol - 2][ATR_INTERFACE_BYTE_TD].present)
+	{
 		(*protocol_type) = (atr->ib[number_protocol - 2][ATR_INTERFACE_BYTE_TD].value & 0x0F);
+	}
 	else
+	{
 		(*protocol_type) = ATR_PROTOCOL_TYPE_T0;
+	}
 	return (ATR_OK);
 }
 
 int ATR_GetInterfaceByte(ATR *atr, unsigned number, int character, UCHAR *value)
 {
 	if (number > atr->pn || number < 1)
+	{
 		return (ATR_NOT_FOUND);
+	}
 	if (atr->ib[number - 1][character].present && (character == ATR_INTERFACE_BYTE_TA || character == ATR_INTERFACE_BYTE_TB || character == ATR_INTERFACE_BYTE_TC || character == ATR_INTERFACE_BYTE_TD))
+	{
 		(*value) = atr->ib[number - 1][character].value;
+	}
 	else
+	{
 		return (ATR_NOT_FOUND);
+	}
 	return (ATR_OK);
 }
 
@@ -317,9 +351,13 @@ int ATR_GetParameter(ATR *atr, int name, U32 *parameter)
 	if (name == ATR_PARAMETER_F)
 	{
 		if (ATR_GetIntegerValue(atr, ATR_INTEGER_VALUE_FI, &FI) == ATR_OK)
+		{
 			(*parameter) = (U32)(atr_f_table[FI]);
+		}
 		else
+		{
 			(*parameter) = (U32) ATR_DEFAULT_F;
+		}
 		return (ATR_OK);
 	}
 	else if (name == ATR_PARAMETER_D)
@@ -329,33 +367,49 @@ int ATR_GetParameter(ATR *atr, int name, U32 *parameter)
 			(*parameter) = (U32)(atr_d_table[DI]);
 		}
 		else
+		{
 			(*parameter) = (U32) ATR_DEFAULT_D;
+		}
 		return (ATR_OK);
 	}
 	else if (name == ATR_PARAMETER_I)
 	{
 		if (ATR_GetIntegerValue(atr, ATR_INTEGER_VALUE_II, &II) == ATR_OK)
+		{
 			(*parameter) = (U32)(atr_i_table[II]);
+		}
 		else
+		{
 			(*parameter) = ATR_DEFAULT_I;
+		}
 		return (ATR_OK);
 	}
 	else if (name == ATR_PARAMETER_P)
 	{
 		if (ATR_GetIntegerValue(atr, ATR_INTEGER_VALUE_PI2, &PI2) == ATR_OK)
+		{
 			(*parameter) = (U32) PI2;
+		}
 		else if (ATR_GetIntegerValue(atr, ATR_INTEGER_VALUE_PI1, &PI1) == ATR_OK)
+		{
 			(*parameter) = (U32) PI1;
+		}
 		else
+		{
 			(*parameter) = (U32) ATR_DEFAULT_P;
+		}
 		return (ATR_OK);
 	}
 	else if (name == ATR_PARAMETER_N)
 	{
 		if (ATR_GetIntegerValue(atr, ATR_INTEGER_VALUE_N, &N) == ATR_OK)
+		{
 			(*parameter) = (U32) N;
+		}
 		else
+		{
 			(*parameter) = (U32) ATR_DEFAULT_N;
+		}
 		return (ATR_OK);
 	}
 	return (ATR_NOT_FOUND);
@@ -364,6 +418,7 @@ int ATR_GetParameter(ATR *atr, int name, U32 *parameter)
 unsigned long GetParameterD(ATR *atr)
 {
 	static unsigned long parameter = 0;
+
 	ATR_GetParameter(atr, ATR_INTEGER_VALUE_DI, &parameter);
 	return parameter;
 	return ATR_DEFAULT_D;
@@ -372,6 +427,7 @@ unsigned long GetParameterD(ATR *atr)
 unsigned long GetParameterF(ATR *atr)
 {
 	static unsigned long parameter = 0;
+
 	ATR_GetParameter(atr, ATR_INTEGER_VALUE_FI, &parameter);
 	return parameter;
 	return ATR_DEFAULT_F;
@@ -381,7 +437,9 @@ unsigned long GetParameterF(ATR *atr)
 int ATR_GetHistoricalBytes(ATR *atr, UCHAR hist[ATR_MAX_HISTORICAL], unsigned *length)
 {
 	if (atr->hbn == 0)
+	{
 		return (ATR_NOT_FOUND);
+	}
 	(*length) = atr->hbn;
 	memcpy(hist, atr->hb, atr->hbn);
 	return (ATR_OK);
@@ -396,13 +454,21 @@ int ATR_GetRaw(ATR *atr, UCHAR buffer[ATR_MAX_SIZE], unsigned *length)
 	for (i = 0; i < atr->pn; i++)
 	{
 		if (atr->ib[i][ATR_INTERFACE_BYTE_TA].present)
+		{
 			buffer[j++] = atr->ib[i][ATR_INTERFACE_BYTE_TA].value;
+		}
 		if (atr->ib[i][ATR_INTERFACE_BYTE_TB].present)
+		{
 			buffer[j++] = atr->ib[i][ATR_INTERFACE_BYTE_TB].value;
+		}
 		if (atr->ib[i][ATR_INTERFACE_BYTE_TC].present)
+		{
 			buffer[j++] = atr->ib[i][ATR_INTERFACE_BYTE_TC].value;
+		}
 		if (atr->ib[i][ATR_INTERFACE_BYTE_TD].present)
+		{
 			buffer[j++] = atr->ib[i][ATR_INTERFACE_BYTE_TD].value;
+		}
 	}
 	if (atr->hbn > 0)
 	{
@@ -410,7 +476,9 @@ int ATR_GetRaw(ATR *atr, UCHAR buffer[ATR_MAX_SIZE], unsigned *length)
 		j += atr->hbn;
 	}
 	if ((atr->TCK).present)
+	{
 		buffer[j++] = (atr->TCK).value;
+	}
 	(*length) = j;
 	return ATR_OK;
 }
@@ -418,7 +486,9 @@ int ATR_GetRaw(ATR *atr, UCHAR buffer[ATR_MAX_SIZE], unsigned *length)
 int ATR_GetCheckByte(ATR *atr, UCHAR *check_byte)
 {
 	if (!((atr->TCK).present))
+	{
 		return (ATR_NOT_FOUND);
+	}
 	(*check_byte) = (atr->TCK).value;
 	return (ATR_OK);
 }
@@ -426,9 +496,15 @@ int ATR_GetCheckByte(ATR *atr, UCHAR *check_byte)
 int ATR_GetFsMax(ATR *atr, unsigned long *fsmax)
 {
 	UCHAR FI;
+
 	if (ATR_GetIntegerValue(atr, ATR_INTEGER_VALUE_FI, &FI) == ATR_OK)
+	{
 		(*fsmax) = atr_fs_table[FI];
+	}
 	else
+	{
 		(*fsmax) = atr_fs_table[1];
+	}
 	return (ATR_OK);
 }
+// vim:ts=4

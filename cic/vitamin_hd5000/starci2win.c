@@ -771,6 +771,6 @@ module_init             (starci2win_init);
 module_exit             (starci2win_exit);
 
 MODULE_DESCRIPTION      ("CI Controller");
-MODULE_AUTHOR           ("");
+MODULE_AUTHOR           ("Open Vision developers");
 MODULE_LICENSE          ("GPL");
 

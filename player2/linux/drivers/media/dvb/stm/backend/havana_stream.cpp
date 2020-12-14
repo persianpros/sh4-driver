@@ -134,12 +134,12 @@ HavanaStream_c::~HavanaStream_c(void)
 /// \return Havana status code, HavanaNoError indicates success.
 //}}}
 HavanaStatus_t HavanaStream_c::Init(class HavanaPlayer_c *HavanaPlayer,
-									class Player_c *Player,
-									PlayerPlayback_t PlayerPlayback,
-									char *Media,
-									char *Format,
-									char *Encoding,
-									unsigned int SurfaceId)
+				    class Player_c *Player,
+				    PlayerPlayback_t PlayerPlayback,
+				    char *Media,
+				    char *Format,
+				    char *Encoding,
+				    unsigned int SurfaceId)
 {
 	HavanaStatus_t Status = HavanaNoError;
 	PlayerStatus_t PlayerStatus = PlayerNoError;
@@ -157,11 +157,17 @@ HavanaStatus_t HavanaStream_c::Init(class HavanaPlayer_c *HavanaPlayer,
 		LockInitialised = true;
 	}
 	if (strcmp(Media, BACKEND_AUDIO_ID) == 0)
+	{
 		PlayerStreamType = StreamTypeAudio;
+	}
 	else if (strcmp(Media, BACKEND_VIDEO_ID) == 0)
+	{
 		PlayerStreamType = StreamTypeVideo;
+	}
 	else
+	{
 		PlayerStreamType = StreamTypeOther;
+	}
 	if (Collator == NULL)
 		Status = HavanaPlayer->CallFactory(Format, Encoding, PlayerStreamType, ComponentCollator, (void **)&Collator);
 	if (Status != HavanaNoError)
@@ -242,24 +248,24 @@ HavanaStatus_t HavanaStream_c::Init(class HavanaPlayer_c *HavanaPlayer,
 	CloneManifestor = new Manifestor_CloneDummy_c();
 	CloningManifestor->SetCloneTo(CloneManifestor);
 	PlayerStatus = Player->AddStream(PlayerPlayback,
-									 &PlayerStream,
-									 PlayerStreamType,
-									 Collator,
-									 FrameParser,
-									 Codec,
-									 OutputTimer,
-									 CloningManifestor,
-									 true);
+					 &PlayerStream,
+					 PlayerStreamType,
+					 Collator,
+					 FrameParser,
+					 Codec,
+					 OutputTimer,
+					 CloningManifestor,
+					 true);
 #else
 	PlayerStatus = Player->AddStream(PlayerPlayback,
-									 &PlayerStream,
-									 PlayerStreamType,
-									 Collator,
-									 FrameParser,
-									 Codec,
-									 OutputTimer,
-									 Manifestor,
-									 true);
+					 &PlayerStream,
+					 PlayerStreamType,
+					 Collator,
+					 FrameParser,
+					 Codec,
+					 OutputTimer,
+					 Manifestor,
+					 true);
 #endif
 	if (PlayerStatus != PlayerNoError)
 	{
@@ -287,9 +293,9 @@ HavanaStatus_t HavanaStream_c::Init(class HavanaPlayer_c *HavanaPlayer,
 			if (VideoManifestor->GetSurfaceParameters((void **)&SurfaceDescriptor) == ManifestorNoError)
 			{
 				VideoManifestor->SetOutputWindow(((SurfaceDescriptor->DisplayWidth * PIP_X_N) / PIP_FACTOR_D) - PIP_X_OFFSET,
-												 PIP_Y_OFFSET,
-												 (SurfaceDescriptor->DisplayWidth * PIP_FACTOR_N) / PIP_FACTOR_D,
-												 (SurfaceDescriptor->DisplayHeight * PIP_FACTOR_N) / PIP_FACTOR_D);
+								 PIP_Y_OFFSET,
+								 (SurfaceDescriptor->DisplayWidth * PIP_FACTOR_N) / PIP_FACTOR_D,
+								 (SurfaceDescriptor->DisplayHeight * PIP_FACTOR_N) / PIP_FACTOR_D);
 			}
 		}
 #endif
@@ -316,7 +322,7 @@ HavanaStatus_t HavanaStream_c::Init(class HavanaPlayer_c *HavanaPlayer,
 //}}}
 //{{{ InjectData
 HavanaStatus_t HavanaStream_c::InjectData(const void *Data,
-										  unsigned int DataLength)
+					  unsigned int DataLength)
 {
 	Buffer_t Buffer;
 	PlayerInputDescriptor_t *InputDescriptor;
@@ -337,9 +343,9 @@ HavanaStatus_t HavanaStream_c::InjectData(const void *Data,
 //}}}
 //{{{ InjectDataPacket
 HavanaStatus_t HavanaStream_c::InjectDataPacket(const unsigned char *Data,
-												unsigned int DataLength,
-												bool PlaybackTimeValid,
-												unsigned long long PlaybackTime)
+						unsigned int DataLength,
+						bool PlaybackTimeValid,
+						unsigned long long PlaybackTime)
 {
 	Buffer_t Buffer;
 	PlayerInputDescriptor_t *InputDescriptor;
@@ -361,7 +367,7 @@ HavanaStatus_t HavanaStream_c::InjectDataPacket(const unsigned char *Data,
 //}}}
 //{{{ Discontinuity
 HavanaStatus_t HavanaStream_c::Discontinuity(bool ContinuousReverse,
-											 bool SurplusData)
+					     bool SurplusData)
 {
 	//STREAM_DEBUG("Surplus %d, reverse %d\n", SurplusData, ContinuousReverse);
 	OS_LockMutex(&InputLock);
@@ -372,7 +378,8 @@ HavanaStatus_t HavanaStream_c::Discontinuity(bool ContinuousReverse,
 //}}}
 //{{{ Drain
 #ifdef __TDT__
-HavanaStatus_t HavanaStream_c::Drain(bool Discard, bool NonBlock)
+HavanaStatus_t HavanaStream_c::Drain(bool Discard,
+				     bool NonBlock)
 #else
 HavanaStatus_t HavanaStream_c::Drain(bool Discard)
 #endif
@@ -437,7 +444,7 @@ HavanaStatus_t HavanaStream_c::Enable(bool Manifest)
 //}}}
 //{{{ SetId
 HavanaStatus_t HavanaStream_c::SetId(unsigned int DemuxId,
-									 unsigned int Id)
+				     unsigned int Id)
 {
 	STREAM_DEBUG("DemuxId = %d, Id = 0x%x\n", DemuxId, Id);
 	if ((DemuxId != DEMUX_INVALID_ID) && ((Id & DMX_FILTER_BY_PRIORITY_MASK) != 0))
@@ -468,8 +475,8 @@ HavanaStatus_t HavanaStream_c::ChannelSelect(channel_select_t Channel)
 		CodecStatus_t CodecStatus;
 		CodecParameters.ParameterType = CodecSelectChannel;
 		CodecParameters.Channel = (Channel == CHANNEL_MONO_LEFT) ? ChannelSelectLeft :
-								  (Channel == CHANNEL_MONO_RIGHT) ? ChannelSelectRight :
-								  ChannelSelectStereo;
+					  (Channel == CHANNEL_MONO_RIGHT) ? ChannelSelectRight :
+					  ChannelSelectStereo;
 		CodecStatus = Codec->SetModuleParameters(sizeof(CodecParameterBlock_t), &CodecParameters);
 		if (CodecStatus != CodecNoError)
 		{
@@ -483,7 +490,7 @@ HavanaStatus_t HavanaStream_c::ChannelSelect(channel_select_t Channel)
 //}}}
 //{{{ SetOption
 HavanaStatus_t HavanaStream_c::SetOption(play_option_t Option,
-										 unsigned int Value)
+					 unsigned int Value)
 {
 	unsigned char PolicyValue = 0;
 	PlayerPolicy_t PlayerPolicy;
@@ -673,7 +680,7 @@ HavanaStatus_t HavanaStream_c::SetOption(play_option_t Option,
 //}}}
 //{{{ GetOption
 HavanaStatus_t HavanaStream_c::GetOption(play_option_t Option,
-										 unsigned int *Value)
+					 unsigned int *Value)
 {
 	unsigned char PolicyValue;
 	PlayerPolicy_t PlayerPolicy;
@@ -833,7 +840,7 @@ HavanaStatus_t HavanaStream_c::GetOption(play_option_t Option,
 //}}}
 //{{{ MapOption
 HavanaStatus_t HavanaStream_c::MapOption(play_option_t Option,
-										 PlayerPolicy_t *PlayerPolicy)
+					 PlayerPolicy_t *PlayerPolicy)
 {
 	switch (Option)
 	{
@@ -976,9 +983,9 @@ HavanaStatus_t HavanaStream_c::Step(void)
 //}}}
 //{{{ SetOutputWindow
 HavanaStatus_t HavanaStream_c::SetOutputWindow(unsigned int X,
-											   unsigned int Y,
-											   unsigned int Width,
-											   unsigned int Height)
+					       unsigned int Y,
+					       unsigned int Width,
+					       unsigned int Height)
 {
 	ManifestorStatus_t ManifestorStatus;
 	//STREAM_DEBUG("\n");
@@ -1014,9 +1021,9 @@ HavanaStatus_t HavanaStream_c::SetOutputWindow(unsigned int X,
 //}}}
 //{{{ SetInputWindow
 HavanaStatus_t HavanaStream_c::SetInputWindow(unsigned int X,
-											  unsigned int Y,
-											  unsigned int Width,
-											  unsigned int Height)
+					      unsigned int Y,
+					      unsigned int Width,
+					      unsigned int Height)
 {
 	ManifestorStatus_t ManifestorStatus;
 	//STREAM_DEBUG("\n");
@@ -1082,7 +1089,7 @@ HavanaStatus_t HavanaStream_c::GetPlayInfo(struct play_info_s *PlayInfo)
 /// \return Havana status code, HavanaNoError indicates success.
 //}}}
 HavanaStatus_t HavanaStream_c::Switch(char *Format,
-									  char *Encoding)
+				      char *Encoding)
 {
 	HavanaStatus_t Status = HavanaNoError;
 	PlayerStatus_t PlayerStatus = PlayerNoError;
@@ -1131,11 +1138,11 @@ HavanaStatus_t HavanaStream_c::Switch(char *Format,
 		}
 	}
 	PlayerStatus = Player->SwitchStream(PlayerStream,
-										PendingCollator,
-										PendingFrameParser,
-										PendingCodec,
-										OutputTimer,
-										true);
+					    PendingCollator,
+					    PendingFrameParser,
+					    PendingCodec,
+					    OutputTimer,
+					    true);
 	if (PlayerStatus != PlayerNoError)
 	{
 		STREAM_ERROR("Unable to switch player stream\n");
@@ -1158,12 +1165,12 @@ HavanaStatus_t HavanaStream_c::Switch(char *Format,
 //}}}
 //{{{ GetDecodeBuffer
 HavanaStatus_t HavanaStream_c::GetDecodeBuffer(buffer_handle_t *DecodeBuffer,
-											   unsigned char **Data,
-											   unsigned int Format,
-											   unsigned int DimensionCount,
-											   unsigned int Dimensions[],
-											   unsigned int *Index,
-											   unsigned int *Stride)
+					       unsigned char **Data,
+					       unsigned int Format,
+					       unsigned int DimensionCount,
+					       unsigned int Dimensions[],
+					       unsigned int *Index,
+					       unsigned int *Stride)
 {
 	ManifestorStatus_t Status;
 	BufferStructure_t BufferStructure;
@@ -1258,7 +1265,7 @@ HavanaStatus_t HavanaStream_c::ReturnDecodeBuffer(buffer_handle_t DecodeBuffer)
 //}}}
 //{{{ GetDecodeBufferPoolStatus
 HavanaStatus_t HavanaStream_c::GetDecodeBufferPoolStatus(unsigned int *BuffersInPool,
-														 unsigned int *BuffersWithNonZeroReferenceCount)
+							 unsigned int *BuffersWithNonZeroReferenceCount)
 {
 	PlayerStatus_t Status;
 	unsigned int MemoryInPool;
@@ -1269,12 +1276,12 @@ HavanaStatus_t HavanaStream_c::GetDecodeBufferPoolStatus(unsigned int *BuffersIn
 // returning buffers in pool obtained from get pool usage, we now return the
 // manifestor obtained value of how many buffers we can reasonably expect to allocate
 //
-//	STREAM_DEBUG("\n");
+// STREAM_DEBUG("\n");
 	Status = DecodeBufferPool->GetPoolUsage(NULL,
-											BuffersWithNonZeroReferenceCount,
-											&MemoryInPool,
-											&MemoryAllocated,
-											&MemoryInUse);
+						BuffersWithNonZeroReferenceCount,
+						&MemoryInPool,
+						&MemoryAllocated,
+						&MemoryInUse);
 	if (Status != BufferNoError)
 	{
 		STREAM_ERROR("Failed to get decode buffer pool usage\n");
@@ -1412,9 +1419,9 @@ HavanaStatus_t HavanaStream_c::CheckEvent(struct PlayerEventRecord_s *PlayerEven
 //}}}
 //{{{ GetOutputWindow
 HavanaStatus_t HavanaStream_c::GetOutputWindow(unsigned int *X,
-											   unsigned int *Y,
-											   unsigned int *Width,
-											   unsigned int *Height)
+					       unsigned int *Y,
+					       unsigned int *Width,
+					       unsigned int *Height)
 {
 	ManifestorStatus_t ManifestorStatus;
 //	STREAM_DEBUG("\n");
@@ -1433,7 +1440,7 @@ HavanaStatus_t HavanaStream_c::GetOutputWindow(unsigned int *X,
 //}}}
 //{{{ RegisterEventSignalCallback
 stream_event_signal_callback HavanaStream_c::RegisterEventSignalCallback(context_handle_t Context,
-																		 stream_event_signal_callback Callback)
+									 stream_event_signal_callback Callback)
 {
 	stream_event_signal_callback PreviousCallback = EventSignalCallback;
 	STREAM_DEBUG("\n");
@@ -1449,7 +1456,7 @@ stream_event_signal_callback HavanaStream_c::RegisterEventSignalCallback(context
 //}}}
 //{{{ GetPlayerEnvironment
 HavanaStatus_t HavanaStream_c::GetPlayerEnvironment(PlayerPlayback_t *PlayerPlayback,
-													PlayerStream_t *PlayerStream)
+						    PlayerStream_t *PlayerStream)
 {
 	//STREAM_DEBUG("\n");
 	if ((this->PlayerStream == NULL) || (this->PlayerPlayback == NULL))
@@ -1462,4 +1469,3 @@ HavanaStatus_t HavanaStream_c::GetPlayerEnvironment(PlayerPlayback_t *PlayerPlay
 	return HavanaNoError;
 }
 //}}}
-

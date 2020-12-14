@@ -126,3 +126,4 @@ extern unsigned long GetParameterF(ATR *atr);
 extern unsigned long GetClockRate(U32 mhz);
 
 #endif /* _ATR_ */
+// vim:ts=4

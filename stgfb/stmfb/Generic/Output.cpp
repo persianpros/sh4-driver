@@ -310,7 +310,7 @@ const stm_mode_line_t* COutput::GetModeParamsLine(stm_display_mode_t mode) const
 {
   ULONG i;
 
-  for (i=0; i < (ULONG)STVTG_TIMING_MODE_COUNT; i++)
+  for (i=0; i < (long int)STVTG_TIMING_MODE_COUNT; i++)
   {
     if (ModeParamsTable[i].Mode == mode)
     {

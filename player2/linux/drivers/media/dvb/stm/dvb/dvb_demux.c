@@ -40,7 +40,7 @@ Date Modification Name
 #include <dvb_ca_en50221.h>
 #endif
 
-#include <dvb_demux.h> /* provides kernel demux types */
+#include "dvb_demux.h" /* provides kernel demux types */
 
 #include "dvb_module.h"
 #include "dvb_audio.h"
@@ -53,9 +53,9 @@ extern int AudioIoctlSetAvSync(struct DeviceContext_s *Context, unsigned int Sta
 extern int AudioIoctlStop(struct DeviceContext_s *Context);
 
 extern int stpti_start_feed(struct dvb_demux_feed *dvbdmxfeed,
-							struct DeviceContext_s *DeviceContext);
+			    struct DeviceContext_s *DeviceContext);
 extern int stpti_stop_feed(struct dvb_demux_feed *dvbdmxfeed,
-						   struct DeviceContext_s *pContext);
+			   struct DeviceContext_s *pContext);
 #endif
 
 /********************************************************************************
@@ -72,7 +72,7 @@ extern int stpti_stop_feed(struct dvb_demux_feed *dvbdmxfeed,
  ********************************************************************************/
 
 #if defined(ADB_BOX)
-extern int glowica;
+extern int tuner;
 enum
 {
 	SINGLE,
@@ -83,19 +83,15 @@ enum
 extern void stm_tsm_init(int cfg);
 extern int reset_tsm;
 
-/* >>> DVBT USB */
-/* j00zek comment: To enable DVBT USB we need to integrate it with player2. take demuxes from it and inject data through SWTS
+/* >>> DVB-T USB */
+/* j00zek comment: To enable DVB-T USB we need to integrate it with player2. take demuxes from it and inject data through SWTS
  To make it working, dvbt driver needs to be modded too. See dvbt/as102 for reference
  Step1: enabling feeding from player2, needs changes in driver, see more comments in dvbt/as102
  Step2 in st-merger*/
 #if defined(ADB_BOX) \
  || defined(ARIVALINK200) \
  || defined(SAGEMCOM88) \
- || defined(SPARK7162) \
- || defined(IPBOX9900) \
- || defined(IPBOX99) \
- || defined(IPBOX55) \
- || defined(HL101)
+ || defined(SPARK7162)
 int (*StartFeed_)(struct dvb_demux_feed *Feed);
 int (*StopFeed_)(struct dvb_demux_feed *Feed);
 
@@ -107,11 +103,6 @@ void extern_startfeed_init(int(*StartFeed)(struct dvb_demux_feed *Feed), int(*St
 /* Sagemcom88 has 2 models with and without internal DVB-T. In both, DVB-T USB should be configured different way */
 #if defined(SAGEMCOM88)
 extern int hasdvbt;
-#endif
-
-#if defined(IPBOX9900) \
- || defined(IPBOX99)
-extern int twinhead;
 #endif
 
 EXPORT_SYMBOL(extern_startfeed_init);
@@ -149,61 +140,59 @@ int StartFeed(struct dvb_demux_feed *Feed)
 	}
 	if (tsm_reset && reset_tsm)
 	{
-		printk(KERN_DEBUG "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
+		printk(KERN_WARNING "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
 		stm_tsm_init(1);
 	}
 #else
 	if (Context->numRunningFeeds == 0 && reset_tsm)
 	{
-		printk(KERN_DEBUG "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
+		printk(KERN_WARNING "reset_tsm: %d numRunningFeeds: %d => calling stm_tsm_init(1)\n", reset_tsm, Context->numRunningFeeds);
 		stm_tsm_init(1);
 	}
 #endif
-	/* >>> DVBT USB */
+	/* >>> DVB-T USB */
 #if defined(ADB_BOX)
-	if (glowica == SINGLE)
+	if (tuner == SINGLE)
 	{
 		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT1) && (StartFeed_ != NULL))
+		{
 			StartFeed_(Feed);
+		}
 	}
-	else if (glowica == TWIN)
+	else if (tuner == TWIN)
 	{
 		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT2) && (StartFeed_ != NULL))
+		{
 			StartFeed_(Feed);
+		}
 	}
-#elif defined(ARIVALINK200) \
- || defined(IPBOX55) \
- || defined(HL101)
+#elif defined(ARIVALINK200)
 	if ((Context->pPtiSession->source == DMX_SOURCE_FRONT1) && (StartFeed_ != NULL))
+	{
 		StartFeed_(Feed);
+	}
 #elif defined(SPARK7162)
 	if ((Context->pPtiSession->source == DMX_SOURCE_FRONT3) && (StartFeed_ != NULL))
+	{
 		StartFeed_(Feed);
+	}
 #elif defined(SAGEMCOM88)
-	if (hasdvbt == 0) //model without internal DVB-T (esi88)
+	if (hasdvbt == 0)  // model without internal DVB-T (esi88)
 	{
 		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT2) && (StartFeed_ != NULL))
+		{
 			StartFeed_(Feed);
+		}
 	}
-	else if (hasdvbt == 1) //model with internal DVB-T (uhd88), our DVB-T USB will be available as fourth FE
+	else if (hasdvbt == 1)  // model with internal DVB-T (uhd88), our DVB-T USB will be available as fourth FE
 	{
 		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT3) && (StartFeed_ != NULL))
+		{
 			StartFeed_(Feed);
-	}
-#elif defined(IPBOX9900) \
- || defined(IPBOX99)
-	if (twinhead == 1)
-	{
-		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT1) && (StartFeed_ != NULL))
-			StartFeed_(Feed);
-	}
-	else
-	{
-		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT2) && (StartFeed_ != NULL))
-			StartFeed_(Feed);
+		}
 	}
 #endif
-	/* <<< DVBT USB */
+	/* <<< DVB-T USB */
 #ifdef __TDT__
 #ifdef no_subtitles
 	if ((Feed->type == DMX_TYPE_TS) && (Feed->pes_type > DMX_TS_PES_OTHER))
@@ -217,8 +206,11 @@ int StartFeed(struct dvb_demux_feed *Feed)
 	switch (Feed->type)
 	{
 		case DMX_TYPE_TS:
+		{
 			if (Feed->pes_type > DMX_TS_PES_OTHER)
+			{
 				return -EINVAL;
+			}
 			for (i = 0; i < DVB_MAX_DEVICES_PER_ADAPTER; i++)
 			{
 				if (Feed->pes_type == AudioId[i])
@@ -355,7 +347,9 @@ int StartFeed(struct dvb_demux_feed *Feed)
 #endif
 			mutex_unlock(&(DvbContext->Lock));
 			break;
+		}
 		case DMX_TYPE_SEC:
+		{
 #ifdef __TDT__
 			//DVB_DEBUG ("feed type = SEC\n");
 			mutex_lock(&(DvbContext->Lock));
@@ -365,11 +359,14 @@ int StartFeed(struct dvb_demux_feed *Feed)
 			mutex_unlock(&(DvbContext->Lock));
 #endif
 			break;
+		}
 		default:
+		{
 #ifdef __TDT
 			DVB_DEBUG("< (type = %d unknown\n", Feed->type);
 #endif
 			return -EINVAL;
+		}
 	}
 	return 0;
 }
@@ -391,19 +388,17 @@ int StopFeed(struct dvb_demux_feed *Feed)
 #endif
 	/* >>> DVBT USB */
 #if defined(ADB_BOX)
-	if (glowica == SINGLE)
+	if (tuner == SINGLE)
 	{
 		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT1) && (StopFeed_ != NULL))
 			StopFeed_(Feed);
 	}
-	else if (glowica == TWIN)
+	else if (tuner == TWIN)
 	{
 		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT2) && (StopFeed_ != NULL))
 			StopFeed_(Feed);
 	}
-#elif defined(ARIVALINK200) \
- || defined(IPBOX55) \
- || defined(HL101)
+#elif defined(ARIVALINK200)
 	if ((Context->pPtiSession->source == DMX_SOURCE_FRONT1) && (StopFeed_ != NULL))
 		StopFeed_(Feed);
 #elif defined(SPARK7162)
@@ -418,18 +413,6 @@ int StopFeed(struct dvb_demux_feed *Feed)
 	else if (hasdvbt == 1) //model with internal DVB-T (uhd88), our DVB-T USB will be available as fourth FE
 	{
 		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT3) && (StopFeed_ != NULL))
-			StopFeed_(Feed);
-	}
-#elif defined(IPBOX9900) \
- || defined(IPBOX99)
-	if (twinhead == 1)
-	{
-		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT1) && (StopFeed_ != NULL))
-			StopFeed_(Feed);
-	}
-	else
-	{
-		if ((Context->pPtiSession->source == DMX_SOURCE_FRONT2) && (StopFeed_ != NULL))
 			StopFeed_(Feed);
 	}
 #endif
@@ -556,8 +539,7 @@ int StopFeed(struct dvb_demux_feed *Feed)
 /* Uncomment the define to enable player decoupling from the DVB API.
  With this workaround packets sent to the player do not block the DVB API
  and do not cause the scheduling bug (waiting on buffers during spin_lock).
- However, there is a side effect - playback may disturb recordings.
-*/
+ However, there is a side effect - playback may disturb recordings. */
 #define DECOUPLE_PLAYER_FROM_DVBAPI
 #ifndef DECOUPLE_PLAYER_FROM_DVBAPI
 
@@ -609,6 +591,7 @@ void demultiplexDvbPackets(struct dvb_demux *demux, const u8 *buf, int count)
 {
 	dvb_dmx_swfilter_packets(demux, buf, count);
 }
+
 #else
 
 /*{{{ WriteToDecoder*/
@@ -621,10 +604,10 @@ int WriteToDecoder(struct dvb_demux_feed *Feed, const u8 *buf, size_t count)
 	 (once as PES_VIDEO and then as PES_PCR). Therefore it is IMPORTANT
 	 not to overwrite the flag or the PES type. */
 	if ((Feed->type == DMX_TYPE_TS) &&
-			((Feed->pes_type == DMX_PES_AUDIO0) ||
-			 (Feed->pes_type == DMX_PES_VIDEO0) ||
-			 (Feed->pes_type == DMX_PES_AUDIO1) ||
-			 (Feed->pes_type == DMX_PES_VIDEO1)))
+			((Feed->pes_type == (enum dmx_ts_pes)DMX_PES_AUDIO0) ||
+			 (Feed->pes_type == (enum dmx_ts_pes)DMX_PES_VIDEO0) ||
+			 (Feed->pes_type == (enum dmx_ts_pes)DMX_PES_AUDIO1) ||
+			 (Feed->pes_type == (enum dmx_ts_pes)DMX_PES_VIDEO1)))
 	{
 		Context->provideToDecoder = 1;
 		Context->feedPesType = Feed->pes_type;

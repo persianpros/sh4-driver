@@ -149,10 +149,6 @@ ifdef SAGEMCOM88
  PART2=1
 endif
 
-ifdef PACE7241
- PART2=1
-endif
-
 ifndef PART1
 ifndef PART2
  PART3=1

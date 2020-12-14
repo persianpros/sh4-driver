@@ -768,14 +768,6 @@ void pti_hal_init ( struct stpti *pti , struct dvb_demux* demux, void (*_demulti
  || defined(HS7429) \
  || defined(HS7119) \
  || defined(HS7819) \
- || defined(FOREVER_NANOSMART) \
- || defined(FOREVER_9898HD) \
- || defined(DP7001) \
- || defined(FOREVER_3434HD) \
- || defined(FOREVER_2424HD) \
- || defined(GPV8000) \
- || defined(EP8000) \
- || defined(EPP8000) \
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
  || defined(VITAMIN_HD5000) \
@@ -1160,6 +1152,6 @@ MODULE_PARM_DESC(videoMem, "videoMem\n");
 #else
 #endif
 
-MODULE_AUTHOR("Open Vision developers");
+MODULE_AUTHOR("Peter Bennett <peter.bennett@st.com>; adapted by TDT");
 MODULE_DESCRIPTION("STPTI DVB Driver");
 MODULE_LICENSE("GPL");

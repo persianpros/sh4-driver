@@ -43,8 +43,24 @@ install: all
 
 clean:
 	@$(MAKE) -C $(KERNEL_LOCATION) M=$(shell pwd) KBUILD_VERBOSE=0 clean
+	$(SILENT)rm player2/linux/drivers/media/dvb/stm/allocator/modules.order
+	$(SILENT)rm player2/linux/drivers/media/dvb/stm/backend/modules.order
+	$(SILENT)rm player2/linux/drivers/media/dvb/stm/dvb/modules.order
+	$(SILENT)rm player2/linux/drivers/media/dvb/stm/h264_preprocessor/modules.order
+	$(SILENT)rm player2/linux/drivers/media/dvb/stm/mpeg2_hard_host_transformer/modules.order
+	$(SILENT)rm player2/linux/drivers/media/sysfs/stm/modules.order
+	$(SILENT)rm player2/linux/drivers/sound/kreplay/modules.order
+	$(SILENT)rm player2/linux/drivers/sound/ksound/modules.order
+	$(SILENT)rm player2/linux/drivers/sound/pcm_transcoder/modules.order
+	$(SILENT)rm player2/linux/drivers/sound/pseudocard/modules.order
+	$(SILENT)rm player2/linux/drivers/sound/silencegen/modules.order
+	$(SILENT)rm player2/linux/drivers/stm/mmelog/modules.order
+	$(SILENT)rm player2/linux/drivers/stm/monitor/modules.order
+	$(SILENT)rm player2/linux/drivers/stm/platform/modules.order
+	$(SILENT)rm player2/linux/modules.order
+	$(SILENT)rm player2/modules.order
 
 # for CDK compatibility, there is no useable distclean from here
-distclean:	clean
+distclean: clean
 
 .PHONY:	clean

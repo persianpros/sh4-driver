@@ -88,46 +88,40 @@ class Manifestor_VideoStmfb_c : public Manifestor_Video_c
 
 		/* Manifestor video class functions */
 		ManifestorStatus_t OpenOutputSurface(DeviceHandle_t DisplayDevice,
-											 unsigned int PlaneId,
-											 unsigned int OutputId);
+						     unsigned int PlaneId,
+						     unsigned int OutputId);
 		ManifestorStatus_t CloseOutputSurface(void);
 		ManifestorStatus_t UpdateOutputSurfaceDescriptor(void);
 
 		ManifestorStatus_t CreateDecodeBuffers(unsigned int Count,
-											   unsigned int Width,
-											   unsigned int Height);
+						       unsigned int Width,
+						       unsigned int Height);
 		ManifestorStatus_t DestroyDecodeBuffers(void);
 
 		ManifestorStatus_t QueueBuffer(unsigned int BufferIndex,
-									   struct ParsedFrameParameters_s *FrameParameters,
-									   struct ParsedVideoParameters_s *VideoParameters,
-									   struct VideoOutputTiming_s *VideoOutputTiming,
-									   struct BufferStructure_s *BufferStructure);
+					       struct ParsedFrameParameters_s *FrameParameters,
+					       struct ParsedVideoParameters_s *VideoParameters,
+					       struct VideoOutputTiming_s *VideoOutputTiming,
+					       struct BufferStructure_s *BufferStructure);
 		ManifestorStatus_t QueueInitialFrame(unsigned int BufferIndex,
-											 struct ParsedVideoParameters_s *VideoParameters,
-											 struct BufferStructure_s *BufferStructure);
+						     struct ParsedVideoParameters_s *VideoParameters,
+						     struct BufferStructure_s *BufferStructure);
 		ManifestorStatus_t QueueNullManifestation(void);
 		ManifestorStatus_t FlushDisplayQueue(void);
 
 		ManifestorStatus_t Enable(void);
 		ManifestorStatus_t Disable(void);
 		ManifestorStatus_t UpdateDisplayWindows(void);
-		ManifestorStatus_t CheckInputDimensions(unsigned int Width,
-												unsigned int Height);
+		ManifestorStatus_t CheckInputDimensions(unsigned int Width, unsigned int Height);
 
 		ManifestorStatus_t SynchronizeOutput(void);
 
-		bool BufferAvailable(unsigned char *Address,
-							 unsigned int Size);
+		bool BufferAvailable(unsigned char *Address, unsigned int Size);
 
 		/* The following functions are public because they are accessed via C stub functions */
-		void DisplayCallback(struct StreamBuffer_s *Buffer,
-							 stm_time64_t VsyncTime);
-		void InitialFrameDisplayCallback(struct StreamBuffer_s *Buffer,
-										 stm_time64_t VsyncTime);
-		void DoneCallback(struct StreamBuffer_s *Buffer,
-						  stm_time64_t VsyncTime,
-						  unsigned int Status);
+		void DisplayCallback(struct StreamBuffer_s *Buffer, stm_time64_t VsyncTime);
+		void InitialFrameDisplayCallback(struct StreamBuffer_s *Buffer, stm_time64_t VsyncTime);
+		void DoneCallback(struct StreamBuffer_s *Buffer, stm_time64_t VsyncTime, unsigned int Status);
 #ifdef __TDT__
 #ifdef UFS922
 		int get_dei_fmd(char *page, char **start, off_t off, int count, int *eof);
@@ -153,11 +147,11 @@ class Manifestor_VideoStmfb_c : public Manifestor_Video_c
 #endif
 	protected:
 		void SelectDisplayBufferPointers(struct BufferStructure_s *BufferStructure,
-										 struct StreamBuffer_s *StreamBuff,
-										 stm_display_buffer_t *DisplayBuff);
+						 struct StreamBuffer_s *StreamBuff,
+						 stm_display_buffer_t *DisplayBuff);
 
 		void ApplyPixelAspectRatioCorrection(stm_display_buffer_t *DisplayBuff,
-											 struct ParsedVideoParameters_s *VideoParameters);
+						     struct ParsedVideoParameters_s *VideoParameters);
 
 };
 

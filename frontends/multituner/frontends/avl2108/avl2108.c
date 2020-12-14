@@ -196,7 +196,6 @@ static u16 avl2108_i2c_writereg(struct avl2108_state *state, u8 *data, u16 *size
 		eprintk("%s(): error: %i, size %d\n", __func__, err, *size);
 		return AVL2108_ERROR_I2C; //return -EREMOTEIO;
 	}
-
 	return AVL2108_OK;
 }
 
@@ -2015,7 +2014,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 			}
 			else
 			{
-				msleep(5);  /* Wait 10ms for tuner to lock the channel */
+				msleep(5);  /* Wait 5ms for tuner to lock the channel */
 			}
 			dprintk(10, "%s(): Waiting for tuner lock: %d\n", __func__, cnt);
 			continue;
@@ -2079,7 +2078,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 #if DVB_API_VERSION >= 5
 	if (c->symbol_rate < 5000000)
 	{
-		max_time = 1000; /* Max waiting time: 1000ms */
+		max_time = 1000;  /* Max waiting time: 1000ms */
 	}
 	else if (c->symbol_rate < 10000000)
 	{
@@ -2092,7 +2091,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 #else
 	if (newfe.delsys.dvbs.symbol_rate < 5000000)
 	{
-		max_time = 1000; /* Max waiting time: 1000ms */
+		max_time = 1000;  /* Max waiting time: 1000ms */
 	}
 	else if (newfe.delsys.dvbs.symbol_rate < 10000000)
 	{

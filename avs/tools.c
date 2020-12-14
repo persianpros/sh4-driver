@@ -25,5 +25,4 @@ void set_bits(unsigned char *regs, int regIndex, unsigned char value, int start_
 unsigned char get_bits(unsigned char *regs, int regIndex, int start_bit, int nr_bits)
 {
     return ((regs[regIndex] >> start_bit) & ((1 << nr_bits) - 1));
-
 }

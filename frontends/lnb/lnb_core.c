@@ -9,17 +9,13 @@ enum
 {
 	A8293,
 	LNB24,
-	LNBH25P,
-	LNBH26P,
-	LNB_PIO
+	LNB_PIO,
 };
 
 static const struct i2c_device_id lnb_id[] =
 {
 	{ "a8293", A8293 },
 	{ "lnb24", LNB24 },
-	{ "lnbh25p", LNBH25P },
-	{ "lnbh26p", LNBH26P },
 	{ "pio", LNB_PIO },
 	{ }
 };
@@ -34,7 +30,7 @@ short paramDebug = 0;
  */
 static unsigned short normal_i2c[] =
 {
-	0x08, /* A8293, LNBH25P, LNBH26P  */
+	0x08, /* A8293 */
 	I2C_CLIENT_END
 };
 I2C_CLIENT_INSMOD;
@@ -66,16 +62,6 @@ static int lnb_newprobe(struct i2c_client *client, const struct i2c_device_id *i
 		case LNB24:
 		{
 			lnb24_init(client);
-			break;
-		}
-		case LNBH25P:
-		{
-			lnbh25p_init(client);
-			break;
-		}
-		case LNBH26P:
-		{
-			lnbh26p_init(client);
 			break;
 		}
 		case LNB_PIO:
@@ -125,16 +111,6 @@ static int lnb_command_ioctl(struct i2c_client *client, unsigned int cmd, void *
 			err = lnb24_command(client, cmd, arg);
 			break;
 		}
-		case LNBH25P:
-		{
-			err = lnbh25p_command(client, cmd, arg);
-			break;
-		}
-		case LNBH26P:
-		{
-			err = lnbh26p_command(client, cmd, arg);
-			break;
-		}
 		case LNB_PIO:
 		{
 			err = lnb_pio_command(cmd, arg);
@@ -165,16 +141,6 @@ int lnb_command_kernel(unsigned int cmd, void *arg)
 		case LNB24:
 		{
 			err = lnb24_command_kernel(client, cmd, arg);
-			break;
-		}
-		case LNBH25P:
-		{
-			err = lnbh25p_command_kernel(client, cmd, arg);
-			break;
-		}
-		case LNBH26P:
-		{
-			err = lnbh26p_command_kernel(client, cmd, arg);
 			break;
 		}
 		case LNB_PIO:
@@ -231,15 +197,7 @@ static int lnb_detect(struct i2c_client *client, int kind, struct i2c_board_info
 		{
 			kind = LNB24;
 		}
-		else if (!strcmp("lnbh25p", type))
-		{
-			kind = LNBH25P;
-		}
-		else if (!strcmp("lnbh26p", type))
-		{
-			kind = LNBH26P;
-		}
-		else if(!strcmp("pio", type))
+		else if (!strcmp("pio", type))
 		{
 			kind = LNB_PIO;
 		}
@@ -259,16 +217,6 @@ static int lnb_detect(struct i2c_client *client, int kind, struct i2c_board_info
 		case LNB24:
 		{
 			name = "lnb24";
-			break;
-		}
-		case LNBH25P:
-		{
-			name = "lnbh25p";
-			break;
-		}
-		case LNBH26P:
-		{
-			name = "lnbh26p";
 			break;
 		}
 		case LNB_PIO:
@@ -377,7 +325,7 @@ module_init(lnb_init);
 module_exit(lnb_exit);
 
 module_param(type, charp, 0);
-MODULE_PARM_DESC(type, "device type (a8293, lnb24, lnbh25p, lnbh26p, pio)");
+MODULE_PARM_DESC(type, "device type (a8293, lnb24, pio)");
 
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");

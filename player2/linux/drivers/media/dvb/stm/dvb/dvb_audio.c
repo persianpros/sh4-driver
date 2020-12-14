@@ -64,33 +64,29 @@ extern struct DeviceContext_s *DeviceContext;
 #endif
 
 /*{{{ prototypes*/
-static int AudioOpen(struct inode *Inode,
-					 struct file *File);
-static int AudioRelease(struct inode *Inode,
-						struct file *File);
+static int AudioOpen(struct inode *Inode, struct file *File);
+static int AudioRelease(struct inode *Inode, struct file *File);
 static int AudioIoctl(struct inode *Inode,
-					  struct file *File,
-					  unsigned int IoctlCode,
-					  void *ParamAddress);
+		      struct file *File,
+		      unsigned int IoctlCode,
+		      void *ParamAddress);
 static ssize_t AudioWrite(struct file *File,
-						  const char __user *Buffer,
-						  size_t Count,
-						  loff_t *ppos);
+			  const char __user *Buffer,
+			  size_t Count,
+			  loff_t *ppos);
 static unsigned int AudioPoll(struct file *File,
-							  poll_table *Wait);
+			      poll_table *Wait);
 #ifdef __TDT__
-int AudioIoctlSetAvSync(struct DeviceContext_s *Context,
-						unsigned int State);
+int AudioIoctlSetAvSync(struct DeviceContext_s *Context, unsigned int State);
 #else
-static int AudioIoctlSetAvSync(struct DeviceContext_s *Context,
-							   unsigned int State);
+static int AudioIoctlSetAvSync(struct DeviceContext_s *Context, unsigned int State);
 #endif
+
 static int AudioIoctlChannelSelect(struct DeviceContext_s *Context,
-								   audio_channel_select_t Channel);
-static int AudioIoctlSetSpeed(struct DeviceContext_s *Context,
-							  int Speed);
+				   audio_channel_select_t Channel);
+static int AudioIoctlSetSpeed(struct DeviceContext_s *Context, int Speed);
 int AudioIoctlSetPlayInterval(struct DeviceContext_s *Context,
-							  audio_play_interval_t *PlayInterval);
+			      audio_play_interval_t *PlayInterval);
 /*}}}*/
 /*{{{ static data*/
 static char *AudioContent[] =
@@ -235,12 +231,12 @@ int AudioIoctlPlay(struct DeviceContext_s *Context)
 			sigfillset(&newsigs);
 			sigprocmask(SIG_BLOCK, &newsigs, &oldsigs);
 			Result = DvbPlaybackAddStream(Context->Playback,
-										  BACKEND_AUDIO_ID,
-										  BACKEND_PES_ID,
-										  AudioContent[Context->AudioEncoding],
-										  DemuxId,
-										  Context->Id,
-										  &Context->AudioStream);
+						      BACKEND_AUDIO_ID,
+						      BACKEND_PES_ID,
+						      AudioContent[Context->AudioEncoding],
+						      DemuxId,
+						      Context->Id,
+						      &Context->AudioStream);
 			sigprocmask(SIG_SETMASK, &oldsigs, NULL);
 			if (Result == STREAM_INCOMPLETE)
 			{
@@ -397,7 +393,7 @@ static int AudioIoctlSetBypassMode(struct DeviceContext_s *Context, unsigned int
 		if (kcontrol[vLoop]->private_value == PSEUDO_ADDR(spdif_bypass))
 		{
 			single_control = kcontrol[vLoop];
-			printk(KERN_DEBUG "Find spdif_bypass control at %p\n", single_control);
+			printk("Find spdif_bypass control at %p\n", single_control);
 			break;
 		}
 	}
@@ -418,7 +414,7 @@ static int AudioIoctlSetBypassMode(struct DeviceContext_s *Context, unsigned int
 		if (kcontrol[vLoop]->private_value == PSEUDO_ADDR(hdmi_bypass))
 		{
 			single_control = kcontrol[vLoop];
-			printk(KERN_DEBUG "Find hdmi_bypass control at %p\n", single_control);
+			printk("Find hdmi_bypass control at %p\n", single_control);
 			break;
 		}
 	}
@@ -657,8 +653,8 @@ static int AudioIoctlSetEncoding(struct DeviceContext_s *Context, unsigned int E
 			sigfillset(&Newsigs);
 			sigprocmask(SIG_BLOCK, &Newsigs, &Oldsigs);
 			Result = DvbStreamSwitch(Context->AudioStream,
-									 BACKEND_PES_ID,
-									 AudioContent[Context->AudioEncoding]);
+						 BACKEND_PES_ID,
+						 AudioContent[Context->AudioEncoding]);
 			sigprocmask(SIG_SETMASK, &Oldsigs, NULL);
 			/*
 			if (Result == 0)
@@ -836,12 +832,12 @@ int AudioIoctlSetTimeMapping(struct DeviceContext_s *Context, audio_time_mapping
 /*}}}*/
 /*}}}*/
 /*{{{ AudioOpen*/
-static int AudioOpen(struct inode *Inode,
-					 struct file *File)
+static int AudioOpen(struct inode *Inode, struct file *File)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
 	int Error;
+
 	DVB_DEBUG("(audio%d)\n", Context->Id);
 	Error = dvb_generic_open(Inode, File);
 	if (Error < 0)
@@ -855,12 +851,12 @@ static int AudioOpen(struct inode *Inode,
 }
 /*}}}*/
 /*{{{ AudioRelease*/
-static int AudioRelease(struct inode *Inode,
-						struct file *File)
+static int AudioRelease(struct inode *Inode, struct file *File)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
 	struct DvbContext_s *DvbContext = Context->DvbContext;
+
 	DVB_DEBUG("(audio%d)\n", Context->Id);
 	if ((File->f_flags & O_ACCMODE) != O_RDONLY)
 	{
@@ -904,14 +900,15 @@ static int AudioRelease(struct inode *Inode,
 /*}}}*/
 /*{{{ AudioIoctl*/
 static int AudioIoctl(struct inode *Inode,
-					  struct file *File,
-					  unsigned int IoctlCode,
-					  void *Parameter)
+		      struct file *File,
+		      unsigned int IoctlCode,
+		      void *Parameter)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
 	struct DvbContext_s *DvbContext = Context->DvbContext;
 	int Result = 0;
+
 	/*DVB_DEBUG("AudioIoctl : Ioctl %08x\n", IoctlCode); */
 	if (((File->f_flags & O_ACCMODE) == O_RDONLY) && (IoctlCode != AUDIO_GET_STATUS))
 		return -EPERM;
@@ -1028,6 +1025,7 @@ static ssize_t AudioWrite(struct file *File, const char __user *Buffer, size_t C
 	char *OutBuffer = &Context->dvr_out[16 * 2048];
 	void *PhysicalBuffer = NULL;
 	const unsigned char *ClearData = Buffer;
+
 	if ((File->f_flags & O_ACCMODE) == O_RDONLY)
 		return -EPERM;
 	if (Context->AudioState.stream_source == AUDIO_SOURCE_DEMUX)
@@ -1121,7 +1119,7 @@ static unsigned int AudioPoll(struct file *File, poll_table *Wait)
 	// So not really a problem but still not nice
 	if (DvbStreamCheckDrained(Context->AudioStream) == 1)
 	{
-		printk(KERN_DEBUG "Audio Stream drained\n");
+		printk("Audio Stream drained\n");
 		Mask |= (POLLIN);
 	}
 #endif

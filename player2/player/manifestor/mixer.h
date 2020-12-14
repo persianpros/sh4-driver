@@ -49,7 +49,7 @@ Date Modification Name
 
 /* Output debug information (which may be on the critical path) but is usually turned off */
 #define MIXER_DEBUG(fmt, args...) ((void)(ENABLE_MIXER_DEBUG && \
-										  (report(severity_note, "%s%s: " fmt, MIXER_TAG, MIXER_FUNCTION, ##args), 0)))
+					  (report(severity_note, "%s%s: " fmt, MIXER_TAG, MIXER_FUNCTION, ##args), 0)))
 
 /* Output trace information off the critical path */
 #define MIXER_TRACE(fmt, args...) (report(severity_note, "%s%s: " fmt, MIXER_TAG, MIXER_FUNCTION, ##args))
@@ -58,7 +58,6 @@ Date Modification Name
 
 #define MIXER_ASSERT(x) do if(!(x)) report(severity_error, "%s: Assertion '%s' failed at %s:%d\n", \
 												   MIXER_FUNCTION, #x, __FILE__, __LINE__); while(0)
-
 enum OutputState_t
 {
 	/// There is no manifestor connected to this input.

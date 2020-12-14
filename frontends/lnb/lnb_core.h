@@ -25,20 +25,12 @@
 #define LNB_VOLTAGE_OFF 0x2b0010
 #define LNB_VOLTAGE_VER 0x2b0011
 #define LNB_VOLTAGE_HOR 0x2b0012
-// tuner 2, lnbh26p only
-#define LNB_VOLTAGE_OFF_2 0x2b0013
-#define LNB_VOLTAGE_VER_2 0x2b0014
-#define LNB_VOLTAGE_HOR_2 0x2b0015
 
 extern short paramDebug;
 
-#define dprintk(level, x...) do \
-{ \
-	if ((paramDebug) && (level <= paramDebug)) \
-	{ \
-		printk(TAGDEBUG x); \
-	} \
-} while (0)
+#define dprintk(level, x...) do { \
+		if ((paramDebug) && (level <= paramDebug)) printk(TAGDEBUG x); \
+	} while (0)
 
 int a8293_init(struct i2c_client *client);
 int a8293_command(struct i2c_client *client, unsigned int cmd, void *arg);
@@ -47,14 +39,6 @@ int a8293_command_kernel(struct i2c_client *client, unsigned int cmd, void *arg)
 int lnb24_init(struct i2c_client *client);
 int lnb24_command(struct i2c_client *client, unsigned int cmd, void *arg);
 int lnb24_command_kernel(struct i2c_client *client, unsigned int cmd, void *arg);
-
-int lnbh25p_init(struct i2c_client *client);
-int lnbh25p_command(struct i2c_client *client, unsigned int cmd, void *arg );
-int lnbh25p_command_kernel(struct i2c_client *client, unsigned int cmd, void *arg);
-
-int lnbh26p_init(struct i2c_client *client);
-int lnbh26p_command(struct i2c_client *client, unsigned int cmd, void *arg );
-int lnbh26p_command_kernel(struct i2c_client *client, unsigned int cmd, void *arg);
 
 int lnb_pio_init(void);
 int lnb_pio_exit(void);

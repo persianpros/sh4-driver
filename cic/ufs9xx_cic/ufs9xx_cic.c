@@ -216,8 +216,7 @@ static int ufs9xx_cic_readN (struct ufs9xx_cic_state *state, u8 * buf, u16 len)
 
 	if ((ret = i2c_transfer (state->i2c, &msg, 1)) != 1)
 	{
-		printk ("%s: writereg error(err == %i)\n",
-			__FUNCTION__, ret);
+		printk ("%s: writereg error(err == %i)\n", __FUNCTION__, ret);
 		ret = -EREMOTEIO;
 	}
 
@@ -231,9 +230,9 @@ static int ufs9xx_cic_writereg(struct ufs9xx_cic_state* state, int reg, int data
 		.flags = 0, .buf = buf, .len = 2 };
 	int err;
 
-	if ((err = i2c_transfer(state->i2c, &msg, 1)) != 1) {
-		printk("%s: writereg error(err == %i, reg == 0x%02x,"
-			 " data == 0x%02x)\n", __FUNCTION__, err, reg, data);
+	if ((err = i2c_transfer(state->i2c, &msg, 1)) != 1)
+	{
+		printk("%s: writereg error(err == %i, reg == 0x%02x, data == 0x%02x)\n", __FUNCTION__, err, reg, data);
 		return -EREMOTEIO;
 	}
 
@@ -244,10 +243,10 @@ static int ufs9xx_cic_writereg(struct ufs9xx_cic_state* state, int reg, int data
 static int ufs9xx_cic_poll_slot_status(struct dvb_ca_en50221 *ca, int slot, int open)
 {
 	struct ufs9xx_cic_state *state = ca->data;
-	int                     slot_status = 0;
-	unsigned int            result;
+	int  slot_status = 0;
+	unsigned int result;
 #if defined(UFS922)
-	u8                      buf[2];
+	u8 buf[2];
 #endif
 
 	dprintk(150, "%s (%d; open = %d) >\n", __FUNCTION__, slot, open);
@@ -276,8 +275,9 @@ static int ufs9xx_cic_poll_slot_status(struct dvb_ca_en50221 *ca, int slot, int 
 	dprintk(120, "Slot %d Status = 0x%x\n", slot, result);
 
 	if (result == 0x01)
+	{
 		slot_status = 1;
-
+	}
 	if (slot_status)
 	{
 		if (state->module_status[slot] & SLOTSTATUS_RESET)
@@ -286,12 +286,10 @@ static int ufs9xx_cic_poll_slot_status(struct dvb_ca_en50221 *ca, int slot, int 
 	* so we save the state and check here if the module is ready. on ufs913/ufs922
 	* we have a special ready pin, on ufs912 we read from attribute memory.
 	*/
-
 #if defined(UFS912)
-
 #ifdef use_additional_waiting_period
-			/* timeout in progress */
-			if(time_after(jiffies, state->detection_timeout[slot]))
+	/* timeout in progress */
+			if (time_after(jiffies, state->detection_timeout[slot]))
 			{
 #endif
 				result = ufs9xx_cic_read_attribute_mem(ca, slot, 0); 
@@ -299,7 +297,9 @@ static int ufs9xx_cic_poll_slot_status(struct dvb_ca_en50221 *ca, int slot, int 
 				dprintk(200, "result = 0x%02x\n", result);
 
 				if (result == 0x1d)
+				{
 					state->module_status[slot] = SLOTSTATUS_READY;
+				}
 #ifdef use_additional_waiting_period
 			}
 #endif
@@ -309,7 +309,9 @@ static int ufs9xx_cic_poll_slot_status(struct dvb_ca_en50221 *ca, int slot, int 
 
 			dprintk(200, "readyPin = %d\n", result);
 			if (result)
+			{
 				state->module_status[slot] = SLOTSTATUS_READY;
+			}
 #endif
 		}
 		else if (state->module_status[slot] & SLOTSTATUS_NONE)
@@ -342,17 +344,20 @@ static int ufs9xx_cic_poll_slot_status(struct dvb_ca_en50221 *ca, int slot, int 
 	}
 
 	if (state->module_status[slot] != SLOTSTATUS_NONE)
+	{
 		slot_status = DVB_CA_EN50221_POLL_CAM_PRESENT;
+	}
 	else
+	{
 		slot_status = 0;
-   
+	}
 	if (state->module_status[slot] & SLOTSTATUS_READY)
+	{
 		slot_status |= DVB_CA_EN50221_POLL_CAM_READY;
-
+	}
 	dprintk(120, "Module %c (%d): result = %d, status = %d\n",
 				slot ? 'B' : 'A', slot, slot_status,
 				state->module_status[slot]);
-
 	return slot_status;
 }
 
@@ -362,7 +367,6 @@ static int ufs9xx_cic_slot_reset(struct dvb_ca_en50221 *ca, int slot)
 	int aPresent, bPresent;
 
 	dprintk(1, "%s >\n", __FUNCTION__);
-
 
 	state->module_status[slot] = SLOTSTATUS_RESET;
 
@@ -374,18 +378,18 @@ static int ufs9xx_cic_slot_reset(struct dvb_ca_en50221 *ca, int slot)
 	{
 		set_cam_path(TUNER_1_CAM_A_VIEW);
 		set_ts_path(TUNER_1_CAM_A_VIEW);
-	} else
-	if ((!aPresent) && (bPresent))
+	}
+	else if ((!aPresent) && (bPresent))
 	{
 		set_cam_path(TUNER_1_CAM_B_VIEW);
 		set_ts_path(TUNER_1_CAM_B_VIEW);
-	} else
-	if ((aPresent) && (bPresent))
+	}
+	else if ((aPresent) && (bPresent))
 	{
 		set_cam_path(TUNER_1_CAM_A_CAM_B_VIEW);
 		set_ts_path(TUNER_1_CAM_A_CAM_B_VIEW);
-	} else
-	if ((!aPresent) && (!bPresent))
+	}
+	else if ((!aPresent) && (!bPresent))
 	{
 		set_cam_path(TUNER_1_VIEW);
 		set_ts_path(TUNER_1_VIEW);
@@ -419,15 +423,20 @@ static int ufs9xx_cic_read_attribute_mem(struct dvb_ca_en50221 *ca, int slot, in
 	res = ufs9xx_read_register_u8(state->slot_attribute_read[slot] + address);
 
 	if (address <= 2)
+	{
 		dprintk (100, "address = %d: res = 0x%.x\n", address, res);
+	}
 	else
 	{
 		if ((res > 31) && (res < 127))
+		{
 			dprintk(100, "%c", res);
+		}
 		else
+		{
 			dprintk(150, ".");
+		}
 	}
-
 	return (int) res;
 }
 
@@ -485,18 +494,18 @@ static int ufs9xx_cic_slot_shutdown(struct dvb_ca_en50221 *ca, int slot)
 	{
 		set_cam_path(TUNER_1_CAM_A_VIEW);
 		set_ts_path(TUNER_1_CAM_A_VIEW);
-	} else
-	if ((!aPresent) && (bPresent))
+	}
+	else if ((!aPresent) && (bPresent))
 	{
 		set_cam_path(TUNER_1_CAM_B_VIEW);
 		set_ts_path(TUNER_1_CAM_B_VIEW);
-	} else
-	if ((aPresent) && (bPresent))
+	}
+	else if ((aPresent) && (bPresent))
 	{
 		set_cam_path(TUNER_1_CAM_A_CAM_B_VIEW);
 		set_ts_path(TUNER_1_CAM_A_CAM_B_VIEW);
-	} else
-	if ((!aPresent) && (!bPresent))
+	}
+	else if ((!aPresent) && (!bPresent))
 	{
 		set_cam_path(TUNER_1_VIEW);
 		set_ts_path(TUNER_1_VIEW);
@@ -520,24 +529,23 @@ static int ufs9xx_cic_slot_ts_enable(struct dvb_ca_en50221 *ca, int slot)
 	{
 		set_cam_path(TUNER_1_CAM_A_VIEW);
 		set_ts_path(TUNER_1_CAM_A_VIEW);
-	} else
-	if ((!aPresent) && (bPresent))
+	}
+	else if ((!aPresent) && (bPresent))
 	{
 		set_cam_path(TUNER_1_CAM_B_VIEW);
 		set_ts_path(TUNER_1_CAM_B_VIEW);
-	} else
-	if ((aPresent) && (bPresent))
+	}
+	else if ((aPresent) && (bPresent))
 	{
 		set_cam_path(TUNER_1_CAM_A_CAM_B_VIEW);
 		set_ts_path(TUNER_1_CAM_A_CAM_B_VIEW);
-	} else
-	if ((!aPresent) && (!bPresent))
+	}
+	else if ((!aPresent) && (!bPresent))
 	{
 		set_cam_path(TUNER_1_VIEW);
 		set_ts_path(TUNER_1_VIEW);
 	}
 #endif
-
 	return 0;
 }
 
@@ -559,60 +567,72 @@ int setCiSource(int slot, int source)
 		{
 			set_cam_path(TUNER_1_CAM_A_VIEW);				//	0x01	00000001	
 			set_ts_path(TUNER_1_CAM_A_VIEW);				//	0x23	00100011
-		} else
-		if ((!(aPresent)) && (bPresent))
+		}
+		else if ((!(aPresent)) && (bPresent))
 		{
 			set_cam_path(TUNER_1_CAM_B_VIEW);				//	0x10	00010000
 			set_ts_path(TUNER_1_CAM_B_VIEW);				//	0x24	00100100
-		} else
-		if ((aPresent) && (bPresent))
+		}
+		else if ((aPresent) && (bPresent))
 		{
 
-			if (ci_state.module_source[1] == 1) {				//	Cam B and Tuner 2 in use
+			if (ci_state.module_source[1] == 1)
+			{	//	Cam B and Tuner 2 in use
 				set_cam_path(TUNER_1_CAM_A_TUNER_2_CAM_B);		//	0x21	00100001 T1_CAM_A_T2_CAM_B
 				set_ts_path(TUNER_1_CAM_A_TUNER_2_CAM_B);		//	0x43	01000011 T1_CAM_A_T2_CAM_B
-			} else if (ci_state.module_source[0] == 1) {			//	Cam A and Tuner 2 in use
+			}
+			else if (ci_state.module_source[0] == 1)
+			{	//	Cam A and Tuner 2 in use
 				set_cam_path(TUNER_1_VIEW_CAM_A);			//	0x12	00010010 T1_CAM_B_T2_CAM_A
 				set_ts_path(TUNER_1_VIEW_CAM_A);			//	0x34	00110100 T1_CAM_B_T2_CAM_A
-			} else {
+			}
+			else
+			{
 				set_cam_path(TUNER_1_CAM_A_CAM_B_VIEW);			//	0x14	00010100
 				set_ts_path(TUNER_1_CAM_A_CAM_B_VIEW);			//	0x23	00100011
 			}
-		} else
-		if ((!(aPresent)) && (!(bPresent)))
+		}
+		else if ((!(aPresent)) && (!(bPresent)))
 		{
 			set_cam_path(TUNER_1_VIEW);					//	0x00	00000000
 			set_ts_path(TUNER_1_VIEW);					//	0x21	00100001
 		}
-	} else
+	}
+	else
 	{
 		if ((aPresent) && (!bPresent))
 		{
 			set_cam_path(TUNER_2_CAM_A);					//	0x12	00010010
 			set_ts_path(TUNER_2_CAM_A);					//	0x31	00110001
-		} else
-		if ((!aPresent) && (bPresent))
+		}
+		else if ((!aPresent) && (bPresent))
 		{
 			set_cam_path(TUNER_2_CAM_B);					//	0x20	00100000
 			set_ts_path(TUNER_2_CAM_B);					//	0x41	01000001
-		} else
-		if ((aPresent) && (bPresent))
+		}
+		else if ((aPresent) && (bPresent))
 		{
-			if (slot == 0) {
-				if (ci_state.module_source[1] == 0) {			//	Cam B and Tuner 1 in use
+			if (slot == 0)
+			{
+				if (ci_state.module_source[1] == 0)
+				{	//	Cam B and Tuner 1 in use
 					set_cam_path(TUNER_1_VIEW_CAM_A);		//	0x12	00010010 T1_CAM_B_T2_CAM_A
 					set_ts_path(TUNER_1_VIEW_CAM_A);		//	0x34	00110100 T1_CAM_B_T2_CAM_A
-				} else {
+				}
+				else
+				{
 					set_cam_path(TUNER_2_CAM_A_B);			//	0x24	00100100
 					set_ts_path(TUNER_2_CAM_A);			//	0x31	00110001
 				}
-			} else {
+			}
+			else
+			{
 				set_cam_path(TUNER_1_CAM_A_TUNER_2_CAM_B);		//	0x21	00100001 T1_CAM_A_T2_CAM_B
 				set_ts_path(TUNER_1_CAM_A_TUNER_2_CAM_B);		//	0x43	01000011 T1_CAM_A_T2_CAM_B
 
 			}
-		} else
-		if ((!aPresent) && (!bPresent))
+		}
+		else if ((!aPresent) && (!bPresent))
 		{
 /* ??? */
 			set_ts_path(TUNER_2_VIEW);					//	0x12	00010010
@@ -639,50 +659,69 @@ void set_cam_path(int route)
 	switch (route)
 	{
 		case TUNER_1_VIEW:
+		{
 			dprintk(1,"%s: TUNER_1_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x00);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_A_VIEW:
+		{
 			dprintk(1,"%s: TUNER_1_CAM_A_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x01);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_B_VIEW:
+		{
 			dprintk(1,"%s: TUNER_1_CAM_B_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x10);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_A_CAM_B_VIEW:
+		{
 			dprintk(1,"%s: TUNER_1_CAM_A_CAM_B_VIEW\n", __func__);
 //FIXME: maruapp sets first 0x11 and then 0x14 ???
 			ufs9xx_cic_writereg(state, 0x02, 0x14);
-		break;
+			break;
+		}
 		case TUNER_2_CAM_A:
+		{
 			dprintk(1, "%s: TUNER_2_CAM_A\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x12);
-		break;
+			break;
+		}
 		case TUNER_2_CAM_B:
+		{
 			dprintk(1,"%s: TUNER_2_CAM_B\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x20);
-		break;
+			break;
+		}
 		case TUNER_2_CAM_A_B:
-/* fixme maurapp sets first 0x22 */
+		{
+			/* fixme maurapp sets first 0x22 */
 			dprintk(1,"%s: TUNER_2_CAM_A_B\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x24);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_A_TUNER_2_CAM_B:
+		{
 			dprintk(1,"%s: TUNER_1_CAM_A_TUNER_2_CAM_B\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x21);
-		break;
+			break;
+		}
 		case TUNER_1_VIEW_CAM_A:
+		{
 			dprintk(1,"%s: TUNER_1_VIEW_CAM_A\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x12);
-		break;
+			break;
+		}
 		default:
+		{
 			dprintk(1,"%s: TUNER_1_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x02, 0x00);
-		break;
+			break;
+		}
 	}
 }
-
 
 void set_ts_path(int route)
 {
@@ -691,46 +730,66 @@ void set_ts_path(int route)
 	switch (route)
 	{
 		case TUNER_1_VIEW:
+		{
 			dprintk(1,"%s: TUNER_1_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x01, 0x21);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_A_VIEW:
+		{
 			dprintk(1,"%s: TUNER_1_CAM_A_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x01, 0x23);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_B_VIEW:
+		{
 			dprintk(1,"%s: TUNER_1_CAM_B_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x01, 0x24);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_A_CAM_B_VIEW:
+		{
 			ufs9xx_cic_writereg(state, 0x01, 0x23);
 			dprintk(1,"%s: TUNER_1_CAM_A_CAM_B_VIEW\n", __func__);
-		break;
+			break;
+		}
 		case TUNER_2_VIEW:
-/* fixme: maruapp sets sometimes 0x11 before */
+		{
+			/* fixme: maruapp sets sometimes 0x11 before */
 			ufs9xx_cic_writereg(state, 0x01, 0x12);
 			dprintk(1,"%s: TUNER_2_VIEW\n", __func__);
-		break;
+			break;
+		}
 		case TUNER_2_CAM_A:
+		{
 			ufs9xx_cic_writereg(state, 0x01, 0x31);
 			dprintk(1,"%s: TUNER_2_CAM_A\n", __func__);
-		break;
+			break;
+		}
 		case TUNER_2_CAM_B:
+		{
 			ufs9xx_cic_writereg(state, 0x01, 0x41);
 			dprintk(1, "%s: TUNER_2_CAM_B\n", __func__);
-		break;
+			break;
+		}
 		case TUNER_1_CAM_A_TUNER_2_CAM_B:
+		{
 			ufs9xx_cic_writereg(state, 0x01, 0x43);
 			dprintk(1,"%s: TUNER_1_CAM_A_TUNER_2_CAM_B\n", __func__);
 		break;
+		}
 		case TUNER_1_VIEW_CAM_A:
+		{
 			ufs9xx_cic_writereg(state, 0x01, 0x34);
 			dprintk(1,"%s: TUNER_1_VIEW_CAM_A\n", __func__);
-		break;
+			break;
+		}
 		default:
+		{
 			dprintk(1,"%s: TUNER_1_VIEW\n", __func__);
 			ufs9xx_cic_writereg(state, 0x01, 0x21);
-		break;
+			break;
+		}
 	}
 }
 #endif
@@ -1017,12 +1076,11 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 	
 	dprintk(1, "init_ufs9xx_cic: call dvb_ca_en50221_init\n");
 
-	if ((result = dvb_ca_en50221_init(core->dvb_adap,
-					  &core->ca, 0, 2)) != 0) {
+	if ((result = dvb_ca_en50221_init(core->dvb_adap, &core->ca, 0, 2)) != 0)
+	{
 		printk(KERN_ERR "ca0 initialisation failed.\n");
 		goto error;
 	}
-
 	dprintk(1, "ufs9xx_cic: ca0 interface initialised.\n");
 
 	dprintk(10, "init_ufs9xx_cic <\n");
@@ -1030,9 +1088,7 @@ int init_ci_controller(struct dvb_adapter* dvb_adap)
 	return 0;
 
 error:
-
 	printk("init_ufs9xx_cic < error\n");
-
 	return result;
 }
 
@@ -1055,7 +1111,7 @@ module_init             (ufs9xx_cic_init);
 module_exit             (ufs9xx_cic_exit);
 
 MODULE_DESCRIPTION      ("CI Controller");
-MODULE_AUTHOR           ("Dagobert");
+MODULE_AUTHOR           ("Open Vision developers");
 MODULE_LICENSE          ("GPL");
 
 module_param(paramDebug, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

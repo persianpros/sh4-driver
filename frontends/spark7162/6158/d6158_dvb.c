@@ -4,13 +4,13 @@
 //			Copyright (C), 2013-2018, AV Frontier Tech. Co., Ltd.
 //
 //
-// 文 件 名： $RCSfile$
+// 文 件 名：   $RCSfile$
 //
-// 创 建 者： D26LF
+// 创 建 者：   D26LF
 //
-// 创建时间： 2013.12.16
+// 创建时间：   2013.12.16
 //
-// 最后更新： $Date$
+// 最后更新：   $Date$
 //
 //				$Author$
 //
@@ -18,11 +18,11 @@
 //
 //				$State$
 //
-// 文件描述： d6158 dvb
+// 文件描述：   d6158 dvb
 //
 /******************************************************************************/
 
-/******************************** 文件包含************************************/
+/********************************  文件包含************************************/
 
 #include <linux/kernel.h> /* Kernel support */
 #include <linux/delay.h>
@@ -56,9 +56,9 @@
 
 #include "../../base/mxl301.h"
 
-/******************************** 常量定义************************************/
+/********************************  常量定义************************************/
 
-/******************************** 数据结构************************************/
+/********************************  数据结构************************************/
 
 struct dvb_d6158_fe_ofdm_state
 {
@@ -70,20 +70,21 @@ struct dvb_d6158_fe_ofdm_state
 	struct dvb_frontend_parameters *p;
 };
 
-/******************************** 宏 定 义************************************/
+/********************************  宏 定 义************************************/
 
-/******************************** 变量定义************************************/
+/********************************  变量定义************************************/
 
-/******************************** 变量引用************************************/
+/********************************  变量引用************************************/
 
-/******************************** 函数声明************************************/
+/********************************  函数声明************************************/
 
-/******************************** 函数定义************************************/
+/********************************  函数定义************************************/
 
 int d6158_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
 	int iRet;
 	struct dvb_d6158_fe_ofdm_state *state = fe->demodulator_priv;
+
 	iRet = nim_panic6158_get_SNR(&(state->spark_nimdev), (UINT8 *)snr);
 	*snr = *snr * 255 * 255 / 100;
 	return iRet;
@@ -92,6 +93,7 @@ int d6158_read_snr(struct dvb_frontend *fe, u16 *snr)
 int d6158_read_ber(struct dvb_frontend *fe, UINT32 *ber)
 {
 	struct dvb_d6158_fe_ofdm_state *state = fe->demodulator_priv;
+
 	return nim_panic6158_get_BER(&state->spark_nimdev, ber);
 }
 
@@ -100,6 +102,7 @@ int d6158_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 	int iRet;
 	u32 Strength;
 	u32 *Intensity = &Strength;
+
 	struct dvb_d6158_fe_ofdm_state *state = fe->demodulator_priv;
 	iRet = nim_panic6158_get_AGC(&state->spark_nimdev, (UINT8 *)Intensity);
 	if (*Intensity > 90)
@@ -122,6 +125,7 @@ int d6158_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	int j, iRet;
 	struct dvb_d6158_fe_ofdm_state *state = fe->demodulator_priv;
 	UINT8 bIsLocked;
+
 	//printk("%s>>\n", __FUNCTION__);
 	for (j = 0; j < (PANIC6158_T2_TUNE_TIMEOUT / 50); j++)
 	{
@@ -136,10 +140,10 @@ int d6158_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	if (bIsLocked)
 	{
 		*status = FE_HAS_SIGNAL
-				  | FE_HAS_CARRIER
-				  | FE_HAS_VITERBI
-				  | FE_HAS_SYNC
-				  | FE_HAS_LOCK;
+		        | FE_HAS_CARRIER
+		        | FE_HAS_VITERBI
+		        | FE_HAS_SYNC
+		        | FE_HAS_LOCK;
 	}
 	else
 	{
@@ -148,8 +152,7 @@ int d6158_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	return 0;
 }
 
-int d6158_read_ucblocks(struct dvb_frontend *fe,
-						u32 *ucblocks)
+int d6158_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 {
 	*ucblocks = 0;
 	return 0;
@@ -158,6 +161,7 @@ int d6158_read_ucblocks(struct dvb_frontend *fe,
 int dvb_d6158_get_property(struct dvb_frontend *fe, struct dtv_property *tvp)
 {
 	//struct dvb_d0367_fe_ofdm_state* state = fe->demodulator_priv;
+
 	/* get delivery system info */
 	if (tvp->cmd == DTV_DELIVERY_SYSTEM)
 	{
@@ -177,6 +181,7 @@ int dvb_d6158_get_property(struct dvb_frontend *fe, struct dtv_property *tvp)
 int dvb_d6158_fe_qam_get_property(struct dvb_frontend *fe, struct dtv_property *tvp)
 {
 	//struct dvb_d0367_fe_ofdm_state* state = fe->demodulator_priv;
+
 	/* get delivery system info */
 	if (tvp->cmd == DTV_DELIVERY_SYSTEM)
 	{
@@ -191,8 +196,7 @@ int dvb_d6158_fe_qam_get_property(struct dvb_frontend *fe, struct dtv_property *
 	return 0;
 }
 
-int d6158_set_frontend(struct dvb_frontend *fe,
-					   struct dvb_frontend_parameters *p)
+int d6158_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_parameters *p)
 {
 	struct dvb_d6158_fe_ofdm_state *state = fe->demodulator_priv;
 	struct dtv_frontend_properties *props = &fe->dtv_property_cache;
@@ -208,8 +212,7 @@ int d6158_set_frontend(struct dvb_frontend *fe,
 	return 0;
 }
 
-int d6158earda_set_frontend(struct dvb_frontend *fe,
-							struct dvb_frontend_parameters *p)
+int d6158earda_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_parameters *p)
 {
 	struct dvb_d6158_fe_ofdm_state *state = fe->demodulator_priv;
 	struct dtv_frontend_properties *props = &fe->dtv_property_cache;
@@ -309,6 +312,7 @@ struct dvb_frontend *dvb_d6158_attach(struct i2c_adapter *i2c, UINT8 system)
 	struct nim_panic6158_private *priv;
 	int ret;
 	struct COFDM_TUNER_CONFIG_API Tuner_API;
+
 	/* allocate memory for the internal state */
 	state = kzalloc(sizeof(struct dvb_d6158_fe_ofdm_state), GFP_KERNEL);
 	if (state == NULL) goto error;
@@ -318,7 +322,7 @@ struct dvb_frontend *dvb_d6158_attach(struct i2c_adapter *i2c, UINT8 system)
 		goto error;
 	}
 	/* create dvb_frontend */
-	if (system == DEMO_BANK_T2) //dvb-t
+	if (system == DEMO_BANK_T2)  //dvb-t
 	{
 		printk("DEMO_BANK_T2\n");
 		memcpy(&state->frontend.ops, &dvb_d6158_fe_ofdm_ops, sizeof(struct dvb_frontend_ops));
@@ -335,9 +339,7 @@ struct dvb_frontend *dvb_d6158_attach(struct i2c_adapter *i2c, UINT8 system)
 	state->DeviceMap.Fields = STV0367ofdm_NBFIELDS;
 	state->DeviceMap.Mode = IOREG_MODE_SUBADR_16;
 	state->DeviceMap.RegExtClk = 27000000; //Demod External Crystal_HZ
-	state->DeviceMap.RegMap = (TUNER_IOREG_Register_t *)
-							  kzalloc(state->DeviceMap.Registers * sizeof(TUNER_IOREG_Register_t),
-									  GFP_KERNEL);
+	state->DeviceMap.RegMap = (TUNER_IOREG_Register_t *)kzalloc(state->DeviceMap.Registers * sizeof(TUNER_IOREG_Register_t), GFP_KERNEL);
 	state->DeviceMap.priv = (void *)state;
 	state->spark_nimdev.priv = priv;
 	state->spark_nimdev.base_addr = PANIC6158_T2_ADDR;
@@ -397,6 +399,7 @@ struct dvb_frontend *dvb_d6158earda_attach(struct i2c_adapter *i2c, UINT8 system
 	struct nim_panic6158_private *priv;
 	int ret;
 	struct COFDM_TUNER_CONFIG_API Tuner_API;
+
 	/* allocate memory for the internal state */
 	state = kzalloc(sizeof(struct dvb_d6158_fe_ofdm_state), GFP_KERNEL);
 	if (state == NULL) goto error;
@@ -426,9 +429,7 @@ struct dvb_frontend *dvb_d6158earda_attach(struct i2c_adapter *i2c, UINT8 system
 	state->DeviceMap.Fields = STV0367ofdm_NBFIELDS;
 	state->DeviceMap.Mode = IOREG_MODE_SUBADR_16;
 	state->DeviceMap.RegExtClk = 27000000; //Demod External Crystal_HZ
-	state->DeviceMap.RegMap = (TUNER_IOREG_Register_t *)
-							  kzalloc(state->DeviceMap.Registers * sizeof(TUNER_IOREG_Register_t),
-									  GFP_KERNEL);
+	state->DeviceMap.RegMap = (TUNER_IOREG_Register_t *)kzalloc(state->DeviceMap.Registers * sizeof(TUNER_IOREG_Register_t), GFP_KERNEL);
 	state->DeviceMap.priv = (void *)state;
 	state->spark_nimdev.priv = priv;
 	state->spark_nimdev.base_addr = PANIC6158_T2_ADDR;
@@ -493,12 +494,11 @@ static struct dvb_tuner_ops mxl301_ops =
 	.release = NULL,
 };
 
-struct dvb_frontend *mxl301_attach(struct dvb_frontend *fe,
-								   const struct MXL301_config *config,
-								   struct i2c_adapter *i2c)
+struct dvb_frontend *mxl301_attach(struct dvb_frontend *fe, const struct MXL301_config *config, struct i2c_adapter *i2c)
 {
 	struct MXL301_state *state = NULL;
 	struct dvb_tuner_info *info;
+
 	state = kzalloc(sizeof(struct MXL301_state), GFP_KERNEL);
 	if (state == NULL)
 		goto exit;
@@ -534,6 +534,7 @@ YW_ErrorType_T tuner_mxl301_Identify(IOARCH_Handle_t *i2c_adap)
 	U8 data = 0x53;
 	U8 cmd[3];
 	U8 cTuner_Base_Addr = 0xC2;
+
 	//tuner soft reset
 	cmd[0] = cTuner_Base_Addr;
 	cmd[1] = 0xFF;

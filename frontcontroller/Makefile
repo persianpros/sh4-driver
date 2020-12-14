@@ -43,7 +43,7 @@ obj-y += tffp/
 endif
 
 ifdef HL101
-obj-y += aotom_hl101/
+obj-y += proton/
 endif
 
 ifdef VIP1_V1
@@ -163,21 +163,21 @@ obj-y += ipbox55/
 endif
 
 ifdef CUBEREVO
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI2
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_250HD
 obj-y += ipbox/
 else ifdef CUBEREVO_9500HD
 obj-y += ipbox/
 else ifdef CUBEREVO_2000HD
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI_FTA
 obj-y += ipbox/
 else ifdef CUBEREVO_3000HD
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 endif
 
 ifdef VITAMIN_HD5000

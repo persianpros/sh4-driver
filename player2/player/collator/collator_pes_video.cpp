@@ -282,8 +282,8 @@ CollatorStatus_t Collator_PesVideo_c::Input(
 						else
 						{
 							BlockTerminate = (((Code & Configuration.BlockTerminateMask) == Configuration.BlockTerminateCode) && !Configuration.DeferredTerminateFlag) ||
-											 (Configuration.StreamTerminateFlushesFrame && (Code == Configuration.StreamTerminationCode)) ||
-											 (Configuration.DeferredTerminateFlag && TerminationFlagIsSet);
+									 (Configuration.StreamTerminateFlushesFrame && (Code == Configuration.StreamTerminationCode)) ||
+									 (Configuration.DeferredTerminateFlag && TerminationFlagIsSet);
 							TerminationFlagIsSet = false;
 						}
 						GotPartialHeader = false;
@@ -381,7 +381,9 @@ CollatorStatus_t Collator_PesVideo_c::Input(
 			}
 #endif
 			for (i = 0; i < min(SpanningCount, RemainingLength); i++)
+			{
 				BufferBase[AccumulatedDataSize + i] = RemainingData[i];
+			}
 			if (SpanningCount > RemainingLength)
 			{
 				RemainingData += i;

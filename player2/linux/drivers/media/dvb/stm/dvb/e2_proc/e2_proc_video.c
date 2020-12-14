@@ -87,11 +87,11 @@ extern void switch_video_command_kernel(char *kbuf);
  */
 
 extern int DisplayCreate(char *Media,
-						 unsigned int SurfaceId);
+			 unsigned int SurfaceId);
 extern int DvbDisplayDelete(char *Media,
-							unsigned int SurfaceId);
+			    unsigned int SurfaceId);
 extern int isDisplayCreated(char *Media,
-							unsigned int SurfaceId);
+			    unsigned int SurfaceId);
 
 /* FIXME Header ? */
 #define SAAIOGREG 1 /* read registers */
@@ -148,7 +148,7 @@ static struct Modes
 {
 
 	{
-		25, "1024x768_60", 1024, 768, 1024, 768, 8, 15385, 160, 24, 29, 3, 136, 6,
+		25, "1024x768", 1024, 768, 1024, 768, 8, 15385, 160, 24, 29, 3, 136, 6,
 		FB_VMODE_NONINTERLACED | FB_VMODE_CONUPDATE
 	},
 	{
@@ -169,7 +169,7 @@ static struct Modes
 	},
 
 	{
-		20, "1280x1024_60", 1280, 1024, 1280, 1024, 8, 9260, 248, 48, 38, 1, 112, 3,
+		20, "1280x1024", 1280, 1024, 1280, 1024, 8, 9260, 248, 48, 38, 1, 112, 3,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT, FB_VMODE_NONINTERLACED | FB_VMODE_CONUPDATE
 	},
 	{
@@ -187,7 +187,7 @@ static struct Modes
 	},
 
 	{
-		16, "1080p60", 1920, 1080, 1920, 1080, 16, 6734, 148, 88, 36, 4, 44, 5,
+		16, "1080p", 1920, 1080, 1920, 1080, 16, 6734, 148, 88, 36, 4, 44, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT, FB_VMODE_CONUPDATE
 	},
 	{
@@ -221,7 +221,7 @@ static struct Modes
 	},
 
 	{
-		8, "1080i60", 1920, 1080, 1920, 1080, 16, 13468, 148, 88, 35, 5, 44, 5,
+		8, "1080i", 1920, 1080, 1920, 1080, 16, 13468, 148, 88, 35, 5, 44, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT, FB_VMODE_INTERLACED | FB_VMODE_CONUPDATE
 	},
 	{
@@ -234,7 +234,7 @@ static struct Modes
 	},
 
 	{
-		5, "720p60", 1280, 720, 1280, 720, 16, 13468, 220, 110, 20, 5, 40, 5,
+		5, "720p", 1280, 720, 1280, 720, 16, 13468, 220, 110, 20, 5, 40, 5,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT, FB_VMODE_NONINTERLACED | FB_VMODE_CONUPDATE
 	},
 	{
@@ -247,24 +247,24 @@ static struct Modes
 	 */
 #ifdef alter_tobak
 	{
-		3, "576p50", 720, 576, 720, 576, 16, 37037, 68, 12, 34, 10, 64, 5, 0,
+		3, "576p", 720, 576, 720, 576, 16, 37037, 68, 12, 34, 10, 64, 5, 0,
 		FB_VMODE_NONINTERLACED | FB_VMODE_CONUPDATE
 	},
 #else
 	{
-		3, "576p50", 720, 576, 720, 576, 16, 37037, 68, 12, 39, 5, 64, 5, 0,
+		3, "576p", 720, 576, 720, 576, 16, 37037, 68, 12, 39, 5, 64, 5, 0,
 		FB_VMODE_NONINTERLACED | FB_VMODE_CONUPDATE
 	},
 #endif
 
 #ifdef alter_tobak
 	{
-		2, "576i50", 720, 576, 720, 576, 16, 74074, 68, 12, 38, 5, 64, 6, 0,
+		2, "576i", 720, 576, 720, 576, 16, 74074, 68, 12, 38, 5, 64, 6, 0,
 		FB_VMODE_INTERLACED | FB_VMODE_CONUPDATE
 	},
 #else
 	{
-		2, "576i50", 720, 576, 720, 576, 16, 74074, 69, 12, 41, 5, 63, 3, 0,
+		2, "576i", 720, 576, 720, 576, 16, 74074, 69, 12, 41, 5, 63, 3, 0,
 		FB_VMODE_INTERLACED | FB_VMODE_CONUPDATE
 	},
 #endif
@@ -294,7 +294,7 @@ int proc_video_policy_get(void)
 {
 	/* Dagobert: You cannot use this semaphore here because this will be called from
 	 * VideoIoctl which holds this semaphore too. This means deadlock.
-	 * mutex_lock (&(ProcDeviceContext->DvbContext->Lock));
+	   mutex_lock (&(ProcDeviceContext->DvbContext->Lock));
 	*/
 	if (ProcDeviceContext->VideoStream != NULL)
 	{
@@ -369,7 +369,7 @@ int proc_video_policy_get(void)
 	}
 	/* Dagobert: You cannot use this semaphore here because this will be called from
 	 * VideoIoctl which holds this semaphore too. This means deadlock.
-	 * mutex_unlock (&(ProcDeviceContext->DvbContext->Lock));
+	    mutex_unlock (&(ProcDeviceContext->DvbContext->Lock));
 	*/
 	return policy_ply;
 }
@@ -387,7 +387,8 @@ int proc_video_switch_type_write(struct file *file, const char __user *buf, unsi
 	char *myString;
 	ssize_t ret = -ENOMEM;
 	unsigned long mlen;
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+
+//	printk("[player2] %s > count = %ld\n", __func__, count);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (page)
@@ -422,6 +423,7 @@ int proc_video_switch_type_write(struct file *file, const char __user *buf, unsi
 		ret = mlen;
 		kfree(myString);
 	}
+
 out:
 	free_page((unsigned long)page);
 	mutex_unlock(&(ProcDeviceContext->DvbContext->Lock));
@@ -434,14 +436,16 @@ int proc_video_switch_write(struct file *file, const char __user *buf, unsigned 
 	char *myString;
 	ssize_t ret = -ENOMEM;
 	unsigned long mlen;
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+//	printk("[player2] %s count = %ld\n", __func__, count);
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (page)
 	{
 		ret = -EFAULT;
 		if (copy_from_user(page, buf, count))
+		{
 			goto out;
+		}
 		myString = (char *) kmalloc(count + 1, GFP_KERNEL);
 		strncpy(myString, page, count);
 		myString[count] = '\0';
@@ -451,75 +455,87 @@ int proc_video_switch_write(struct file *file, const char __user *buf, unsigned 
 			myString[count - 1] = '\0';
 			count--;
 		}
-		printk(KERN_DEBUG "proc_video_switch_write >> %s\n", myString);
+		printk("[player2] %s > %s\n", __func__, myString);
 		if (video_switch_type == 0)
 		{
 			if (fms6403_in2_sel_pin == NULL)
+			{
 				fms6403_in2_sel_pin = stpio_request_pin(5, 3, "fms6403_in2_sel_pin", STPIO_OUT);
+			}
 			if (fms6403_fsel0_pin == NULL)
+			{
 				fms6403_fsel0_pin = stpio_request_pin(4, 6, "fms6403_fsel0_pin", STPIO_OUT);
+			}
 			if (fms6403_fsel1_pin == NULL)
+			{
 				fms6403_fsel1_pin = stpio_request_pin(3, 5, "fms6403_fsel1_pin", STPIO_OUT);
+			}
 			if (strncmp("scart", myString, count) == 0)
 			{
 				stpio_set_pin(fms6403_in2_sel_pin, 0); //0=rgb 1=yvu
-				printk(KERN_DEBUG "!!!!!!!!!!!!! SET PAL !!!!!!!!!!!!!!\n");
+				printk("[player2] %s Set PAL\n", __func__);
 				video_switch = 0;
 			}
 			else if (strncmp("component1080p", myString, count) == 0)
 			{
-				stpio_set_pin(fms6403_in2_sel_pin, 1); //0=rgb 1=yvu
-				stpio_set_pin(fms6403_fsel0_pin, 1); //1080p50
+				stpio_set_pin(fms6403_in2_sel_pin, 1);  // 0 = rgb, 1 = yvu
+				stpio_set_pin(fms6403_fsel0_pin, 1);  // 1080p50
 				stpio_set_pin(fms6403_fsel1_pin, 1);
-				printk(KERN_DEBUG "!!!!!!!!!!!!! SET Filter Bypass !!!!!!!!!!!!!!\n");
+				printk("[player2] %s Set Filter Bypass\n", __func__);
 				video_switch = 1;
 			}
 			else if (strncmp("component1080i", myString, count) == 0)
 			{
-				stpio_set_pin(fms6403_in2_sel_pin, 1); //0=rgb 1=yvu
-				stpio_set_pin(fms6403_fsel0_pin, 0); //720p/1080i
+				stpio_set_pin(fms6403_in2_sel_pin, 1);  // 0 = rgb, 1 = yvu
+				stpio_set_pin(fms6403_fsel0_pin, 0);  // 720p/1080i
 				stpio_set_pin(fms6403_fsel1_pin, 1);
-				printk(KERN_DEBUG "!!!!!!!!!!!!! SET Filter FMS6403 32Mhz !!!!!!!!!!!!!!\n");
+				printk("[player2] %s Set Filter FMS6403 to 32 Mhz\n, __func__");
 				video_switch = 2;
 			}
 			else if (strncmp("component720p", myString, count) == 0)
 			{
-				stpio_set_pin(fms6403_in2_sel_pin, 1); //0=rgb 1=yvu
-				stpio_set_pin(fms6403_fsel0_pin, 0); //720p/1080i
+				stpio_set_pin(fms6403_in2_sel_pin, 1);  // 0 = rgb, 1 = yvu
+				stpio_set_pin(fms6403_fsel0_pin, 0);  // 720p/1080i
 				stpio_set_pin(fms6403_fsel1_pin, 1);
-				printk(KERN_DEBUG "!!!!!!!!!!!!! SET Filter FMS6403 32Mhz !!!!!!!!!!!!!!\n");
+				printk("[player2] %s Set Filter FMS6403 to 32 Mhz\n", __func__);
 				video_switch = 3;
 			}
 			else if (strncmp("component576p", myString, count) == 0)
 			{
-				stpio_set_pin(fms6403_in2_sel_pin, 1); //0=rgb 1=yvu
-				stpio_set_pin(fms6403_fsel0_pin, 1); //576p
+				stpio_set_pin(fms6403_in2_sel_pin, 1); // 0 = rgb, 1 = yvu
+				stpio_set_pin(fms6403_fsel0_pin, 1);  // 576i/p
 				stpio_set_pin(fms6403_fsel1_pin, 0);
-				printk(KERN_DEBUG "!!!!!!!!!!!!! SET Filter FMS6403 15Mhz !!!!!!!!!!!!!!\n");
+				printk("[player2] %s Set Filter FMS6403 to 15 Mhz\n", __func__);
 				video_switch = 4;
 			}
 			else if (strncmp("component576i", myString, count) == 0)
 			{
-				stpio_set_pin(fms6403_in2_sel_pin, 1); //0=rgb 1=yvu
-				stpio_set_pin(fms6403_fsel0_pin, 1); //576p
+				stpio_set_pin(fms6403_in2_sel_pin, 1);  //0 = rgb, 1 = yvu
+				stpio_set_pin(fms6403_fsel0_pin, 1);  // 576i/p
 				stpio_set_pin(fms6403_fsel1_pin, 0);
-				printk(KERN_DEBUG "!!!!!!!!!!!!! SET Filter FMS6403 15Mhz !!!!!!!!!!!!!!\n");
+				printk("[player2] %s Set Filter FMS6403 to 15 Mhz\n", __func__);
 				video_switch = 5;
 			}
-		} //switch type
-		if (video_switch_type == 1) //bxzb
+		}  // switch type
+		if (video_switch_type == 1)  // bxzb
 		{
 			if (pin02 == NULL)
+			{
 				pin02 = stpio_request_pin(0, 2, "pin02", STPIO_OUT);
+			}
 			if (pin06 == NULL)
+			{
 				pin06 = stpio_request_pin(0, 6, "pin06", STPIO_OUT);
+			}
 			if (pin24 == NULL)
+			{
 				pin24 = stpio_request_pin(2, 4, "pin23", STPIO_OUT);
+			}
 			//0 0 1 - jest rgb
 			//0 0 0 - jest rgb
-			stpio_set_pin(pin02, 0); //pin6 - E
+			stpio_set_pin(pin02, 0);  // pin6 - E
 			stpio_set_pin(pin06, 0);
-			stpio_set_pin(pin24, 1); //1-rgb
+			stpio_set_pin(pin24, 1);  // 1 - rgb
 		}
 		/* always return count to avoid endless loop */
 		//ret = count;
@@ -535,26 +551,39 @@ out:
 int proc_video_switch_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
 {
 	int len = 0;
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __func__);
 	if (video_switch == 0)
+	{
 		len = sprintf(page, "scart\n");
+	}
 	else if (video_switch == 1)
+	{
 		len = sprintf(page, "component1080p\n");
+	}
 	else if (video_switch == 2)
+	{
 		len = sprintf(page, "component1080i\n");
+	}
 	else if (video_switch == 3)
+	{
 		len = sprintf(page, "component720p\n");
+	}
 	else if (video_switch == 4)
+	{
 		len = sprintf(page, "component576p\n");
+	}
 	else if (video_switch == 5)
+	{
 		len = sprintf(page, "component576i\n");
+	}
 	return len;
 }
 
 int proc_video_switch_choices_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
 {
 	int len = 0;
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+
+	printk("[player2] %s >\n", __func__);
 	len = sprintf(page, "scart component1080p component1080i component720p component576p component576i\n");
 	return len;
 }
@@ -562,18 +591,18 @@ int proc_video_switch_choices_read(char *page, char **start, off_t off, int coun
 
 //TODO: say avs to send the widescreenflag if needed
 int proc_video_aspect_write(struct file *file, const char __user *buf,
-							unsigned long count, void *data)
+			    unsigned long count, void *data)
 {
 	char *page;
 	char *myString;
 	ssize_t ret = -ENOMEM;
 	/* int result; */
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
-	printk(KERN_DEBUG "%p, %p, %p", ProcDeviceContext, ProcDeviceContext->DvbContext, ProcDeviceContext->VideoStream);
+	printk("%p, %p, %p", ProcDeviceContext, ProcDeviceContext->DvbContext, ProcDeviceContext->VideoStream);
 #else
-	printk(KERN_DEBUG "%p, %p, %d, %p", ProcDeviceContext, ProcDeviceContext->DvbContext, ProcDeviceContext->DvbContext->Lock.count.counter, ProcDeviceContext->VideoStream);
+	printk("%p, %p, %d, %p", ProcDeviceContext, ProcDeviceContext->DvbContext, ProcDeviceContext->DvbContext->Lock.count.counter, ProcDeviceContext->VideoStream);
 #endif
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
@@ -589,7 +618,7 @@ int proc_video_aspect_write(struct file *file, const char __user *buf,
 		//printk("%s\n", myString);
 		aspect_e2 = VIDEO_FORMAT_16_9;
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		if (strncmp("4:3", myString, count - 1) == 0)
 		{
@@ -601,7 +630,7 @@ int proc_video_aspect_write(struct file *file, const char __user *buf,
 		}
 		/*if (strncmp("221:1", myString, count - 1) == 0)
 		{
-			aspect_e2 = VIDEO_FORMAT_221_1;
+		    aspect_e2 = VIDEO_FORMAT_221_1;
 		}*/
 		//we dont support any, whatever this is
 		if (strncmp("any", myString, count - 1) == 0)
@@ -620,11 +649,11 @@ out:
 }
 
 int proc_video_aspect_read(char *page, char **start, off_t off, int count,
-						   int *eof, void *data_unused)
+			   int *eof, void *data_unused)
 {
 	int len = 0;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	if (aspect_e2 == VIDEO_FORMAT_4_3)
 	{
@@ -634,7 +663,7 @@ int proc_video_aspect_read(char *page, char **start, off_t off, int count,
 	{
 		len = sprintf(page, "16:9\n");
 		/*} else if (aspect_e2 == VIDEO_FORMAT_221_1) {
-			len = sprintf(page, "221:1\n");*/
+		    len = sprintf(page, "221:1\n");*/
 	}
 	else //should never occur
 	{
@@ -644,11 +673,11 @@ int proc_video_aspect_read(char *page, char **start, off_t off, int count,
 }
 
 int proc_video_aspect_choices_read(char *page, char **start, off_t off, int count,
-								   int *eof, void *data_unused)
+				   int *eof, void *data_unused)
 {
 	int len = 0;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	//we dont support any, whatever this is
 	//len = sprintf(page, "4:3 16:9 any\n");
@@ -657,14 +686,14 @@ int proc_video_aspect_choices_read(char *page, char **start, off_t off, int coun
 }
 
 int proc_video_policy_write(struct file *file, const char __user *buf,
-							unsigned long count, void *data)
+			    unsigned long count, void *data)
 {
 	char *page;
 	char *myString;
 	ssize_t ret = -ENOMEM;
 	int result;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -676,7 +705,7 @@ int proc_video_policy_write(struct file *file, const char __user *buf,
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		if (strncmp("letterbox", myString, count - 1) == 0)
 		{
@@ -694,7 +723,7 @@ int proc_video_policy_write(struct file *file, const char __user *buf,
 		{
 			policy_e2 = VIDEO_POL_NON_LINEAR;
 		}
-		else if (strncmp("nonlinear", myString, count - 1) == 0) // e2 writes nonlinear
+		else if (strncmp("nonlinear", myString, count - 1) == 0)  // e2 writes nonlinear
 		{
 			policy_e2 = VIDEO_POL_NON_LINEAR;
 		}
@@ -726,11 +755,11 @@ out:
 }
 
 int proc_video_policy_read(char *page, char **start, off_t off, int count,
-						   int *eof, void *data_unused)
+			   int *eof, void *data_unused)
 {
 	int len = 0;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	if (policy_e2 == VIDEO_POL_LETTER_BOX)
 	{
@@ -752,11 +781,11 @@ int proc_video_policy_read(char *page, char **start, off_t off, int count,
 }
 
 int proc_video_policy_choices_read(char *page, char **start, off_t off, int count,
-								   int *eof, void *data_unused)
+				   int *eof, void *data_unused)
 {
 	int len = 0;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	len = sprintf(page, "letterbox panscan non bestfit\n");
 	return len;
@@ -764,7 +793,7 @@ int proc_video_policy_choices_read(char *page, char **start, off_t off, int coun
 
 /* hack hack ;-) */
 int proc_video_videomode_write(struct file *file, const char __user *buf,
-							   unsigned long count, void *data)
+			       unsigned long count, void *data)
 {
 	char *page;
 	ssize_t ret = -ENOMEM;
@@ -775,7 +804,7 @@ int proc_video_videomode_write(struct file *file, const char __user *buf,
 	void *fb;
 	struct fb_info *info;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	fb = stmfb_get_fbinfo_ptr();
@@ -796,7 +825,7 @@ int proc_video_videomode_write(struct file *file, const char __user *buf,
 		strncpy(myString, page, new_count);
 		myString[new_count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		//whithout -1 write a unsupportet string hangs the driver
 		for (vLoop = 0; vLoop < (sizeof(Options) / sizeof(struct Modes)) - 1; vLoop++)
@@ -819,7 +848,7 @@ int proc_video_videomode_write(struct file *file, const char __user *buf,
 			}
 			if (strncmp(myString, Options[vLoop].name, new_count) == 0)
 			{
-				printk(KERN_DEBUG "Found mode to set %s at %d\n", Options[vLoop].name, vLoop);
+				printk("Found mode to set %s at %d\n", Options[vLoop].name, vLoop);
 				modeToSet = vLoop;
 			}
 		}
@@ -843,7 +872,7 @@ int proc_video_videomode_write(struct file *file, const char __user *buf,
 					{
 						createNew = 1;
 #ifdef VERY_VERBOSE
-						printk(KERN_DEBUG "delete display\n");
+						printk("delete display\n");
 #endif
 						DvbDisplayDelete(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 					}
@@ -869,19 +898,19 @@ int proc_video_videomode_write(struct file *file, const char __user *buf,
 				if ((ProcDeviceContext != NULL) && (createNew == 1))
 				{
 #ifdef VERY_VERBOSE
-					printk(KERN_DEBUG "create new display\n");
+					printk("create new display\n");
 #endif
 					DisplayCreate(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 					VideoIoctlPlay(ProcDeviceContext);
 					err = DvbStreamSetOutputWindow(ProcDeviceContext->VideoStream,
-												   0, 0, Options[modeToSet].xres, Options[modeToSet].yres);
+								       0, 0, Options[modeToSet].xres, Options[modeToSet].yres);
 					if (err != 0)
 					{
 						printk("failed to set output window %d, %d, %d\n", Options[modeToSet].xres, Options[modeToSet].yres, err);
 					}
 #ifdef VERY_VERBOSE
 					else
-						printk(KERN_DEBUG "set output window to %d, %d ok\n", Options[modeToSet].xres, Options[modeToSet].yres);
+						printk("set output window to %d, %d ok\n", Options[modeToSet].xres, Options[modeToSet].yres);
 #endif
 				}
 			}
@@ -901,14 +930,14 @@ out:
 }
 
 int proc_video_videomode_read(char *page, char **start, off_t off, int count,
-							  int *eof, void *data_unused)
+			      int *eof, void *data_unused)
 {
 	int len = 0;
 	int vLoop = 0;
 	void *fb = NULL;
 	struct fb_info *info;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	fb = stmfb_get_fbinfo_ptr(); /* cannot return a NULL pointer */
 	/* Dagobert:
@@ -949,7 +978,7 @@ int proc_video_videomode_read(char *page, char **start, off_t off, int count,
 				Options[vLoop].sync == info->var.sync/* &&
 				Options[vLoop].vmode == info->var.vmode*/)
 		{
-			printk(KERN_DEBUG "Found mode to set %s at %d\n", Options[vLoop].name, vLoop);
+			printk("Found mode to set %s at %d\n", Options[vLoop].name, vLoop);
 			len = sprintf(page, "%s\n", Options[vLoop].name);
 			break;
 		}
@@ -958,7 +987,7 @@ int proc_video_videomode_read(char *page, char **start, off_t off, int count,
 }
 
 int proc_video_pal_h_start_write(struct file *file, const char __user *buf,
-								 unsigned long count, void *data)
+				 unsigned long count, void *data)
 {
 	char *page;
 	ssize_t ret = -ENOMEM;
@@ -966,7 +995,7 @@ int proc_video_pal_h_start_write(struct file *file, const char __user *buf,
 	int value;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -982,7 +1011,7 @@ int proc_video_pal_h_start_write(struct file *file, const char __user *buf,
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		sscanf(myString, "%x", &value);
 		fb = stmfb_get_fbinfo_ptr();
@@ -1001,7 +1030,7 @@ int proc_video_pal_h_start_write(struct file *file, const char __user *buf,
 				{
 					createNew = 1;
 #ifdef VERY_VERBOSE
-					printk(KERN_DEBUG "delete display\n");
+					printk("delete display\n");
 #endif
 					DvbDisplayDelete(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				}
@@ -1014,19 +1043,19 @@ int proc_video_pal_h_start_write(struct file *file, const char __user *buf,
 			if ((ProcDeviceContext != NULL) && (createNew == 1))
 			{
 #ifdef VERY_VERBOSE
-				printk(KERN_DEBUG "create new display\n");
+				printk("create new display\n");
 #endif
 				DisplayCreate(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				VideoIoctlPlay(ProcDeviceContext);
 				err = DvbStreamSetOutputWindow(ProcDeviceContext->VideoStream,
-											   0, 0, screen_info.xres, screen_info.yres);
+							       0, 0, screen_info.xres, screen_info.yres);
 				if (err != 0)
 				{
 					printk("failed to set output window %d, %d, %d\n", screen_info.xres, screen_info.yres, err);
 				}
 #ifdef VERY_VERBOSE
 				else
-					printk(KERN_DEBUG "set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
+					printk("set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
 #endif
 			}
 		}
@@ -1045,7 +1074,7 @@ out:
 }
 
 int proc_video_pal_h_end_write(struct file *file, const char __user *buf,
-							   unsigned long count, void *data)
+			       unsigned long count, void *data)
 {
 	char *page;
 	ssize_t ret = -ENOMEM;
@@ -1053,7 +1082,7 @@ int proc_video_pal_h_end_write(struct file *file, const char __user *buf,
 	int value;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -1069,7 +1098,7 @@ int proc_video_pal_h_end_write(struct file *file, const char __user *buf,
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		sscanf(myString, "%x", &value);
 		fb = stmfb_get_fbinfo_ptr();
@@ -1088,7 +1117,7 @@ int proc_video_pal_h_end_write(struct file *file, const char __user *buf,
 				{
 					createNew = 1;
 #ifdef VERY_VERBOSE
-					printk(KERN_DEBUG "delete display\n");
+					printk("delete display\n");
 #endif
 					DvbDisplayDelete(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				}
@@ -1101,19 +1130,19 @@ int proc_video_pal_h_end_write(struct file *file, const char __user *buf,
 			if ((ProcDeviceContext != NULL) && (createNew == 1))
 			{
 #ifdef VERY_VERBOSE
-				printk(KERN_DEBUG "create new display\n");
+				printk("create new display\n");
 #endif
 				DisplayCreate(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				VideoIoctlPlay(ProcDeviceContext);
 				err = DvbStreamSetOutputWindow(ProcDeviceContext->VideoStream,
-											   0, 0, screen_info.xres, screen_info.yres);
+							       0, 0, screen_info.xres, screen_info.yres);
 				if (err != 0)
 				{
 					printk("failed to set output window %d, %d, %d\n", screen_info.xres, screen_info.yres, err);
 				}
 #ifdef VERY_VERBOSE
 				else
-					printk(KERN_DEBUG "set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
+					printk("set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
 #endif
 			}
 		}
@@ -1132,7 +1161,7 @@ out:
 }
 
 int proc_video_pal_v_start_write(struct file *file, const char __user *buf,
-								 unsigned long count, void *data)
+				 unsigned long count, void *data)
 {
 	char *page;
 	ssize_t ret = -ENOMEM;
@@ -1140,7 +1169,7 @@ int proc_video_pal_v_start_write(struct file *file, const char __user *buf,
 	int value;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -1156,7 +1185,7 @@ int proc_video_pal_v_start_write(struct file *file, const char __user *buf,
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		sscanf(myString, "%x", &value);
 		fb = stmfb_get_fbinfo_ptr();
@@ -1175,7 +1204,7 @@ int proc_video_pal_v_start_write(struct file *file, const char __user *buf,
 				{
 					createNew = 1;
 #ifdef VERY_VERBOSE
-					printk(KERN_DEBUG "delete display\n");
+					printk("delete display\n");
 #endif
 					DvbDisplayDelete(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				}
@@ -1188,19 +1217,19 @@ int proc_video_pal_v_start_write(struct file *file, const char __user *buf,
 			if ((ProcDeviceContext != NULL) && (createNew == 1))
 			{
 #ifdef VERY_VERBOSE
-				printk(KERN_DEBUG "create new display\n");
+				printk("create new display\n");
 #endif
 				DisplayCreate(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				VideoIoctlPlay(ProcDeviceContext);
 				err = DvbStreamSetOutputWindow(ProcDeviceContext->VideoStream,
-											   0, 0, screen_info.xres, screen_info.yres);
+							       0, 0, screen_info.xres, screen_info.yres);
 				if (err != 0)
 				{
 					printk("failed to set output window %d, %d, %d\n", screen_info.xres, screen_info.yres, err);
 				}
 #ifdef VERY_VERBOSE
 				else
-					printk(KERN_DEBUG "set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
+					printk("set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
 #endif
 			}
 		}
@@ -1219,7 +1248,7 @@ out:
 }
 
 int proc_video_pal_v_end_write(struct file *file, const char __user *buf,
-							   unsigned long count, void *data)
+			       unsigned long count, void *data)
 {
 	char *page;
 	ssize_t ret = -ENOMEM;
@@ -1227,7 +1256,7 @@ int proc_video_pal_v_end_write(struct file *file, const char __user *buf,
 	int value;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -1243,7 +1272,7 @@ int proc_video_pal_v_end_write(struct file *file, const char __user *buf,
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		sscanf(myString, "%x", &value);
 		fb = stmfb_get_fbinfo_ptr();
@@ -1262,7 +1291,7 @@ int proc_video_pal_v_end_write(struct file *file, const char __user *buf,
 				{
 					createNew = 1;
 #ifdef VERY_VERBOSE
-					printk(KERN_DEBUG "delete display\n");
+					printk("delete display\n");
 #endif
 					DvbDisplayDelete(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				}
@@ -1275,19 +1304,19 @@ int proc_video_pal_v_end_write(struct file *file, const char __user *buf,
 			if ((ProcDeviceContext != NULL) && (createNew == 1))
 			{
 #ifdef VERY_VERBOSE
-				printk(KERN_DEBUG "create new display\n");
+				printk("create new display\n");
 #endif
 				DisplayCreate(BACKEND_VIDEO_ID, ProcDeviceContext->Id);
 				VideoIoctlPlay(ProcDeviceContext);
 				err = DvbStreamSetOutputWindow(ProcDeviceContext->VideoStream,
-											   0, 0, screen_info.xres, screen_info.yres);
+							       0, 0, screen_info.xres, screen_info.yres);
 				if (err != 0)
 				{
 					printk("failed to set output window %d, %d, %d\n", screen_info.xres, screen_info.yres, err);
 				}
 #ifdef VERY_VERBOSE
 				else
-					printk(KERN_DEBUG "set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
+					printk("set output window to %d, %d ok\n", screen_info.xres, screen_info.yres);
 #endif
 			}
 		}
@@ -1306,13 +1335,13 @@ out:
 }
 
 int proc_video_pal_h_start_read(char *page, char **start, off_t off, int count,
-								int *eof, void *data_unused)
+				int *eof, void *data_unused)
 {
 	int len = 0;
 	void *fb = NULL;
 	struct fb_info *info;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	fb = stmfb_get_fbinfo_ptr(); /* cannot return a NULL pointer */
 	/*
@@ -1325,13 +1354,13 @@ int proc_video_pal_h_start_read(char *page, char **start, off_t off, int count,
 }
 
 int proc_video_pal_h_end_read(char *page, char **start, off_t off, int count,
-							  int *eof, void *data_unused)
+			      int *eof, void *data_unused)
 {
 	int len = 0;
 	void *fb = NULL;
 	struct fb_info *info;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	fb = stmfb_get_fbinfo_ptr(); /* cannot return a NULL pointer */
 	/*
@@ -1344,13 +1373,13 @@ int proc_video_pal_h_end_read(char *page, char **start, off_t off, int count,
 }
 
 int proc_video_pal_v_start_read(char *page, char **start, off_t off, int count,
-								int *eof, void *data_unused)
+				int *eof, void *data_unused)
 {
 	int len = 0;
 	void *fb = NULL;
 	struct fb_info *info;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	fb = stmfb_get_fbinfo_ptr(); /* cannot return a NULL pointer */
 	/*
@@ -1363,13 +1392,13 @@ int proc_video_pal_v_start_read(char *page, char **start, off_t off, int count,
 }
 
 int proc_video_pal_v_end_read(char *page, char **start, off_t off, int count,
-							  int *eof, void *data_unused)
+			      int *eof, void *data_unused)
 {
 	int len = 0;
 	void *fb = NULL;
 	struct fb_info *info;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	fb = stmfb_get_fbinfo_ptr(); /* cannot return a NULL pointer */
 	/*
@@ -1382,13 +1411,13 @@ int proc_video_pal_v_end_read(char *page, char **start, off_t off, int count,
 }
 
 int proc_video_videomode_choices_write(struct file *file, const char __user *buf,
-									   unsigned long count, void *data)
+				       unsigned long count, void *data)
 {
 	char *page;
 	ssize_t ret = -ENOMEM;
 	/* int result; */
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -1403,14 +1432,14 @@ int proc_video_videomode_choices_write(struct file *file, const char __user *buf
 }
 
 int proc_video_videomode_choices_read(char *page, char **start, off_t off, int count,
-									  int *eof, void *data_unused)
+				      int *eof, void *data_unused)
 {
 	int len = 0;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %d\n", __FUNCTION__, count);
+	printk("%s %d\n", __FUNCTION__, count);
 #endif
 #if 0
-#if defined(UFS912) || defined(SPARK) || defined (SPARK7162) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7810A) || defined(HS7420) || defined(HS7429) || defined(HS7119) || defined(HS7819) || defined(ATEMIO520) || defined(ATEMIO530) || defined(UFS913) || defined(VITAMIN_HD5000) || defined(SAGEMCOM88) || defined(PACE7241) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD) || defined(DP7001) || defined(EPP8000)
+#if defined(UFS912) || defined(SPARK) || defined (SPARK7162) || defined(ATEVIO7500) || defined(HS7110) || defined(HS7810A) || defined(HS7420) || defined(HS7429) || defined(HS7119) || defined(HS7819) || defined(ATEMIO520) || defined(ATEMIO530) || defined(UFS913) || defined(VITAMIN_HD5000) || defined(SAGEMCOM88) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(FOREVER_3434HD) || defined(DP7001) || defined(EPP8000)
 	len = sprintf(page, "pal 1080i50 720p50 576p50 576i 1080i 720p 1080p24 1080p25 1080p30 1080p50 1080p59 1080p PC\n");
 #else
 	len = sprintf(page, "pal 1080i50 720p50 576p50 576i 1080i 720p 1080p24 1080p25 1080p30 PC\n");
@@ -1431,14 +1460,14 @@ int proc_video_videomode_choices_read(char *page, char **start, off_t off, int c
 }
 
 int proc_video_videomode_preferred_write(struct file *file, const char __user *buf,
-										 unsigned long count, void *data)
+					 unsigned long count, void *data)
 {
 	char *page;
 	char *myString;
 	ssize_t ret = -ENOMEM;
 	/* int result; */
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	mutex_lock(&(ProcDeviceContext->DvbContext->Lock));
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -1451,7 +1480,7 @@ int proc_video_videomode_preferred_write(struct file *file, const char __user *b
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		kfree(myString);
 	}
@@ -1462,25 +1491,25 @@ out:
 }
 
 int proc_video_videomode_preferred_read(char *page, char **start, off_t off, int count,
-										int *eof, void *data_unused)
+					int *eof, void *data_unused)
 {
 	int len = 0;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 	len = sprintf(page, "HDMI\n");
 	return len;
 }
 
 int proc_video_alpha_write(struct file *file, const char __user *buf,
-						   unsigned long count, void *data)
+			   unsigned long count, void *data)
 {
 	char *page;
 	char *myString;
 	ssize_t ret = -ENOMEM;
 	/* int result; */
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s %ld - ", __FUNCTION__, count);
+	printk("%s %ld - ", __FUNCTION__, count);
 #endif
 	page = (char *)__get_free_page(GFP_KERNEL);
 	if (page)
@@ -1496,7 +1525,7 @@ int proc_video_alpha_write(struct file *file, const char __user *buf,
 		strncpy(myString, page, count);
 		myString[count] = '\0';
 #ifdef VERY_VERBOSE
-		printk(KERN_DEBUG "%s\n", myString);
+		printk("%s\n", myString);
 #endif
 		sscanf(myString, "%d", &alpha);
 		varEx.layerid = 0;
@@ -1514,11 +1543,11 @@ out:
 }
 
 int proc_video_alpha_read(char *page, char **start, off_t off, int count,
-						  int *eof, void *data_unused)
+			  int *eof, void *data_unused)
 {
 	int len = 0;
 #ifdef VERY_VERBOSE
-	printk(KERN_DEBUG "%s\n", __FUNCTION__);
+	printk("%s\n", __FUNCTION__);
 #endif
 #if !defined(ADB_BOX)
 	struct stmfb_info *info = stmfb_get_fbinfo_ptr();
