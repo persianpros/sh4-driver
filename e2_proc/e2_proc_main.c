@@ -1032,7 +1032,15 @@ struct ProcStructure_s e2Proc[] =
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	{cProcEntry, "stb/info/model_name",                                              NULL, NULL, NULL, NULL, ""},
 #endif
 
@@ -1158,7 +1166,15 @@ struct ProcStructure_s e2Proc[] =
  || defined(HS7420) \
  || defined(HS7429) \
  || defined(HS7810A) \
- || defined(HS7819)
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(FOREVER_3434HD) \
+ || defined(FOREVER_2424HD) \
+ || defined(GPV8000) \
+ || defined(EP8000) \
+ || defined(EPP8000)
 	{cProcEntry, "stb/fp/resellerID",                                                NULL, NULL, NULL, NULL, ""},
 #endif
 
