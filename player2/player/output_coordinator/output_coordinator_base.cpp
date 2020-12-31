@@ -230,7 +230,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::RegisterStream(
 	NewContext->LeastSquareFit.Reset();
 	NewContext->ManifestorLatency = INVALID_TIME;
 	NewContext->StreamOffset = (long long)INVALID_TIME;
-#if defined QBOXHD || defined QBOXHD_MINI
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
 	NewContext->LastSpeedChanged = false;
 #endif
 	OS_InitializeEvent(&NewContext->AbortPerformEntryIntoDecodeWindowWait);
@@ -500,7 +500,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::SetPlaybackSpeed(
 			if (ContextLoop->TimeMappingEstablished)
 			{
 				TranslateSystemTimeToPlayback(ContextLoop, Now, &ContextLoop->BaseNormalizedPlaybackTime);
-#if defined QBOXHD || defined QBOXHD_MINI
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
 				ContextLoop->LastSeenNormalizedPlaybackTime = ContextLoop->BaseNormalizedPlaybackTime;
 #endif
 				ContextLoop->BaseSystemTime = Now;
@@ -548,7 +548,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::ResetTimeMapping(OutputCoord
 			ContextLoop = ContextLoop->Next)
 	{
 		ContextLoop->TimeMappingEstablished = false;
-#if defined QBOXHD || defined QBOXHD_MINI
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
 		ContextLoop->LastSeenNormalizedPlaybackTime = 0;
 #endif
 		OS_SetEvent(&ContextLoop->AbortPerformEntryIntoDecodeWindowWait);
@@ -664,7 +664,7 @@ OutputCoordinatorStatus_t OutputCoordinator_Base_c::TranslatePlaybackTimeToSyste
 	{
 		if (!Context->TimeMappingEstablished)
 			return OutputCoordinatorMappingNotEstablished;
-#if defined QBOXHD || defined QBOXHD_MINI
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
 		if (Speed.IntegerPart()==1)                                                                             //Added by Duolabs
         {
             if (Context->LastSeenNormalizedPlaybackTime!=0 && (NormalizedPlaybackTime > Context->LastSeenNormalizedPlaybackTime))

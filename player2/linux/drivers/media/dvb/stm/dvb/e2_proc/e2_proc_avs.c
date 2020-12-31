@@ -33,8 +33,11 @@ struct stmfbio_output_configuration;
 extern struct snd_kcontrol **pseudoGetControls(int *numbers);
 extern int snd_pseudo_integer_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol);
 extern int snd_pseudo_integer_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+int avs_command_kernel(unsigned int cmd, void *arg) {}
+#else
 extern int avs_command_kernel(unsigned int cmd, void *arg);
-
+#endif
 extern int stmfb_set_output_configuration(struct stmfbio_output_configuration *c, struct stmfb_info *i);
 extern int stmfb_get_output_configuration(struct stmfbio_output_configuration *c, struct stmfb_info *i);
 struct stmfb_info *stmfb_get_fbinfo_ptr(void);
@@ -270,6 +273,11 @@ int proc_avs_0_volume_write(struct file *file, const char __user *buf, unsigned 
 			ucontrol.value.integer.value[3] = volume;
 			ucontrol.value.integer.value[4] = volume;
 			ucontrol.value.integer.value[5] = volume;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+/* For 'Side Left' and 'Side Right' in pseudo_card 'Master' */
+			ucontrol.value.integer.value[6] = volume;
+			ucontrol.value.integer.value[7] = volume;
+#endif
 			snd_pseudo_integer_put(single_control, &ucontrol);
 		}
 		else

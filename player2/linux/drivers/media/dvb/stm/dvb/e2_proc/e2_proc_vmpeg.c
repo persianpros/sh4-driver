@@ -28,7 +28,13 @@ int proc_vmpeg_0_dst_left_write(struct file *file, const char __user *buf,
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s %d - ", __FUNCTION__, (unsigned int)count);
 #endif
@@ -62,6 +68,9 @@ int proc_vmpeg_0_dst_left_write(struct file *file, const char __user *buf,
 		{
 			mutex_lock(&(pContext->DvbContext->Lock));
 			err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 			if (err != 0)
 				printk("failed to get output window %d\n", err);
 #ifdef VERY_VERBOSE
@@ -77,6 +86,9 @@ int proc_vmpeg_0_dst_left_write(struct file *file, const char __user *buf,
 				printk("set output window ok %d %d %d %d\n", l, t, w, h);
 #endif
 			mutex_unlock(&(pContext->DvbContext->Lock));
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			VideoSetOutputWindow(pContext, l, t, w, h );
+#endif
 		}
 		/* always return count to avoid endless loop */
 		ret = count;
@@ -96,7 +108,13 @@ int proc_vmpeg_0_dst_left_read(char *page, char **start, off_t off, int count,
 	void *fb;
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -117,6 +135,9 @@ int proc_vmpeg_0_dst_left_read(char *page, char **start, off_t off, int count,
 	{
 		mutex_lock(&(pContext->DvbContext->Lock));
 		err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 		if (err != 0)
 		{
 			printk("failed to get output window %d\n", err);
@@ -142,7 +163,13 @@ int proc_vmpeg_0_dst_top_write(struct file *file, const char __user *buf,
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s %d - ", __FUNCTION__, (unsigned int)count);
 #endif
@@ -176,6 +203,9 @@ int proc_vmpeg_0_dst_top_write(struct file *file, const char __user *buf,
 			int l, t, w, h;
 			mutex_lock(&(pContext->DvbContext->Lock));
 			err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 			if (err != 0)
 				printk("failed to get output window %d\n", err);
 #ifdef VERY_VERBOSE
@@ -191,6 +221,9 @@ int proc_vmpeg_0_dst_top_write(struct file *file, const char __user *buf,
 				printk("set output window ok %d %d %d %d\n", l, t, w, h);
 #endif
 			mutex_unlock(&(pContext->DvbContext->Lock));
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			VideoSetOutputWindow(pContext, l, t, w, h );
+#endif
 		}
 		/* always return count to avoid endless loop */
 		ret = count;
@@ -210,7 +243,13 @@ int proc_vmpeg_0_dst_top_read(char *page, char **start, off_t off, int count,
 	void *fb;
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -231,6 +270,9 @@ int proc_vmpeg_0_dst_top_read(char *page, char **start, off_t off, int count,
 	{
 		mutex_lock(&(pContext->DvbContext->Lock));
 		err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 		if (err != 0)
 		{
 			printk("failed to get output window %d\n", err);
@@ -255,7 +297,13 @@ int proc_vmpeg_0_dst_width_write(struct file *file, const char __user *buf,
 	void *fb;
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
 #ifdef VERY_VERBOSE
 	printk("%s %d - ", __FUNCTION__, (unsigned int)count);
@@ -290,6 +338,9 @@ int proc_vmpeg_0_dst_width_write(struct file *file, const char __user *buf,
 			int l, t, w, h;
 			mutex_lock(&(pContext->DvbContext->Lock));
 			err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 			if (err != 0)
 				printk("failed to get output window %d\n", err);
 #ifdef VERY_VERBOSE
@@ -305,6 +356,9 @@ int proc_vmpeg_0_dst_width_write(struct file *file, const char __user *buf,
 				printk("set output window ok %d %d %d %d\n", l, t, w, h);
 #endif
 			mutex_unlock(&(pContext->DvbContext->Lock));
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			VideoSetOutputWindow(pContext, l, t, w, h );
+#endif
 		}
 		/* always return count to avoid endless loop */
 		ret = count;
@@ -324,7 +378,13 @@ int proc_vmpeg_0_dst_width_read(char *page, char **start, off_t off, int count,
 	void *fb;
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -345,6 +405,9 @@ int proc_vmpeg_0_dst_width_read(char *page, char **start, off_t off, int count,
 	{
 		mutex_lock(&(pContext->DvbContext->Lock));
 		err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 		if (err != 0)
 		{
 			printk("failed to get output window %d\n", err);
@@ -369,7 +432,13 @@ int proc_vmpeg_0_dst_height_write(struct file *file, const char __user *buf,
 	void *fb;
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
 #ifdef VERY_VERBOSE
 	printk("%s %d - ", __FUNCTION__, (unsigned int)count);
@@ -404,6 +473,9 @@ int proc_vmpeg_0_dst_height_write(struct file *file, const char __user *buf,
 			int l, t, w, h;
 			mutex_lock(&(pContext->DvbContext->Lock));
 			err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 			if (err != 0)
 				printk("failed to get output window %d\n", err);
 #ifdef VERY_VERBOSE
@@ -419,6 +491,9 @@ int proc_vmpeg_0_dst_height_write(struct file *file, const char __user *buf,
 				printk("set output window ok %d %d %d %d\n", l, t, w, h);
 #endif
 			mutex_unlock(&(pContext->DvbContext->Lock));
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			VideoSetOutputWindow(pContext, l, t, w, h );
+#endif
 		}
 		/* always return count to avoid endless loop */
 		ret = count;
@@ -438,7 +513,13 @@ int proc_vmpeg_0_dst_height_read(char *page, char **start, off_t off, int count,
 	void *fb;
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -459,6 +540,9 @@ int proc_vmpeg_0_dst_height_read(char *page, char **start, off_t off, int count,
 	{
 		mutex_lock(&(pContext->DvbContext->Lock));
 		err = DvbStreamGetOutputWindow(pContext->VideoStream, &l, &t, &w, &h);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		if ( err != 0 ) err = VideoGetOutputWindow(pContext, &l,&t,&w,&h );
+#endif
 		if (err != 0)
 		{
 			printk("failed to get output window %d\n", err);
@@ -478,7 +562,13 @@ int proc_vmpeg_0_yres_read(char *page, char **start, off_t off, int count,
 			   int *eof, void *data)
 {
 	int len = 0;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -495,7 +585,13 @@ int proc_vmpeg_0_xres_read(char *page, char **start, off_t off, int count,
 			   int *eof, void *data)
 {
 	int len = 0;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -512,7 +608,13 @@ int proc_vmpeg_0_framerate_read(char *page, char **start, off_t off, int count,
 				int *eof, void *data)
 {
 	int len = 0;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -529,7 +631,13 @@ int proc_vmpeg_0_aspect_read(char *page, char **start, off_t off, int count,
 			     int *eof, void *data)
 {
 	int len = 0;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s\n", __FUNCTION__);
 #endif
@@ -552,7 +660,13 @@ int proc_vmpeg_0_dst_all_write(struct file *file, const char __user *buf,
 	struct fb_info *info;
 	struct fb_var_screeninfo screen_info;
 	char *myString = kmalloc(count + 1, GFP_KERNEL);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbCurrDecoder_s *pDvbCurrDecoder = (struct DvbCurrDecoder_s*)data;
+	struct DvbContext_s *pDvbContext =pDvbCurrDecoder->DvbContext;
+	struct DeviceContext_s *pContext = &pDvbContext->DeviceContext[0];
+#else
 	struct DeviceContext_s *pContext = (struct DeviceContext_s *)data;
+#endif
 #ifdef VERY_VERBOSE
 	printk("%s %d - ", __FUNCTION__, (unsigned int)count);
 #endif
@@ -603,6 +717,9 @@ int proc_vmpeg_0_dst_all_write(struct file *file, const char __user *buf,
 				printk("set output window ok %d %d %d %d\n", l, t, w, h);
 #endif
 			mutex_unlock(&(pContext->DvbContext->Lock));
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			VideoSetOutputWindow(pContext, l, t, w, h );
+#endif
 		}
 		/* always return count to avoid endless loop */
 		ret = count;

@@ -31,6 +31,10 @@ license from ST.
 #define STREAM_MAX_NUMBER 16
 #define DEFAULT_ERR_THRESHOLD 5
 
+#ifdef defined(QBOXHD) || defined(QBOXHD_MINI)
+#define bool int
+#endif
+
 static int PlayerSetEvent(struct player_event_s *Event);
 static struct mutex SysfsWriteLock;
 
@@ -116,7 +120,7 @@ static struct class player2_class =
 static void do_notify(void)
 {
 	notify_count++;
-#ifndef __TDT__
+#ifndef __TDT__ || defined(QBOXHD) || defined(QBOXHD_MINI)
 	sysfs_notify(&player2_class.subsys.kobj, NULL, "notify");
 #endif
 }

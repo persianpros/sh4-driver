@@ -156,6 +156,9 @@ class HavanaPlayer_c
 		int isDisplayCreated(char *Media,
 				     unsigned int SurfaceId);
 #endif
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		class Player_c*   getPlayer(void);
+#endif
 };
 
 /*{{{ doxynote*/

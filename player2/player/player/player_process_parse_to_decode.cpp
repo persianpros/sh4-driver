@@ -52,7 +52,7 @@ OS_TaskEntry(PlayerProcessParseToDecode)
 	return NULL;
 }
 
-#if defined QBOXHD || defined QBOXHD_MINI
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
 void Player_Generic_c::setTimeCtrl(bool on)
 {
 	//report(severity_info,"Player_Generic_c::setTimeCtrl(bool on):  on=%s <================= \n\n\n",on?"true":"false");

@@ -85,6 +85,9 @@ int DvbBackendInit(void)
 		BACKEND_ERROR("Unable to create backend context - no memory\n");
 		return -ENOMEM;
 	}
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	Backend->Name = NULL;
+#endif
 	Backend->Ops = NULL;
 	return 0;
 }
@@ -484,6 +487,10 @@ int DvbStreamInject(struct StreamContext_s *Stream,
 		    unsigned int Length)
 {
 	int Result = 0;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	/* Print audio and video pids */
+	//printk("------> %s(): buf[1]: 0x%X, buf[2]: 0x%X\n", __func__, *(Buffer + 1), *(Buffer + 2));
+#endif
 	mutex_lock(&(Stream->Lock));
 	Result = Stream->Inject(Stream->Handle, Buffer, Length);
 	mutex_unlock(&(Stream->Lock));

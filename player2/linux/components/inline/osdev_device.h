@@ -687,6 +687,15 @@ static inline OSDEV_Status_t OSDEV_ClaimSemaphoreTimeout(OSDEV_Semaphore_t *Sema
 
 // -----------------------------------------------------------------------------------------------
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+static inline int   OSDEV_ClaimSemaphore_trylock(    OSDEV_Semaphore_t       *Semaphore )
+{
+    return down_trylock( *Semaphore );
+}
+
+// -----------------------------------------------------------------------------------------------
+#endif
+
 static inline OSDEV_Status_t OSDEV_ClaimSemaphoreInterruptible(OSDEV_Semaphore_t *Semaphore)
 {
 	if (down_interruptible(*Semaphore) != 0)

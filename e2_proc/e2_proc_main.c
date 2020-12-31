@@ -1099,7 +1099,7 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/video/hdmi_colorspace_choices",                                NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/force_dvi",                                              NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/video/policy",                                                 NULL, NULL, NULL, NULL, ""},
-#if defined QBOXHD || defined QBOXHD_MINI
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
 	{cProcEntry, "stb/video/policy2"                                                , NULL, NULL, NULL, NULL, ""},
 #endif
 	{cProcEntry, "stb/video/policy_choices",                                         NULL, NULL, NULL, NULL, ""},

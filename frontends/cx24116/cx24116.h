@@ -159,4 +159,8 @@ struct cx24116_state
 
 extern void cx24116_register_frontend(struct dvb_adapter *dvb_adap);
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+int cx24116_set_voltage(struct dvb_frontend* fe, fe_sec_voltage_t voltage);
+#endif
+
 #endif // _CX24116_H_

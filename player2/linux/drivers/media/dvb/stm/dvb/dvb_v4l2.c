@@ -66,8 +66,11 @@ license from ST.
 
 #define DVB_V4L2_MAX_BUFFERS 10
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+extern struct DvbContext_s*     DvbContextArray[3];
+#else
 extern struct DvbContext_s *DvbContext;
-
+#endif
 /******************************
  * GLOBAL VARIABLES
  ******************************/
@@ -400,6 +403,11 @@ static int linuxdvb_v4l2_capture_thread(void *data)
 int linuxdvb_ioctl(struct stm_v4l2_handles *handle, struct stm_v4l2_driver *driver, int device, enum _stm_v4l2_driver_type type, struct file *file, unsigned int cmd, void *arg)
 {
 	struct linuxdvb_v4l2 *ldvb = handle->v4l2type[type].handle;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	struct DvbContext_s *DvbContext = DvbContextArray[0];
+
+	printk("-----> %s(): Aqui me atora: DvbContext[0]!!!!!!!!\n", __func__);
+#endif
 	// Need a mutex here
 	switch (cmd)
 	{

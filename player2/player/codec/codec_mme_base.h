@@ -238,6 +238,11 @@ typedef struct CodecBufferState_s
 	bool DecodedWithMbaff; // Flag used by H264
 	unsigned int ReferenceFrameSlot; // Value used by H264
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	unsigned int                  ReferenceFrameCount_time;                                         //Added by Duolabs
+	unsigned int                  ReferenceFrame_flag;                                              //Added by Duolabs
+#endif
+
 	unsigned char *DecimatedLumaPointer;
 	unsigned char *DecimatedChromaPointer;
 

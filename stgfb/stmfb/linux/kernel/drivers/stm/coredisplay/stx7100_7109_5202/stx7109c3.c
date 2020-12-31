@@ -46,13 +46,9 @@ static struct stmcore_display_pipeline_data platform_data[] = {
     .blitter_irq              = 156,
     .blitter_irq_kernel       = -1, /* handled by main blitter */
     .hdmi_irq                 = 158,
-#if defined(CONFIG_SH_ST_MB442) || defined(CONFIG_SH_ST_HMP7100)
+#if defined(CONFIG_SH_ST_MB442) || defined(CONFIG_SH_ST_HMP7100) || defined(CONFIG_SH_ST_MB411)
     .hdmi_i2c_adapter_id      = 1,
-#elif defined(CONFIG_SH_ST_MB448)
-    .hdmi_i2c_adapter_id      = 0,
-#elif defined(CONFIG_SH_ST_MB411)
-    .hdmi_i2c_adapter_id      = 1,
-#elif defined(CONFIG_SH_ST_HMS1)
+#elif defined(CONFIG_SH_ST_HMS1) || defined(QBOXHD) || defined(QBOXHD_MINI)
     .hdmi_i2c_adapter_id      = 2,
 #else
     .hdmi_i2c_adapter_id      = 0, /* Add your board definition here */
@@ -117,19 +113,28 @@ static struct stmcore_display_pipeline_data platform_data[] = {
     .vtg_irq                  = 154,
     .blitter_irq              = 156,
     .hdmi_irq                 = 158,
-#if defined(UFS922)
+#if defined(CONFIG_SH_STB7100_REF) \
+|| defined(CONFIG_SH_ST_MB442) \
+|| defined(CONFIG_SH_RELOOK511) \
+|| defined(CUBEREVO) \
+|| defined(CUBEREVO_MINI) \
+|| defined(CUBEREVO_MINI2) \
+|| defined(CUBEREVO_250HD) \
+|| defined(CUBEREVO_2000HD) \
+|| defined(CUBEREVO_9500HD) \
+|| defined(CUBEREVO_MINI_FTA) \
+|| defined(CUBEREVO_3000HD) \
+|| defined(CONFIG_SH_IPBOX9900) \
+|| defined(CONFIG_SH_IPBOX99) \
+|| defined(CONFIG_SH_IPBOX55) \
+|| defined(CONFIG_SH_ARIVALINK200) \
+|| defined(HL101) \
+|| defined(VIP1_V1) \
+|| defined(VIP1_V2) \
+|| defined(VIP2)
+    .hdmi_i2c_adapter_id      = 1,
+#elif defined(CONFIG_SH_STB7109E_REF) || defined(CONFIG_SH_ST_MB448) || defined(UFS922) || defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(QBOXHD) || defined(QBOXHD_MINI)
 /* Dagobert: for stlinux23 this is mb422 but i2c is on bus 2 instead! */
-    .hdmi_i2c_adapter_id      = 2,
-#elif defined(HL101) || defined(VIP1_V1) || defined(VIP1_V2) || defined(VIP2)
-/*nassar: spider-box hl-101 uses id 1  */
-    .hdmi_i2c_adapter_id      = 1,
-#elif defined(CONFIG_SH_STB7100_REF) || defined(CONFIG_SH_ST_MB442) || defined(CONFIG_SH_RELOOK511) || \
-    defined(CUBEREVO) || defined(CUBEREVO_MINI) || \
-    defined(CUBEREVO_MINI2) || defined(CUBEREVO_250HD) || defined(CUBEREVO_2000HD) || \
-    defined(CUBEREVO_9500HD) || defined(CUBEREVO_MINI_FTA) || defined(CUBEREVO_3000HD) || \
-    defined(CONFIG_SH_IPBOX9900) || defined(CONFIG_SH_IPBOX99) || defined(CONFIG_SH_IPBOX55) || defined(CONFIG_SH_ARIVALINK200)
-    .hdmi_i2c_adapter_id      = 1,
-#elif defined(CONFIG_SH_STB7109E_REF) || defined(CONFIG_SH_ST_MB448)
     .hdmi_i2c_adapter_id      = 2,
 #elif defined(CONFIG_SH_STB7100_MBOARD) || defined(CONFIG_SH_ST_MB411)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
@@ -137,9 +142,8 @@ static struct stmcore_display_pipeline_data platform_data[] = {
 #else
     .hdmi_i2c_adapter_id      = 1,
 #endif
-#endif
-#if defined(FORTIS_HDBOX) || defined(OCTAGON1008)
-    .hdmi_i2c_adapter_id      = 2,
+#else 
+    .hdmi_i2c_adapter_id      = 0,
 #endif
     .main_output_id           = 0,
     .aux_output_id            = -1,
@@ -247,7 +251,9 @@ static bool claimed_gpio_hotplug;
     defined(CONFIG_SH_ST_MB442)   || \
     defined(CONFIG_SH_ST_MB448)   || \
     defined(CONFIG_SH_ST_HMP7100) || \
-    defined(CONFIG_SH_ST_HMS1)
+    defined(CONFIG_SH_ST_HMS1) || \
+    defined(QBOXHD) || \
+    defined(QBOXHD_MINI)
 #define SYSCONF_DEVICEID 0x19001000
 #else
 #define SYSCONF_DEVICEID 0

@@ -229,6 +229,10 @@ extern int proc_video_hdmi_colorspace_write(struct file* file, const char __user
 extern int proc_video_hdmi_colorspace_choices_read(char* page, char** start, off_t off, int count, int* eof, void* data_unused);
 extern int proc_video_policy_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused);
 extern int proc_video_policy_write(struct file *file, const char __user *buf, unsigned long count, void *data);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+extern int proc_video_policy2_read(char *page, char **start, off_t off, int count,int *eof, void *data_unused);
+extern int proc_video_policy2_write(struct file *file, const char __user *buf, unsigned long count, void *data);
+#endif
 extern int proc_video_policy_choices_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused);
 extern int proc_video_videomode_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused);
 extern int proc_video_videomode_write(struct file *file, const char __user *buf, unsigned long count, void *data);
@@ -386,8 +390,11 @@ struct e2_procs
 	 {"stb/video/force_dvi", NULL, NULL, 0},
 	*/
 	{"stb/video/hdmi_colorspace", proc_video_hdmi_colorspace_read, proc_video_hdmi_colorspace_write, 0},
-	{"stb/video/hdmi_colorspace_choices", proc_video_hdmi_colorspace_choices_read,NULL, 0},
+	{"stb/video/hdmi_colorspace_choices", proc_video_hdmi_colorspace_choices_read, NULL, 0},
 	{"stb/video/policy", proc_video_policy_read, proc_video_policy_write, 0},
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	{"stb/video/policy2", NULL, proc_video_policy2_read, proc_video_policy2_write, 0},
+#endif
 	{"stb/video/policy_choices", proc_video_policy_choices_read, NULL, 0},
 	{"stb/video/videomode", proc_video_videomode_read, proc_video_videomode_write, 0},
 	{"stb/video/videomode_50hz", proc_video_videomode_read, proc_video_videomode_write, 0},

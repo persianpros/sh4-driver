@@ -17,8 +17,12 @@
 #include <asm/irq.h>
 
 #if defined(CONFIG_CPU_SUBTYPE_STB7100)
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+#include "qboxhd.h"
+#else
 #include "mb442.h"
 #include "hms1.h"
+#endif
 #include "platform_710x.h"
 #elif defined(CONFIG_CPU_SUBTYPE_STX7200)
 #include "mb520.h"

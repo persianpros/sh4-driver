@@ -285,6 +285,11 @@ static int aspect_ply = (video_format_t) VIDEO_FORMAT_16_9;
 static int policy_e2 = VIDEO_POL_LETTER_BOX;
 static int policy_ply = (video_displayformat_t) VIDEO_LETTER_BOX;
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+static int policy2_e2  = VIDEO_POL_LETTER_BOX;
+static int policy2_ply = (video_displayformat_t) VIDEO_LETTER_BOX;
+#endif
+
 #if defined(ADB_BOX)
 static int video_switch = 0;
 static int video_switch_type = 0; //default 0, 0-bska/bsla/bzzb 1-bxzb
@@ -296,6 +301,22 @@ int proc_video_policy_get(void)
 	 * VideoIoctl which holds this semaphore too. This means deadlock.
 	   mutex_lock (&(ProcDeviceContext->DvbContext->Lock));
 	*/
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	if (ProcDeviceContext->VideoStream != NULL)
+	{
+		if (policy_e2 == VIDEO_POL_LETTER_BOX) 
+			policy_ply = VIDEO_LETTER_BOX;
+		else if (policy_e2 == VIDEO_POL_PAN_SCAN) 
+			policy_ply = VIDEO_PAN_SCAN;
+		else if (policy_e2 == VIDEO_POL_BEST_FIT) 
+			policy_ply = VIDEO_FULL_SCREEN;
+		else if (policy_e2 == VIDEO_POL_NON_LINEAR) 
+			policy_ply = VIDEO_CENTER_CUT_OUT;
+
+	   //SCART
+	   avs_command_kernel(SAAIOSWSS, SAA_WSS_43F);
+	}
+#else
 	if (ProcDeviceContext->VideoStream != NULL)
 	{
 		int cur_video_aspect = VIDEO_FORMAT_16_9;
@@ -367,6 +388,7 @@ int proc_video_policy_get(void)
 		//SCART
 		avs_command_kernel(SAAIOSWSS, (void *)(aspect_e2 == VIDEO_FORMAT_16_9 ? SAA_WSS_169F : SAA_WSS_43F));
 	}
+#endif
 	/* Dagobert: You cannot use this semaphore here because this will be called from
 	 * VideoIoctl which holds this semaphore too. This means deadlock.
 	    mutex_unlock (&(ProcDeviceContext->DvbContext->Lock));
@@ -638,6 +660,9 @@ int proc_video_aspect_write(struct file *file, const char __user *buf,
 			aspect_e2 = VIDEO_FORMAT_4_3;
 		}
 		//printk("Video Format = %d\n", format);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)		
+		aspect_ply = aspect_e2;
+#endif
 		/* always return count to avoid endless loop */
 		ret = count;
 		kfree(myString);
@@ -731,7 +756,13 @@ int proc_video_policy_write(struct file *file, const char __user *buf,
 		if (ProcDeviceContext->VideoStream != NULL)
 		{
 			policy_ply = proc_video_policy_get();
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			aspect_ply = aspect_e2; 
+			if (ProcDeviceContext->VideoSize.aspect_ratio ==  VIDEO_FORMAT_4_3)
+			{
+#else
 			aspect_ply = proc_video_aspect_get();
+#endif
 			//printk("Calling DvbStreamSetOption ->PLAY_OPTION_VIDEO_ASPECT_RATIO\n");
 			result = DvbStreamSetOption(ProcDeviceContext->VideoStream, PLAY_OPTION_VIDEO_ASPECT_RATIO, aspect_ply);
 			if (result != 0)
@@ -743,6 +774,9 @@ int proc_video_policy_write(struct file *file, const char __user *buf,
 				printk("Failed to set option %d\n", result);
 			else
 				ProcDeviceContext->VideoState.display_format = (video_displayformat_t)policy_ply;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			}
+#endif
 		}
 		else
 			printk("Can't set policy, VideoStream NULL\n");
@@ -779,6 +813,121 @@ int proc_video_policy_read(char *page, char **start, off_t off, int count,
 	}
 	return len;
 }
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+int proc_video_policy2_get(void) {
+
+/* Dagobert: You cannot use this semaphore here because this will be called from
+ * VideoIoctl which holds this semaphore too. This means deadlock.
+	mutex_lock (&(ProcDeviceContext->DvbContext->Lock));
+*/
+
+	if (ProcDeviceContext->VideoStream != NULL)
+	{
+		if (policy2_e2 == VIDEO_POL_LETTER_BOX) 
+			policy2_ply = VIDEO_LETTER_BOX;
+		else if (policy2_e2 == VIDEO_POL_PAN_SCAN) 
+			policy2_ply = VIDEO_PAN_SCAN;
+		else if (policy2_e2 == VIDEO_POL_BEST_FIT) 
+			policy2_ply = VIDEO_FULL_SCREEN;
+		
+		//SCART
+		avs_command_kernel(SAAIOSWSS, SAA_WSS_169F);
+	}
+/* Dagobert: You cannot use this semaphore here because this will be called from
+ * VideoIoctl which holds this semaphore too. This means deadlock.
+	mutex_unlock (&(ProcDeviceContext->DvbContext->Lock));
+*/
+	return policy2_ply;
+}
+
+
+
+int proc_video_policy2_write(struct file *file, const char __user *buf,
+                           unsigned long count, void *data)
+{
+	char 		*page;
+	char		*myString;
+	ssize_t 	ret = -ENOMEM;
+	int		result;
+	
+	printk("%s %d - ", __FUNCTION__, count);
+
+    	mutex_lock (&(ProcDeviceContext->DvbContext->Lock));
+
+	page = (char *)__get_free_page(GFP_KERNEL);
+	if (page) 
+	{
+		if (copy_from_user(page, buf, count))
+			goto out;
+
+		myString = (char *) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count] = '\0';
+		printk("%s\n", myString);
+
+		if (strncmp("letterbox", myString, count - 1) == 0) {
+			policy2_e2 = VIDEO_POL_LETTER_BOX;
+		} else if (strncmp("panscan", myString, count - 1) == 0) {
+		        policy2_e2 = VIDEO_POL_PAN_SCAN;
+		} else if (strncmp("bestfit", myString, count - 1) == 0) {
+		        policy2_e2 = VIDEO_POL_BEST_FIT;
+		} else if (strncmp("non", myString, count - 1) == 0) {
+		        policy2_e2 = VIDEO_POL_NON_LINEAR;
+		}
+
+		kfree(myString);
+
+		if (ProcDeviceContext->VideoStream != NULL)
+		{
+		   policy2_ply = proc_video_policy2_get();
+
+		    aspect_ply = aspect_e2; 
+			if (ProcDeviceContext->VideoSize.aspect_ratio !=  VIDEO_FORMAT_4_3) {
+
+				result  = StreamSetOption (ProcDeviceContext->VideoStream, PLAY_OPTION_VIDEO_ASPECT_RATIO, aspect_ply);
+				if (result != 0)
+					printk("Error setting stream option %d\n", result);
+				else
+					ProcDeviceContext->VideoState.video_format = (video_format_t)aspect_ply;
+	
+				result  = StreamSetOption (ProcDeviceContext->VideoStream, PLAY_OPTION_VIDEO_DISPLAY_FORMAT, policy2_ply);
+				if (result != 0)
+					printk("Failed to set option %d\n", result);
+				else
+					ProcDeviceContext->VideoState.display_format = (video_displayformat_t)policy2_ply;
+			}
+		} else
+		   printk("Can't set policy, VideoStream NULL\n");
+	}
+	
+	ret = count;
+out:
+	free_page((unsigned long)page);
+    	mutex_unlock (&(ProcDeviceContext->DvbContext->Lock));
+	return ret;
+}
+
+
+int proc_video_policy2_read (char *page, char **start, off_t off, int count,
+			  int *eof, void *data_unused)
+{
+	int len = 0;
+	printk("%s\n", __FUNCTION__);
+	
+	if (policy2_e2 == VIDEO_POL_LETTER_BOX) {
+		len = sprintf(page, "letterbox\n");
+	} else if (policy2_e2 == VIDEO_POL_PAN_SCAN) {
+		len = sprintf(page, "panscan\n");
+	} else if (policy2_e2 == VIDEO_POL_NON_LINEAR) {
+		len = sprintf(page, "non\n");
+	} else if (policy2_e2 == VIDEO_POL_BEST_FIT) {
+		len = sprintf(page, "bestfit\n");
+	}
+	
+        return len;
+}
+#endif
 
 int proc_video_policy_choices_read(char *page, char **start, off_t off, int count,
 				   int *eof, void *data_unused)
@@ -892,7 +1041,12 @@ int proc_video_videomode_write(struct file *file, const char __user *buf,
 				screen_info.sync = Options[modeToSet].sync;
 				screen_info.vmode = Options[modeToSet].vmode;
 				screen_info.activate = FB_ACTIVATE_FORCE;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+				/* In QBoxHD and QBoxHD mini the resolution is changed with DirectFB */
+				int err=1;
+#else
 				err = fb_set_var(fb, &screen_info);
+#endif
 				if (err != 0)
 					printk("error setting new resolution %d\n", err);
 				if ((ProcDeviceContext != NULL) && (createNew == 1))
@@ -1528,12 +1682,21 @@ int proc_video_alpha_write(struct file *file, const char __user *buf,
 		printk("%s\n", myString);
 #endif
 		sscanf(myString, "%d", &alpha);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		if( (alpha>=0) && (alpha<=255) )
+		{
+#endif
 		varEx.layerid = 0;
 		varEx.caps = 0;
 		varEx.activate = 0; //STMFBIO_ACTIVATE_IMMEDIATE;
 		varEx.caps |= STMFBIO_VAR_CAPS_OPACITY;
 		varEx.opacity = alpha;
 		err = stmfb_set_var_ex(&varEx, info);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		}
+		else
+			printk("Wrong range of alhpa (0<a<255): %d\n",alpha);
+#endif
 		kfree(myString);
 	}
 	ret = count;

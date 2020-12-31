@@ -309,6 +309,18 @@ HavanaStatus_t HavanaPlayback_c::SetSpeed(int PlaySpeed)
 	}
 	Speed = Rational_t(PlaySpeed, PLAY_SPEED_NORMAL_PLAY);
 	PLAYBACK_DEBUG("Setting speed to %d.%06d\n", Speed.IntegerPart(), Speed.RemainderDecimal());
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	if (disable_time_ctrl)
+	{
+// 		printk(KERN_INFO "HavanaPlayback_c::SetSpeed() - disable_time_ctrl\n");
+		Player->setTimeCtrl(false);
+	}
+	else
+	{
+		Player->setTimeCtrl(true);
+// 		printk(KERN_INFO "HavanaPlayback_c::SetSpeed() - enable_time_ctrl\n");
+	}
+#endif
 	Status = Player->SetPlaybackSpeed(PlayerPlayback, Speed, Direction);
 	if (Status != PlayerNoError)
 	{

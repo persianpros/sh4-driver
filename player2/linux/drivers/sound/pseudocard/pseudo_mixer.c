@@ -180,8 +180,14 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 #else
 #if defined (CONFIG_KERNELVERSION)
 #if defined(__TDT__)
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			CARD_SPDIF  ("SPDIF",   0, 2,  48000, 2),
+			CARD        ("Analog",  0, 1,  48000, 2),
+			CARD        ("HDMI",    0, 0,  48000, 2),
+#else
 			CARD_SPDIF("SPDIF", 2, 0, 48000, 2),
 			CARD("Analog", 0, 0, 48000, 2),
+#endif
 #else
 			CARD_SPDIF("SPDIF", 0, 2, 48000, 2),
 			CARD("HDMI", 0, 0, 48000, 2),

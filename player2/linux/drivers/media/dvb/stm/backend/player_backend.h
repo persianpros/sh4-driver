@@ -34,6 +34,11 @@ Date Modification Name
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+int _setTimeCtrl(int on);
+#endif
+
 int BackendInit(void);
 int BackendDelete(void);
 

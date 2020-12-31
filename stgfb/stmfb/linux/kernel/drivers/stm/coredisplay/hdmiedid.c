@@ -824,8 +824,11 @@ int stmhdmi_read_edid(struct stm_hdmi *hdmi)
   ctrl_outb(0x00, 0xa2800000);
   ctrl_outb(0x40, 0xa2800000);
 #endif
-
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+  for(retry=0;retry<10;retry++)
+#else
   for(retry=0;retry<5;retry++)
+#endif
   {
     res = 0;
 

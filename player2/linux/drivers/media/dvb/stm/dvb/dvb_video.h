@@ -64,6 +64,13 @@ int VideoSetOutputWindow(struct DeviceContext_s *Context,
 			 unsigned int Top,
 			 unsigned int Width,
 			 unsigned int Height);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+int VideoGetOutputWindow(struct DeviceContext_s* Context,
+			 unsigned int* Left,
+			 unsigned int* Top,
+			 unsigned int* Width,
+			 unsigned int* Height);
+#endif
 int VideoSetInputWindow(struct DeviceContext_s *Context,
 			unsigned int Left,
 			unsigned int Top,

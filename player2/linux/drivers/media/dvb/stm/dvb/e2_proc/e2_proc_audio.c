@@ -47,8 +47,11 @@ extern int snd_pseudo_integer_get(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol);
 extern int snd_pseudo_integer_put(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+static int avs_command_kernel(unsigned int cmd, void *arg) { return 0; }
+#else
 int avs_command_kernel(unsigned int cmd, void *arg);
-
+#endif
 #if defined(ADB_BOX)
 int proc_audio_delay_pcm_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
@@ -360,6 +363,11 @@ int proc_audio_j1_mute_write(struct file *file, const char __user *buf,
 				ucontrol.value.integer.value[3] = -63;
 				ucontrol.value.integer.value[4] = -63;
 				ucontrol.value.integer.value[5] = -63;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+/* For 'Side Left' and 'Side Right' in pseudo_card 'Master' */
+				ucontrol.value.integer.value[6] = -63;
+				ucontrol.value.integer.value[7] = -63;
+#endif
 				snd_pseudo_integer_put(single_control, &ucontrol);
 			}
 			else
@@ -398,6 +406,11 @@ int proc_audio_j1_mute_write(struct file *file, const char __user *buf,
 					ucontrol.value.integer.value[3] = volume;
 					ucontrol.value.integer.value[4] = volume;
 					ucontrol.value.integer.value[5] = volume;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+/* For 'Side Left' and 'Side Right' in pseudo_card 'Master' */
+					ucontrol.value.integer.value[6] = volume;
+					ucontrol.value.integer.value[7] = volume;
+#endif
 					snd_pseudo_integer_put(single_control, &ucontrol);
 				}
 			}

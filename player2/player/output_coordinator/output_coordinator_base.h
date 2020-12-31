@@ -105,7 +105,7 @@ struct OutputCoordinatorContext_s
 	long long StreamOffset;
 
 	long long CurrentErrorHistory[4];
-#if defined QBOXHD || defined QBOXHD_MINI
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
 	unsigned long long LastSeenNormalizedPlaybackTime;
 	bool LastSpeedChanged;      
 #endif

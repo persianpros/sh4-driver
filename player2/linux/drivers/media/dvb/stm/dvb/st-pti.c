@@ -43,9 +43,39 @@
 #include <linux/dvb/ca.h>
 
 #include "st-common.h"
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+#include "pti.h"
+#include "pti_hal.h"
+#include "nim_tuner.h"
+
+#if defined(QBOXHD_MINI)
+#define DELAYER
+
+#ifdef DELAYER
+#include "delayer.h"
+#endif ///DELAYER
+#endif
+
+#else
 #include "st-merger.h"
+#endif
 
 //__TDT__: many modifications in this file
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+#define PTI_DEBUG
+#ifdef PTI_DEBUG
+// 		#define dprintk(x...) do { printk("[ST-PTI] " x); } while(0)
+// 		extern int debug;
+		int stpti_debug=0;
+		module_param(stpti_debug, int, 0644);
+		MODULE_PARM_DESC(stpti_debug, "Modify ST-PTI debugging level (default:0=OFF)");
+		#define TAGDEBUG "[ST-PTI] "
+		#define dprintk(level, x...) do { if (stpti_debug && (level <= stpti_debug)) printk(TAGDEBUG x); } while (0)
+#else
+		#define dprintk(x...)
+#endif
+#endif
 
 #if defined(ADB_BOX)
 int TsinMode;
@@ -69,6 +99,11 @@ enum
 	SINGLE,
 	TWIN,
 };
+#endif
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+//void pti_hal_init(struct stpti *, void (*_demultiplexDvbPackets)(struct dvb_demux*, const u8 *, int), int);
+void pti_hal_init(struct stpti *, struct dvb_demux *, void (*_demultiplexDvbPackets)(struct dvb_demux*, const u8 *, int), int);
 #endif
 
 #if defined(UFS922)
@@ -217,6 +252,41 @@ int stpti_start_feed(struct dvb_demux_feed *dvbdmxfeed, struct DeviceContext_s *
 		if (((unsigned short) pSession->pidtable[vLoop] ==
 				(unsigned short) dvbdmxfeed->pid))
 		{
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			if(pSession->references[vLoop]==1 && pSession->buf_type[vLoop]==VID_BUFFER)
+			{
+				/// if current bufType == VID_BUFFER swap it with one of type OTHER_BUFFER
+				// 1. release slot with VID_BUFFER buffer
+				pti_hal_slot_unlink_buffer ( pSession->session, pSession->slots[vLoop]);
+				pti_hal_slot_clear_pid ( pSession->session, pSession->slots[vLoop] );
+				pti_hal_slot_free ( pSession->session, pSession->slots[vLoop] );
+
+				// 2. get a new slot with OTHER_BUFFER buffer
+				pSession->slots[vLoop] = pti_hal_get_new_slot_handle ( pSession->session, dvbdmxfeed->type, dvbdmxfeed->pes_type, demux , NULL, NULL);
+				if(pti_hal_slot_link_buffer ( pSession->session, pSession->slots[vLoop], OTHER_BUFFER) == 0)
+				{
+					/* link audio/video slot to the descrambler */
+					if ((dvbdmxfeed->pes_type == DMX_TS_PES_VIDEO) || (dvbdmxfeed->pes_type == DMX_TS_PES_AUDIO) || (dvbdmxfeed->pid>50)) //DMX_TS_PES_OTHER
+					{
+						int err;
+						if(pSession->descramblerForPid[dvbdmxfeed->pid] != -1) /// a descrambler index already set for this PID by CA_SET_PID
+						{
+							pSession->descramblerindex[vLoop]= pSession->descramblerForPid[dvbdmxfeed->pid];
+
+							if ((err = pti_hal_descrambler_link(pSession->session,pSession->descramblers[pSession->descramblerindex[vLoop]], pSession->slots[vLoop])) != 0)
+								printk("%s: ERROR linking slot %d to descrambler %d, err = %d\n", __func__, pSession->slots[vLoop], pSession->descramblers[pSession->descramblerindex[vLoop]], err);
+						}
+					}
+					pti_hal_slot_set_pid ( pSession->session, pSession->slots[vLoop], dvbdmxfeed->pid );
+
+					// 2.1 update new assigned buffer type
+					pSession->buf_type[vLoop]==OTHER_BUFFER;
+					dprintk(2,"%s: CHANGED  VID_BUFFER =====> OTHER_BUFFER !!! <---------------",__func__);
+				}
+				else
+					dprintk(2,"%s: 1. pti_hal_slot_link_buffer FAILED!!! <---------------\n",__func__);
+			}
+#endif
 			pSession->references[vLoop]++;
 			//ok we have a reference but maybe this one must be rechecked to a new
 			//dma (video) and maybe we must attach the descrambler
@@ -249,6 +319,12 @@ int stpti_start_feed(struct dvb_demux_feed *dvbdmxfeed, struct DeviceContext_s *
 	pSession->pidtable[pSession->num_pids] = dvbdmxfeed->pid;
 	pSession->type[pSession->num_pids] = dvbdmxfeed->type;
 	pSession->pes_type[pSession->num_pids] = my_pes_type;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	/// save current buffer type
+// 	if(bufType == VID_BUFFER)
+// 		dprintk(2,"%s: saving bufType == VID_BUFFER for PID=0x%04x\n", __func__, dvbdmxfeed->pid);
+	pSession->buf_type[pSession->num_pids]   = bufType;
+#endif
 	pSession->references[pSession->num_pids] = 1;
 	pSession->slots[pSession->num_pids] = pti_hal_get_new_slot_handle(pSession->session,
 									  dvbdmxfeed->type,
@@ -367,6 +443,9 @@ int stpti_stop_feed(struct dvb_demux_feed *dvbdmxfeed, struct DeviceContext_s *p
 					pSession->slots[n] = pSession->slots[n + 1];
 					pSession->type[n] = pSession->type[n + 1];
 					pSession->pes_type[n] = pSession->pes_type[n + 1];
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+					pSession->buf_type[n]   = pSession->buf_type[n + 1];
+#endif
 					pSession->references[n] = pSession->references[n + 1];
 					pSession->descramblerindex[n] = pSession->descramblerindex[n + 1];
 				}
@@ -491,8 +570,11 @@ static int ptiInitialized = 0;
 static struct stpti pti;
 
 /********************************************************/
-
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+void ptiInit ( struct DeviceContext_s *pContext, struct plat_frontend_config *nims_config)
+#else
 void ptiInit(struct DeviceContext_s *pContext)
+#endif
 {
 #if defined(SAGEMCOM88) \
  || defined(UFS912) \
@@ -561,7 +643,11 @@ void ptiInit(struct DeviceContext_s *pContext)
 		/*
 		 * Setup the transport stream merger based on the configuration
 		 */
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+    	stm_tsm_init ( 0, nims_config );
+#else
 		stm_tsm_init(/*config */ 1);
+#endif
 #if defined(ARIVALINK200) \
  || defined(TF7700) \
  || defined(UFS922) \
@@ -611,6 +697,8 @@ void ptiInit(struct DeviceContext_s *pContext)
  || defined(DP7001) \
  || defined(EPP8000)
 		stv090x_register_frontend(&pContext->DvbContext->DvbAdapter);
+#elif defined(QBOXHD) || defined(QBOXHD_MINI)
+	/* Do nothing. We attach the tuners in nim_tuner_attach_frontend() */
 #elif defined(HL101) \
  || defined(VIP1_V1) \
  || defined(VIP1_V2) \

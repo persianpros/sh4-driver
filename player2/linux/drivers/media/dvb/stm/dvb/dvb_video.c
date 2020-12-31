@@ -51,6 +51,22 @@ Date Modification Name
 #include <linux/mm.h>
 #endif
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+extern struct DeviceContext_s* ProcDeviceContext;
+
+
+#define DVB_DEMUX_DEBUG
+#ifdef DVB_DEMUX_DEBUG
+extern int stdemux_debug;
+#define TAGDEBUG "[DVB_VIDEO] "
+#define dprintk(level, x...) do { if (stdemux_debug && (level <= stdemux_debug)) printk(TAGDEBUG x); } while (0)
+#else
+#define dprintk(x...)
+#endif /* DVB_DEMUX_DEBUG */
+
+
+#endif
+
 /*{{{ prototypes*/
 static int VideoOpen(struct inode *Inode, struct file *File);
 static int VideoRelease(struct inode *Inode, struct file *File);
@@ -163,6 +179,14 @@ static const unsigned char Mpeg2SequenceEnd[] =
 	0xff, 0xff, 0xff, 0xff
 };
 /*}}}*/
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+typedef enum {
+	SWITCH_TO_DEFAULT_DVBADAPTER                = 0,
+	SWITCH_TO_CURR_DVBADAPTER                   = 1,
+} dvbcurrdecoder_action_t;
+#endif
+
 /*{{{ Videoinit*/
 struct dvb_device *VideoInit(struct DeviceContext_s *Context)
 {
@@ -249,6 +273,71 @@ int VideoSetOutputWindow(struct DeviceContext_s *Context,
 	return Result;
 }
 /*}}}*/
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+int VideoGetOutputWindow (struct DeviceContext_s*        Context,
+                          unsigned int*                  Left,
+                          unsigned int*                  Top,
+                          unsigned int*                  Width,
+                          unsigned int*                  Height)
+{
+//    struct DvbContext_s*        DvbContext      = Context->DvbContext;
+    int                         Result          = 0;
+
+	*Left = Context->VideoOutputWindow.X;
+	*Top = Context->VideoOutputWindow.Y;
+	*Width = Context->VideoOutputWindow.Width;
+	*Height = Context->VideoOutputWindow.Height;
+
+    return Result;
+}
+
+
+int SwitchDVBCurrDecoder (struct DeviceContext_s*        Context,
+                          dvbcurrdecoder_action_t   Action)
+{
+	int		Result = 0, force_resize = 0;
+	unsigned int	Left, Top, Width, Height;
+
+	if ( Action == SWITCH_TO_DEFAULT_DVBADAPTER ) {
+		// Setting the first one
+		Context->DvbContext->DvbCurrDecoderArray[0]->DvbContext = Context->DvbContext->DvbContextArray[0];
+		ProcDeviceContext = &Context->DvbContext->DvbContextArray[0]->DeviceContext[0];
+		force_resize = 1;
+	}
+	else if ( Action == SWITCH_TO_CURR_DVBADAPTER ) {
+		Context->DvbContext->DvbCurrDecoderArray[0]->DvbContext = Context->DvbContext;
+		ProcDeviceContext = Context;
+		force_resize = 1;
+	}
+
+	if ( force_resize ) {
+		VideoGetOutputWindow( Context, &Left, &Top, &Width, &Height );
+
+		if (Context->VideoStream != NULL)
+			Result  = StreamSetOutputWindow (Context->VideoStream, Left, Top, Width, Height);
+		else
+		{
+			Context->VideoOutputWindow.X            = Left;
+			Context->VideoOutputWindow.Y            = Top;
+			Context->VideoOutputWindow.Width        = Width;
+			Context->VideoOutputWindow.Height       = Height;
+		}
+		
+		if (Context->VideoSize.aspect_ratio ==  VIDEO_FORMAT_4_3)
+			Context->VideoState.display_format = (video_displayformat_t) proc_video_policy_get();
+		else
+			Context->VideoState.display_format = (video_displayformat_t) proc_video_policy2_get();
+		Context->VideoState.video_format = (video_format_t) proc_video_aspect_get();
+
+		VideoIoctlSetDisplayFormat (Context, (unsigned int)Context->VideoState.display_format);
+		VideoIoctlSetFormat        (Context, (unsigned int)Context->VideoState.video_format);
+	}
+
+	return Result;
+}
+#endif
+
 /*{{{ VideoSetInputWindow*/
 int VideoSetInputWindow(struct DeviceContext_s *Context,
 			unsigned int Left,
@@ -316,6 +405,9 @@ int VideoIoctlStop(struct DeviceContext_s *Context, unsigned int Mode)
 	VideoIoctlClearBuffer(Context);
 #endif
 	DVB_DEBUG("Play state = %d\n", Context->VideoState.play_state);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	SwitchDVBCurrDecoder( Context, SWITCH_TO_DEFAULT_DVBADAPTER );
+#endif
 	return Result;
 }
 /*}}}*/
@@ -436,6 +528,9 @@ int VideoIoctlPlay(struct DeviceContext_s *Context)
 		Context->VideoState.play_state = VIDEO_PLAYING;
 	}
 	DVB_DEBUG("(video%d) State = %d\n", Context->Id, Context->VideoState.play_state);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	SwitchDVBCurrDecoder(Context, SWITCH_TO_CURR_DVBADAPTER);
+#endif
 	return Result;
 }
 /*}}}*/
@@ -1545,7 +1640,14 @@ static void VideoSetEvent(struct DeviceContext_s *Context, struct stream_event_s
 			 the only thing E2 is going to do with this event is displaying
 			 the 16/9 icon or not
 			*/
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			if (Context->VideoSize.aspect_ratio ==  VIDEO_FORMAT_4_3)
+				display_format = (video_displayformat_t) proc_video_policy_get();
+			else
+				display_format = (video_displayformat_t) proc_video_policy2_get();
+#else
 			Context->VideoState.display_format = (video_displayformat_t) proc_video_policy_get();
+#endif
 			Context->VideoState.video_format = (video_format_t) proc_video_aspect_get();
 			VideoIoctlSetDisplayFormat(Context, (unsigned int)Context->VideoState.display_format);
 			VideoIoctlSetFormat(Context, Context->VideoState.video_format);

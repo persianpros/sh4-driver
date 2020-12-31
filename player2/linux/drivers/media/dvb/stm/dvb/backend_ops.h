@@ -36,6 +36,10 @@ Date Modification Name
 #include <linux/dvb/video.h>
 #else
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+extern int disable_time_ctrl;
+#endif
+
 /* extracts from linux/dvb/audio.h (which can't be included by C++ files in Linux 2.3) */
 typedef enum
 {

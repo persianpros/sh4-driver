@@ -681,4 +681,9 @@ void HavanaPlayer_c::EventSignalThread(void)
 	HAVANA_DEBUG("Terminating\n");
 }
 //}}}
-
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+class Player_c*  HavanaPlayer_c::getPlayer(void)
+{
+   return Player;
+}
+#endif

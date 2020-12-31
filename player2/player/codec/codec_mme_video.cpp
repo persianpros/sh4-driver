@@ -155,6 +155,18 @@ CodecStatus_t Codec_MmeVideo_c::Input(Buffer_t CodedBuffer)
 	//
 	if (!ParsedFrameParameters->NewFrameParameters)
 		return CodecNoError;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+//H264 deadlock work around bug fix.
+//This bug fix avoids crash of IntermediateProcess in "codec_mme_video_h264.cpp" due to H264 deadlock work,
+//in which partial decoded buffer may be discarded before "CurrentDecodeBufferIndex" has been invalidated.
+	if (CurrentDecodeBufferIndex != INVALID_INDEX)
+	{
+		if (BufferState[CurrentDecodeBufferIndex].Buffer == 0)
+		{
+			CurrentDecodeBufferIndex = INVALID_INDEX;
+		}
+	}
+#endif
 	//
 	// Test if this frame indicates completion of any previous decodes (for slice decoding)
 	//

@@ -128,6 +128,12 @@ class Codec_MmeVideoH264_c : public Codec_MmeVideo_c
 		unsigned int NumberOfUsedDescriptors; // Map of used descriptors when constructing a reference list
 		unsigned char DescriptorIndices[3 * H264_MAX_REFERENCE_FRAMES];
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		OS_Mutex_t                            HALT_Lock;                                                //Added by Duolabs
+		bool                                  HALT_Flag;                                                //Added by Duolabs
+		bool                                  HALTED_Flag;                                              //Added by Duolabs
+#endif
+
 		ReferenceFrameList_t LocalReferenceFrameList[H264_NUM_REF_FRAME_LISTS];
 
 		// Functions
@@ -146,6 +152,10 @@ class Codec_MmeVideoH264_c : public Codec_MmeVideo_c
 	public:
 
 		void IntermediateProcess(void);
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		int getPlayerSpeed(void);
+#endif
 
 	public:
 

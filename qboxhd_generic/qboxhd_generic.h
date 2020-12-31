@@ -44,7 +44,7 @@
 #define	DEACT_RST					0
 #define	ACT_RST						1
 
-#if defined QBOXHD_MINI
+#if defined(QBOXHD_MINI)
 #define TUNER_0						0
 #define TUNER_1						1
 #endif
@@ -54,7 +54,7 @@
 #define RST_IOW_MAGIC			    'R'
 
 #define IOCTL_ACTIVATION_RST		_IOW(RST_IOW_MAGIC, 1,  int)
-#if defined QBOXHD_MINI
+#if defined(QBOXHD_MINI)
 #define IOCTL_RST_TUNER_0			_IOW(RST_IOW_MAGIC, 100,  int)
 #define IOCTL_RST_TUNER_1			_IOW(RST_IOW_MAGIC, 101,  int)
 #endif

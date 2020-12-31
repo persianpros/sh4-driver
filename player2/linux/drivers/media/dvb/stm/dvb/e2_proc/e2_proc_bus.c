@@ -17,6 +17,61 @@
 #include "dvbdev.h"
 #include "dvb_frontend.h"
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+
+#include "../nim_tuner.h"
+
+#define PROC_BUF_SIZE	256
+
+int proc_bus_nim_sockets_read(char *page, 
+							char **start, 
+							off_t off, 
+							int count,
+							int *eof, 
+							void *data_unused)
+{
+	int					i, blen;
+	char				outbuf[PROC_BUF_SIZE];
+	struct nim_info_st 	nims_info[NIMS_NUM_MAX], *ptr;
+
+	get_nims_info(nims_info);
+	if (nims_info == NULL) {
+		printk("%s(): Could not get NIMs info\n", __func__);
+        return -EINVAL;
+	}
+
+	/* Write to buffer the NIMs config */
+	ptr = nims_info;
+	outbuf[0] = '\0';
+    for (i = 0; i < NIMS_NUM_MAX; i++, ptr++) {
+        if ((strlen(ptr->type)) || (strlen(ptr->name))) {
+            sprintf(outbuf, "%sNIM Socket %d:\n\tType: %s\n\tName: %s\n",
+                outbuf, ptr->nim_pos, ptr->type, ptr->name);
+        }
+    }
+
+	blen = strlen(outbuf);
+    if (count < blen)
+        return -EINVAL;
+
+    /*   
+     * If file position is non-zero, then assume the string has
+     * been read and indicate there is no more data to be read.
+     */
+    if (off != 0)
+        return 0;
+
+    /* We know the buffer is big enough to hold the string */
+    strcpy(page, outbuf);
+
+    /* Signal EOF */
+    *eof = 1;
+
+    return blen;
+}
+
+#else
+
 extern struct DeviceContext_s *ProcDeviceContext;
 
 #define MAX_NIM_LENGTH 100
@@ -160,3 +215,5 @@ int proc_bus_nim_sockets_read(char *page, char **start, off_t off, int count,
 	}
 	return len;
 }
+
+#endif

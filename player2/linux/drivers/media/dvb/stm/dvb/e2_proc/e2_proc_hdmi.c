@@ -64,6 +64,10 @@ struct stmfbio_output_configuration
 
 extern struct DeviceContext_s *ProcDeviceContext;
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+unsigned int hdmi_audio_source_ply = STMHDMIIO_AUDIO_SOURCE_PCM;
+#endif
+
 int proc_hdmi_audio_source_write(struct file *file, const char __user *buf,
 				 unsigned long count, void *data)
 {
@@ -99,6 +103,9 @@ int proc_hdmi_audio_source_write(struct file *file, const char __user *buf,
 			value = STMHDMIIO_AUDIO_SOURCE_NONE;
 		}
 		stmhdmiio_set_audio_source(value);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		hdmi_audio_source_ply = value;
+#endif
 		/* always return count to avoid endless loop */
 		ret = count;
 	}

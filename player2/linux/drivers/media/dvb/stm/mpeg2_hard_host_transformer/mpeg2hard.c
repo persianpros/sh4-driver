@@ -232,6 +232,15 @@ Mpeg2HardStatus_t Mpeg2HardDecodeFrame(Mpeg2HardHandle_t Handle,
 	static unsigned int Colour = 0;
 	static unsigned int Total = 0;
 #endif
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+        unsigned int Status;
+        static unsigned char decode_timeout = 0;
+        static unsigned char *mirror_array = 0;
+        static unsigned int mirror_array_len = 0;
+        static Mpeg2HardFrameParams_t mirror_FrameParams;
+
+        if (decode_timeout == 1) FrameParams = &mirror_FrameParams;
+#endif
 	// In a multi use environment, we need to grab the decoder, and if
 	// it is not currently loaded, load our stream context.
 	OSDEV_ClaimSemaphore(&DecoderLock);
@@ -313,9 +322,29 @@ Mpeg2HardStatus_t Mpeg2HardDecodeFrame(Mpeg2HardHandle_t Handle,
 	}
 	else
 		WriteRegister(VID_RCM(0), (unsigned int)(((FrameParams->decodingFlags & PROGRESSIVE) != 0) + 0x04));
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	if (decode_timeout == 0)                                                                                //Modified by Duolabs
+	{
+            // Set Compressed data pointers
+		WriteRegister( VID_VLD_PTR(0), (unsigned int)FrameParams->compressedDataFrame);  // VLD data
+		WriteRegister( VID_VLDRL(0),   (unsigned int)(FrameParams->compressedDataFrame + FrameParams->compressedDataSize + 255 + 1024 ) ); // VLD data limit
+	}
+	else                              //If decode timeout occured, send magic array data into decoder Mpeg2 to try to unblock it
+	{
+            //Fix of Mpeg2 hardware decoder deadlock.
+            //Substitution of decode buffer with saved one at timeout occuring
+		unsigned long buffer;
+
+		buffer = virt_to_phys((volatile void*)mirror_array);
+
+		WriteRegister( VID_VLD_PTR(0), (unsigned int)buffer);  // VLD data
+		WriteRegister( VID_VLDRL(0),   (unsigned int)(buffer + mirror_array_len + 255 + 1024 ) ); // VLD data limit
+	}
+#else
 	// Set Compressed data pointers
 	WriteRegister(VID_VLD_PTR(0), (unsigned int)FrameParams->compressedDataFrame); // VLD data
 	WriteRegister(VID_VLDRL(0), (unsigned int)(FrameParams->compressedDataFrame + FrameParams->compressedDataSize + 255 + 1024)); // VLD data limit
+#endif
 // OSDEV_Print("Compressed data pointer %x size %x\n",FrameParams->compressedDataFrame, FrameParams->compressedDataSize);
 	// Setup the picture parameters
 	FirstField = (FrameParams->lumaDecodeFramebuffer != Context->LumaDecodeFrameBuffer);
@@ -390,7 +419,25 @@ Mpeg2HardStatus_t Mpeg2HardDecodeFrame(Mpeg2HardHandle_t Handle,
 			Column = (MacroBlock >> 16) & 0x7f;
 			Row = MacroBlock & 0x7f;
 			OSDEV_Print("***** Error-%s: Decode timeout. Decoded to macroblock row %d, column %d\n", __FUNCTION__, Row, Column);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+                    //Fix of Mpeg2 hardware decoder deadlock.
+                    //In case of decode timeout I save frame data and frame parameters. At next decode I substitute legal decode frame with saved one
+                    //and for next decodes too, until timeout doesn't occur any more.
+                        if (mirror_array == 0)
+                        {
+                            unsigned char *virt_addr = phys_to_virt((unsigned long)FrameParams->compressedDataFrame);
+                            mirror_array_len = FrameParams->compressedDataSize;
+                            mirror_array = (unsigned char *)kmalloc(FrameParams->compressedDataSize, GFP_DMA);
+                            memcpy(mirror_array, virt_addr, FrameParams->compressedDataSize);
+                            mirror_FrameParams = *FrameParams;
+                        }
+
+                        decode_timeout = 1;
+#endif
 		}
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		else decode_timeout = 0;                                                                        //Added by Duolabs
+#endif
 	}
 #endif
 	// Check statuses are as expected
@@ -398,6 +445,16 @@ Mpeg2HardStatus_t Mpeg2HardDecodeFrame(Mpeg2HardHandle_t Handle,
 #if defined (ENABLE_HD)
 	if ((InterruptStatus & VID_STA__DID) != VID_STA__DID)
 		OSDEV_Print("Error: Interrupt status = %08x\n", InterruptStatus);
+#endif
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+        if (decode_timeout == 0)
+        {
+                if (mirror_array != 0)                                                                                  //Added by Duolabs
+                {
+                        kfree(mirror_array);
+                        mirror_array = 0;
+                }
+        }
 #endif
 	// Release the decoder for use, and return
 	OSDEV_ReleaseSemaphore(&DecoderLock);

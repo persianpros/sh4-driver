@@ -967,7 +967,15 @@ static int cx24116_wait_for_lnb(struct dvb_frontend *fe)
 
 	return -ETIMEDOUT; /* -EBUSY ? */
 }
+#if defined(QBOXHD)
+int cx24116_set_voltage(struct dvb_frontend* fe, fe_sec_voltage_t voltage)
+{
+	struct cx24116_state *state = fe->demodulator_priv;
 
+	return state->i2c->nr;
+}
+EXPORT_SYMBOL(cx24116_set_voltage);
+#else
 static int cx24116_set_voltage(struct dvb_frontend *fe,
 			       fe_sec_voltage_t voltage)
 {
@@ -997,7 +1005,62 @@ static int cx24116_set_voltage(struct dvb_frontend *fe,
 
 	return 0;
 }
+#endif
+#if defined(QBOXHD)
+int cx24116_set_tone(struct dvb_frontend *fe,
+	fe_sec_tone_mode_t tone)
+{
+	struct cx24116_cmd cmd;
+	int ret;
 
+	dprintk("%s(%d)\n", __func__, tone);
+	if ((tone != SEC_TONE_ON) && (tone != SEC_TONE_OFF)) {
+		printk(KERN_ERR "%s: Invalid, tone=%d\n", __func__, tone);
+		return -EINVAL;
+	}
+
+	/* Wait for LNB ready */
+	ret = cx24116_wait_for_lnb(fe);
+	if (ret != 0)
+		return ret;
+
+	/* Min delay time after DiSEqC send */
+	msleep(15); /* XXX determine is FW does this, see send_diseqc/burst */
+
+    /* This is always done before the tone is set */
+    cmd.args[0x00] = CMD_LNBDCLEVEL;
+    cmd.args[0x01] = 0x00;
+    cmd.len= 0x02;
+    ret = cx24116_cmd_execute(fe, &cmd);
+    if (ret != 0)
+        return ret;
+
+	/* Now we set the tone */
+	cmd.args[0x00] = CMD_SET_TONE;
+	cmd.args[0x01] = 0x00;
+	cmd.args[0x02] = 0x00;
+
+	switch (tone) {
+	case SEC_TONE_ON:
+		dprintk("%s: setting tone on\n", __func__);
+		cmd.args[0x03] = 0x01;
+		break;
+	case SEC_TONE_OFF:
+		dprintk("%s: setting tone off\n", __func__);
+		cmd.args[0x03] = 0x00;
+		break;
+	}
+	cmd.len = 0x04;
+
+	/* Min delay time before DiSEqC send */
+	/*msleep(100); *//* XXX determine is FW does this, see send_diseqc/burst */
+	msleep(15);
+
+	return cx24116_cmd_execute(fe, &cmd);
+}
+EXPORT_SYMBOL(cx24116_set_tone);
+
+#else
 static int cx24116_set_tone(struct dvb_frontend *fe,
 			    fe_sec_tone_mode_t tone)
 {
@@ -1042,7 +1105,7 @@ static int cx24116_set_tone(struct dvb_frontend *fe,
 
 	return cx24116_cmd_execute(fe, &cmd);
 }
-
+#endif
 /* Initialise DiSEqC */
 static int cx24116_diseqc_init(struct dvb_frontend *fe)
 {

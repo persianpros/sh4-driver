@@ -30,6 +30,26 @@ static class HavanaPlayer_c *HavanaPlayer;
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+int _setTimeCtrl(int on)
+{
+	PLAYER_TRACE("%s: on=%d\n",__func__,on);
+
+	if(HavanaPlayer)
+	{
+		class Player_c *player = HavanaPlayer->getPlayer();
+		if(player)
+		{
+			PLAYER_TRACE("%s: set TimeCtrl to => %d\n",__func__,on);
+			player->setTimeCtrl((on?true:false));
+		}
+	}
+
+	return 0;
+}
+#endif
+
 //{{{ BackendInit
 int BackendInit(void)
 {

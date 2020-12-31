@@ -955,7 +955,7 @@ SCI_ERROR sci_hw_init(ULONG sci_id) {
         _set_reg_writeonly(0, BASE_ADDRESS_PIO4, PIO_CLR_P4C2, 0x40);
 
 #ifdef SC_CLOCK_CONTROL_BY_FPGA
-	#if defined QBOXHD_MINI
+#if defined(QBOXHD_MINI)
         /* Disable pin of internal clock */
 		/* Set pin 0.2 and 0.6 in output because they are the reset pin for tuners */
         _set_reg(0, BASE_ADDRESS_PIO0, PIO_P0C0, 0x08, 0xBF);
@@ -965,15 +965,15 @@ SCI_ERROR sci_hw_init(ULONG sci_id) {
         _set_reg_writeonly(0, BASE_ADDRESS_PIO0, PIO_CLR_P4C0, 0x44);
         _set_reg_writeonly(0, BASE_ADDRESS_PIO0, PIO_SET_P4C1, 0x44);
         _set_reg_writeonly(0, BASE_ADDRESS_PIO0, PIO_CLR_P4C2, 0x44);
-	#else
+#else
         /* Disable pin of internal clock */
         _set_reg(0, BASE_ADDRESS_PIO0, PIO_P0C0, 0x08, 0xBF);
         _set_reg(0, BASE_ADDRESS_PIO0, PIO_P0C1, 0x35, 0x8A);
         _set_reg(0, BASE_ADDRESS_PIO0, PIO_P0C2, 0xAB, 0x14);
-	#endif
+#endif
 
 #else
-	#if defined QBOXHD_MINI
+#if defined(QBOXHD_MINI)
         /* Bit order works according to the alternative function. Datasheet page 63 */
         /* PIO bit configuration encoding. Datasheet page 214 */
 		/* Set pin 0.2 and 0.6 in output because they are the reset pin for tuners */
@@ -984,14 +984,14 @@ SCI_ERROR sci_hw_init(ULONG sci_id) {
         _set_reg_writeonly(0, BASE_ADDRESS_PIO0, PIO_CLR_P4C0, 0x44);
         _set_reg_writeonly(0, BASE_ADDRESS_PIO0, PIO_SET_P4C1, 0x44);
         _set_reg_writeonly(0, BASE_ADDRESS_PIO0, PIO_CLR_P4C2, 0x44);
-	#else
+#else
         /* Bit order works according to the alternative function. Datasheet page 63 */
         /* PIO bit configuration encoding. Datasheet page 214 */
         _set_reg(0, BASE_ADDRESS_PIO0, PIO_P0C0, 0x00, 0xBF);
         _set_reg(0, BASE_ADDRESS_PIO0, PIO_P0C1, 0x3D, 0x82);
         _set_reg(0, BASE_ADDRESS_PIO0, PIO_P0C2, 0xAB, 0x14);
 
-	#endif
+#endif
 #endif
         
         /* Set SC0_C8: Datasheet qboxhd gpio interface */
@@ -1053,18 +1053,18 @@ SCI_ERROR sci_hw_init(ULONG sci_id) {
         _set_reg_writeonly(1, BASE_ADDRESS_PIO3, PIO_CLR_P3C2, 0x40);
         
 #ifdef SC_CLOCK_CONTROL_BY_FPGA
-	#if defined QBOXHD_MINI
+#if defined(QBOXHD_MINI)
         /* Disable pin of internal clock */
 		/* Set pin 1.2 in input (spare pin), now it is in output because it is used by internal clk pin */
         _set_reg(1, BASE_ADDRESS_PIO1, PIO_P1C0, 0x0C, 0xBF);
         _set_reg(1, BASE_ADDRESS_PIO1, PIO_P1C1, 0x31, 0x8E);
         _set_reg(1, BASE_ADDRESS_PIO1, PIO_P1C2, 0x8F, 0x30);
-	#else
+#else
         /* Disable pin of internal clock */
         _set_reg(1, BASE_ADDRESS_PIO1, PIO_P1C0, 0x08, 0xBF);
         _set_reg(1, BASE_ADDRESS_PIO1, PIO_P1C1, 0x35, 0x8A);
         _set_reg(1, BASE_ADDRESS_PIO1, PIO_P1C2, 0x8B, 0x34);
-	#endif
+#endif
 #else
 		/* Pin 1.2 it is the internal clk pin so,if the driver uses the internal clk this pin must be set to 1.2 */	
 
@@ -2466,15 +2466,7 @@ static int __init sci_module_init(void)
 module_init(sci_module_init);
 module_exit(sci_module_cleanup);
 
-#ifdef QBOXHD
-#define MOD               "-HD"
-#elif  QBOXHD_MINI
-#define MOD               "-Mini"
-#else
-#define MOD               ""
-#endif
-
-#define SMARTCARD_VERSION       "0.0.9"MOD
+#define SMARTCARD_VERSION       "0.0.9"
 
 MODULE_VERSION(SMARTCARD_VERSION);
 

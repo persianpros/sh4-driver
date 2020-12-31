@@ -245,6 +245,18 @@ DemultiplexorStatus_t Demultiplexor_Ts_c::Demux(
 		Pid = DVB_PID(Header);
 		if (Context->PidTable[Pid] == 0)
 			continue;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		/* Discard Encrypted Packet */
+		if ( Context->Base.BufferData[NewPacketStart+3] & 0x80 )
+		{
+	#if 0
+			report( severity_error, "Demultiplexor_Ts_c::Demux - DISCARD Encrypted Packet (%02x %02x %02x %02x)\n",
+					Context->Base.BufferData[NewPacketStart], Context->Base.BufferData[NewPacketStart+1],
+	 				Context->Base.BufferData[NewPacketStart+2], Context->Base.BufferData[NewPacketStart+3] );
+	#endif
+			continue;
+		}
+#endif
 		Entry = Context->PidTable[Pid] - 1;
 		BaseStream = &Context->Base.Streams[Entry];
 		Stream = &Context->Streams[Entry];

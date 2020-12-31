@@ -56,6 +56,27 @@ extern int stpti_start_feed(struct dvb_demux_feed *dvbdmxfeed,
 			    struct DeviceContext_s *DeviceContext);
 extern int stpti_stop_feed(struct dvb_demux_feed *dvbdmxfeed,
 			   struct DeviceContext_s *pContext);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+#define DVB_DEMUX_DEBUG
+#ifdef DVB_DEMUX_DEBUG
+		int stdemux_debug=0;
+		module_param(stdemux_debug, int, 0644);
+		MODULE_PARM_DESC(stdemux_debug, "Modify DVB_DEMUX debugging level (default:0=OFF)");
+
+		static int testPid = -1;
+		module_param(testPid, int, 0644);
+		MODULE_PARM_DESC(testPid, "testPid: pid to looking for into filtering stream");
+		static int testPid_freq = 0;
+		module_param(testPid_freq, int, 0644);
+		MODULE_PARM_DESC(testPid_freq, "testPid_freq: number of packets with PID=testPid.\n0=print never, 1=print each packet, 1000=print each 1000 packets");
+		static int injectCount = 0;
+		static int demuxCount = 0;
+#define TAGDEBUG "[DVB_DEMUX] "
+#define dprintk(level, x...) do { if (stdemux_debug && (level <= stdemux_debug)) printk(TAGDEBUG x); } while (0)
+#else
+#define dprintk(x...)
+#endif
+#endif
 #endif
 
 /********************************************************************************
@@ -655,6 +676,15 @@ int writeToDecoder(struct dvb_demux *demux, int pes_type, const u8 *buf, size_t 
 			return count;
 		j += 188;
 	}
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	if((((buf[1] & 0x1f) << 8) + buf[2]) == testPid)
+		if(testPid_freq>0 && testPid_freq==injectCount++)
+		{
+			injectCount=0;
+			dprintk(4,"%s: injecting packet: [0]%02x [1]%02x [2]%02x [3]%02x >\n",
+				__func__,buf[0],buf[1],buf[2],buf[3]);
+		}
+#endif
 	return DvbStreamInject(Context->DemuxContext->DemuxStream, buf, count);
 }
 
@@ -687,6 +717,25 @@ void demultiplexDvbPackets(struct dvb_demux *demux, const u8 *buf, int count)
 			next += 188;
 			cnt++;
 			pid = ts_pid(&buf[next]);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+			//if scrambled data
+			if ( buf[next]==0x47 && (buf[next+3]&0xC0) && (buf[next+3]&0x0F)==0x0F )
+				dprintk(4,"%s: 0x%04x =>buf[0]=0x%02x buf[3]=0x%02x [%01x|%01x]\n",
+						__func__,pid,buf[next],buf[next+3],(buf[next+3]&0xC0)>>4, (buf[next+3]&0x0F));
+
+			if(pid == testPid)
+			{
+				if(testPid_freq>0 && testPid_freq==demuxCount++)
+				{
+					demuxCount=0;
+					dprintk(5,"%s: pck: [0]%02x [1]%02x [2]%02x [3]%02x\n",
+							__func__,buf[next+0],buf[next+1],buf[next+2],buf[next+3]);
+				}
+			}
+			else
+				dprintk(6,"%s: buf:[0]%02x [1]%02x [2]%02x [3]%02x\n",
+						__func__,buf[next+0],buf[next+1],buf[next+2],buf[next+3]);
+#endif
 			if ((pid != firstPid) || (cnt > 8))
 				break;
 		}

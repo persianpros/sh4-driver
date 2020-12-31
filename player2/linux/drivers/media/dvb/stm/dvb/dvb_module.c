@@ -272,6 +272,17 @@ long DvbGenericUnlockedIoctl(struct file *file, unsigned int foo, unsigned long 
 		DeviceContext->dvr_in = kmalloc(65536, GFP_KERNEL); // 128Kbytes is quite a lot per device.
 		DeviceContext->dvr_out = kmalloc(65536, GFP_KERNEL); // However allocating on each write is expensive.
 		DeviceContext->EncryptionOn = 0;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		DeviceContext->VideoOutputWindow.X                = 0;
+		DeviceContext->VideoOutputWindow.Y                = 0;
+		DeviceContext->VideoOutputWindow.Width            = 0;
+		DeviceContext->VideoOutputWindow.Height           = 0;
+
+		DeviceContext->VideoInputWindow.X                 = 0;
+		DeviceContext->VideoInputWindow.Y                 = 0;
+		DeviceContext->VideoInputWindow.Width             = 0;
+		DeviceContext->VideoInputWindow.Height            = 0;
+#endif
 #ifdef __TDT__
 		DeviceContext->VideoPlaySpeed = DVB_SPEED_NORMAL_PLAY;
 		DeviceContext->provideToDecoder = 0;

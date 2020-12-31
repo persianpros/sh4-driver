@@ -55,6 +55,10 @@ Date Modification Name
 #include "e2_proc/e2_proc.h"
 #include "../../../../sound/pseudocard/pseudo_mixer.h"
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+extern unsigned int hdmi_audio_source_ply;
+#endif
+
 extern struct snd_kcontrol **pseudoGetControls(int *numbers);
 extern int snd_pseudo_switch_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol);
 extern int snd_pseudo_integer_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol);
@@ -158,6 +162,20 @@ struct dvb_device *AudioInit(struct DeviceContext_s *Context)
 /*}}}*/
 /*{{{ Ioctls*/
 /*{{{ AudioIoctlStop*/
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+
+#define STMHDMIIO_AUDIO_SOURCE_2CH_I2S (0)
+#define STMHDMIIO_AUDIO_SOURCE_PCM     STMHDMIIO_AUDIO_SOURCE_2CH_I2S
+#define STMHDMIIO_AUDIO_SOURCE_SPDIF   (1)
+#define STMHDMIIO_AUDIO_SOURCE_8CH_I2S (2)
+#define STMHDMIIO_AUDIO_SOURCE_NONE    (0xffffffff)
+
+extern long stmhdmiio_set_audio_source(unsigned int arg);
+extern long stmhdmiio_get_audio_source(unsigned int *arg);
+
+#endif
+
 int AudioIoctlStop(struct DeviceContext_s *Context)
 {
 	int Result = 0;
@@ -166,6 +184,10 @@ int AudioIoctlStop(struct DeviceContext_s *Context)
 	if (Context->AudioStream != NULL)
 	{
 		struct mutex *WriteLock = Context->ActiveAudioWriteLock;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		if ( hdmi_audio_source_ply == STMHDMIIO_AUDIO_SOURCE_PCM )
+			stmhdmiio_set_audio_source(STMHDMIIO_AUDIO_SOURCE_NONE);
+#endif
 		/* Discard previously injected data to free the lock. */
 		DvbStreamDrain(Context->AudioStream, true);
 		/*mutex_lock (WriteLock);*/
@@ -270,6 +292,12 @@ int AudioIoctlPlay(struct DeviceContext_s *Context)
 	{
 		DvbStreamEnable(Context->AudioStream, true);
 		Context->AudioState.play_state = AUDIO_PLAYING;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		if ( hdmi_audio_source_ply == STMHDMIIO_AUDIO_SOURCE_PCM ) {
+			stmhdmiio_set_audio_source( hdmi_audio_source_ply );
+			printk("HDMI audio source SET: %d\n",hdmi_audio_source_ply);
+		}
+#endif
 	}
 	DVB_DEBUG("State = %d\n", Context->AudioState.play_state);
 	return Result;

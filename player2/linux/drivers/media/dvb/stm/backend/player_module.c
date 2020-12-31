@@ -66,6 +66,94 @@ module_param(useoldaudiofw, int, 0444);
 MODULE_PARM_DESC(useoldaudiofw, "Set to 1 if you will use old audio firmware (audio.elf)");
 #endif
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+
+#include <linux/proc_fs.h>	/* Necessary because we use the proc fs */
+#include <asm/uaccess.h>	/* for copy_from_user */
+
+#define PROCFS_MAX_SIZE		3
+#define PROCFS_NAME 		"disable_time_ctrl"
+
+static struct proc_dir_entry *disable_time_ctrl_proc;
+static char procfs_buffer[PROCFS_MAX_SIZE];
+static unsigned long procfs_buffer_size = PROCFS_MAX_SIZE;
+
+int disable_time_ctrl=0;
+module_param(disable_time_ctrl, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC (disable_time_ctrl," disable time-scontrol patch");
+
+int debugReport = 0;
+module_param (debugReport,int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC (debugReport," enable Player2 report system");
+
+#define PLAYER2_VERSION       "0.0.6"
+MODULE_VERSION(PLAYER2_VERSION);
+
+int procfile_read(char *buffer, char **buffer_location,
+				  off_t offset, int buffer_length, int *eof, void *data)
+{
+	int ret;
+
+// 	printk(KERN_INFO "procfile_read (/proc/%s) called offset=%d, buffer_length=%d\n", PROCFS_NAME,offset,buffer_length);
+
+	if (offset > 0)
+	{
+		/* we have finished to read, return 0 */
+		ret  = 0;
+	}
+	else
+	{
+		procfs_buffer[0]=(0x30+(disable_time_ctrl?1:0)); //set buffer to module's parameter value
+		procfs_buffer[1]='\n';
+		procfs_buffer[2]='\0';
+
+		/* fill the buffer, return the buffer size */
+		memcpy(buffer, procfs_buffer, procfs_buffer_size);
+		ret = procfs_buffer_size;
+	}
+
+// 	printk(KERN_INFO "procfile_read disable_time_ctrl =%d procfs_buffer[0]=%d ret=%d\n",disable_time_ctrl,procfs_buffer[0],ret);
+	return ret;
+}
+
+/**
+ * This function is called with the /proc file is written
+ *
+ */
+int procfile_write(struct file *file, const char *buffer, unsigned long count,
+				   void *data)
+{
+	printk(KERN_INFO "procfile_write (/proc/%s) called\n\n", PROCFS_NAME);
+
+	/* get buffer size */
+	procfs_buffer_size = count;
+	if (procfs_buffer_size > PROCFS_MAX_SIZE )
+	{
+		procfs_buffer_size = PROCFS_MAX_SIZE;
+	}
+
+	/* write data to the buffer */
+	if ( copy_from_user(procfs_buffer, buffer, procfs_buffer_size) ) {
+		return -EFAULT;
+	}
+
+	if(procfs_buffer[0]==0x30)
+		disable_time_ctrl = 0;
+	else
+	{
+		disable_time_ctrl = 1;
+		procfs_buffer[0]  = 0x31;
+	}
+
+	printk(KERN_INFO "procfile_write => _setTimeCtrl -\n");
+	_setTimeCtrl(disable_time_ctrl==1);
+	printk(KERN_INFO "procfile_write => _setTimeCtrl +\n");
+
+// 	printk(KERN_INFO "procfile_write => set disable_time_ctrl =%d procfs_buffer[0]=%d\n", disable_time_ctrl,procfs_buffer[0]);
+	return count; //just one run !!!
+}
+#endif
+
 static struct dvb_backend_operations DvbBackendOps =
 {
 	.owner = THIS_MODULE,
@@ -160,6 +248,31 @@ static int __init PlayerLoadModule(void)
 #if defined (CONFIG_EXPORT_PLAYER_INTERFACE)
 	register_player_interface(MODULE_NAME, &PlayerInterfaceOps);
 #endif
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	{
+		/* create the /proc file */
+		disable_time_ctrl_proc = create_proc_entry(PROCFS_NAME, 0644, NULL);
+
+		if (disable_time_ctrl_proc == NULL) {
+			remove_proc_entry(PROCFS_NAME, &proc_root);
+			printk(KERN_ALERT "Error: Could not initialize /proc/%s\n",
+				   PROCFS_NAME);
+			return -ENOMEM;
+		}
+
+		disable_time_ctrl_proc->read_proc  = procfile_read;
+		disable_time_ctrl_proc->write_proc = procfile_write;
+		disable_time_ctrl_proc->owner 	  = THIS_MODULE;
+		disable_time_ctrl_proc->mode 	  = S_IFREG | S_IRUGO | S_IWUGO;
+		disable_time_ctrl_proc->uid 	  = 0;
+		disable_time_ctrl_proc->gid 	  = 0;
+		disable_time_ctrl_proc->size 	  = 37;
+
+		printk(KERN_INFO "/proc/%s created\n", PROCFS_NAME);
+		return 0;	/* everything is ok */
+	}
+
+#endif
 	PLAYER_DEBUG("Player2 backend loaded\n");
 	return 0;
 }
@@ -167,6 +280,9 @@ static int __init PlayerLoadModule(void)
 static void __exit PlayerUnloadModule(void)
 {
 	BackendDelete();
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	remove_proc_entry(PROCFS_NAME, &proc_root);
+#endif
 	PLAYER_DEBUG("Player2 backend unloaded\n");
 	return;
 }

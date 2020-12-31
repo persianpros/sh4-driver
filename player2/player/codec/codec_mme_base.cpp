@@ -841,10 +841,16 @@ CodecStatus_t Codec_MmeBase_c::GetDecodeBuffer(void)
 	Status = MapBufferToDecodeIndex(ParsedFrameParameters->DecodeFrameIndex, CurrentDecodeBufferIndex);
 	if (Status != CodecNoError)
 		return Status;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_LockMutex( &Lock );
+#endif
 	memset(&BufferState[CurrentDecodeBufferIndex], 0x00, sizeof(CodecBufferState_t));
 	BufferState[CurrentDecodeBufferIndex].Buffer = CurrentDecodeBuffer;
 	BufferState[CurrentDecodeBufferIndex].OutputOnDecodesComplete = false;
 	BufferState[CurrentDecodeBufferIndex].DecodesInProgress = 0;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	BufferState[CurrentDecodeBufferIndex].ReferenceFrameCount_time      = OS_GetTimeInMilliSeconds();
+#endif
 	//
 	// Obtain the interesting references to the buffer
 	//
@@ -852,6 +858,9 @@ CodecStatus_t Codec_MmeBase_c::GetDecodeBuffer(void)
 						 NULL,
 						 (void **)(&BufferState[CurrentDecodeBufferIndex].BufferPointer),
 						 Configuration.AddressingMode);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_UnLockMutex( &Lock );
+#endif
 	Status = CurrentDecodeBuffer->AttachMetaData(Player->MetaDataParsedFrameParametersReferenceType, UNSPECIFIED_SIZE, (void *)ParsedFrameParameters);
 	if (Status != PlayerNoError)
 	{
@@ -1031,6 +1040,9 @@ CodecStatus_t Codec_MmeBase_c::TranslateReferenceFrameLists(bool IncrementUseCou
 	{
 		CurrentDecodeBuffer->IncrementReferenceCount();
 		BufferState[CurrentDecodeBufferIndex].ReferenceFrameCount++;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		BufferState[CurrentDecodeBufferIndex].ReferenceFrame_flag = 1;
+#endif
 	}
 //
 	DecodeContext->NumberOfReferenceFrameLists = ParsedFrameParameters->NumberOfReferenceFrameLists;
@@ -1505,13 +1517,24 @@ CodecStatus_t Codec_MmeBase_c::DecrementReferenceCount(unsigned int BufferIndex)
 	Buffer_t Buffer;
 	unsigned int Count;
 //
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_LockMutex( &Lock );
+#endif
 	Buffer = BufferState[BufferIndex].Buffer;
 	if (Buffer == NULL)
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	{
+		report(severity_error,"Error - NULL buffer index %d\n",BufferIndex);
+		OS_UnLockMutex( &Lock );
+		return CodecNoError;
+	}
+#else
 	{
 		report(severity_error, "Codec_MmeBase_c::DecrementReferenceCount(%s) - NULL buffer index %d\n", Configuration.CodecName, BufferIndex);
 		return CodecError;
 	}
 	OS_LockMutex(&Lock);
+#endif
 	Buffer->GetOwnerCount(&Count);
 	if (Count == 1)
 	{

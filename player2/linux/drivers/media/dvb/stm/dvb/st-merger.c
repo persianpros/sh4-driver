@@ -24,7 +24,11 @@
 #endif
 #include <linux/stm/stm-frontend.h>
 #include "tsmerger.h"
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+#include "pti.h"
+#else
 #include "st-common.h"
+#endif
 #include "dvb_module.h"
 
 #include <linux/delay.h>
@@ -181,6 +185,10 @@ enum
 #endif
 
 extern int highSR;
+
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+void paceSwtsByPti(void);
+#endif
 
 extern void paceSwtsByPti(void);
 
@@ -598,8 +606,11 @@ void spark_stm_tsm_init(void)
 }
 #endif
 #endif
-
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+void stm_tsm_init (int use_cimax, struct plat_frontend_config *config)
+#else
 void stm_tsm_init(int use_cimax)
+#endif
 {
 	unsigned int ret;
 	int n;
@@ -908,7 +919,9 @@ void stm_tsm_init(int use_cimax)
  || defined(FOREVER_9898HD) \
  || defined(FOREVER_3434HD) \
  || defined(DP7001) \
- || defined(EPP8000)
+ || defined(EPP8000) \
+ || defined(QBOXHD) \
+ || defined(QBOXHD_MINI)
 		ctrl_outl(0x0, tsm_io + SWTS_CFG(1));
 		ctrl_outl(0x0, tsm_io + SWTS_CFG(2));
 #endif
@@ -1230,7 +1243,9 @@ void stm_tsm_init(int use_cimax)
  && !defined(FOREVER_9898HD) \
  && !defined(FOREVER_3434HD) \
  && !defined(DP7001) \
- && !defined(EPP8000)
+ && !defined(EPP8000) \
+ && !defined(QBOXHD) \
+ && !defined(QBOXHD_MINI)
 		/* UFS910 stream configuration */
 		/* route stream 2 to PTI */
 		ret = ctrl_inl(tsm_io + TSM_PTI_SEL);
@@ -1289,7 +1304,9 @@ void stm_tsm_init(int use_cimax)
  || defined(UFC960) \
  || defined(HL101) \
  || defined(VIP1_V1) \
- || defined(VIP1_V2)
+ || defined(VIP1_V2) \
+ || defined(QBOXHD) \
+ || defined(QBOXHD_MINI)
 		/* TF7700 stream configuration */
 		/* route stream 1 to PTI */
 		ret = ctrl_inl(tsm_io + TSM_PTI_SEL);
@@ -1520,7 +1537,7 @@ void stm_tsm_init(int use_cimax)
  || defined(DP7001) \
  || defined(EPP8000)
 		tsm_handle.fdma_reqline = 31;
-#elif defined(UFS910)
+#elif defined(UFS910) || defined(QBOXHD) || defined(QBOXHD_MINI)
 		//ufs910 use dma request id 30 for swts, do'nt know what other boxes use
 		tsm_handle.fdma_reqline = 28;
 #else
@@ -1537,6 +1554,55 @@ void stm_tsm_init(int use_cimax)
 		}
 #endif
 	}
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	else {
+		/* bypass cimax */
+		int n;
+		unsigned long size;
+
+		printk("Bypass cimax\n");
+
+		tsm_io = (unsigned long)ioremap (config->tsm_base_address, 0x1000);
+
+#ifdef LOAD_TSM_DATA
+		TSM_NUM_PTI_ALT_OUT  = config->tsm_num_pti_alt_out;
+		TSM_NUM_1394_ALT_OUT = config->tsm_num_1394_alt_out;
+#endif
+
+		writel( 0x0, tsm_io + TSM_SW_RESET);
+		writel( 0x6, tsm_io + TSM_SW_RESET);
+
+		size = (config->tsm_sram_buffer_size / config->nr_nims) & ~31;
+
+		for (n=0;n<5;n++)
+			writel( TSM_RAM_ALLOC_START( 0x3 *n ), tsm_io + TSM_STREAM_CONF(n));
+
+		for (n = 0; n < config->nr_nims; n++)
+		{
+			enum plat_frontend_options options = config->nims[n].option;
+			int chan = STM_GET_CHANNEL(options);// / STM_TSM_CHANNEL_1) & 0xf;
+
+			/*printk("---> %s(): options: 0x%X\n", __func__, options);*/
+			writel(readl(tsm_io + TSM_DESTINATION(0)) | (1 << chan), tsm_io + TSM_DESTINATION(0));
+
+			writel((readl(tsm_io + TSM_STREAM_CONF(chan)) & TSM_RAM_ALLOC_START(0xff))	|
+					(options & STM_SERIAL_NOT_PARALLEL ? TSM_SERIAL_NOT_PARALLEL : 0 )	|
+					(options & STM_INVERT_CLOCK        ? TSM_INVERT_BYTECLK : 0 )		| 
+					(options & STM_PACKET_CLOCK_VALID  ? TSM_SYNC_NOT_ASYNC : 0 )		|
+					TSM_ALIGN_BYTE_SOP 													| 
+					TSM_PRIORITY(0xf) 													|
+					TSM_STREAM_ON 														|
+					TSM_ADD_TAG_BYTES,
+					tsm_io + TSM_STREAM_CONF(chan));
+
+			writel( TSM_SYNC(config->nims[n].lock)	|    
+					TSM_DROP(config->nims[n].drop)	|
+					TSM_SOP_TOKEN(0x47)				|
+					TSM_PACKET_LENGTH(188), 
+					tsm_io + TSM_STREAM_SYNC(chan));
+		}
+	}
+#else
 	else
 	{
 		/* bypass cimax */
@@ -1758,6 +1824,7 @@ void stm_tsm_init(int use_cimax)
 			       TSM_PACKET_LENGTH(188)
 			       , tsm_io + TSM_STREAM_SYNC(chan));
 		}
+#endif
 		/* Put TSMERGER into normal mode */
 		writel(TSM_CFG_BYPASS_NORMAL, tsm_io + TSM_SYSTEM_CFG);
 	}

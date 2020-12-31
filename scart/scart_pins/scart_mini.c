@@ -332,19 +332,9 @@ module_exit(scart_mini_exit);
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Turn on/off frontend debugging (default:off).");
 
-#ifdef QBOXHD
-#define MOD               "-HD"
-#elif  QBOXHD_MINI
-#define MOD               "-Mini"
-#else
-#define MOD               ""
-#endif
-
-#define SCART_VERSION       "0.0.1"MOD
+#define SCART_VERSION       "0.0.1"
 MODULE_VERSION(SCART_VERSION);
 
 MODULE_DESCRIPTION("Set generic GPIO's of QBoxHD mini for scart");
 MODULE_AUTHOR("Michele Cecchin");
 MODULE_LICENSE("GPL");
-
-

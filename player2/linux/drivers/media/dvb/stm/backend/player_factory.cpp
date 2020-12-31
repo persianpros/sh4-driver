@@ -32,7 +32,9 @@
 #include "collator_pes_audio_eac3.h"
 #include "collator_pes_audio_dtshd.h"
 #include "collator_pes_audio_lpcm.h"
+#if !defined(QBOXHD) && !defined(QBOXHD_MINI)
 #include "collator_pes_audio_wma.h"
+#endif
 #include "collator_pes_audio_mlp.h"
 #include "collator_pes_audio_rma.h"
 //#include "collator_pes_audio_avs.h"
@@ -58,7 +60,9 @@
 #include "frame_parser_audio_eac3.h"
 #include "frame_parser_audio_dtshd.h"
 #include "frame_parser_audio_lpcm.h"
+#if !defined(QBOXHD) && !defined(QBOXHD_MINI)
 #include "frame_parser_audio_wma.h"
+#endif
 #include "frame_parser_audio_mlp.h"
 #include "frame_parser_audio_rma.h"
 //#include "frame_parser_audio_avs.h"
@@ -83,7 +87,9 @@
 #include "codec_mme_audio_eac3.h"
 #include "codec_mme_audio_dtshd.h"
 #include "codec_mme_audio_lpcm.h"
+#if !defined(QBOXHD) && !defined(QBOXHD_MINI)
 #include "codec_mme_audio_wma.h"
+#endif
 #include "codec_mme_audio_mlp.h"
 #include "codec_mme_audio_rma.h"
 //#include "codec_mme_audio_avs.h"
@@ -241,7 +247,11 @@ static void *CollatorPesAudioLpcmBFactory(void)
 static void *CollatorPesAudioWmaFactory(void)
 {
 	FACTORY_DEBUG("\n");
+#if !defined(QBOXHD) && !defined(QBOXHD_MINI)
 	return new Collator_PesAudioWma_c();
+#else
+	return NULL;
+#endif
 }
 
 static void *CollatorPesAudioLpcmSFactory(void)
@@ -418,7 +428,11 @@ static void *FrameParserAudioLpcmBFactory(void)
 static void *FrameParserAudioWmaFactory(void)
 {
 	FACTORY_DEBUG("\n");
+#if !defined(QBOXHD) && !defined(QBOXHD_MINI)
 	return new FrameParser_AudioWma_c();
+#else
+	return NULL;
+#endif
 }
 
 /// \todo Magic constant for SPDIF latency.
@@ -603,7 +617,11 @@ static void *CodecMMEAudioLpcmBFactory(void)
 static void *CodecMMEAudioWmaFactory(void)
 {
 	FACTORY_DEBUG("\n");
+#if !defined(QBOXHD) && !defined(QBOXHD_MINI)
 	return new Codec_MmeAudioWma_c();
+#else
+	return NULL;
+#endif
 }
 
 static void *CodecMMEAudioMlpFactory(void)

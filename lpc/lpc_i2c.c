@@ -1041,18 +1041,9 @@ module_param(debugl, int, 0644);
 MODULE_PARM_DESC(debug, "Turn on/off LPC debugging (default:off).");
 MODULE_PARM_DESC(debugl, "Turn on/off LPC debugging in I/O operation.");
 
-#ifdef QBOXHD
-#define MOD               "-HD"
-#elif  QBOXHD_MINI
-#define MOD               "-Mini"
-#else
-#define MOD               ""
-#endif
-
-#define LPC_VERSION       "0.0.6"MOD
+#define LPC_VERSION       "0.0.6"
 MODULE_VERSION(LPC_VERSION);
 
 MODULE_DESCRIPTION("I2C driver for the LPC");
 MODULE_AUTHOR("Duolabs");
 MODULE_LICENSE("GPL");
-

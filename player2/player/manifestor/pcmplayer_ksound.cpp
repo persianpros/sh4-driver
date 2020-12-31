@@ -227,7 +227,7 @@ PlayerStatus_t PcmPlayer_Ksound_c::MapSamples(unsigned int SampleCount, bool Non
 		Result = ksnd_pcm_wait(SoundcardHandle, 2000);
 #else
 		Result = ksnd_pcm_wait(SoundcardHandle, -1);
-#endif ///QBOXHD
+#endif
 		if (Result <= 0)
 		{
 			PCMPLAYER_ERROR("Underrun before waiting for period expiry (%d) for %s\n",

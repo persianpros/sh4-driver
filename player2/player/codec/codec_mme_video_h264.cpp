@@ -47,6 +47,10 @@ Date Modification Name
 #include "h264.h"
 #include "ring_generic.h"
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+#include "manifestor_base.h"
+#endif
+
 // /////////////////////////////////////////////////////////////////////////
 //
 // Locally defined constants
@@ -164,6 +168,11 @@ Codec_MmeVideoH264_c::Codec_MmeVideoH264_c(void)
 	// Create the lock
 	//
 	OS_InitializeMutex(&H264Lock);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_InitializeMutex(&HALT_Lock);
+	HALT_Flag = false;
+	HALTED_Flag = false;
+#endif
 	//
 	// Create the ring used to inform the intermediate process of a datum on the way
 	//
@@ -233,6 +242,9 @@ Codec_MmeVideoH264_c::~Codec_MmeVideoH264_c(void)
 	//
 	OS_TerminateEvent(&StartStopEvent);
 	OS_TerminateMutex(&H264Lock);
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_TerminateMutex( &HALT_Lock );
+#endif
 }
 
 // /////////////////////////////////////////////////////////////////////////
@@ -242,7 +254,26 @@ Codec_MmeVideoH264_c::~Codec_MmeVideoH264_c(void)
 
 CodecStatus_t Codec_MmeVideoH264_c::Halt(void)
 {
-	return Codec_MmeVideo_c::Halt();
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+    int status;                                                                                              //Entire function modified by Duolabs
+
+    while(!HALTED_Flag)
+    {
+        status = OS_LockMutex_trylock(&HALT_Lock);
+        if (status)
+        {
+            //report( severity_error, "Codec_MmeVideoH264_c::Halt H264  Tryed to HALT++++++++++++++++++++++++++++++++++++++++++\n");
+            HALT_Flag = true;
+            OS_SleepMilliSeconds( 100 );
+            continue;
+        }
+        break;
+    }
+
+    HALTED_Flag = true;
+    //report( severity_error, "Codec_MmeVideoH264_c::Halt H264  HALTED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+#endif
+    return Codec_MmeVideo_c::Halt();
 }
 
 // /////////////////////////////////////////////////////////////////////////
@@ -1413,6 +1444,37 @@ OS_TaskEntry(Codec_MmeVideoH264_IntermediateProcess)
 	return NULL;
 }
 
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+
+#define DVB_SPEED_NORMAL_PLAY           1000
+#define DVB_SPEED_STOPPED               0
+#define DVB_SPEED_REVERSE_STOPPED       0x80000000
+
+
+#define PLAY_SPEED_NORMAL_PLAY          DVB_SPEED_NORMAL_PLAY
+#define PLAY_SPEED_STOPPED              DVB_SPEED_STOPPED
+#define PLAY_SPEED_REVERSE_STOPPED      DVB_SPEED_REVERSE_STOPPED
+
+// ----------------------
+
+int Codec_MmeVideoH264_c::getPlayerSpeed(void)
+{
+    Rational_t		  Speed;
+    PlayDirection_t	  Direction;
+    int playerSpeed = 0;
+
+    Player->GetPlaybackSpeed( Playback, &Speed, &Direction );
+
+    playerSpeed = (int)IntegerPart (Speed * PLAY_SPEED_NORMAL_PLAY);
+    if ((playerSpeed == PLAY_SPEED_STOPPED) && (Direction != PlayForward))
+        playerSpeed = PLAY_SPEED_REVERSE_STOPPED;
+    else if (Direction != PlayForward)
+        playerSpeed = -playerSpeed;
+
+    return playerSpeed;
+}
+#endif
+
 // ----------------------
 
 void Codec_MmeVideoH264_c::IntermediateProcess(void)
@@ -1429,6 +1491,9 @@ void Codec_MmeVideoH264_c::IntermediateProcess(void)
 	//
 	// Signal we have started
 	//
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+	OS_LockMutex(&HALT_Lock);
+#endif
 	ProcessRunningCount++;
 	OS_SetEvent(&StartStopEvent);
 	//
@@ -1442,7 +1507,41 @@ void Codec_MmeVideoH264_c::IntermediateProcess(void)
 		//
 		RingStatus = FramesInPreprocessorChainRing->Extract(&Entry, MAX_EVENT_WAIT);
 		if (RingStatus == RingNothingToGet)
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		{
+		    if (HALT_Flag)
+		    {
+	     //This branch avoids possible deadlock during zapping
+		        OS_UnLockMutex(&HALT_Lock);
+		        while( !Terminating ) OS_SleepMilliSeconds( 100 );
+		    }
+		    else
+		    {
+	     //If there is no message to process, than it clears all decode buffers older than 5 secs.
+		        unsigned int i, Count;
+
+		        OS_LockMutex( &Lock );
+		        for(i=0;i<32;i++)
+		        {
+		            if(BufferState[i].Buffer!=0)
+		            {
+		                BufferState[i].Buffer->GetOwnerCount(&Count);
+		                if ((Count==1) && (BufferState[i].ReferenceFrameCount_time+5000<=OS_GetTimeInMilliSeconds()))
+		                {
+		                    report( severity_error, "REMOVE buffer due to timeout 5 secs ----22222---- idx:%d  owncount: %d  refcount: %d  RefFrame: %d  reftime: %d   now: %d\n", i, Count, BufferState[i].ReferenceFrameCount, BufferState[i].ReferenceFrame_flag, BufferState[i].ReferenceFrameCount_time, OS_GetTimeInMilliSeconds() );
+		                    OS_UnLockMutex( &Lock );
+		                    Codec_MmeBase_c::DecrementReferenceCount(i);
+		                    OS_LockMutex( &Lock );
+		                }
+		            }
+		        }
+		        OS_UnLockMutex( &Lock );
+		    }
+#endif
 			continue;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+		}
+#endif
 		//
 		// Is frame aborted
 		//
@@ -1498,6 +1597,164 @@ void Codec_MmeVideoH264_c::IntermediateProcess(void)
 			case ActionPassOnFrame:
 				if (Terminating)
 					break;
+#if defined(QBOXHD) || defined(QBOXHD_MINI)
+//H264 deadlock work around
+//It checks decoder buffers before input CodedBuffer to Video Codec. If all buffers are full, then waits for at least one empties.
+//After 1.5 secs clears the oldest one. Besides it clears all buffers older than 5 secs.
+				{
+				    unsigned int i, ii, c, k, tttime, time=0, Count, mintime;
+				    unsigned int NUM_BUFFERS;
+
+
+				    ((class Manifestor_Base_c*)Manifestor)->GetDecodeBufferCount( &NUM_BUFFERS );
+
+							do
+							{
+								c=0;
+								for(i=0;i<32;i++) if(BufferState[i].Buffer!=0) c++;
+								if (!Terminating && (getPlayerSpeed()==PLAY_SPEED_STOPPED) && c>=NUM_BUFFERS)
+								{
+									OS_SleepMilliSeconds( 100 );
+								}
+							} while(!Terminating && (getPlayerSpeed()==PLAY_SPEED_STOPPED) && c>=NUM_BUFFERS);
+
+
+				    if (c>=NUM_BUFFERS)
+				    {
+				        unsigned char buftorelease[32];
+				        unsigned char buftorelease_cnt = 0;
+				        CodecStatus_t	Status;
+				        unsigned int    Index;
+
+				        time = tttime = OS_GetTimeInMilliSeconds();
+
+				        while(1)
+				        {
+				            OS_SleepMilliSeconds( 5 );
+
+				            buftorelease_cnt = 0;
+				            for( i=0; i<H264_CODED_FRAME_COUNT; i++ )
+				            {
+				                if( FramesInPreprocessorChain[i].Used && ( FramesInPreprocessorChain[i].Action == ActionCallReleaseReferenceFrame ||
+				                                                           FramesInPreprocessorChain[i].Action == ActionStashReleaseReferenceFrame   ) )
+				                {
+				                    Status	= TranslateDecodeIndex( FramesInPreprocessorChain[i].DecodeFrameIndex, &Index );
+				                    if (Status == CodecNoError) buftorelease[buftorelease_cnt++] = Index;
+				                }
+				            }
+
+				            ReleaseReferenceFrameStash->Insert(0xBEEFDEAD);
+				            do
+				            {
+				                ReleaseReferenceFrameStash->Extract( &DecodeFrameIndex );
+				                if (DecodeFrameIndex == 0xBEEFDEAD) break;
+				                ReleaseReferenceFrameStash->Insert( DecodeFrameIndex );
+				                Status = TranslateDecodeIndex( DecodeFrameIndex, &Index );
+				                if (Status == CodecNoError) buftorelease[buftorelease_cnt++] = Index;
+				            } while(1);
+
+
+				            c=0;
+
+				            OS_LockMutex( &Lock );
+				            for(i=0;i<32;i++)
+				            {
+				                if(BufferState[i].Buffer!=0)
+				                {
+				                    c++;
+
+				                    {
+				                        BufferState[i].Buffer->GetOwnerCount(&Count);
+				                        if ((Count==1) && (BufferState[i].ReferenceFrameCount_time+5000<=OS_GetTimeInMilliSeconds()))
+				                        {
+				                            for( ii=0; ii<buftorelease_cnt; ii++ )     if (buftorelease[ii] == i) break;
+				                            if (ii == buftorelease_cnt)
+				                            {
+				                                report( severity_error, "REMOVE buffer due to timeout 5 secs ----11111---- idx:%d  owncount: %d  refcount: %d  RefFrame: %d  reftime: %d   now: %d\n", i, Count, BufferState[i].ReferenceFrameCount, BufferState[i].ReferenceFrame_flag, BufferState[i].ReferenceFrameCount_time, OS_GetTimeInMilliSeconds() );
+				                                OS_UnLockMutex( &Lock );
+				                                Codec_MmeBase_c::DecrementReferenceCount(i);
+				                                OS_LockMutex( &Lock );
+				                                c--;
+				                            }
+				                        }
+				                    }
+				                }
+				            }
+				            OS_UnLockMutex( &Lock );
+
+				            if (c<NUM_BUFFERS) break;
+
+				            if (time+1500<=OS_GetTimeInMilliSeconds())
+				            {
+				                mintime = 0;
+				                c=0;
+				                OS_LockMutex( &Lock );
+				                for(i=0;i<32;i++)
+				                {
+				                    if(BufferState[i].Buffer!=0)
+				                    {
+				                        BufferState[i].Buffer->GetOwnerCount(&Count);
+				                        if ((Count==1) && (BufferState[i].ReferenceFrame_flag || BufferState[i].ReferenceFrameCount_time+5000<=OS_GetTimeInMilliSeconds()) && (BufferState[i].ReferenceFrameCount_time<mintime || mintime==0))
+				                        {
+				                            for( ii=0; ii<buftorelease_cnt; ii++ )     if (buftorelease[ii] == i) break;
+				                            if (ii == buftorelease_cnt)
+				                            {
+				                                mintime = BufferState[i].ReferenceFrameCount_time;
+				                                k = i;
+				                            }
+				                        }
+				                    }
+				                }
+				                if (mintime != 0)
+				                {
+				                    BufferState[k].Buffer->GetOwnerCount(&Count);
+				                    report( severity_error, "REMOVE oldest buffer ------------- idx:%d  owncount: %d  refcount: %d  RefFrame: %d  reftime: %d   now: %d\n", k, Count, BufferState[k].ReferenceFrameCount, BufferState[k].ReferenceFrame_flag, BufferState[k].ReferenceFrameCount_time, OS_GetTimeInMilliSeconds() );
+				                    OS_UnLockMutex( &Lock );
+				                    Codec_MmeBase_c::DecrementReferenceCount(k);
+				                    OS_LockMutex( &Lock );
+				                }
+				                OS_UnLockMutex( &Lock );
+				            }
+
+
+									do
+									{
+										c=0;
+										for(i=0;i<32;i++) if(BufferState[i].Buffer!=0) c++;
+										if (!Terminating && (getPlayerSpeed()==PLAY_SPEED_STOPPED) && c>=NUM_BUFFERS)
+										{
+											OS_SleepMilliSeconds( 100 );
+										}
+									} while(!Terminating && (getPlayerSpeed()==PLAY_SPEED_STOPPED) && c>=NUM_BUFFERS);
+
+
+				            if (c<NUM_BUFFERS) break;
+
+				            if (tttime+1000<=OS_GetTimeInMilliSeconds())
+				            {
+				                //report( severity_error, "******************************************************************\n");
+				                OS_LockMutex( &Lock );
+				                for(i=0;i<32;i++)
+				                {
+				                    if(BufferState[i].Buffer!=0)
+				                    {
+				                        BufferState[i].Buffer->GetOwnerCount(&Count);
+				                        //report( severity_error, "***************************************** idx:%d  owncount: %d  refcount: %d  RefFrame: %d  reftime: %d  now: %d\n", i, Count, BufferState[i].ReferenceFrameCount, BufferState[i].ReferenceFrame_flag, BufferState[i].ReferenceFrameCount_time, OS_GetTimeInMilliSeconds() );
+				                    }
+				                }
+				                OS_UnLockMutex( &Lock );
+				                //report( severity_error, "==================================================================\n");
+				                //for( i=0; i<buftorelease_cnt; i++ )
+				                //{
+				                //    report( severity_error, "========================================= idx:%d \n", buftorelease[i]);
+				                //}
+				                //report( severity_error, "******************************************************************\n");
+				                tttime = OS_GetTimeInMilliSeconds();
+				            }
+				        }
+				    }
+			    }
+#endif
 				//
 				// Now mimic the input procedure as done in the player process
 				//
