@@ -86,7 +86,7 @@ void setup_soc(void)
     *(pio2+PIO_PnC2) = *(pio2+PIO_PnC2) & ~(1L<<2);
   }
 
-#elif defined(CONFIG_STI7111)
+#elif defined(CONFIG_STI7111) || defined(CONFIG_STIH205)
   {
     /*
      * Enable HDMI hotplug PIO function
@@ -216,6 +216,7 @@ void setup_soc(void)
     *(pio5+PIO_PnC2) = *(pio5+PIO_PnC2) | (1L<<7);
 
   }
+
 #elif defined(CONFIG_STI5206)
   {
     /*
@@ -226,6 +227,7 @@ void setup_soc(void)
     *syscfg10 = *syscfg10 | SYS_CFG10_DVO_ENABLE;
 
   }
+
 #elif defined(CONFIG_STI7108)
   {
     /*
@@ -353,7 +355,7 @@ interrupt_t *get_bdisp_interrupt()
 {
 #if defined(CONFIG_STI7200)
   return interrupt_handle(OS21_INTERRUPT_BDISP0_AQ1);
-#elif defined(CONFIG_STI7111) || defined(CONFIG_STI7105) || defined(CONFIG_STI7106)
+#elif defined(CONFIG_STI7111) || defined(CONFIG_STI7105) || defined(CONFIG_STI7106) || defined(CONFIG_STIH205)
   return interrupt_handle(OS21_INTERRUPT_BDISP_AQ);
 #elif defined(CONFIG_STI7141)
   return interrupt_handle(OS21_INTERRUPT_BDISP_AQ1_IRQP);
@@ -372,12 +374,10 @@ interrupt_t *get_main_vtg_interrupt()
   return interrupt_handle(OS21_INTERRUPT_VTG_1);
 #elif defined(CONFIG_STI7200)
   return interrupt_handle(OS21_INTERRUPT_VTG_MAIN0);
-#elif defined(CONFIG_STI7111) || defined(CONFIG_STI7105) || defined(CONFIG_STI7106)
+#elif defined(CONFIG_STI7111) || defined(CONFIG_STI7105) || defined(CONFIG_STI7106) || defined(CONFIG_STI5206) || defined(CONFIG_STIH205)
   return interrupt_handle(OS21_INTERRUPT_MAIN_VTG);
 #elif defined(CONFIG_STI7141)
   return interrupt_handle(OS21_INTERRUPT_IRQ_MAIN_VTG_0);
-#elif defined(CONFIG_STI5206)
-  return interrupt_handle(OS21_INTERRUPT_MAIN_VTG);
 #elif defined(CONFIG_STI7108)
   return interrupt_handle(OS21_INTERRUPT_VTG_MAIN_VSYNC);
 #endif

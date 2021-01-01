@@ -1037,7 +1037,7 @@ TUNER_Error_t STV6111_TunerWrite(STCHIP_Handle_t hTuner)
 	      
 	      if(hTunerParams)
 	      {
-		      if((hTunerParams->DemodModel == DEMOD_STI7111)&&(hTuner->RepeaterHost->ChipID <0x20))
+		      if(((hTunerParams->DemodModel == DEMOD_STI7111) || (hTunerParams->DemodModel == DEMOD_STIH205)) && (hTuner->RepeaterHost->ChipID <0x20))
 		      {
 		         for(i=hTuner->WrStart;i<hTuner->WrSize;i++) /*Write one register at a time for 7111 cut1.0*/
 		           chipError |= ChipSetRegisters(hTuner,i, 1);
@@ -1103,7 +1103,7 @@ TUNER_Error_t STV6111_TunerRead(STCHIP_Handle_t hTuner)
       
 	    if(hTunerParams)
 	    {
-		      if((hTunerParams->DemodModel == DEMOD_STI7111)&&(hTuner->RepeaterHost->ChipID <0x20))
+		      if(((hTunerParams->DemodModel == DEMOD_STI7111) || (hTunerParams->DemodModel == DEMOD_STIH205)) && (hTuner->RepeaterHost->ChipID <0x20))
 		      {
 		       for(i=hTuner->RdStart;i<hTuner->RdSize;i++) /*Read one register at a time for cut1.0*/
 		          chipError|=ChipGetRegisters(hTuner, i ,1);

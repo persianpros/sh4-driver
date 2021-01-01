@@ -220,7 +220,7 @@ int cec_internal_init(void)
 	res |= (1 << (29));
 	cec_write_register_u32(SysConfigBaseAddress + SYS_CFG2, res);
 #endif
-#ifdef STx7111
+#if defined(STx7111) || defined(STxH205) //Currently the same as STx7111, needs verification
 	/* pio 1.7 open drain */
 	cec_write_register_u32(PIO1BaseAddress + PIO_PC0, 128);
 	cec_write_register_u32(PIO1BaseAddress + PIO_PC1, 128);
@@ -236,23 +236,6 @@ int cec_internal_init(void)
 	res |= (1 << (24));
 	cec_write_register_u32(SysConfigBaseAddress + SYS_CFG5, res);
 #endif
-#ifdef STxH205 //Currently the same as STx7111, needs verification
-    /* pio 1.7 open drain */
-    cec_write_register_u32( PIO1BaseAddress + PIO_PC0, 128 );
-    cec_write_register_u32( PIO1BaseAddress + PIO_PC1, 128 );
-    cec_write_register_u32( PIO1BaseAddress + PIO_PC2, 128 );
-
-    res = cec_read_register_u32( SysConfigBaseAddress + SYS_CFG5 );
-    /* pio 1.7 pad */
-    res |= ( 1 << (8) );
-    cec_write_register_u32( SysConfigBaseAddress + SYS_CFG5, res );
-
-    res = cec_read_register_u32( SysConfigBaseAddress + SYS_CFG5 );
-    /* pio 1.7 alt */
-    res |= ( 1 << (24) );
-    cec_write_register_u32( SysConfigBaseAddress + SYS_CFG5, res );
-#endif
-
 	res = cec_read_register_u32(CECBaseAddress + CEC_CFG);
 	/* enable */
 	res |= 0x3;
@@ -274,13 +257,12 @@ void cec_internal_exit(void)
 	res &= ~(1 << (29));
 	cec_write_register_u32(SysConfigBaseAddress + SYS_CFG2, res);
 #endif
-#ifdef STx7111
+#if defined(STx7111) || defined(STxH205) //Currently the same as STx7111, needs verification
 	/* pio 1.7 close drain */
 	res = cec_read_register_u32(SysConfigBaseAddress + SYS_CFG5);
 	res &= ~(256);
 	cec_write_register_u32(SysConfigBaseAddress + SYS_CFG5, res);
 #endif
-
 	res = cec_read_register_u32(CECBaseAddress + CEC_CFG);
 	/* disable */
 	res &= (u32)~ 0x03;

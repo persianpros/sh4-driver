@@ -28,12 +28,8 @@
 #ifdef STx7105
 #define CEC_IRQ                157
 #endif
-#ifdef STx7111
+#if defined(STx7111) || defined(STxH205) // CAUTION: to be verified!
 #define CEC_IRQ                143
-#endif
-
-#if defined CONFIG_CPU_SUBTYPE_STXH205
-#define CEC_IRQ                143  // CAUTION: to be verified!
 #endif
 
 #define CEC_STATUS_RECV_BTF 128

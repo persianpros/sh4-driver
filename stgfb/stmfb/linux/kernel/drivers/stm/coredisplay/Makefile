@@ -12,3 +12,4 @@ obj-m += sti7111_7141/
 obj-m += sti7105_7106/
 obj-m += sti5206/
 obj-m += sti7108/
+obj-m += stih205/

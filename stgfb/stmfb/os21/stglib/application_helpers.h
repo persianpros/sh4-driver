@@ -80,6 +80,11 @@
 #include <os21/st40/stx7108.h>
 #include <soc/sti7108/sti7108reg.h>
 
+#elif defined(CONFIG_STIH205)
+
+#include <os21/st40/stih205.h>
+#include <soc/stih205/stih205reg.h>
+
 #else
 #error Undefined chip type, check your makefile options
 #endif

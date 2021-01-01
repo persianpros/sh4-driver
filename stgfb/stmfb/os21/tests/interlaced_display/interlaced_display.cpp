@@ -515,16 +515,16 @@ osclock_t               lasttime;
     vsync_interrupt = interrupt_handle(OS21_INTERRUPT_VTG_2);
   }
 
-#elif defined(CONFIG_STI7111) || defined(CONFIG_STI7105) || defined(CONFIG_STI7106)
+#elif defined(CONFIG_STI7111) || defined(CONFIG_STI7105) || defined(CONFIG_STI7106) ||  defined(CONFIG_STIH205)
   if(output == 0)
   {
-    printf("Selecting STx7111/STx7105/STx7106 Main output pipeline\n");
+    printf("Selecting STx7111/STx7105/STx7106/STxH205 Main output pipeline\n");
     planeid  = OUTPUT_GDP1;
     vsync_interrupt = interrupt_handle(OS21_INTERRUPT_MAIN_VTG);
   }
   else
   {
-    printf("Selecting STx7111/STx7105/STx7106 Aux output pipeline\n");
+    printf("Selecting STx7111/STx7105/STx7106/STxH205 Aux output pipeline\n");
     planeid  = OUTPUT_GDP3;
     vsync_interrupt = interrupt_handle(OS21_INTERRUPT_AUX_VTG);
   }

@@ -204,7 +204,25 @@ ALLFBSRCS += $(addprefix $(SRC_TOPDIR)/soc/sti7108/,                           \
 			sti7108device.cpp)
 
 else
+ifeq ($(CONFIG_STIH205),y)
+ALLFBSRCS += $(HDTVOUTCOMMON)  $(HDMI_COMMON) $(HDMI_FDMA_IFRAME) $(DEI_IQI)
+
+ALLFBSRCS += $(addprefix $(SRC_TOPDIR)/Gamma/, GDPBDispOutput.cpp)
+
+ALLFBSRCS += $(addprefix $(SRC_TOPDIR)/soc/stih205/,                           \
+			stih205gdp.cpp                                         \
+			stih205bdisp.cpp                                       \
+			stih205mixer.cpp                                       \
+			stih205dvo.cpp                                         \
+			stih205mainoutput.cpp                                  \
+			stih205auxoutput.cpp                                   \
+			stih205hdmi.cpp                                        \
+			stih205device.cpp                                      \
+			stih205devicecreate.cpp)
+
+else
 $(error Unknown chip configuration)
+endif
 endif
 endif
 endif

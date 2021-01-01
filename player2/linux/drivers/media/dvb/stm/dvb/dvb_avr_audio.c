@@ -99,18 +99,13 @@ static int ll_audio_enable = false;
 # define AUDIO_CAPTURE_CARD 0
 # if defined(CONFIG_CPU_SUBTYPE_STX7200)
 # define AUDIO_CAPTURE_PCM 7
-# elif defined(CONFIG_CPU_SUBTYPE_STX7111)
-# define AUDIO_CAPTURE_PCM 3
-# warning Need to check this value
-# elif defined(CONFIG_CPU_SUBTYPE_STX7141)
-# define AUDIO_CAPTURE_PCM 3
-# warning Need to check this value
-# elif defined(CONFIG_CPU_SUBTYPE_STX7105) || defined(CONFIG_CPU_SUBTYPE_STX7106) || defined(CONFIG_CPU_SUBTYPE_STX7108)
-# define AUDIO_CAPTURE_PCM 3
-# warning Need to check this value
-# elif defined(CONFIG_CPU_SUBTYPE_STB7100)
-# define AUDIO_CAPTURE_PCM 3
-# elif defined(CONFIG_CPU_SUBTYPE_STXH205)
+# elif defined(CONFIG_CPU_SUBTYPE_STX7111) \
+ || defined(CONFIG_CPU_SUBTYPE_STX7141) \
+ || defined(CONFIG_CPU_SUBTYPE_STB7100) \
+ || defined(CONFIG_CPU_SUBTYPE_STX7105) \
+ || defined(CONFIG_CPU_SUBTYPE_STX7106) \
+ || defined(CONFIG_CPU_SUBTYPE_STX7108) \
+ || defined(CONFIG_CPU_SUBTYPE_STXH205)
 # define AUDIO_CAPTURE_PCM 3
 # warning Need to check this value
 # else

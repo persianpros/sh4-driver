@@ -560,7 +560,7 @@ U32  ST_GetClocksPerSecondLow(void);
 U32  ST_GetMajorRevision(ST_Revision_t *ptRevision_p);
 U32  ST_GetMinorRevision(ST_Revision_t *ptRevision_p);
 U32  ST_GetPatchRevision(ST_Revision_t *ptRevision_p);
-#if !defined (ST_5197) && !defined(ST_7108)&& !defined(ST_H205)
+#if !defined (ST_5197) && !defined(ST_7108) && !defined(ST_H205)
 U32 ST_GetIpVersion(ST_HWIPtype_t ipname);
 #endif
 U32 ST_GetSocRevision(void);

@@ -613,7 +613,7 @@ TUNER_Error_t STB6100_TunerWrite(STCHIP_Handle_t hTuner)
  	
 	if(hTunerParams && !hTuner->Error)	
  	{
-      if((hTunerParams->DemodModel == DEMOD_STI7111)&&(hTuner->RepeaterHost->ChipID <0x20))
+      if(((hTunerParams->DemodModel == DEMOD_STI7111) || (hTunerParams->DemodModel == DEMOD_STIH205) && (hTuner->RepeaterHost->ChipID <0x20))
       {
          for(i=hTuner->WrStart;i<hTuner->WrSize;i++) /*Write one register at a time for 7111 cut1.0*/
            chipError |= ChipSetRegisters(hTuner,i, 1);
@@ -679,7 +679,7 @@ TUNER_Error_t STB6100_TunerRead(STCHIP_Handle_t hTuner)
 	if(hTunerParams && !hTuner->Error)	
 
  {
-      if((hTunerParams->DemodModel == DEMOD_STI7111)&&(hTuner->RepeaterHost->ChipID <0x20))
+      if(((hTunerParams->DemodModel == DEMOD_STI7111) || (hTunerParams->DemodModel == DEMOD_STIH205) && (hTuner->RepeaterHost->ChipID <0x20))
       {
        chipError=ChipGetRegisters(hTuner,hTuner->RdStart,1);/*Only read first register*/
       }

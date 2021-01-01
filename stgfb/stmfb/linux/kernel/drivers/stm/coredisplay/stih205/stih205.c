@@ -27,7 +27,7 @@
 #include "soc/stih205/stih205reg.h"
 #include "soc/stih205/stih205device.h"
 
-#if defined(CONFIG_SH_ST_B2067)
+#if defined(CONFIG_SH_ST_B2067) || defined(CONFIG_CPU_SUBTYPE_STXH205)
 
     #if (defined(FOREVER_NANOSMART) \
      || defined(FOREVER_9898HD) \

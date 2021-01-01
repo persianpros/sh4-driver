@@ -134,6 +134,8 @@ typedef STFRONTEND_Media_t STFRONTEND_Device_t;/*For backward compatibility*/
           STFRONTEND_DEMOD_STV0900_Demod2,       /*Satellite     */
           STFRONTEND_DEMOD_STX7111_Demod1,       /*Satellite     */
           STFRONTEND_DEMOD_STX7111_Demod2,       /*Satellite     */
+          STFRONTEND_DEMOD_STXH205_Demod1,       /*Satellite     */
+          STFRONTEND_DEMOD_STXH205_Demod2,       /*Satellite     */
           STFRONTEND_DEMOD_STV0289,   		/*Satellite     */
 		  STFRONTEND_DEMOD_STV0910_Demod1,       /*Satellite     */
           STFRONTEND_DEMOD_STV0910_Demod2, 
