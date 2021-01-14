@@ -9,6 +9,7 @@ Implementation of linux dvb dvr input device
 Date        Modification                                    Name
 ----        ------------                                    --------
 01-Nov-06   Created                                         Pete
+05-Jan-21   Modified for Opticum HD 9600 (TS)               Audioniek
 
 ************************************************************************/
 
@@ -27,8 +28,8 @@ Date        Modification                                    Name
 // --- CI switch support ---
 #include "dvb_ca_en50221.h"
 
-#define STARCI2_ADDR         0x40
-#define STARCI2_I2C_BUS      2
+#define STARCI2_ADDR         0x3d
+#define STARCI2_I2C_BUS      0
 
 #define SLOT_STATUS_NONE     0x01
 #define SLOT_STATUS_PRESENT  0x02
@@ -96,7 +97,7 @@ static int starci2_writereg(int reg, int data)
 
 	if (debug > 1)
 	{
-		printk("[starciwin] %s:  write reg 0x%02x, value 0x%02x\n", __func__, reg, data);
+		printk("[starciwin] %s: write reg 0x%02x, value 0x%02x\n", __func__, reg, data);
 	}
 	if ((err = i2c_transfer(cicam.i2c, &msg, 1)) != 1)
 	{
@@ -149,7 +150,7 @@ int ciintf_detect(void)
 
 	if ((i2c = i2c_get_adapter(STARCI2_I2C_BUS)) == NULL)
 	{
-		printk("[starciwin] %s: Error: Can't find i2c adapter #0\n", __func__);
+		printk("[starciwin] %s: Error: Cannot find i2c adapter #0\n", __func__);
 		return -ENODEV;
 	}
 	val = i2c_transfer(i2c, msg, 2);
@@ -182,12 +183,12 @@ int ciintf_set_twin_mode(int on, int locked)
 	{
 		// TWIN MODE
 		cicam.slot.mode = 1;
-		cicam.slot.input[0] = 0; // 0 = tuner-A, 1 = tuner-B, 2 = ci-A, 3 = ci-B
+		cicam.slot.input[0] = 0;  // 0 = tuner-A, 1 = tuner-B, 2 = ci-A, 3 = ci-B
 		cicam.slot.input[1] = 1;
 		cicam.slot.output[0] = 0;
 		cicam.slot.output[1] = 1;
-		starci2_writereg(0x10, 0x00); // TS PATH
-		starci2_writereg(0x11, 0x80); // TS PATH: TWIN ON, TSI1->1st TSI, TSI2->2nd TSI
+		starci2_writereg(0x10, 0x00);  // TS PATH
+		starci2_writereg(0x11, 0x80);  // TS PATH: TWIN ON, TSI1->1st TSI, TSI2->2nd TSI
 		printk("[starciwin] CICAM: TWIN mode set\n");
 	}
 	else
@@ -198,8 +199,8 @@ int ciintf_set_twin_mode(int on, int locked)
 		cicam.slot.input[1] = 2;
 		cicam.slot.output[0] = 2;
 		cicam.slot.output[1] = 1;
-		starci2_writereg(0x10, 0x00); // TS PATH
-		starci2_writereg(0x11, 0x00); // TS PATH: TWIN OFF
+		starci2_writereg(0x10, 0x00);  // TS PATH
+		starci2_writereg(0x11, 0x00);  // TS PATH: TWIN OFF
 		printk("[starciwin] CICAM: SINGLE mode set\n");
 	}
 
@@ -324,22 +325,22 @@ int ciintf_init(struct dvb_ca_en50221 *ca)
 	// CI power
 	{
 		struct stpio_pin *pwr = NULL;
-		if ((pwr = stpio_request_pin( 5, 4, "CIpwr1", STPIO_OUT)) == NULL)
+		if ((pwr = stpio_request_pin(5, 4, "CIpwr1", STPIO_OUT)) == NULL)
 		{
-			printk("[starciwin] ERR: Cannott acquire CI power pin5.4!\n");
+			printk("[starciwin] ERR: Cannot acquire CI power pin PIO 5.4!\n");
 		}
 		else
 		{
-			printk("[starciwin] CI power pin5.4 acquired OK\n");
+			printk("[starciwin] CI power pin PIO 5.4 acquired OK\n");
 			stpio_set_pin(pwr, 1);
 		}
-		if ((pwr = stpio_request_pin( 4, 7, "CIpwr2", STPIO_OUT)) == NULL)
+		if ((pwr = stpio_request_pin(4, 7, "CIpwr2", STPIO_OUT)) == NULL)
 		{
-			printk("[starciwin] ERR: Can't acquire CI power pin4.7!\n");
+			printk("[starciwin] ERR: Cannot acquire CI power pin PIO 4.7!\n");
 		}
 		else
 		{
-			printk("[starciwin] CI power pin2.7 acquired OK\n");
+			printk("[starciwin] CI power pin PIO 4.7 acquired OK\n");
 			stpio_set_pin(pwr, 1);
 		}
 	}
@@ -732,7 +733,7 @@ int setCiSource(int slot, int source)
 {
 	int val;
 
-	printk("[starciwin] setCiSource (%d, %d)\n", slot, source);
+	printk("[starciwin] %s (%d, %d)\n", __func__, slot, source);
 	if ((slot < 0) || (slot > 1)  /* invalid slot */
 	||  (source > 3)  /* invalid source */
 	||  (slot == 0 && source == 2)  /* nonsense */
@@ -827,7 +828,7 @@ int init_ci_controller (struct dvb_adapter* dvb_adap)
 			}
 			else
 			{
-				printk("[starciwin] CICAM initialisation sucessful.\n");
+				printk("[starciwin] CICAM initialisation successful.\n");
 			}
 		}
 	}  // autodetect
@@ -850,6 +851,6 @@ module_init(starci2win_init);
 module_exit(starci2win_exit);
 
 MODULE_DESCRIPTION("CI Controller");
-MODULE_AUTHOR("Open Vision developers");
+MODULE_AUTHOR("");
 MODULE_LICENSE("GPL");
 // vim:ts=4

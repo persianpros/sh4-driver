@@ -21,11 +21,12 @@
 #ifndef __IX2470_H
 #define __IX2470_H
 
+#include "avl2108.h"
 
 enum ix2470_step
 {
-	IX2470_STEP_1000 = 0,  // 1000 kHz
-	IX2470_STEP_500        //  500 kHz
+	IX2470_STEP_1000 = 0,  // 1000 kHz, do not divide
+	IX2470_STEP_500        //  500 kHz, divide by 2
 };
 
 enum ix2470_bbgain
@@ -35,49 +36,39 @@ enum ix2470_bbgain
 	IX2470_GAIN_4dB       // -4dB Att
 };
 
-#if 0
 enum ix2470_cpump
 {
 	IX2470_CP_120uA,	/*  120uA */
 	IX2470_CP_260uA,	/*  260uA */
 	IX2470_CP_555uA,	/*  555uA */
-	IX2470_CP_1200uA,	/* 1200uA */
+	IX2470_CP_1200uA,	/* 1200uA (alway use this value according to datasheet) */
 };
-#endif
 
 struct ix2470_cfg
 {
-	u8 			name[32];
-	u8 			addr;
-	enum ix2470_step 	step_size;
-	enum ix2470_bbgain	bb_gain;
-	u8			t_lock;
+	u8 name[32];
+	u8 addr;
+	u8 step_size;
+	u8 bb_gain;
+	u8 t_lock;
 };
 
-struct ix2470_devctl
-{
-	int (*tuner_init) (struct dvb_frontend *fe);
-	int (*tuner_sleep) (struct dvb_frontend *fe);
-	int (*tuner_set_frequency) (struct dvb_frontend *fe, u32 frequency);
-	int (*tuner_get_frequency) (struct dvb_frontend *fe, u32 *frequency);
-	int (*tuner_set_bandwidth) (struct dvb_frontend *fe, u32 bandwidth);
-	int (*tuner_get_bandwidth) (struct dvb_frontend *fe, u32 *bandwidth);
-	int (*tuner_set_bbgain) (struct dvb_frontend *fe, u32 gain);
-	int (*tuner_get_bbgain) (struct dvb_frontend *fe, u32 *gain);
-	int (*tuner_set_refclk)  (struct dvb_frontend *fe, u32 refclk);
-	int (*tuner_get_status) (struct dvb_frontend *fe, u32 *status);
-};
+// tuner functions for demod
+u16 tuner_load_fw(struct dvb_frontend *fe);
+u16 tuner_init(struct dvb_frontend *fe);
+u16 tuner_lock(struct dvb_frontend *fe, u32 frequency, u32 srate, u32 _lfp);
+u16 tuner_lock_status(struct dvb_frontend *fe);
 
-//#if defined(CONFIG_DVB_IX2470) || (defined(CONFIG_DVB_IX2470_MODULE) && defined(MODULE))
+// AVL2108 demod functions
+extern u16 demod_i2c_repeater_send(void *state, u8 *buf, u16 size);
+extern u16 demod_i2c_repeater_recv(void *state, u8 *buf, u16 size);
+extern u16 demod_i2c_write(void *state, u8 *buf, u16 buf_size);
+extern u16 demod_i2c_write16(void *state, u32 addr, u16 data);
+extern u16 demod_send_op(u8 ucOpCmd, void *state);
+extern u16 demod_get_op_status(void *state);
+extern u16 demod_i2c_read16(void *state, u32 addr, u16 *data);
 
-extern struct ix2470_devctl *ix2470_attach(struct dvb_frontend *fe, const struct ix2470_cfg *cfg, struct i2c_adapter *i2c);
-//#else
-//static inline struct ix2470_devctl *ix2470_attach(struct dvb_frontend *fe, const struct ix2470_cfg *cfg, struct i2c_adapter *i2c)
-//{
-//	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
-//	return NULL;
-//}
-//#endif /* CONFIG_DVB_IX2470 */
+extern int ix2470_attach(struct dvb_frontend *fe, void *demod_priv, struct avl2108_equipment_s *equipment, u8 internal, struct i2c_adapter *i2c);
 
 #endif /* __IX2470_H */
 // vim:ts=4

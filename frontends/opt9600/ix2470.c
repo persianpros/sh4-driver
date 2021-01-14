@@ -1,7 +1,10 @@
 /*
 	Sharp IX2470 Silicon tuner driver
 
-	Copyright (C) Manu Abraham <abraham.manu@gmail.com>
+	Parts Copyright (C) Manu Abraham <abraham.manu@gmail.com>
+	Parts Copyright (C) Malcom Priestley
+
+	Adapted for Opticum HD (TS) 9600 by Audioniek
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -31,74 +34,75 @@
 #include "dvb_frontend.h"
 #include "ix2470.h"
 
-#define FE_ERROR				0
-#define FE_NOTICE				1
-#define FE_INFO					2
-#define FE_DEBUG				3
-#define FE_DEBUGREG				4
+#define I2C_ADDR_IX2470  (0xc0)
 
-#define dprintk(__y, __z, format, arg...) do {						\
-	if (__z) {									\
-		if	((verbose > FE_ERROR) && (verbose > __y))			\
-			printk(KERN_ERR "%s: " format "\n", __func__ , ##arg);		\
-		else if	((verbose > FE_NOTICE) && (verbose > __y))			\
-			printk(KERN_NOTICE "%s: " format "\n", __func__ , ##arg);	\
-		else if ((verbose > FE_INFO) && (verbose > __y))			\
-			printk(KERN_INFO "%s: " format "\n", __func__ , ##arg);		\
-		else if ((verbose > FE_DEBUG) && (verbose > __y))			\
-			printk(KERN_DEBUG "%s: " format "\n", __func__ , ##arg);	\
-	} else {									\
-		if (verbose > __y)							\
-			printk(format, ##arg);						\
-	}										\
-} while (0)
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[ix2470] "
 
-static unsigned int verbose;
-module_param(verbose, int, 0644);
-MODULE_PARM_DESC(verbose, "Set Verbosity level");
+/*
+ *  Data read format of the Sharp IX2470VA
+ *
+ *  byte1:   1   |   1   |   0   |   0   |   0   |  MA1  |  MA0  |  1
+ *  byte2:  POR  |   FL  |  RD2  |  RD1  |  RD0  |   X   |   X   |  X
+ *
+ *  byte1 = address
+ *  byte2;
+ *	POR   = Power on Reset (Vcc H=<2.2v L>2.2v)
+ *	FL    = Phase Lock (H=lock L=unlock)
+ *	RD0-2 = Reserved for internal operations (ignore)
+ *	X     = Don't care (ignore)
+ *
+ * Only POR can be used to check the tuner is present
+ *
+ * Caution: after byte2 the I2C reverts to write mode;
+ *          continuing to read may corrupt tuning data.
+ */
 
+/*
+ *  Data write format of the Sharp IX2470VA
+ *
+ *  byte1:   1   |   1   |   0   |   0   |   0   | 0(MA1)| 0(MA0)|  0
+ *  byte2:   0   |  BG1  |  BG2  |   N8  |   N7  |   N6  |  N5   |  N4
+ *  byte3:   N3  |   N2  |   N1  |   A5  |   A4  |   A3  |   A2  |  A1
+ *  byte4:   1   | 1(C1) | 1(C0) |  PD5  |  PD4  |   TM  | 0(RTS)| 1(REF)
+ *  byte5:   BA2 |  BA1  |  BA0  |  PSC  |  PD3  |PD2/TS2|DIV/TS1|PD0/TS0
+ *
+ *  byte1 = address
+ *
+ *  Write order
+ *  1) byte1 -> byte2 -> byte3 -> byte4 -> byte5
+ *  2) byte1 -> byte4 -> byte5 -> byte2 -> byte3
+ *  3) byte1 -> byte2 -> byte3 -> byte4
+ *  4) byte1 -> byte4 -> byte5 -> byte2
+ *  5) byte1 -> byte2 -> byte3
+ *  6) byte1 -> byte4 -> byte5
+ *  7) byte1 -> byte2
+ *  8) byte1 -> byte4
+ *
+ *  Recommended Setup
+ *  1 -> 8 -> 6
+ */
+
+static const struct ix2470_cfg ix2470va_cfg =
+{
+	.name		= "Sharp IX2470VA",
+	.addr		= I2C_ADDR_IX2470,
+	.step_size 	= IX2470_STEP_1000,
+	.bb_gain	= IX2470_GAIN_2dB,  // -2db Attenuation
+	.t_lock     = 0  // use default wait time for lock (200ms)
+};
 
 struct ix2470_state
 {
-	struct dvb_frontend	*fe;
-	struct i2c_adapter	*i2c;
-	const struct ix2470_cfg *cfg;
-	struct ix2470_devctl	*ctl;
-	u8 			reg[4];
+	struct avl2108_equipment_s equipment;
+	u8                         internal;
+	struct i2c_adapter         *i2c;
+	struct ix2470_cfg          *ix2470cfg;
+	u8 			               byte[4];  // current values of byte 2 through 5
+	u32                        frequency;
 };
-
-static int ix2470_write(struct ix2470_state *ix2470, u8 *buf, u8 len)
-{
-	const struct ix2470_cfg *cfg = ix2470->cfg;
-	struct i2c_adapter *i2c = ix2470->i2c;
-	int ret = 0;
-	struct i2c_msg msg = { .addr = cfg->addr, .flags = 0, .buf = buf, .len = len };
-
-	ret = i2c_transfer(i2c, &msg, 1);
-	if (ret != 1)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
-		return ret < 0 ? ret : -EREMOTEIO;
-	}
-	return 0;
-}
-
-static int ix2470_read(struct ix2470_state *ix2470, u8 *buf, u8 len)
-{
-	const struct ix2470_cfg *cfg = ix2470->cfg;
-	struct i2c_adapter *i2c = ix2470->i2c;
-	int ret = 0;
-
-	struct i2c_msg msg = { .addr = cfg->addr, .flags = I2C_M_RD, .buf = buf, .len = len };
-
-	ret = i2c_transfer(i2c, &msg, 1);
-	if (ret != 1)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
-		return ret < 0 ? ret : -EREMOTEIO;
-	}
-	return 0;
-}
 
 static inline u32 ix2470_do_div(u64 n, u32 d)
 {
@@ -106,443 +110,17 @@ static inline u32 ix2470_do_div(u64 n, u32 d)
 	return n;
 }
 
-static int ix2470_set_frequency(struct dvb_frontend *fe, u32 Frequency)
-{
-	struct ix2470_state *ix2470 = fe->tuner_priv;
-
-	u64 freq, fVCO, tmp;
-
-	u32 divider;
-
-	u8 cfg[4];
-	u32 N, A, P, R, PSC, DIV, BA, REF, PD0, BG, CP;
-	u8 b1, PD23, PD45, LPF;
-	int ret = 0;
-
-#define F_XTAL 4000000  // 4MHz Quarz Oscillator
-
-	dprintk(FE_DEBUG, 1, "Frequency: %d ", Frequency);
-	freq = Frequency;
-
-	if ((freq < 950000) || (freq > 2150000))
-	{
-		dprintk(FE_ERROR, 1, "SetFrequency - out of range [%llu]!", freq);
-		return -EINVAL;
-	}
-
-	freq *= 1000; /* convert to Hz */
-	if (freq <= 0)
-	{
-		return -EINVAL;
-	}
-	fVCO = freq;
-
-	cfg[0] = 0x40;
-	cfg[1] = 0x00;
-	cfg[2] = 0xE0;
-	cfg[3] = 0x00;
-
-	cfg[0] &= 0x9F;
-	cfg[0] |= 0x20;
-	cfg[2] &= 0xE3;
-	cfg[3] &= 0xF3;
-
-	dprintk(FE_DEBUG, 1, "B0-B4: 0x%02x 0x%02x 0x%02x 0x%02x", cfg[0], cfg[1], cfg[2], cfg[3]);
-	ret = ix2470_write(ix2470, cfg, 4); /* Init */
-	if (ret)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
-		goto err;
-	}
-
-	// select band
-	if (fVCO <= 986000000)
-	{
-		PSC = 1;
-		DIV = 1;
-		BA = 5;
-	}
-	else if (fVCO <= 1073000000)
-	{
-		PSC = 1;
-		DIV = 1;
-		BA = 6;
-	}
-	else if (fVCO <= 1154000000)
-	{
-		PSC = 0;
-		DIV = 1;
-		BA = 7;
-	}
-	else if (fVCO <= 1291000000)
-	{
-		PSC = 0;
-		DIV = 0;
-		BA = 1;
-	}
-	else if (fVCO <= 1447000000)
-	{
-		PSC = 0;
-		DIV = 0;
-		BA = 2;
-	}
-	else if (fVCO <= 1615000000)
-	{
-		PSC = 0;
-		DIV = 0;
-		BA = 3;
-	}
-	else if (fVCO <= 1791000000)
-	{
-		PSC = 0;
-		DIV = 0;
-		BA = 4;
-	}
-	else if (fVCO <= 1972000000)
-	{
-		PSC = 0;
-		DIV = 0;
-		BA = 5;
-	}
-	else
-	{
-		PSC = 0;
-		DIV = 0;
-		BA = 6;
-	}
-	if (fVCO < 1024000000L)
-	{
-		REF = 1; // divider = 500 kHz
-	}
-	else
-	{
-		REF = 0; // divider = 1000 kHz
-	}
-	if (fVCO <= 1375000000L)
-	{
-		PSC = 1;
-	}
-	else
-	{
-		PSC = 0;
-	}
-	// calculate divider
-	if (REF)
-	{
-		R = 8;  // xtal/r =  500 kHz
-	}
-	else
-	{
-		R = 4;  // xtal/r = 1000 kHz
-	}
-	if (PSC)
-	{
-		P = 16;
-	}
-	else
-	{
-		P = 32;
-	}
-	PD0 = 0;  // Power on
-	BG  = 2;  // -4dB
-	CP  = 3;  // Charge pump
-
-	// charge pump
-	if (freq < 1450000000)
-	{
-		// low band
-		if (fVCO < 1300000000)
-		{
-			CP = 1;         // 500 µA
-		}
-		else if (fVCO < 1375000000)
-		{
-			CP = 2;         // 1 mA
-		}
-		else
-		{
-			CP = 3;         // 2 mA
-		}
-	}
-	else
-	{
-		// high band
-		if (fVCO < 1850000000)
-		{
-			CP = 1;         // 500 ÂµA
-		}
-		else if (fVCO < 2045000000)
-		{
-			CP = 2;         // 1 mA
-		}
-		else
-		{
-			CP = 3;         // 2 mA
-		}
-	}
-	cfg[3] |= (u8) (PSC << 4);
-	cfg[3] |= (u8) (BA << 5);
-	cfg[3] |= (u8) (DIV << 1);
-
-	divider = F_XTAL / R;
-
-	// round-divide
-	fVCO += (divider / 2);
-	do_div(fVCO, divider); // fVCO /= divider
-
-	tmp = fVCO;
-	do_div(tmp, P); // N = tmp / P
-	N = tmp;
-
-	tmp = fVCO;
-	A = tmp - (P * N);
-
-	cfg[0] |= (u8) ((BG & 0x03) << 5);
-	cfg[0] |= (u8) ((N >> 3) & 0x1F);
-	cfg[1] |= (u8) ((N & 0x07) << 5);
-	cfg[1] |= (u8) ((A & 0x1F) << 0);
-	cfg[2] |= (u8) (REF & 0x01);
-	cfg[2] |= (u8) ((CP & 0x02) << 5);
-
-	b1 = cfg[0];
-
-	dprintk(FE_DEBUG, 1, "B0-B3: 0x%02x 0x%02x 0x%02x 0x%02x", cfg[0], cfg[1], cfg[2], cfg[3]);
-	// vco/lpf adjustment mode clear
-	ret = ix2470_write(ix2470, cfg, 4);
-	if (ret)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret = %d", ret);
-		goto err;
-	}
-
-	// vco/lpf adjustment mode setting
-	cfg[2] |= 0x04; // TM = 1
-
-	dprintk(FE_DEBUG, 1, "B2: 0x%02x", cfg[2]);
-	ret = ix2470_write(ix2470, &cfg[2], 1);
-	if (ret)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret = %d", ret);
-		goto err;
-	}
-	msleep(50);
-	LPF  = 34;  // 34MHz
-	PD23 = 0;
-	PD45 = 0;
-
-	switch (LPF)
-	{
-		case  0:
-		{
-			PD23 = 0;
-			PD45 = 0;
-			break;
-		}
-		case 10:
-		{
-			PD23 = 0;
-			PD45 = 3;
-			break;
-		}
-		case 12:
-		{
-			PD23 = 2;
-			PD45 = 0;
-			break;
-		}
-		case 14:
-		{
-			PD23 = 2;
-			PD45 = 2;
-			break;
-		}
-		case 16:
-		{
-			PD23 = 2;
-			PD45 = 1;
-			break;
-		}
-		case 18:
-		{
-			PD23 = 2;
-			PD45 = 3;
-			break;
-		}
-		case 20:
-		{
-			PD23 = 1;
-			PD45 = 0;
-			break;
-		}
-		case 22:
-		{
-			PD23 = 1;
-			PD45 = 2;
-			break;
-		}
-		case 24:
-		{
-			PD23 = 1;
-			PD45 = 1;
-			break;
-		}
-		case 26:
-		{
-			PD23 = 1;
-			PD45 = 3;
-			break;
-		}
-		case 28:
-		{
-			PD23 = 3;
-			PD45 = 0;
-			break;
-		}
-		case 30:
-		{
-			PD23 = 3;
-			PD45 = 2;
-			break;
-		}
-		case 32:
-		{
-			PD23 = 3;
-			PD45 = 1;
-			break;
-		}
-		case 34:
-		{
-			PD23 = 3;
-			PD45 = 3;
-			break;
-		}
-	}
-	cfg[2]|=(u8)(PD45 << 3);
-	cfg[3]|=(u8)(PD23 << 2);
-
-	dprintk(FE_DEBUG, 1, "B2-B3: 0x%02x 0x%02x", cfg[2], cfg[3]);
-	ret = ix2470_write(ix2470, &cfg[2], 2);
-	if (ret)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
-		goto err;
-	}
-	cfg[0] = b1;
-	dprintk(FE_DEBUG, 1, "B0: 0x%02x", cfg[0]);
-	ret = ix2470_write(ix2470, cfg, 1);
-	if (ret)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
-		goto err;
-	}
-	msleep(100);
-
-err:
-	return ret;
-}
-
-static int ix2470_get_status(struct dvb_frontend *fe, u32 *status)
-{
-	struct ix2470_state *state = fe->tuner_priv;
-	u8 result;
-	int err = 0;
-
-	*status = 0;
-
-	err = ix2470_read(state, &result, 1);
-	if (err < 0)
-	{
-		printk("%s: I/O Error\n", __func__);
-		return err;
-	}
-	dprintk(FE_DEBUG, 1, "STATUS: REG:0x%02x", result);
-	if ((result >> 6) & 0x01)
-	{
-		printk("%s: Tuner Phase Locked\n", __func__);
-		*status = 1;
-	}
-	return err;
-}
-
-static const struct ix2470_bw_sel
-{
-	u8 val;
-	u32 fc;
-} bw_sel[] =
-{
-	{ 0x0c, 10000 },
-	{ 0x02, 12000 },
-	{ 0x0a, 14000 },
-	{ 0x06, 16000 },
-	{ 0x0e, 18000 },
-	{ 0x01, 20000 },
-	{ 0x09, 22000 },
-	{ 0x05, 24000 },
-	{ 0x0d, 26000 },
-	{ 0x03, 28000 },
-	{ 0x0b, 30000 },
-	{ 0x07, 32000 },
-	{ 0x0f, 34000 },
-};
-
-static int ix2470_set_bw(struct dvb_frontend *fe, u32 bandwidth)
-{
-	struct ix2470_state *ix2470  = fe->tuner_priv;
-	const struct ix2470_cfg *cfg = ix2470->cfg;
-	u8 *b                        = ix2470->reg;
-	int i, ret = 0;
-	u32 halfbw;
-
-	halfbw = (bandwidth / 1000) >> 1;
-	dprintk(FE_DEBUG, 1, "Bandwidth:%d", bandwidth);
-
-	for (i = 0; i < ARRAY_SIZE(bw_sel); i++)
-	{
-		if (halfbw <= bw_sel[i].fc)
-		{
-			dprintk(FE_DEBUG, 1, "bw:%d halfbw:%d LPF fc:%d", bandwidth, halfbw, bw_sel[i].fc);
-			break;
-		}
-	}
-	if (i >= ARRAY_SIZE(bw_sel))
-	{
-		dprintk(FE_ERROR, 1, "Error: out of array bounds!, i=%d", i);
-		goto err;
-	}
-	b[2] |= ((bw_sel[i].val >> 2) & 0x03) << 3; /* Byte 4 PD:5, PD:4 */
-	b[3] |= (bw_sel[i].val & 0x03) << 2; /* Byte 5 PD:3, PD:2 */
-
-	dprintk(FE_DEBUG, 1, "B4,B5: 0x%02x 0x%02x", b[2], b[3]);
-	ret = ix2470_write(ix2470, &b[2], 2); /* Byte1, Byte4 - Byte5 */
-	if (ret)
-	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
-		goto err;
-	}
-	if (cfg->t_lock)
-	{
-		msleep(cfg->t_lock);
-	}
-	else
-	{
-		msleep(200);
-	}
-
-err:
-	return ret;
-}
-
 static const struct ix2470_losc_sel
 {
-	u32 f_ll;
-	u32 f_ul;
+	u32 f_ll;  // low limit (input)
+	u32 f_ul;  // hi limit  (input)
 
-	u8 band;
-	u8 psc;
-	u8 div;
-	u8 ba210;
+	u8 ba;  // resulting band
+	u8 p;  // resulting p (from PSC==1 ? 16 : 32) 
+	u8 div;  // result DIV
+	u8 ba210; // resulting BA
 } losc_sel[] =
-{
+{	// f_ll     f_ul    ba    p     div   ba210
 	{  950000,  986000, 0x01, 0x10, 0x01, 0x05 },
 	{  986000, 1073000, 0x02, 0x10, 0x01, 0x06 },
 	{ 1073000, 1154000, 0x03, 0x20, 0x01, 0x07 },
@@ -551,42 +129,130 @@ static const struct ix2470_losc_sel
 	{ 1447000, 1615000, 0x06, 0x20, 0x00, 0x03 },
 	{ 1615000, 1791000, 0x07, 0x20, 0x00, 0x04 },
 	{ 1791000, 1972000, 0x08, 0x20, 0x00, 0x05 },
-	{ 1972000, 2150000, 0x09, 0x20, 0x00, 0x06 },
+	{ 1972000, 2150000, 0x09, 0x20, 0x00, 0x06 }
 };
 
 static const int steps[2] = { 1000, 500 };
 
-static int ix2470_set_freq(struct dvb_frontend *fe, u32 frequency)
+static const struct ix2470_lpf_sel
+{
+	u8 val;
+	u32 fc;  // MHz
+} lpf_sel[] =
+{
+	{ 0x0c, 10 },
+	{ 0x02, 12 },
+	{ 0x0a, 14 },
+	{ 0x06, 16 },
+	{ 0x0e, 18 },
+	{ 0x01, 20 },
+	{ 0x09, 22 },
+	{ 0x05, 24 },
+	{ 0x0d, 26 },
+	{ 0x03, 28 },
+	{ 0x0b, 30 },
+	{ 0x07, 32 },
+	{ 0x0f, 34 }
+};
+
+/* **************** generic functions ********** */
+
+u16 ix2470_tuner_lock_status(struct dvb_frontend *fe)
+{
+	struct ix2470_state *ix2470 = fe->tuner_priv;
+	u16 ret = AVL2108_OK;
+	u8  data;
+
+	dprintk(150, "%s >\n", __func__);
+	if (ix2470->internal)
+	{
+		return ret;
+	}
+	else
+	{
+		ret = ix2470->equipment.demod_i2c_repeater_recv(fe->demodulator_priv, &data, 1);
+		dprintk(100, "Tuner status: 0x%02x\n", data);
+
+		if (ret == AVL2108_OK)
+		{
+			if (data & (1 << 7))
+			{
+				ret = AVL2108_ERROR_GENERIC;
+				dprintk(1, "Error: Tuner not powered on\n");
+			}			
+			if (data & (1 << 6))
+			{
+				ret = AVL2108_OK;
+				dprintk(70, "Tuner Phase Locked\n");
+			}
+			else
+			{
+				ret = AVL2108_ERROR_GENERIC;
+				dprintk(1, "Tuner not Locked\n");
+			}
+		}
+		dprintk(150, "%s < (lock status: %u)\n", __func__, (u32)ret);
+		return ret;
+	}
+	
+}
+
+u16 ix2470_tuner_lock(struct dvb_frontend *fe, u32 freq, u32 srate, u32 lpf)
 {
 	struct ix2470_state *ix2470  = fe->tuner_priv;
-	const struct ix2470_cfg *cfg = ix2470->cfg;
-	u8 *b                        = ix2470->reg;
-
-	int i, ret = 0;
-	u8 N, A, bb_gain, pump;
+	const struct ix2470_cfg *cfg = &ix2470va_cfg;
+	u16 ret = AVL2108_OK;
+	u32 i;
 	u32 data;
+	u8 byte[4];
+	u8 bb_gain, pump, N, A, DIV, BA210;
+	u8 PD23, PD45, LPF;
 
+//	dprintk(150, "%s >\n", __func__);
+
+	freq *= 100;  /* convert to kHz */
+	dprintk(70, "Frequency %d kHz, Symbol rate %d Ms/s, LPF %d.%1d MHz\n", freq, srate / 1000, lpf / 10, lpf % 10);
+
+	// set frequency
+	if ((freq < 950000) || (freq > 2150000))
+	{
+		dprintk(1, "%s Frequency [%llu] out of range \n", __func__, freq);
+		return -EINVAL;
+	}
+
+	if (freq <= 0)
+	{
+		return -EINVAL;
+	}
+
+	// retrieve current values
+	memcpy(byte, ix2470->byte, sizeof(byte));
+
+	// set BB gain
 	if (cfg->bb_gain)
 	{
 		bb_gain = cfg->bb_gain;
 	}
 	else
 	{
-		bb_gain = IX2470_GAIN_2dB; /* 0 */
+		bb_gain = IX2470_GAIN_2dB;  // default -2db Attenuation
 	}
-	dprintk(FE_DEBUG, 1, "Set frequency to: %d kHz", frequency / 1000);
 
-	/* get dividers corresponding to frequency */
+	// set charge pump
+	pump = IX2470_CP_1200uA;  // datasheet says always use this value (C1=1, C0=1 -> 1.2mA)
+
+	// determine band, P(SC), DIV and BA210
+	// get dividers corresponding to frequency
 	for (i = 0; i < ARRAY_SIZE(losc_sel); i++)
 	{
-		if (losc_sel[i].f_ll <= frequency && frequency < losc_sel[i].f_ul)
+		if (losc_sel[i].f_ll <= freq && freq < losc_sel[i].f_ul)
 		{
-			dprintk(FE_DEBUG, 1, "Freq:%d UL:%d LL:%d Band:%d PSC:%d Div:%d BA210:%d",
-				frequency,
-				losc_sel[i].f_ul,
-				losc_sel[i].f_ll,
-				losc_sel[i].band,
-				losc_sel[i].psc,
+			dprintk(70, "Freq: %d kHz, (UL: %d MHz, LL: %d MHz), Band: %d, P: %d, DIV: %d, BA210: %d\n",
+				freq,
+				losc_sel[i].f_ul / 1000,
+				losc_sel[i].f_ll / 1000,
+				losc_sel[i].ba,
+				losc_sel[i].p,
 				losc_sel[i].div,
 				losc_sel[i].ba210);
 			break;
@@ -594,106 +260,270 @@ static int ix2470_set_freq(struct dvb_frontend *fe, u32 frequency)
 	}
 	if (i >= ARRAY_SIZE(losc_sel))
 	{
-		dprintk(FE_ERROR, 1, "Error: out of array bounds!, i=%d", i);
+		dprintk(1, "%s Error: out of array bounds while setting frequency!, i=%d\n", __func__, i);
 		goto err;
 	}
 
 	/*
-	 * fvco = (P*N + A) x fosc/R
-	 *		fvco	= tune frequency
-	 *		fosc	= 4MHz
-	 *		R	= 4
+	 * Calculate divider values
 	 *
-	 *		A	= swallow division ratio (0 - 31; A < N)
-	 *		N	= Programmable division ratio (5 - 255)
-	 *		P	= Prescaler division ratio
+	 * Applicable formula:
+	 *
+	 * fvco = ((P * N) + A) * (fosc / R)
+	 *		fvco = tune frequency in MHz
+	 *		fosc = 4 MHz
+	 *		R	 = 4
+	 *      NOTE: fosc / R is 1 -> only deal with (P * N) + A
+	 *
+	 *		A	 = swallow division ratio (0 - 31; A < N)
+	 *		N	 = Programmable division ratio (5 - 255)
+	 *		P	 = Prescaler division ratio (set by PSC == 1 ? 16 : 32)
 	 */
-	data = ix2470_do_div(frequency, steps[cfg->step_size] + 1);
-	N = data / losc_sel[i].psc; /* N = data / P */
-	A = data - losc_sel[i].psc * N; /* A = data - P * N */
-	dprintk(FE_DEBUG, 1, "BBGAIN=%d N=%d A=%d data=%d", cfg->bb_gain, N, A, data);
+	data = ix2470_do_div(freq, steps[cfg->step_size]);  // freq is in kHz
+	N = data / losc_sel[i].p;  // N = data / P
+	A = data - losc_sel[i].p * N;  // A = data - P * N
 
-	b[0] = ((bb_gain & 0x3) << 5) | (N >> 3);
-	b[1] = (N << 5) | (A & 0x1f);
-	b[2] = 0x80 | ((pump & 0x3) << 5); /* Byte 4 */
-	b[3] = (losc_sel[i].ba210 << 5);
-
-	dprintk(FE_DEBUG, 1, "B2-B5: 0x%02x 0x%02x 0x%02x 0x%02x", b[0], b[1], b[2], b[3]);
-	ret = ix2470_write(ix2470, b, 4); /* Byte1 - Byte5 */
-	if (ret)
+#if 0
+	// Check: A must be smaller than N
+	if (A > N)
 	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
+		dprintk(1, "Error: A is not smaller than N! (A = %d, N = %d)\n", A, N);
 		goto err;
 	}
-	b[2] |= (1 << 2); /* TM = 1, VCO/LPF adjustment mode */
-
-	dprintk(FE_DEBUG, 1, "B4: 0x%02x", b[2]);
-	ret = ix2470_write(ix2470, &b[2], 1); /* Byte1 & Byte4 */
-	if (ret)
+	else if (N < 5)
 	{
-		dprintk(FE_ERROR, 1, "I/O error, ret=%d", ret);
+		dprintk(1, "%s Error: N is smaller than 5 (N = %d)\n", __func__, N);
 		goto err;
 	}
+	else if (N > 255)
+	{
+		dprintk(1, "%s Error: N is greater than than 255 (N = %d)\n", __func__, N);
+		goto err;
+	}
+	else if (A > 31)
+	{
+		dprintk(1, "%s Error: A is greater than than 31 (A = %d)\n", __func__, A);
+		goto err;
+	}
+	else
+	{
+		dprintk(50, "Values OK; P = %d  N = %d (division ratio)  A = %d (swallow division)\n", losc_sel[i].p, N, A);
+	}
+	// Calculate receiving frequency back
+	dprintk(50, "Resulting fVCO: %d000 kHz, frequency: %d kHz\n", ((losc_sel[i].p * N) + A), freq);
+#endif
+
+	// Set byte 2
+	byte[0]  = 0;  // clear all bits
+	byte[0] |= ((bb_gain & 0x3) << 5) | (N >> 3);
+	// set byte 3
+	byte[1]  = 0;  // clear all bits
+	byte[1] |= (N << 5) | (A & 0x1f);
+	// set byte 4
+	byte[2] = 0;  // clear all bits (C bits, PD5, PD4 (must be zero), TM (must be zero), RTS (should be 0), and REF (always 0))
+	byte[2] |= 0x80 | ((pump & 0x3) << 5);  // set MSB, add C0, C1
+	// set byte 5
+	byte[3] = 0;  // clear all bits (PD3, PD2 must be zero)
+	byte[3] |= (losc_sel[i].ba210 << 5) | (losc_sel[i].p << 3) | (losc_sel[i].div << 1) | (1 /* PO */ << 0);
+
+	// step 1: send byte2, byte 3, byte 4 & byte 5 to tuner
+	ret = ix2470->equipment.demod_i2c_repeater_send(fe->demodulator_priv, &byte[0], 4);
+	if (ret != AVL2108_OK)
+	{
+		dprintk(1, "%s < I/O error, ret=%d\n", __func__, ret);
+		return ret;
+	}
+
+	// step 2: resend byte4, now with TM=1 (VCO/LPF adjustment mode set)
+	byte[2] = 0x80 | ((pump & 0x3) << 5) | (1 /* TM */ << 2);  // set MSB, add C0, C1, TM =1
+	ret = ix2470->equipment.demod_i2c_repeater_send(fe->demodulator_priv, &byte[2], 1);
+	if (ret != AVL2108_OK)
+	{
+		dprintk(1, "%s < I/O error, ret=%d\n", __func__, ret);
+		return ret;
+	}
+	dprintk(100, "Set frequency complete\n");
+	ix2470->frequency = freq;
+	// end set frequency
+
+	// step 3: wait 10 ms
 	msleep(10);
 
+	// Determine PD bits (LPF setting)
+	lpf /= 10;  // convert LPF to MHz
+
+	for (i = 0; i < ARRAY_SIZE(lpf_sel); i++)
+	{
+		if (lpf <= lpf_sel[i].fc)
+		{
+			dprintk(70, "LPF: %d MHz, Value to set: 0x%02x\n", lpf, (u32)lpf_sel[i].val);
+			break;
+		}
+	}
+	if (i >= ARRAY_SIZE(lpf_sel))
+	{
+		dprintk(1, "%s Error: out of array bounds while setting LPF!, i = %d", __func__, i);
+		goto err;
+	}
+	// set byte 4
+	byte[2] |= ((lpf_sel[i].val >> 2) & 0x03) << 3;  // add PD5, PD4
+	// set byte 5
+	byte[3] |= (lpf_sel[i].val & 0x03) << 2;         // add PD3, PD2
+
+	// step 4: send byte 4 & 5 
+	ret = ix2470->equipment.demod_i2c_repeater_send(fe->demodulator_priv, &byte[2], 2);
+	if (ret)
+	{
+		dprintk(1, "%s I/O error, ret=%d", __func__, ret);
+		goto err;
+	}
+	dprintk(50, "Set lpf complete\n");
+	// end of set lpf (bandwidth)
+
+	if (cfg->t_lock)
+	{
+		msleep(cfg->t_lock);
+	}
+	else
+	{
+		msleep(200);
+	}
+	dprintk(150, "%s < (status %u)\n", __func__, ret);
 err:
 	return ret;
 }
 
-static int ix2470_release(struct dvb_frontend *fe)
+u16 ix2470_tuner_init(struct dvb_frontend *fe)
 {
+	u16 ret = AVL2108_OK;
+#if 0
+	u8  byte[5];  // bytes to write to IX2470
+	u8  BG;
+	u8  MA;
+	u8  N;
+	u8  A;
+	u8  PD;
+	u8  BA;
+	u8  PSC;
+	u8  DIV;
 	struct ix2470_state *ix2470 = fe->tuner_priv;
 
-	fe->tuner_priv = NULL;
-	kfree(ix2470);
-	return 0;
+	dprintk(150, "%s >\n", __func__);
+
+	/* Initialization sequence below is as per Sharp BS2F7VZ7700 datasheet */
+
+	memset(byte, 0, sizeof(byte));
+
+	// Initial values
+	BG = IX2470_GAIN_4dB;  // BB gain -4dB
+	MA = 0;  // ADR
+	N = 4;  // divisor
+	A = 0;  // swallow
+	PD = 15;  // LPF = 10 MHz
+	BA = 5;  // VCO = 950 - 986 MHz
+	PSC = 1;  // VCO = 950 - 986 MHz
+	DIV = 1;  // VCO = 950 - 986 MHz
+
+	/* Step one: send initial five bytes */
+	// byte 1
+//	byte[0]  = ix2470->avl2108->tuner_address;  // inserted by AVL2108 repeater routines
+//	byte[0] |= (MA & 0x3) << 1;  // add ADR
+	// byte 2
+	byte[1] |= 0x7f;  // clear MSB (already done)
+	byte[1] |= 0x40;  // set BG1
+	byte[1] &= 0xbf;  // clear BG0
+	byte[1] |= (N >> 3);  // add N
+	// byte 3
+	byte[2] |= (N << 5) & 0xe0;  // add N
+	byte[2] |= A & 0x1f;  // add A
+	// byte 4
+	byte[3] |= 0x80;  // set MSB
+	byte[3] |= 0x60;  // set C1, C0
+	byte[3] |= ((PD & 0x0C) >> 2) << 3;  // add PD5, PD4
+	byte[3] &= 0xfb;  // clear TM
+	byte[3] &= 0xfd;  // clear RTS 
+	byte[3] |= IX2470_STEP_500;  // set REF
+	// byte 5
+	byte[4] |= BA << 5;  // add BA
+	byte[4] |= (PSC & 0x01) >> 4;  // add PSC
+	byte[4] |= (PD & 0x03) >> 2;  // add PD
+	byte[4] |= (DIV & 0x01) >> 1;  // add DIV
+	byte[4] &= 0x01; //  clear PD0
+	dprintk(50, "%s byte1: 0xc0, byte2: 0x%02x, byte3: 0x%02x, byte4: 0x%02x, byte5: 0x%02x\n", __func__, byte[1], byte[2], byte[3], byte[4]);
+	ret = ix2470->equipment.demod_i2c_repeater_send(fe->demodulator_priv, byte + 1, 4);
+	if (ret != AVL2108_OK)
+	{
+			dprintk(1, "%s < I/O error, ret = %d\n", __func__, ret);
+			return ret;
+	}
+
+	/* Step two: resend byte 4 with TM set */
+	byte[3] |= 0x04;  // set TM
+	dprintk(50, "%s byte4: 0x%02x\n", __func__, byte[3]);
+	ret = ix2470->equipment.demod_i2c_repeater_send(fe->demodulator_priv, byte + 3, 1);
+	if (ret != AVL2108_OK)
+	{
+			dprintk(1, "%s < I/O error, ret = %d\n", __func__, ret);
+			return ret;
+	}
+	
+	/* Step three: wait 10 ms */
+	msleep(10);
+	
+	/* Step four: resend bytes 4 and 5 with with PD set to 34MHz */
+	PD = 31;  // LPF = 34 MHz
+	// byte 4
+	byte[3] &= 0xb7;  // clear PD5, PD4 bits
+	byte[3] |= ((PD & 0x0C) >> 2) << 3;  // add PD5, PD4
+	// byte 5
+	byte[4] &= 0xf3;  // clear PD3, PD2 bits
+	byte[4] |= (PD & 0x03) >> 2;  // add PD3, PD4
+	dprintk(50, "%s byte4: 0x%02x, byte5: 0x%02x\n", __func__, byte[3], byte[4]);
+	ret = ix2470->equipment.demod_i2c_repeater_send(fe->demodulator_priv, byte + 3, 2);
+	if (ret != AVL2108_OK)
+	{
+			dprintk(1, "%s < I/O error, ret = %d\n", __func__, ret);
+			return ret;
+	}
+
+	/* Save current values in state */
+	memcpy(byte, ix2470->byte, sizeof(byte));
+#endif
+	dprintk(150, "%s < (status %u)\n", __func__, ret);
+	return ret;
 }
 
-static struct dvb_tuner_ops ix2470_ops =
-{
-	.info =
-	{
-		.name           = "IX2470",
-		.frequency_min  =  950000,
-		.frequency_step = 2150000,
-		.frequency_step =    1000,
-	},
-	.release	= ix2470_release
-};
-
-static struct ix2470_devctl ix2470_ctl =
-{
-	.tuner_set_frequency = ix2470_set_frequency,
-//	.tuner_set_bandwidth = ix2470_set_bw,
-	.tuner_get_status    = ix2470_get_status,
-};
-
-struct ix2470_devctl *ix2470_attach(struct dvb_frontend *fe, const struct ix2470_cfg *cfg, struct i2c_adapter *i2c)
+int ix2470_attach(struct dvb_frontend *fe, void *demod_priv, struct avl2108_equipment_s *equipment, u8 internal, struct i2c_adapter *i2c)
 {
 	struct ix2470_state *ix2470;
+	const struct ix2470_cfg *cfg = &ix2470va_cfg;
+
+	dprintk(150, "%s >\n", __func__);
 
 	ix2470 = kzalloc(sizeof (struct ix2470_state), GFP_KERNEL);
 	if (!ix2470)
 	{
+		dprintk(1, "%s kzalloc failed\n", __func__);
 		goto exit;
 	}
-	ix2470->i2c       = i2c;
-	ix2470->fe        = fe;
-	ix2470->cfg       = cfg;
-	ix2470->ctl       = &ix2470_ctl;
 
 	fe->tuner_priv    = ix2470;
-	fe->ops.tuner_ops = ix2470_ops;
-	dprintk(FE_ERROR, 1, "Attaching %s IX2470 QPSK/8PSK tuner", cfg->name);
-	return ix2470->ctl;
+	ix2470->equipment = *equipment;
+	ix2470->internal  = internal;
+	ix2470->i2c       = i2c;
+
+	equipment->tuner_load_fw     = NULL;
+	equipment->tuner_init        = ix2470_tuner_init;
+	equipment->tuner_lock        = ix2470_tuner_lock;
+	equipment->tuner_lock_status = ix2470_tuner_lock_status;
+	dprintk(70, "Attaching %s QPSK/8PSK tuner\n", cfg->name);
+	dprintk(150, "%s < (OK)\n", __func__);
+	return 0;
 
 exit:
 	kfree(ix2470);
-	return NULL;
+	dprintk(1, "%s < (Error)\n", __func__);
+	return -1;
 }
 EXPORT_SYMBOL(ix2470_attach);
-
-MODULE_AUTHOR("Manu Abraham");
-MODULE_DESCRIPTION("IX2470 Silicon tuner");
-MODULE_LICENSE("GPL");
 // vim:ts=4

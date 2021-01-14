@@ -1,8 +1,16 @@
-/*
+/****************************************************************************
+ *
  * opt9600_fp_main.c
+ *
+ * Opticum HD 9600 (TS) Frontpanel driver.
+ *
  *
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add irq handling
+ * (c) 2020 Audioniek: ported to Opticum HD 9600 (TS)
+ *
+ * Largely based on cn_micom, enhanced and ported to Opticum HD 9600 (TS)
+ * by Audioniek.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +26,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
- */
-
-/*
- * Opticum 9600HD S/TS Frontpanel driver.
+ ****************************************************************************
  *
- */
+ * Changes
+ *
+ * Date     By              Description
+ * --------------------------------------------------------------------------
+ * 20201222 Audioniek       Initial version, based on cn_micom.
+ * 20201231 Audioniek       Reception of RESPONSE (0xc5) considered/handled
+ *                          as an error condition.
+ *
+ ****************************************************************************/
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -48,17 +61,15 @@
 
 //----------------------------------------------
 
-#define EVENT_BTN                  0x51
-#define EVENT_RC                   0x63
+//#define EVENT_BTN                  0x51
+//#define EVENT_RC                   0x63
 #define EVENT_STANDBY              0x80
 
-#define EVENT_ANSWER_GETTIME       0x15
-#define EVENT_ANSWER_WAKEUP_REASON 0x81
-#define EVENT_ANSWER_FRONTINFO     0xe4 /* unsused */
-#define EVENT_ANSWER_GETIRCODE     0xa5 /* unsused */
-#define EVENT_ANSWER_GETPORT       0xb3 /* unsused */
+#define EVENT_ANSWER_FRONTINFO     0xe4 /* unused */
+#define EVENT_ANSWER_GETIRCODE     0xa5 /* unused */
+#define EVENT_ANSWER_GETPORT       0xb3 /* unused */
 
-#define DATA_BTN_EVENT   2
+//#define DATA_BTN_EVENT   2
 
 //----------------------------------------------
 short paramDebug = 10;
@@ -66,7 +77,7 @@ short paramDebug = 10;
 static unsigned char expectEventData = 0;
 static unsigned char expectEventId = 1;
 
-#define BUFFERSIZE           256  // must be 2 ^ n
+#define BUFFERSIZE 256  // must be 2 ^ n
 static unsigned char RCVBuffer [BUFFERSIZE];
 static int           RCVBufferStart = 0, RCVBufferEnd = 0;
 
@@ -115,16 +126,16 @@ int ack_sem_down(void)
 	err  = wait_event_interruptible_timeout(ack_wq, dataReady == 1, ACK_WAIT_TIME);
 	if (err == -ERESTARTSYS)
 	{
-		printk("wait_event_interruptible failed\n");
+		dprintk(1, "wait_event_interruptible failed\n");
 		return err;
 	}
 	else if (err == 0)
 	{
-		dprintk(0,"Timeout waiting on ack\n");
+		dprintk(1, "Timeout waiting on ack\n");
 	}
 	else
 	{
-		dprintk(20, "Command processed - remaining jiffies %d\n", err);
+		dprintk(100, "Command processed - remaining jiffies %d\n", err);
 	}
 	return 0;
 }
@@ -138,6 +149,7 @@ int getLen(int expectedLen)
 	/* get received length of RCVBuffer  */
 	if (RCVBufferEnd == RCVBufferStart)
 	{
+//		dprintk(20, "Buffer empty\n");
 		return 0;
 	}
 	else if (RCVBufferEnd < RCVBufferStart)
@@ -150,16 +162,19 @@ int getLen(int expectedLen)
 	}
 	if (rcvLen < 3)
 	{
-		//printk("rcvLen < 3\n");
+//		dprintk(20, "rcvLen < 3\n");
 		return 0;
 	}
 	/* get packet data length  */
 	len = RCVBuffer[(RCVBufferEnd + 1) % BUFFERSIZE];
 
+//	dprintk(20, "expectedLen = %d\n", expectedLen);
+//	dprintk(20, "len = %d\n", len);
+
 	if (rcvLen < len + 2)
 	{
 		/* incomplete packet received */
-		//printk("incomplete packet received\n");
+//		dprintk(20, "Incomplete packet received (shorter than %d)\n", len);
 		return 0;
 	}
 
@@ -169,7 +184,7 @@ int getLen(int expectedLen)
 		return len + 2;
 	}
 	/* expected length is not matched */
-	//printk("expected length is not matched\n");
+	dprintk(20, "Expected length is not matched (rcvd = %d, expected = %d\n", len + 2, expectedLen);
 	return 0;
 }
 
@@ -191,7 +206,7 @@ void getRCData(unsigned char *data, int *len)
 	}
 	i = KeyBufferEnd;
 
-	if (KeyBuffer[i] == _MCU_KEYIN)
+	if (KeyBuffer[i] == EVENT_ANSWER_KEYIN)
 	{
 		*len = cPackageSizeKeyIn;
 	}
@@ -229,7 +244,6 @@ void handleCopyData(int len)
 	unsigned char *data = kmalloc(len, GFP_KERNEL);
 
 	i = 0;
-
 	j = RCVBufferEnd;
 
 	while (i != len)
@@ -269,6 +283,7 @@ void dumpData(void)
 		return;
 	}
 	i = RCVBufferEnd;
+	dprintk(0, "%s: ", __func__);
 	for (j = 0; j < len; j++)
 	{
 		printk("0x%02x ", RCVBuffer[i]);
@@ -291,7 +306,7 @@ void dumpData(void)
 
 void dumpValues(void)
 {
-	dprintk(150, "BuffersStart %d, BufferEnd %d, len %d\n", RCVBufferStart, RCVBufferEnd, getLen(-1));
+	dprintk(150, "BufferStart %d, BufferEnd %d, len %d\n", RCVBufferStart, RCVBufferEnd, getLen(-1));
 
 	if (RCVBufferStart != RCVBufferEnd)
 	{
@@ -320,14 +335,15 @@ static void processResponse(void)
 		expectEventData = RCVBuffer[RCVBufferEnd];
 		expectEventId = 0;
 	}
-	dprintk(100, "event 0x%02x %d %d\n", expectEventData, RCVBufferStart, RCVBufferEnd);
+	dprintk(200, "event 0x%02x bufferstart=%d bufferend=%d\n", expectEventData, RCVBufferStart, RCVBufferEnd);
 
 	if (expectEventData)
 	{
 		switch (expectEventData)
 		{
-			case _MCU_KEYIN:
+			case EVENT_ANSWER_KEYIN:  // handles both front panel keys as well as remote control
 			{
+				dprintk(100, "EVENT_ANSWER_KEYIN (0x%02x) received\n", EVENT_ANSWER_KEYIN);
 				len = getLen(cPackageSizeKeyIn);
 
 				if (len == 0)
@@ -338,7 +354,6 @@ static void processResponse(void)
 				{
 					goto out_switch;
 				}
-				dprintk(1, "_MCU_KEYIN complete\n");
 
 				if (paramDebug >= 50)
 				{
@@ -356,14 +371,12 @@ static void processResponse(void)
 
 					KeyBufferStart = (KeyBufferStart + 1) % BUFFERSIZE;
 				}
-				//printk("_MCU_KEYIN complete - %02x\n", RCVBuffer[(RCVBufferEnd+2)%BUFFERSIZE]);
-
+				dprintk(50, "ANSWER_KEYIN processed\n");
 				wake_up_interruptible(&wq);
-
 				RCVBufferEnd = (RCVBufferEnd + cPackageSizeKeyIn) % BUFFERSIZE;
 				break;
 			}
-			case _MCU_VERSION:
+			case EVENT_ANSWER_VERSION:
 			{
 				len = getLen(cGetVersionSize);
 
@@ -376,14 +389,13 @@ static void processResponse(void)
 					goto out_switch;
 				}
 				handleCopyData(len);
-				dprintk(20, "Pos. response received\n");
+				dprintk(50, "EVENT_ANSWER_VERSION (0x%02x) processed\n", EVENT_ANSWER_VERSION);
 				errorOccured = 0;
 				ack_sem_up();
-
 				RCVBufferEnd = (RCVBufferEnd + cGetVersionSize) % BUFFERSIZE;
 				break;
 			}
-			case _MCU_TIME:
+			case EVENT_ANSWER_TIME:
 			{
 				len = getLen(cGetTimeSize);
 
@@ -395,14 +407,18 @@ static void processResponse(void)
 				{
 					goto out_switch;
 				}
+				if (paramDebug >= 100)
+				{
+					dumpData();
+				}
 				handleCopyData(len);
-				dprintk(20, "Pos. response received\n");
+				dprintk(20, "EVENT_ANSWER_TIME (0x%02x) processed\n", EVENT_ANSWER_TIME);
 				errorOccured = 0;
 				ack_sem_up();
 				RCVBufferEnd = (RCVBufferEnd + cGetTimeSize) % BUFFERSIZE;
 				break;
 			}
-			case _MCU_WAKEUPREASON:
+			case EVENT_ANSWER_WAKEUP_REASON:
 			{
 				len = getLen(cGetWakeupReasonSize);
 
@@ -415,14 +431,15 @@ static void processResponse(void)
 					goto out_switch;
 				}
 				handleCopyData(len);
-				dprintk(1, "Pos. response received\n");
+				dprintk(20, "EVENT_ANSWER_WAKEUP_REASON (0x%02x) processed\n", EVENT_ANSWER_WAKEUP_REASON);
 				errorOccured = 0;
 				ack_sem_up();
 				RCVBufferEnd = (RCVBufferEnd + cGetWakeupReasonSize) % BUFFERSIZE;
 				break;
 			}
-			case _MCU_RESPONSE:
-			{
+			case EVENT_ANSWER_RESPONSE:  // 0xc5
+			{  // This response is sent in answer of misunderstood commands, it therefore constitutes an error condition
+				dprintk(1, "EVENT_ANSWER_RESPONSE (0x%02x) received\n", EVENT_ANSWER_RESPONSE);
 				len = getLen(cGetResponseSize);
 
 				if (len == 0)
@@ -433,27 +450,31 @@ static void processResponse(void)
 				{
 					goto out_switch;
 				}
+				if (paramDebug >= 1)
+				{
+					dumpData();
+				}
 				handleCopyData(len);
-				dprintk(1, "Pos. response received\n");
 				errorOccured = 0;
 				ack_sem_up();
 				RCVBufferEnd = (RCVBufferEnd + cGetResponseSize) % BUFFERSIZE;
 				break;
 			}
-			default: // Ignore Response
+			default:  // Ignore unknown response
 			{
-				dprintk(1, "Invalid Response %02x\n", expectEventData);
+				dprintk(1, "Unknown FP response %02x received, discarding\n", expectEventData);
 				dprintk(1, "start %d end %d\n",  RCVBufferStart,  RCVBufferEnd);
 				dumpData();
 
 				/* discard all data, because this happens currently
-				 * sometimes. dont know the problem here.
+				 * sometimes. do not know the problem here.
 				 */
 				RCVBufferEnd = RCVBufferStart;
 				break;
 			}
 		}
 	}
+
 out_switch:
 	expectEventId = 1;
 	expectEventData = 0;
@@ -462,19 +483,18 @@ out_switch:
 static irqreturn_t FP_interrupt(int irq, void *dev_id)
 {
 	unsigned int *ASC_X_INT_STA = (unsigned int *)(ASCXBaseAddress + ASC_INT_STA);
-	unsigned int *ASC_X_INT_EN = (unsigned int *)(ASCXBaseAddress + ASC_INT_EN);
+	unsigned int *ASC_X_INT_EN  = (unsigned int *)(ASCXBaseAddress + ASC_INT_EN);
 	char         *ASC_X_RX_BUFF = (char *)(ASCXBaseAddress + ASC_RX_BUFF);
 	char         *ASC_X_TX_BUFF = (char *)(ASCXBaseAddress + ASC_TX_BUFF);
 	int          dataArrived = 0;
 
-	if (paramDebug > 100)
+	if (paramDebug > 150)
 	{
 		dprintk(0, "i - ");
 	}
 	while (*ASC_X_INT_STA & ASC_INT_STA_RBF)
 	{
 		RCVBuffer [RCVBufferStart] = *ASC_X_RX_BUFF;
-//        printk("%02x ", RCVBuffer [RCVBufferStart]);
 		RCVBufferStart = (RCVBufferStart + 1) % BUFFERSIZE;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
@@ -485,14 +505,13 @@ static irqreturn_t FP_interrupt(int irq, void *dev_id)
 
 		if (RCVBufferStart == RCVBufferEnd)
 		{
-			printk("FP: RCV buffer overflow!!! (%d - %d)\n", RCVBufferStart, RCVBufferEnd);
+			dprintk(1, "%s: ASC3 RCV buffer overflow!!! (%d - %d)\n", __func__, RCVBufferStart, RCVBufferEnd);
 		}
 	}
 	if (dataArrived)
 	{
 		wake_up_interruptible(&rx_wq);
 	}
-//    printk("\n");
 
 	while ((*ASC_X_INT_STA & ASC_INT_STA_THE)
 	&&     (*ASC_X_INT_EN & ASC_INT_STA_THE)
@@ -555,7 +574,7 @@ int mcomTask(void *dummy)
 			dprintk(150, "start %d end %d\n",  RCVBufferStart,  RCVBufferEnd);
 		}
 	}
-	printk("mcomTask died!\n");
+	dprintk(1, "mcomTask died!\n");
 	return 0;
 }
 
@@ -565,13 +584,17 @@ static int __init mcom_init_module(void)
 {
 	int i = 0;
 
+	// set up ASC communication with the front controller
+
 	// Address for Interrupt enable/disable
 	unsigned int *ASC_X_INT_EN = (unsigned int *)(ASCXBaseAddress + ASC_INT_EN);
 	// Address for FiFo enable/disable
 	unsigned int *ASC_X_CTRL   = (unsigned int *)(ASCXBaseAddress + ASC_CTRL);
-	dprintk(5, "%s >\n", __func__);
 
-	//Disable all ASC 2 interrupts
+	printk("Opticum HD 9600 frontcontroller module\n");
+	dprintk(150, "%s >\n", __func__);
+
+	// Disable all ASC 3 interrupts
 	*ASC_X_INT_EN = *ASC_X_INT_EN & ~0x000001ff;
 
 	serial_init();
@@ -589,11 +612,13 @@ static int __init mcom_init_module(void)
 	//Enable the FIFO
 	*ASC_X_CTRL = *ASC_X_CTRL | ASC_CTRL_FIFO_EN;
 
+	dprintk(150, "%s Requesting IRQ %d for ASC\n", __func__, InterruptLine);
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17)
 	i = request_irq(InterruptLine, (void *)FP_interrupt, IRQF_DISABLED, "FP_serial", NULL);
 #else
 	i = request_irq(InterruptLine, (void *)FP_interrupt, SA_INTERRUPT, "FP_serial", NULL);
 #endif
+	dprintk(150, "%s IRQ %d requested\n", __func__, InterruptLine);
 
 	if (!i)
 	{
@@ -601,22 +626,23 @@ static int __init mcom_init_module(void)
 	}
 	else
 	{
-		dprintk(1, "FP: Cannot get irq\n");
+		dprintk(1, "%s: Cannot get IRQ\n", __func__);
 	}
 	msleep(1000);
-	mcom_init_func();
+
+	mcom_init_func();  // initialize driver
 
 	if (register_chrdev(VFD_MAJOR, "VFD", &vfd_fops))
 	{
-		dprintk(1, "unable to get major %d for VFD/MCOM\n", VFD_MAJOR);
+		dprintk(1, "unable to get major %d for VFD/MICOM\n", VFD_MAJOR);
 	}
-	dprintk(10, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
 static void __exit mcom_cleanup_module(void)
 {
-	printk("Opticum 9600HD frontcontroller module unloading\n");
+	printk("Opticum HD 9600 frontcontroller module unloading\n");
 
 	unregister_chrdev(VFD_MAJOR, "VFD");
 
@@ -628,7 +654,7 @@ static void __exit mcom_cleanup_module(void)
 module_init(mcom_init_module);
 module_exit(mcom_cleanup_module);
 
-MODULE_DESCRIPTION("Opticum 9600HD frontcontroller module");
+MODULE_DESCRIPTION("Opticum HD 9600 frontcontroller module");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 

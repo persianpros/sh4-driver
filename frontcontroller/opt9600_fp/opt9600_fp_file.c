@@ -1,8 +1,14 @@
-/*
+/****************************************************************************
+ *
  * opt9600_fp_file.c
  *
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add irq handling
+ * (c) 2020 Audioniek: ported to Opticum HD 9600 (TS)
+ *
+ * Largely based on cn_micom, enhanced and ported to Opticum HD 9600 (TS)
+ * by Audioniek.
+ *
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +24,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
- */
+ ****************************************************************************
+ *
+ * Changes
+ *
+ * Date     By              Description
+ * --------------------------------------------------------------------------
+ * 20201222 Audioniek       Initial version, based on cn_micom.
+ * 20201228 Audioniek       Add Opticum HD 9600 specifics.
+ * 20201230 Audioniek       Fix Opticum HD 9600 sstartup sequence.
+ * 20201231 Audioniek       /dev/vfd scrolls texts longer than DISPLAY_WIDTH.
+ *
+ ****************************************************************************/
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -63,29 +80,13 @@ struct saved_data_s
 	char  data[128];
 };
 
-#define OW_TaskDelay(x)          msleep(x)
-
 #if 1
-#define PRN_LOG(msg, args...)    printk(msg, ##args)
-#define PRN_DUMP(str, data, len) mcom_Dump(str, data, len)
+#define PRN_LOG(msg, args...)        printk(msg, ##args)
+#define PRN_DUMP(str, data, len)     mcom_Dump(str, data, len)
 #else
 #define PRN_LOG(msg, args...)
 #define PRN_DUMP(str, data, len)
 #endif
-
-#define MAX_MCOM_MSG        30
-
-#define MCU_COMM_PORT       UART_1
-#define MCU_COMM_TIMEOUT    1000
-
-typedef enum
-{
-	_VFD,
-	_7SEG
-} DISPLAYTYPE;
-
-static unsigned int  _1SEC  = 1000;
-static unsigned int  _100MS = 100;
 
 static time_t        mcom_time_set_time;
 static unsigned char mcom_time[12];
@@ -95,60 +96,470 @@ static time_t        mcom_settime_set_time;
 static time_t        mcom_settime;
 
 static unsigned char mcom_version[4];
-static unsigned char mcom_private[8]; // 0000 0000(Boot fron AC on), 0000 0001(Boot fron standby), 0000 0002(micom did not use this value, bug)
+static unsigned char mcom_private[8]; // 0000 0000(Boot from AC on), 0000 0001(Boot from standby), 0000 0002(micom did not use this value, bug)
 
+/**************************************************
+ *
+ * Character table for LED models
+ *
+ * Order is ASCII.
+ */
 static char *mcom_ascii_char_7seg[] =
 {
-	_7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    // 0 ~  7 (0x00 ~ 0x07)
-	_7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    // 8 ~ 15 (0x08 ~ 0x0F)
-	_7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    //16 ~ 23 (0x10 ~ 0x18)
-	_7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    //24 ~ 31 (0x19 ~ 0x1F)
-	_7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    //32 ~ 39 (0x20 ~ 0x27)
-	_7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    //40 ~ 47 (0x28 ~ 0x2F)
-	_7SEG_NUM_0,   _7SEG_NUM_1,   _7SEG_NUM_2,   _7SEG_NUM_3,   _7SEG_NUM_4,   _7SEG_NUM_5,   _7SEG_NUM_6,   _7SEG_NUM_7,
-	_7SEG_NUM_8,   _7SEG_NUM_9,   _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,
-	_7SEG_NULL,    _7SEG_CH_A,    _7SEG_CH_B,    _7SEG_CH_C,    _7SEG_CH_D,    _7SEG_CH_E,    _7SEG_CH_F,    _7SEG_CH_G,
-	_7SEG_CH_H,    _7SEG_CH_I,    _7SEG_CH_J,    _7SEG_CH_K,    _7SEG_CH_L,    _7SEG_CH_M,    _7SEG_CH_N,    _7SEG_CH_O,
-	_7SEG_CH_P,    _7SEG_CH_Q,    _7SEG_CH_R,    _7SEG_CH_S,    _7SEG_CH_T,    _7SEG_CH_U,    _7SEG_CH_V,    _7SEG_CH_W,
-	_7SEG_CH_X,    _7SEG_CH_Y,    _7SEG_CH_Z,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,
-	_7SEG_NULL,    _7SEG_CH_A,    _7SEG_CH_B,    _7SEG_CH_C,    _7SEG_CH_D,    _7SEG_CH_E,    _7SEG_CH_F,    _7SEG_CH_G,
-	_7SEG_CH_H,    _7SEG_CH_I,    _7SEG_CH_J,    _7SEG_CH_K,    _7SEG_CH_L,    _7SEG_CH_M,    _7SEG_CH_N,    _7SEG_CH_O,
-	_7SEG_CH_P,    _7SEG_CH_Q,    _7SEG_CH_R,    _7SEG_CH_S,    _7SEG_CH_T,    _7SEG_CH_U,    _7SEG_CH_V,    _7SEG_CH_W,
-	_7SEG_CH_X,    _7SEG_CH_Y,    _7SEG_CH_Z,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL,    _7SEG_NULL
+	_7SEG_NULL,   // 0x00, unprintable control character
+	_7SEG_NULL,   // 0x01, unprintable control character
+	_7SEG_NULL,   // 0x02, unprintable control character
+	_7SEG_NULL,   // 0x03, unprintable control character
+	_7SEG_NULL,   // 0x04, unprintable control character
+	_7SEG_NULL,   // 0x05, unprintable control character
+	_7SEG_NULL,   // 0x06, unprintable control character
+	_7SEG_NULL,   // 0x07, unprintable control character
+	_7SEG_NULL,   // 0x08, unprintable control character
+	_7SEG_NULL,   // 0x09, unprintable control character
+	_7SEG_NULL,   // 0x0a, unprintable control character
+	_7SEG_NULL,   // 0x0b, unprintable control character
+	_7SEG_NULL,   // 0x0c, unprintable control character
+	_7SEG_NULL,   // 0x0d, unprintable control character
+	_7SEG_NULL,   // 0x0e, unprintable control character
+	_7SEG_NULL,   // 0x0f, unprintable control character
+
+	_7SEG_NULL,   // 0x10, unprintable control character
+	_7SEG_NULL,   // 0x11, unprintable control character
+	_7SEG_NULL,   // 0x12, unprintable control character
+	_7SEG_NULL,   // 0x13, unprintable control character
+	_7SEG_NULL,   // 0x14, unprintable control character
+	_7SEG_NULL,   // 0x15, unprintable control character
+	_7SEG_NULL,   // 0x16, unprintable control character
+	_7SEG_NULL,   // 0x17, unprintable control character
+	_7SEG_NULL,   // 0x18, unprintable control character
+	_7SEG_NULL,   // 0x19, unprintable control character
+	_7SEG_NULL,   // 0x1a, unprintable control character
+	_7SEG_NULL,   // 0x1b, unprintable control character
+	_7SEG_NULL,   // 0x1c, unprintable control character
+	_7SEG_NULL,   // 0x1d, unprintable control character
+	_7SEG_NULL,   // 0x1e, unprintable control character
+	_7SEG_NULL,   // 0x1f, unprintable control character
+
+	_7SEG_NULL,   // 0x20, <space>
+	_7SEG_NULL,   // 0x21, !
+	_7SEG_NULL,   // 0x22, "
+	_7SEG_NULL,   // 0x23, #
+	_7SEG_NULL,   // 0x24, $
+	_7SEG_NULL,   // 0x25, %
+	_7SEG_NULL,   // 0x26, &
+	_7SEG_NULL,   // 0x27, '
+	_7SEG_NULL,   // 0x28, (
+	_7SEG_NULL,   // 0x29, )
+	_7SEG_NULL,   // 0x2a, *
+	_7SEG_NULL,   // 0x2b, +
+	_7SEG_NULL,   // 0x2c, ,
+	_7SEG_NULL,   // 0x2d, -
+	_7SEG_NULL,   // 0x2e, .
+	_7SEG_NULL,   // 0x2f, /
+
+	_7SEG_NUM_0,  // 0x30, 0,
+	_7SEG_NUM_1,  // 0x31, 1,
+	_7SEG_NUM_2,  // 0x32, 2,
+	_7SEG_NUM_3,  // 0x33, 3,
+	_7SEG_NUM_4,  // 0x34, 4,
+	_7SEG_NUM_5,  // 0x35, 5,
+	_7SEG_NUM_6,  // 0x36, 6,
+	_7SEG_NUM_7,  // 0x37, 7,
+	_7SEG_NUM_8,  // 0x38, 8,
+	_7SEG_NUM_9,  // 0x39, 9,
+	_7SEG_NULL,   // 0x3a, :
+	_7SEG_NULL,   // 0x3b, ;
+	_7SEG_NULL,   // 0x3c, <
+	_7SEG_NULL,   // 0x3d, =
+	_7SEG_NULL,   // 0x3e, >
+	_7SEG_NULL,   // 0x3f, ?
+
+	_7SEG_NULL,   // 0x40, @
+	_7SEG_CH_A,   // 0x41, A
+	_7SEG_CH_B,   // 0x42, B
+	_7SEG_CH_C,   // 0x43, C
+	_7SEG_CH_D,   // 0x44, D
+	_7SEG_CH_E,   // 0x45, E
+	_7SEG_CH_F,   // 0x46, F
+	_7SEG_CH_G,   // 0x47, G
+	_7SEG_CH_H,   // 0x48, H
+	_7SEG_CH_I,   // 0x49, I
+	_7SEG_CH_J,   // 0x4a, J
+	_7SEG_CH_K,   // 0x4b, K
+	_7SEG_CH_L,   // 0x4c, L
+	_7SEG_CH_M,   // 0x4d, M
+	_7SEG_CH_N,   // 0x4e, N
+	_7SEG_CH_O,   // 0x4f, O
+
+	_7SEG_CH_P,   // 0x50, P
+	_7SEG_CH_Q,   // 0x51, Q
+	_7SEG_CH_R,   // 0x52, R
+	_7SEG_CH_S,   // 0x53, S
+	_7SEG_CH_T,   // 0x54, T
+	_7SEG_CH_U,   // 0x55, U
+	_7SEG_CH_V,   // 0x56, V
+	_7SEG_CH_W,   // 0x57, W
+	_7SEG_CH_X,   // 0x58, X
+	_7SEG_CH_Y,   // 0x59, Y
+	_7SEG_CH_Z,   // 0x5a, Z
+	_7SEG_NULL,   // 0x5b  [
+	_7SEG_NULL,   // 0x5c, |
+	_7SEG_NULL,   // 0x5d, ]
+	_7SEG_NULL,   // 0x5e, ^
+	_7SEG_NULL,   // 0x5f, _
+
+	_7SEG_NULL,   // 0x60, `
+	_7SEG_CH_A,   // 0x61, a
+	_7SEG_CH_B,   // 0x62, b
+	_7SEG_CH_C,   // 0x63, c
+	_7SEG_CH_D,   // 0x64, d
+	_7SEG_CH_E,   // 0x65, e
+	_7SEG_CH_F,   // 0x66, f
+	_7SEG_CH_G,   // 0x67, g
+	_7SEG_CH_H,   // 0x68, h
+	_7SEG_CH_I,   // 0x69, i
+	_7SEG_CH_J,   // 0x6a, j
+	_7SEG_CH_K,   // 0x6b, k
+	_7SEG_CH_L,   // 0x6c, l
+	_7SEG_CH_M,   // 0x6d, m
+	_7SEG_CH_N,   // 0x6e, n
+	_7SEG_CH_O,   // 0x6f, o
+
+	_7SEG_CH_P,   // 0x70, p
+	_7SEG_CH_Q,   // 0x71, q
+	_7SEG_CH_R,   // 0x72, r
+	_7SEG_CH_S,   // 0x73, s
+	_7SEG_CH_T,   // 0x74, t
+	_7SEG_CH_U,   // 0x75, u
+	_7SEG_CH_V,   // 0x76, v
+	_7SEG_CH_W,   // 0x77, w
+	_7SEG_CH_X,   // 0x78, x
+	_7SEG_CH_Y,   // 0x79, y
+	_7SEG_CH_Z,   // 0x7a, z
+	_7SEG_NULL,   // 0x7b, {
+	_7SEG_NULL,   // 0x7c, backslash
+	_7SEG_NULL,   // 0x7d, }
+	_7SEG_NULL,   // 0x7e, ~
+	_7SEG_NULL    // 0x7f, <DEL>--> all segments on
 };
 
-static char *mcom_ascii_char_14seg[] =
+/**************************************************
+ *
+ * Character table for early VFD models
+ *
+ * Order is ASCII.
+ *
+ * NOTE: lower case letters are translated
+ * to uppercase
+ */
+static unsigned char mcom_ascii_char_14seg[] =
 {
-	_14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    // 0 ~  7 (0x00 ~ 0x07)
-	_14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    // 8 ~ 15 (0x08 ~ 0x0F)
-	_14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    //16 ~ 23 (0x10 ~ 0x18)
-	_14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    //24 ~ 31 (0x19 ~ 0x1F)
-	_14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    //32 ~ 39 (0x20 ~ 0x27)
-	_14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    //40 ~ 47 (0x28 ~ 0x2F)
-	_14SEG_NUM_0,   _14SEG_NUM_1,   _14SEG_NUM_2,   _14SEG_NUM_3,   _14SEG_NUM_4,   _14SEG_NUM_5,   _14SEG_NUM_6,   _14SEG_NUM_7,
-	_14SEG_NUM_8,   _14SEG_NUM_9,   _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,
-	_14SEG_NULL,    _14SEG_CH_A,    _14SEG_CH_B,    _14SEG_CH_C,    _14SEG_CH_D,    _14SEG_CH_E,    _14SEG_CH_F,    _14SEG_CH_G,
-	_14SEG_CH_H,    _14SEG_CH_I,    _14SEG_CH_J,    _14SEG_CH_K,    _14SEG_CH_L,    _14SEG_CH_M,    _14SEG_CH_N,    _14SEG_CH_O,
-	_14SEG_CH_P,    _14SEG_CH_Q,    _14SEG_CH_R,    _14SEG_CH_S,    _14SEG_CH_T,    _14SEG_CH_U,    _14SEG_CH_V,    _14SEG_CH_W,
-	_14SEG_CH_X,    _14SEG_CH_Y,    _14SEG_CH_Z,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,
-	_14SEG_NULL,    _14SEG_CH_A,    _14SEG_CH_B,    _14SEG_CH_C,    _14SEG_CH_D,    _14SEG_CH_E,    _14SEG_CH_F,    _14SEG_CH_G,
-	_14SEG_CH_H,    _14SEG_CH_I,    _14SEG_CH_J,    _14SEG_CH_K,    _14SEG_CH_L,    _14SEG_CH_M,    _14SEG_CH_N,    _14SEG_CH_O,
-	_14SEG_CH_P,    _14SEG_CH_Q,    _14SEG_CH_R,    _14SEG_CH_S,    _14SEG_CH_T,    _14SEG_CH_U,    _14SEG_CH_V,    _14SEG_CH_W,
-	_14SEG_CH_X,    _14SEG_CH_Y,    _14SEG_CH_Z,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL,    _14SEG_NULL
+	0x00,  // 0x00, unprintable control character
+	0x00,  // 0x01, unprintable control character
+	0x00,  // 0x02, unprintable control character
+	0x00,  // 0x03, unprintable control character
+	0x00,  // 0x04, unprintable control character
+	0x00,  // 0x05, unprintable control character
+	0x00,  // 0x06, unprintable control character
+	0x00,  // 0x07, unprintable control character
+	0x00,  // 0x08, unprintable control character
+	0x00,  // 0x09, unprintable control character
+	0x00,  // 0x0a, unprintable control character
+	0x00,  // 0x0b, unprintable control character
+	0x00,  // 0x0c, unprintable control character
+	0x00,  // 0x0d, unprintable control character
+	0x00,  // 0x0e, unprintable control character
+	0x00,  // 0x0f, unprintable control character
+
+	0x00,  // 0x10, unprintable control character
+	0x00,  // 0x11, unprintable control character
+	0x00,  // 0x12, unprintable control character
+	0x00,  // 0x13, unprintable control character
+	0x00,  // 0x14, unprintable control character
+	0x00,  // 0x15, unprintable control character
+	0x00,  // 0x16, unprintable control character
+	0x00,  // 0x17, unprintable control character
+	0x00,  // 0x18, unprintable control character
+	0x00,  // 0x19, unprintable control character
+	0x00,  // 0x1a, unprintable control character
+	0x00,  // 0x1b, unprintable control character
+	0x00,  // 0x1c, unprintable control character
+	0x00,  // 0x1d, unprintable control character
+	0x00,  // 0x1e, unprintable control character
+	0x00,  // 0x1f, unprintable control character
+
+	0x00,  // 0x20, <space>
+	0x00,  // 0x21, !
+	0x00,  // 0x22, "
+	0x00,  // 0x23, #
+	0x00,  // 0x24, $
+	0x00,  // 0x25, %
+	0x00,  // 0x26, &
+	0x00,  // 0x27, '
+	0x00,  // 0x28, (
+	0x00,  // 0x29, )
+	0x00,  // 0x2a, *
+	0x00,  // 0x2b, +
+	0x00,  // 0x2c, ,
+	0x00,  // 0x2d, -
+	0x00,  // 0x2e, .
+	0x00,  // 0x2f, /
+
+	0x02,  // 0x30, 0
+	0x03,  // 0x31, 1
+	0x04,  // 0x32, 2
+	0x05,  // 0x33, 3
+	0x06,  // 0x34, 4
+	0x07,  // 0x35, 5
+	0x08,  // 0x36, 6
+	0x09,  // 0x37, 7
+	0x0a,  // 0x38, 8
+	0x0b,  // 0x39, 9
+	0x00,  // 0x3a, :
+	0x00,  // 0x3b, ;
+	0x00,  // 0x3c, <
+	0x00,  // 0x3d, =
+	0x00,  // 0x3e, >
+	0x00,  // 0x3f, ?
+
+	0x00,  // 0x40, @
+	0x0c,  // 0x41, A
+	0x0d,  // 0x42, B
+	0x0e,  // 0x43, C
+	0x0f,  // 0x44, D
+	0x10,  // 0x45, E
+	0x11,  // 0x46, F
+	0x12,  // 0x47, G
+	0x13,  // 0x48, H
+	0x14,  // 0x49, I
+	0x15,  // 0x4a, J
+	0x16,  // 0x4b, K
+	0x17,  // 0x4c, L
+	0x18,  // 0x4d, M
+	0x19,  // 0x4e, N
+	0x1a,  // 0x4f, O
+
+	0x1b,  // 0x50, P
+	0x1c,  // 0x51, Q
+	0x1d,  // 0x52, R
+	0x1e,  // 0x53, S
+	0x1f,  // 0x54, T
+	0x20,  // 0x55, U
+	0x21,  // 0x56, V
+	0x22,  // 0x57, W
+	0x23,  // 0x58, X
+	0x24,  // 0x59, Y
+	0x25,  // 0x5a, Z
+	0x00,  // 0x5b  [
+	0x00,  // 0x5c, |
+	0x00,  // 0x5d, ]
+	0x00,  // 0x5e, ^
+	0x00,  // 0x5f, _
+
+	0x00,  // 0x60, `
+	0x0c,  // 0x61, a
+	0x0d,  // 0x62, b
+	0x0e,  // 0x63, c
+	0x0f,  // 0x64, d
+	0x10,  // 0x65, e
+	0x11,  // 0x66, f
+	0x12,  // 0x67, g
+	0x13,  // 0x68, h
+	0x14,  // 0x69, i
+	0x15,  // 0x6a, j
+	0x16,  // 0x6b, k
+	0x17,  // 0x6c, l
+	0x18,  // 0x6d, m
+	0x19,  // 0x6e, n
+	0x1a,  // 0x6f, o
+               
+	0x1b,  // 0x70, p
+	0x1c,  // 0x71, q
+	0x1d,  // 0x72, r
+	0x1e,  // 0x73, s
+	0x1f,  // 0x74, t
+	0x20,  // 0x75, u
+	0x21,  // 0x76, v
+	0x22,  // 0x77, w
+	0x23,  // 0x78, x
+	0x24,  // 0x79, y
+	0x25,  // 0x7a, z
+	0x00,  // 0x7b, {
+	0x00,  // 0x7c, backslash
+	0x00,  // 0x7d, }
+	0x00,  // 0x7e, ~
+	0x00,  // 0x7f, <DEL>
+};
+
+/**************************************************
+ *
+ * Character table for late VFD models
+ *
+ * Order is ASCII.
+ */
+static char *mcom_ascii_char_14seg_new[] =
+{
+	_14SEG_NULL,   // 0x00, unprintable control character
+	_14SEG_NULL,   // 0x01, unprintable control character
+	_14SEG_NULL,   // 0x02, unprintable control character
+	_14SEG_NULL,   // 0x03, unprintable control character
+	_14SEG_NULL,   // 0x04, unprintable control character
+	_14SEG_NULL,   // 0x05, unprintable control character
+	_14SEG_NULL,   // 0x06, unprintable control character
+	_14SEG_NULL,   // 0x07, unprintable control character
+	_14SEG_NULL,   // 0x08, unprintable control character
+	_14SEG_NULL,   // 0x09, unprintable control character
+	_14SEG_NULL,   // 0x0a, unprintable control character
+	_14SEG_NULL,   // 0x0b, unprintable control character
+	_14SEG_NULL,   // 0x0c, unprintable control character
+	_14SEG_NULL,   // 0x0d, unprintable control character
+	_14SEG_NULL,   // 0x0e, unprintable control character
+	_14SEG_NULL,   // 0x0f, unprintable control character
+
+	_14SEG_NULL,   // 0x10, unprintable control character
+	_14SEG_NULL,   // 0x11, unprintable control character
+	_14SEG_NULL,   // 0x12, unprintable control character
+	_14SEG_NULL,   // 0x13, unprintable control character
+	_14SEG_NULL,   // 0x14, unprintable control character
+	_14SEG_NULL,   // 0x15, unprintable control character
+	_14SEG_NULL,   // 0x16, unprintable control character
+	_14SEG_NULL,   // 0x17, unprintable control character
+	_14SEG_NULL,   // 0x18, unprintable control character
+	_14SEG_NULL,   // 0x19, unprintable control character
+	_14SEG_NULL,   // 0x1a, unprintable control character
+	_14SEG_NULL,   // 0x1b, unprintable control character
+	_14SEG_NULL,   // 0x1c, unprintable control character
+	_14SEG_NULL,   // 0x1d, unprintable control character
+	_14SEG_NULL,   // 0x1e, unprintable control character
+	_14SEG_NULL,   // 0x1f, unprintable control character
+
+	_14SEG_NULL,   // 0x20, <space>
+	_14SEG_NULL,   // 0x21, !
+	_14SEG_NULL,   // 0x22, "
+	_14SEG_NULL,   // 0x23, #
+	_14SEG_NULL,   // 0x24, $
+	_14SEG_NULL,   // 0x25, %
+	_14SEG_NULL,   // 0x26, &
+	_14SEG_NULL,   // 0x27, '
+	_14SEG_NULL,   // 0x28, (
+	_14SEG_NULL,   // 0x29, )
+	_14SEG_NULL,   // 0x2a, *
+	_14SEG_NULL,   // 0x2b, +
+	_14SEG_NULL,   // 0x2c, ,
+	_14SEG_NULL,   // 0x2d, -
+	_14SEG_NULL,   // 0x2e, .
+	_14SEG_NULL,   // 0x2f, /
+
+	_14SEG_NUM_0,  // 0x30, 0
+	_14SEG_NUM_1,  // 0x31, 1
+	_14SEG_NUM_2,  // 0x32, 2
+	_14SEG_NUM_3,  // 0x33, 3
+	_14SEG_NUM_4,  // 0x34, 4
+	_14SEG_NUM_5,  // 0x35, 5
+	_14SEG_NUM_6,  // 0x36, 6
+	_14SEG_NUM_7,  // 0x37, 7
+	_14SEG_NUM_8,  // 0x38, 8
+	_14SEG_NUM_9,  // 0x39, 9
+	_14SEG_NULL,   // 0x3a, :
+	_14SEG_NULL,   // 0x3b, ;
+	_14SEG_NULL,   // 0x3c, <
+	_14SEG_NULL,   // 0x3d, =
+	_14SEG_NULL,   // 0x3e, >
+	_14SEG_NULL,   // 0x3f, ?
+
+	_14SEG_NULL,   // 0x40, @
+	_14SEG_CH_A,   // 0x41, A
+	_14SEG_CH_B,   // 0x42, B
+	_14SEG_CH_C,   // 0x43, C
+	_14SEG_CH_D,   // 0x44, D
+	_14SEG_CH_E,   // 0x45, E
+	_14SEG_CH_F,   // 0x46, F
+	_14SEG_CH_G,   // 0x47, G
+	_14SEG_CH_H,   // 0x48, H
+	_14SEG_CH_I,   // 0x49, I
+	_14SEG_CH_J,   // 0x4a, J
+	_14SEG_CH_K,   // 0x4b, K
+	_14SEG_CH_L,   // 0x4c, L
+	_14SEG_CH_M,   // 0x4d, M
+	_14SEG_CH_N,   // 0x4e, N
+	_14SEG_CH_O,   // 0x4f, O
+
+	_14SEG_CH_P,   // 0x50, P
+	_14SEG_CH_Q,   // 0x51, Q
+	_14SEG_CH_R,   // 0x52, R
+	_14SEG_CH_S,   // 0x53, S
+	_14SEG_CH_T,   // 0x54, T
+	_14SEG_CH_U,   // 0x55, U
+	_14SEG_CH_V,   // 0x56, V
+	_14SEG_CH_W,   // 0x57, W
+	_14SEG_CH_X,   // 0x58, X
+	_14SEG_CH_Y,   // 0x59, Y
+	_14SEG_CH_Z,   // 0x5a, Z
+	_14SEG_NULL,   // 0x5b  [
+	_14SEG_NULL,   // 0x5c, |
+	_14SEG_NULL,   // 0x5d, ]
+	_14SEG_NULL,   // 0x5e, ^
+	_14SEG_NULL,   // 0x5f, _
+
+	_14SEG_NULL,   // 0x60, `
+	_14SEG_CH_A,   // 0x61, a
+	_14SEG_CH_B,   // 0x62, b
+	_14SEG_CH_C,   // 0x63, c
+	_14SEG_CH_D,   // 0x64, d
+	_14SEG_CH_E,   // 0x65, e
+	_14SEG_CH_F,   // 0x66, f
+	_14SEG_CH_G,   // 0x67, g
+	_14SEG_CH_H,   // 0x68, h
+	_14SEG_CH_I,   // 0x69, i
+	_14SEG_CH_J,   // 0x6a, j
+	_14SEG_CH_K,   // 0x6b, k
+	_14SEG_CH_L,   // 0x6c, l
+	_14SEG_CH_M,   // 0x6d, m
+	_14SEG_CH_N,   // 0x6e, n
+	_14SEG_CH_O,   // 0x6f, o
+
+	_14SEG_CH_P,   // 0x70, p
+	_14SEG_CH_Q,   // 0x71, q
+	_14SEG_CH_R,   // 0x72, r
+	_14SEG_CH_S,   // 0x73, s
+	_14SEG_CH_T,   // 0x74, t
+	_14SEG_CH_U,   // 0x75, u
+	_14SEG_CH_V,   // 0x76, v
+	_14SEG_CH_W,   // 0x77, w
+	_14SEG_CH_X,   // 0x78, x
+	_14SEG_CH_Y,   // 0x79, y
+	_14SEG_CH_Z,   // 0x7a, z
+	_14SEG_NULL,   // 0x7b, {
+	_14SEG_NULL,   // 0x7c, backslash
+	_14SEG_NULL,   // 0x7d, }
+	_14SEG_NULL,   // 0x7e, ~
+	_14SEG_NULL    // 0x7f, <DEL>--> all segments on
 };
 
 static struct saved_data_s lastdata;
 
+/****************************************************************************
+ *
+ * Driver code.
+ *
+ */
+
+/*******************************************************
+ *
+ * Code to communicate with the front processor.
+ *
+ */
 static void mcom_Dump(char *string, unsigned char *v_pData, unsigned short v_szData)
 {
 	int i;
 	char str[10], line[80], txt[25];
-	unsigned char *pData;
+	unsigned char    *pData;
 
 	if ((v_pData == NULL) || (v_szData == 0))
 	{
 		return;
 	}
+
 	printk("[ %s [%x]]\n", string, v_szData);
 
 	i = 0;
@@ -178,6 +589,7 @@ static void mcom_Dump(char *string, unsigned char *v_pData, unsigned short v_szD
 			strcat(line, "   ");
 		}
 		while (++i < 16);
+
 		printk("%s %s\n\n", line, txt);
 	}
 }
@@ -194,19 +606,34 @@ int write_sem_down(void)
 
 void copyData(unsigned char *data, int len)
 {
-	dprintk(10, "%s len = %d\n", __func__, len);
+	dprintk(150, "%s > len %d\n", __func__, len);
 	memcpy(ioctl_data, data, len);
 }
 
+/*****************************************************************
+ *
+ * mcom_WriteCommand: Send command to front processor.
+ *
+ */
 int mcomWriteCommand(char *buffer, int len, int needAck)
 {
 	int i;
 
 	dprintk(150, "%s >\n", __func__);
 
+	if (paramDebug > 150)
+	{
+		dprintk(150, "Send Front uC command ");
+		for (i = 0; i < len; i++)
+		{
+			printk("0x%02x ", buffer[i] & 0xff);
+		}
+		printk("\n");
+	}
+
 	for (i = 0; i < len; i++)
 	{
-#ifdef DIRECT_ASC
+#ifdef DIRECT_ASC  // not defined anywhere
 		serial_putc(buffer[i]);
 #else
 		mcom_putc(buffer[i]);
@@ -224,6 +651,65 @@ int mcomWriteCommand(char *buffer, int len, int needAck)
 	return 0;
 }
 
+/*****************************************************************
+ *
+ * mcom_Checksum: Calculate checksum byte over payload.
+ *
+ */
+static unsigned char mcom_Checksum(unsigned char *payload, int len)
+{
+	int           n;
+	unsigned char checksum = 0;
+
+	for (n = 0; n < len; n++)
+	{
+		checksum ^= payload[n];
+	}
+	return checksum;
+}
+
+/*****************************************************************
+ *
+ * mcom_Checksum: Send checksum response string.
+ *
+ */
+static int mcom_SendResponse(char *buf, int needack)
+{
+	unsigned char    response[3];
+	int                res = 0;
+
+	dprintk(150, "%s >\n", __func__);
+
+	response[_TAG] = _MCU_RESPONSE;
+	response[_LEN] = 1;
+	response[_VAL] = mcom_Checksum(buf, 2 + buf[_LEN]);
+
+	if (needack)
+	{
+		errorOccured = 0;
+		res = mcomWriteCommand((char *)response, 3, 1);
+
+		if (errorOccured == 1)
+		{
+			/* error */
+			memset(ioctl_data, 0, 8);
+			dprintk(1, "%s: Timeout on ack occurred\n",__func__);
+			res = -ETIMEDOUT;
+		}
+	}
+	else
+	{
+		res = mcomWriteCommand((char *)response, 3, 0);
+	}
+	dprintk(150, "%s <\n", __func__);
+	return res;
+}
+
+/*****************************************************************
+ *
+ * mcom_GetDisplayType: Return type of frontpanel display.
+ *
+ */
 static DISPLAYTYPE mcomGetDisplayType(void)
 {
 	if (mcom_version[0] == 4)
@@ -234,11 +720,20 @@ static DISPLAYTYPE mcomGetDisplayType(void)
 	{
 		return _VFD;
 	}
-	return _VFD;
+	if (mcom_version[0] == 2)
+	{
+		return _VFD_OLD;  // old VFD
+	}
+	return _VFD_OLD;
 }
 
+/*******************************************************
+ *
+ * Time routines.
+ *
+ */
 static unsigned short mcomYMD2MJD(unsigned short Y, unsigned char M, unsigned char D)
-{
+{  // converts YMD to 16 bit MJD
 	int L;
 
 	Y -= 1900;
@@ -247,7 +742,7 @@ static unsigned short mcomYMD2MJD(unsigned short Y, unsigned char M, unsigned ch
 }
 
 static void mcom_MJD2YMD(unsigned short usMJD, unsigned short *year, unsigned char *month, unsigned char *day)
-{
+{  // converts MJD to to year month day
 	int Y, M, D, K;
 
 	Y = (usMJD * 100 - 1507820) / 36525;
@@ -263,6 +758,12 @@ static void mcom_MJD2YMD(unsigned short usMJD, unsigned short *year, unsigned ch
 	*day   = (unsigned char)D;
 }
 
+/*******************************************************
+ *
+ * mcomSetStandby: put receiver in (deep) standby.
+ *
+ * time = wake up time ?
+ */
 int mcomSetStandby(char *time)
 {
 	char comm_buf[16];
@@ -270,34 +771,35 @@ int mcomSetStandby(char *time)
 	int  showTime = 0;
 	int  wakeup = 0;
 
-	dprintk(100, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 
-	if (mcomGetDisplayType() == _VFD)
+	if (mcomGetDisplayType() == _VFD_OLD || mcomGetDisplayType() == _VFD)
 	{
-		res = mcom_WriteString("Bye bye ...", strlen("Bye bye ..."));
+		res = mcom_WriteString("Bye bye", strlen("Bye bye"));
 	}
 	else
 	{
 		res = mcom_WriteString("WAIT", strlen("WAIT"));
 	}
+	memset(comm_buf, 0, sizeof(comm_buf));
+
 	// send "STANDBY"
 	comm_buf[_TAG] = _MCU_STANDBY;
 	comm_buf[_LEN] = 5;
-	comm_buf[_VAL + 0] = (showTime) ? 1 : 0;
-	comm_buf[_VAL + 1] = 1;  // 24
+	comm_buf[_VAL + 0] = (showTime) ? 1 : 0;  // flag: show time in standby?
+	comm_buf[_VAL + 1] = 1;  // 24h flag?
 	comm_buf[_VAL + 2] = (wakeup) ? 1 : 0;
 	comm_buf[_VAL + 3] = 3;  // power on delay
 	comm_buf[_VAL + 4] = 1;  // extra data (private data)
 
-	PRN_DUMP("@@@ SEND STANDBY @@@", comm_buf, 2 + comm_buf[_LEN]);
-
+//	PRN_DUMP("@@@ SEND STANDBY @@@", comm_buf, 2 + comm_buf[_LEN]);
 	res = mcomWriteCommand(comm_buf, 7, 0);
 
 	if (res != 0)
 	{
 		goto _EXIT_MCOM_STANDBY;
 	}
-	OW_TaskDelay(_100MS);
+	msleep(100);
 
 	// send "NOWTIME"
 	comm_buf[_TAG] = _MCU_NOWTIME;
@@ -312,17 +814,15 @@ int mcomSetStandby(char *time)
 		time_t          curr_time;
 		struct timespec tp;
 
-		tp = current_kernel_time();
+		tp = current_kernel_time();  // get system time
 
-		PRN_LOG("mcomSetTime: %d\n", tp.tv_sec);
-
+//		PRN_LOG("mcomSetTime: %d\n", tp.tv_sec);
 		curr_time = mcom_settime + (tp.tv_sec - mcom_settime_set_time);
-
 		mjd = (curr_time / (24 * 60 * 60)) + 40587;
 
-		mcom_MJD2YMD(mjd, &year, &month, &day);
+		mcom_MJD2YMD(mjd, &year, &month, &day);  // calculate MJD
 
-		comm_buf[_VAL + 0] = (year - 2000) & 0xff;
+		comm_buf[_VAL + 0] = (year - 2000) & 0xff;  // strip century
 		comm_buf[_VAL + 1] = month;
 		comm_buf[_VAL + 2] = day;
 		comm_buf[_VAL + 3] = (curr_time / (24 * 60 * 60)) / (60 * 60);
@@ -330,8 +830,10 @@ int mcomSetStandby(char *time)
 
 #if 0
 		mjd      = (mcom_settime[0] << 8) | mcom_settime[1];
-		time_sec = mcom_settime[2] * 60 * 60 + mcom_settime[3] * 60 + mcom_settime[4] +
-			   (tp.tv_sec - mcom_settime_set_time);
+		time_sec =  mcom_settime[2] * 60 * 60
+		         +  mcom_settime[3] * 60
+		         +  mcom_settime[4]
+		         + (tp.tv_sec - mcom_settime_set_time);
 
 		mjd          += time_sec / (24 * 60 * 60);
 		curr_time_sec = time_sec % (24 * 60 * 60);
@@ -356,9 +858,9 @@ int mcomSetStandby(char *time)
 	{
 		goto _EXIT_MCOM_STANDBY;
 	}
-	OW_TaskDelay(_100MS);
+	msleep(100);
 
-	if (wakeup)
+	if (wakeup)  // 
 	{
 		/* TO BE DONE!! */
 		// send "WAKEUP"
@@ -380,7 +882,7 @@ int mcomSetStandby(char *time)
 		{
 			goto _EXIT_MCOM_STANDBY;
 		}
-		OW_TaskDelay(_100MS);
+		msleep(100);
 	}
 
 	// send "PRIVATE"
@@ -401,13 +903,18 @@ int mcomSetStandby(char *time)
 	{
 		goto _EXIT_MCOM_STANDBY;
 	}
-	OW_TaskDelay(_100MS);
+	msleep(100);
 
 _EXIT_MCOM_STANDBY:
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/*******************************************************
+ *
+ * mcomSetTime: set front processor time.
+ *
+ */
 int mcomSetTime(time_t time)
 {
 	struct timespec tp;
@@ -420,6 +927,11 @@ int mcomSetTime(time_t time)
 	return 0;
 }
 
+/*******************************************************
+ *
+ * mcomGetTime: get front processor time.
+ *
+ */
 int mcomGetTime(void)
 {
 	unsigned short  cur_mjd;
@@ -430,7 +942,8 @@ int mcomGetTime(void)
 
 	cur_mjd = mcomYMD2MJD(mcom_time[0] + 2000, mcom_time[1], mcom_time[2]);
 
-	time_in_sec = mcom_time[3] * 60 * 60 + mcom_time[4] * 60
+	time_in_sec =   mcom_time[3] * 60 * 60
+	            +   mcom_time[4] * 60
 	            + ((mcom_time[5] << 16) | (mcom_time[6] << 8) | mcom_time[7]) * 60
 	            + (tp_now.tv_sec - mcom_time_set_time);
 
@@ -445,13 +958,23 @@ int mcomGetTime(void)
 	return 0;
 }
 
+/*******************************************************
+ *
+ * mcomGetWakeUpMode: get wake up reason.
+ *
+ * NOTE: currently hard coded to power on.
+ */
 int mcomGetWakeUpMode(void)
 {
-	if (mcom_version[0] == 4)            // 4.x.x
+	if (mcom_version[0] == 4)  // 4.x.x
 	{
 		ioctl_data[0] = 0;
 	}
-	else if (mcom_version[0] == 5)        // 5.x.x
+	else if (mcom_version[0] == 5)  // 5.x.x
+	{
+		ioctl_data[0] = 0;
+	}
+	else if (mcom_version[0] == 2)  // 2.x.x
 	{
 		ioctl_data[0] = 0;
 	}
@@ -462,102 +985,92 @@ int mcomGetWakeUpMode(void)
 	return 0;
 }
 
+/*****************************************************************
+ *
+ * mcom_WriteString: Display a text on the front panel display.
+ *
+ * Note: does not scroll; displays the first DISPLAY_WIDTH
+ *       characters. Scrolling is available by writing to
+ *       /dev/vfd: this scrolls a maximum of 64 characters once
+ *       if the text length exceeds DISPLAY_WIDTH.
+ *
+ */
 int mcom_WriteString(unsigned char *aBuf, int len)
 {
-	unsigned char bBuf[128];
+	unsigned char bBuf[12];
 	int i = 0;
 	int j = 0;
 	int payload_len;
 	int res = 0;
 
-	dprintk(100, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 
-	memset(bBuf, ' ', 128);
+	memset(bBuf, ' ', sizeof(bBuf));
+	payload_len = 0;
 
-	for (i = 0, payload_len = 0; i < len; i++)
+	//TODO: insert UTF-8 processing here
+
+	if (len > DISPLAY_WIDTH)
+	{
+		len = DISPLAY_WIDTH;  // display DISPLAY_WIDTH characters maximum
+	}
+	dprintk(50, "Display text: [%s] len = %d\n", aBuf, len);
+
+	for (i = 0; i < len; i++)
 	{
 		// workaround start
-		if (aBuf[i] > 0x7f)
+		if (aBuf[i] > 0x7f)  // skip all characters with MSbit set (should not occur after UTF-8 handling) 
 		{
 			continue;
 		}
 		// workaround end
 
-		if (mcomGetDisplayType() == _VFD)  // VFD display
+		// build command argument
+		if (mcomGetDisplayType() == _VFD_OLD)  // old VFD display (HD 9600 models)
 		{
-			memcpy(bBuf + _VAL + payload_len, mcom_ascii_char_14seg[aBuf[i]], 2);
+			bBuf[i + _VAL] = mcom_ascii_char_14seg[aBuf[i]];
+			payload_len++;
+		}
+		else if (mcomGetDisplayType() == _VFD)  // new VFD display (HD 9600 PRIMA models)
+		{
+			memcpy(bBuf + _VAL + payload_len, mcom_ascii_char_14seg_new[aBuf[i]], 2);
 			payload_len += 2;
 		}
-		else if (mcomGetDisplayType() == _7SEG)  // 4 digit 7-Seg display
+		else if (mcomGetDisplayType() == _7SEG)  // 4 digit 7-Seg display (HD 9600 Mini models)
 		{
 			memcpy(bBuf + _VAL + payload_len, mcom_ascii_char_7seg[aBuf[i]], 1);
-			payload_len += 1;
+			payload_len++;
 		}
 		else
 		{
 			// Unknown
 		}
 	}
-	/* start of command write */
+	/* complete command write */
 	bBuf[0] = _MCU_DISPLAY;
 	bBuf[1] = payload_len;
 
-	/* save last string written to fp */
-	memcpy(&lastdata.data, aBuf, 128);
-	lastdata.length = len;
-	dprintk(70, "len %d\n", len);
 	res = mcomWriteCommand(bBuf, payload_len + 2, 0);
-	dprintk(100, "%s <\n", __func__);
+	mcom_SendResponse(bBuf, 0);
+
+	/* save last string written to fp */
+	memcpy(&lastdata.data, aBuf, DISPLAY_WIDTH);  // save display text for /dev/fd read
+	lastdata.length = len;  // save length  for /dev/fd read
+
+	dprintk(150, "%s <\n", __func__);
+
 	return res;
 }
 
-static unsigned char mcom_Checksum(unsigned char *payload, int len)
-{
-	int           n;
-	unsigned char checksum = 0;
-
-	for (n = 0; n < len; n++)
-	{
-		checksum ^= payload[n];
-	}
-	return checksum;
-}
-
-static int mcom_SendResponse(char *buf, int needack)
-{
-	unsigned char response[3];
-	int           res = 0;
-
-	response[_TAG] = _MCU_RESPONSE;
-	response[_LEN] = 1;
-	response[_VAL] = mcom_Checksum(buf, 2/*tag+len*/ + buf[_LEN]);
-
-	if (needack)
-	{
-		errorOccured = 0;
-		res = mcomWriteCommand((char *)response, 3, 1);
-
-		if (errorOccured == 1)
-		{
-			/* error */
-			memset(ioctl_data, 0, 8);
-			dprintk(1, "error\n");
-
-			res = -ETIMEDOUT;
-		}
-		return res;
-	}
-	else
-	{
-		mcomWriteCommand((char *)response, 3, 0);
-		return 0;
-	}
-}
-
+/****************************************************************
+ *
+ * mcom_init_func: Initialize the driver.
+ *
+ */
 int mcom_init_func(void)
 {
 	unsigned char comm_buf[20];
-	unsigned char n, k;
+	unsigned char k;
 	unsigned char checksum;
 	int           res;
 	int           bootSendCount;
@@ -565,10 +1078,10 @@ int mcom_init_func(void)
 	int           seq_count = -1;
 #endif
 
-	dprintk(100, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 	sema_init(&write_sem, 1);
 
-MCOM_RECOVER :
+//MCOM_RECOVER :
 #if 0
 #if !defined(SUPPORT_MINILINE)
 	seq_count++;
@@ -578,119 +1091,120 @@ MCOM_RECOVER :
 		if ((seq_count % 10) == 0)
 		{
 			mcom_SetupRetryDisplay(seq_count);
-			OW_TaskDelay(_1SEC * 2);
+			msleep(1000 * 2);
 		}
 	}
 #endif
 #endif
+
 	bootSendCount = 0;
+
 	while (1)
 	{
 		// send "BOOT"
 		comm_buf[_TAG] = _MCU_BOOT;
-		comm_buf[_LEN] = n = 1;
+		comm_buf[_LEN] = 1;
 		comm_buf[_VAL] = 0x01;  // dummy
 
 		errorOccured = 0;
-		PRN_DUMP("## SEND:BOOT ##", comm_buf, 2 /*tag+len*/ + n);
+		dprintk(50, "Send BOOT command (0x%02x 0x%02x 0x%02x)\n", comm_buf[_TAG], comm_buf[_LEN], comm_buf[_VAL]);
 		res = mcomWriteCommand(comm_buf, 3, 1);
 
 		if (errorOccured == 1)
 		{
 			/* error */
 			memset(ioctl_data, 0, 8);
-			printk("error\n");
+			dprintk(1, "%s: Error sending BOOT command\n");
 
-			OW_TaskDelay(_100MS);
+			msleep(100);
 			goto MCOM_RECOVER;
 		}
-		else
+
+		// receive "TIME" or "VERSION"
+		if (ioctl_data[_TAG] == EVENT_ANSWER_TIME)
 		{
-			/* time received ->noop here */
-			dprintk(1, "time received\n");
-			PRN_LOG("received\n");
+//			struct timespec     tp;
+//
+//			tp = current_kernel_time();
+//			mcom_time_set_time = tp.tv_sec;
+			memcpy(mcom_time, ioctl_data + _VAL, ioctl_data[_LEN]);
+			dprintk(50, "Front panel uC time %02X-%02X-20%02X %02X:%02X:%02X\n", mcom_time[2], mcom_time[1], mcom_time[0], mcom_time[3], mcom_time[4], mcom_time[5]);
+			break;
 		}
-
-		// recv "VERSION" or "TIME"
-		PRN_DUMP("## RECV:VERSION or TIME ", ioctl_data, 2 /*tag+len*/ + ioctl_data[_LEN]);
-
-		if (ioctl_data[_TAG] == _MCU_VERSION)
+		else if (ioctl_data[_TAG] == EVENT_ANSWER_VERSION)
 		{
 			memcpy(mcom_version, ioctl_data + _VAL, ioctl_data[_LEN]);
-			PRN_LOG("_MCU_VERSION %02X:%02X:%02X:%02X\n", mcom_version[0], mcom_version[1], mcom_version[2], mcom_version[3]);
+			dprintk(50, "Front panel uC version = %X.%02X.%02X\n", ioctl_data[2], ioctl_data[3], ioctl_data[4]);
 			break;
 		}
-		else if (ioctl_data[_TAG] == _MCU_TIME)
-		{
-			struct timespec tp;
-
-			tp = current_kernel_time();
-
-			mcom_time_set_time = tp.tv_sec;
-			memcpy(mcom_time, ioctl_data + _VAL, ioctl_data[_LEN]);
-
-			PRN_LOG("_MCU_TIME: %d\n", mcom_time_set_time);
-			break;
-		}
-		PRN_LOG("tag = %02x\n", ioctl_data[_TAG]);
 
 		if (bootSendCount++ == 3)
 		{
 			goto MCOM_RECOVER;
 		}
-		OW_TaskDelay(_100MS);
+		msleep(100);
 	}
-	// send "RESPONSE" and recv "TIME" or "VERSION
+	// send "RESPONSE" on reception of "TIME" or "VERSION"
 	res = mcom_SendResponse(ioctl_data, 1);
 	if (res)
 	{
-		OW_TaskDelay(_100MS);
+		msleep(100);
 		goto MCOM_RECOVER;
 	}
 
-	PRN_DUMP("## RECV:TIME or VERSION ", ioctl_data, ioctl_data[_LEN] + 2);
-	if (ioctl_data[_TAG] == _MCU_TIME)
+	// receive "VERSION" or "TIME"
+	if (ioctl_data[_TAG] == EVENT_ANSWER_VERSION)
+	{
+		memcpy(mcom_version, ioctl_data + _VAL, ioctl_data[_LEN]);
+		dprintk(50, "Front panel uC version = %X.%02X.%02X\n", mcom_version[0], mcom_version[1], mcom_version[2]);
+	}
+	else if (ioctl_data[_TAG] == EVENT_ANSWER_TIME)
 	{
 		struct timespec tp;
 
 		tp = current_kernel_time();
-
 		mcom_time_set_time = tp.tv_sec;
 		memcpy(mcom_time, ioctl_data + _VAL, ioctl_data[_LEN]);
-
-		PRN_LOG("_MCU_TIME: %d\n", mcom_time_set_time);
-	}
-	else if (ioctl_data[_TAG] == _MCU_VERSION)
-	{
-		memcpy(mcom_version, ioctl_data + _VAL, ioctl_data[_LEN]);
+		dprintk(50, "%s Front panel uC time %02x-%02x-%02x %02x:%02x:%02x\n", __func__, ioctl_data[2], ioctl_data[3], ioctl_data[4], ioctl_data[5], ioctl_data[6], ioctl_data[7]);
 	}
 	else
 	{
-		OW_TaskDelay(_100MS);
+		msleep(100);
 		goto MCOM_RECOVER;
 	}
 
-//	PRN_LOG("mcutype[%d]\n", MCOM_GetMcuType());
-	if (1)  // (MCOM_GetMcuType() > _MCU_TYPE_1)
+	if (mcom_version[0] == 2)  // _VFD_OLD
 	{
-		// recv "PRIVATE"
+		// send "RESPONSE" on reception of "VERSION" or "TIME"
+		res = mcom_SendResponse(ioctl_data, 0);
+		if (res)
+		{
+			msleep(100);
+			goto MCOM_RECOVER;
+		}
+	}
+	else
+	{
+		// send "RESPONSE" on reception of "VERSION" or "TIME"
 		res = mcom_SendResponse(ioctl_data, 1);
 		if (res)
 		{
-			OW_TaskDelay(_100MS);
+			msleep(100);
 			goto MCOM_RECOVER;
 		}
+
+		// receive "PRIVATE"
 		PRN_DUMP("## RECV:PRIVATE ##", ioctl_data, ioctl_data[_LEN] + 2);
 		memcpy(mcom_private, ioctl_data + _VAL, ioctl_data[_LEN]);
 
 		mcom_SendResponse(ioctl_data, 0);
+		msleep(100);
 
-		OW_TaskDelay(_100MS);
 		for (k = 0; k < 3; k++)
 		{
 			// send "KEYCODE"
 			comm_buf[_TAG] = _MCU_KEYCODE;
-			comm_buf[_LEN] = n = 4;
+			comm_buf[_LEN] = 4;
 			comm_buf[_VAL + 0] = 0x04;
 			comm_buf[_VAL + 1] = 0xF3;
 			comm_buf[_VAL + 2] = 0x5F;
@@ -699,16 +1213,16 @@ MCOM_RECOVER :
 			checksum = mcom_Checksum(comm_buf, 6);
 
 			errorOccured = 0;
-			PRN_DUMP("## SEND:KEYCODE ##", comm_buf, 2/*tag+len*/ + n);
+//			PRN_DUMP("## SEND:KEYCODE ##", comm_buf, 2/*tag+len*/ + n);
 			res = mcomWriteCommand(comm_buf, 6, 1);
 
 			if (errorOccured == 1)
 			{
 				/* error */
 				memset(ioctl_data, 0, 8);
-				printk("error\n");
+				dprintk(1, "Error sending KEYCODE command\n");
 
-				OW_TaskDelay(_100MS);
+				msleep(100);
 				goto MCOM_RECOVER;
 			}
 			if (res == 0)
@@ -721,26 +1235,54 @@ MCOM_RECOVER :
 		}
 		if (k >= 3)
 		{
-			OW_TaskDelay(_100MS);
+//			msleep(100);
 			goto MCOM_RECOVER;
 		}
 	}
-	dprintk(100, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return 0;
+
+MCOM_RECOVER:
+	dprintk(1, "%s < Error: Front processor is not responding.\n", __func__);
+	return -1;
+}
+
+/****************************************
+ *
+ * Code for writing to /dev/vfd
+ *
+ */
+void clear_display(void)
+{
+	unsigned char bBuf[8];
+	int res = 0;
+
+	dprintk(150, "%s >\n", __func__);
+
+	memset(bBuf, ' ', sizeof(bBuf));
+	res = mcom_WriteString(bBuf, DISPLAY_WIDTH);
+	dprintk(150, "%s <\n", __func__);
 }
 
 static ssize_t MCOMdev_write(struct file *filp, const char *buff, size_t len, loff_t *off)
 {
 	char *kernel_buf;
-	int minor, vLoop, res = 0;
+	int minor;
+	int vLoop;
+	int res = 0;
+	int llen;
+	int offset = 0;
+	char buf[64];
+	char *b;
 
-	dprintk(100, "%s > (len %d, offs %d)\n", __func__, len, (int) *off);
-	//printk("%s > (len %d, offs %d)\n", __func__, len, (int) *off);
+	dprintk(150, "%s >\n", __func__);
+	dprintk(100, "%s len %d, offs %d\n", __func__, len, (int) *off);
 
 	if (len == 0)
 	{
 		return len;
 	}
+
 	minor = -1;
 	for (vLoop = 0; vLoop < LASTMINOR; vLoop++)
 	{
@@ -751,7 +1293,7 @@ static ssize_t MCOMdev_write(struct file *filp, const char *buff, size_t len, lo
 	}
 	if (minor == -1)
 	{
-		dprintk(1, "Error Bad Minor\n");
+		dprintk(1, "Error: Bad Minor\n");
 		return -1; //FIXME
 	}
 	dprintk(70, "minor = %d\n", minor);
@@ -762,30 +1304,62 @@ static ssize_t MCOMdev_write(struct file *filp, const char *buff, size_t len, lo
 		return -EOPNOTSUPP;
 	}
 	kernel_buf = kmalloc(len, GFP_KERNEL);
+
 	if (kernel_buf == NULL)
 	{
 		dprintk(1, "%s < Return -ENOMEM\n", __func__);
 		return -ENOMEM;
 	}
+
 	copy_from_user(kernel_buf, buff, len);
 
 	if (write_sem_down())
 	{
 		return -ERESTARTSYS;
 	}
-	/* Dagobert: echo add a \n which will be counted as a char
-	 */
-	if (kernel_buf[len - 1] == '\n')
+	llen = len;  // preserve len for return value
+
+	if (llen >= 64)  // do not display more than 64 characters
 	{
-		res = mcom_WriteString(kernel_buf, len - 1);
+		llen = 64;
 	}
-	else
+	// Strip possible trailing LF
+	if (kernel_buf[llen - 1] == '\n')
 	{
-		res = mcom_WriteString(kernel_buf, len);
+		llen--;
 	}
+	kernel_buf[llen] = 0;
+//	if (llen <= DISPLAY_WIDTH)  // no scroll
+//	{
+		res = mcom_WriteString(kernel_buf, llen);
+//	}
+#if 0
+	else  // scroll, display string is longer than display length
+	{
+		// initial display starting at 2nd position to ease reading
+		memset(buf, ' ', sizeof(buf));
+		offset = 2;
+		memcpy(buf + offset, kernel_buf, llen);
+		llen += offset;
+		buf[llen + DISPLAY_WIDTH] = '\0';  // terminate string
+
+		// scroll text
+		b = buf;
+		for (vLoop = 0; vLoop < llen; vLoop++)
+		{
+			res = mcom_WriteString(b + vLoop, DISPLAY_WIDTH);
+			// sleep 300 ms
+			msleep(300);
+		}
+		clear_display();
+
+		// final display
+		res = mcom_WriteString(kernel_buf, DISPLAY_WIDTH);
+	}
+#endif
 	kfree(kernel_buf);
 	write_sem_up();
-	dprintk(70, "%s < res %d len %d\n", __func__, res, len);
+	dprintk(70, "%s < res=%d len=%d\n", __func__, res, len);
 
 	if (res < 0)
 	{
@@ -797,12 +1371,16 @@ static ssize_t MCOMdev_write(struct file *filp, const char *buff, size_t len, lo
 	}
 }
 
+/**********************************
+ *
+ * Code for reading from /dev/vfd
+ *
+ */
 static ssize_t MCOMdev_read(struct file *filp, char __user *buff, size_t len, loff_t *off)
 {
 	int minor, vLoop;
 
-	//printk("%s > (len %d, offs %d)\n", __func__, len, (int) *off);
-	dprintk(100, "%s > (len = %d, offs = %d)\n", __func__, len, (int) *off);
+	dprintk(150, "%s > (len = %d, offs = %d)\n", __func__, len, (int) *off);
 
 	if (len == 0)
 	{
@@ -828,7 +1406,7 @@ static ssize_t MCOMdev_read(struct file *filp, char __user *buff, size_t len, lo
 		int           size = 0;
 		unsigned char data[20];
 
-		memset(data, 0, 20);
+		memset(data, 0, sizeof(data));
 
 		getRCData(data, &size);
 
@@ -860,7 +1438,7 @@ static ssize_t MCOMdev_read(struct file *filp, char __user *buff, size_t len, lo
 		FrontPanelOpen[minor].read = 0;
 
 		up(&FrontPanelOpen[minor].sem);
-		dprintk(100, "%s < Return 0\n", __func__);
+		dprintk(150, "%s <\n", __func__);
 		return 0;
 	}
 	if (len > lastdata.length)
@@ -875,7 +1453,7 @@ static ssize_t MCOMdev_read(struct file *filp, char __user *buff, size_t len, lo
 	FrontPanelOpen[minor].read = len;
 	copy_to_user(buff, lastdata.data, len);
 	up(&FrontPanelOpen[minor].sem);
-	dprintk(100, "%s < (len = %d)\n", __func__, len);
+	dprintk(150, "%s < (len = %d)\n", __func__, len);
 	return len;
 }
 
@@ -883,27 +1461,27 @@ int MCOMdev_open(struct inode *inode, struct file *filp)
 {
 	int minor;
 
-	dprintk(100, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 
-	/* needed! otherwise a racecondition can occur */
+	/* needed! otherwise a race condition can occur */
 	if (down_interruptible(&write_sem))
 	{
 		return -ERESTARTSYS;
 	}
 	minor = MINOR(inode->i_rdev);
 
-	dprintk(70, "open minor %d\n", minor);
+	dprintk(70, "Open minor %d\n", minor);
 
 	if (FrontPanelOpen[minor].fp != NULL)
 	{
-		dprintk(1, "%s < Return -EUSERS\n", __func__);
+		dprintk(1, "%s < return -EUSERS\n", __func__);
 		up(&write_sem);
 		return -EUSERS;
 	}
 	FrontPanelOpen[minor].fp = filp;
 	FrontPanelOpen[minor].read = 0;
 	up(&write_sem);
-	dprintk(100, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return 0;
 
 }
@@ -912,35 +1490,41 @@ int MCOMdev_close(struct inode *inode, struct file *filp)
 {
 	int minor;
 
-	dprintk(100, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 
 	minor = MINOR(inode->i_rdev);
 
-	dprintk(20, "close minor %d\n", minor);
+	dprintk(70, "Close minor %d\n", minor);
 
 	if (FrontPanelOpen[minor].fp == NULL)
 	{
-		dprintk(1, "%s < Return -EUSERS\n", __func__);
+		dprintk(1, "%s < return -EUSERS\n", __func__);
 		return -EUSERS;
 	}
 	FrontPanelOpen[minor].fp = NULL;
 	FrontPanelOpen[minor].read = 0;
 
-	dprintk(100, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
+/****************************************
+ *
+ * IOCTL handling.
+ *
+ */
 static int MCOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int cmd, unsigned long arg)
 {
 	struct opt9600_fp_ioctl_data *mcom = (struct opt9600_fp_ioctl_data *)arg;
 	int res = 0;
 
-	dprintk(100, "%s > 0x%.8x\n", __func__, cmd);
+	dprintk(150, "%s > 0x%.8x\n", __func__, cmd);
 
 	if (down_interruptible(&write_sem))
 	{
 		return -ERESTARTSYS;
 	}
+
 	switch (cmd)
 	{
 		case VFDDRIVERINIT:
@@ -981,18 +1565,27 @@ static int MCOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int cm
 		}
 		case VFDDISPLAYWRITEONOFF:
 		{
-			/* ->alles abschalten ? VFD_Display_Write_On_Off */
-			printk("VFDDISPLAYWRITEONOFF ->not yet implemented\n");
+			dprintk(1, "VFDDISPLAYWRITEONOFF ->not yet implemented\n");
+			break;
+		}
+		case VFDICONDISPLAYONOFF:
+		{
+			dprintk(1, "VFDICONDISPLAYONOFF not supported on this receiver\n");
+			break;
+		}
+		case VFDBRIGHTNESS:
+		{
+			dprintk(1, "VFDBRIGHTNESS not supported on this receiver\n");
 			break;
 		}
 		default:
 		{
-			printk("VFD/CNMicom: unknown IOCTL 0x%x\n", cmd);
+			dprintk(1, "VFD/CNMicom: unknown IOCTL 0x%x\n", cmd);
 			break;
 		}
 	}
 	up(&write_sem);
-	dprintk(100, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return res;
 }
 

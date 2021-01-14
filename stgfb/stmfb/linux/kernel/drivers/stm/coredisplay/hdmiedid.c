@@ -298,18 +298,18 @@ static int stmhdmi_read_edid_block0(struct stm_hdmi *hdmi, edid_block_t rawedid)
 
   if((header1 != 0xffffff00) && (header2 != 0x00ffffff))
   {
-    printk(KERN_WARNING "stmfb: Invalid EDID header 0x%08lx 0x%08lx\n", header1, header2);
+    printk(KERN_WARNING "[stmfb] Invalid EDID header 0x%08lx 0x%08lx\n", header1, header2);
 #ifdef __TDT__
-    printk(KERN_INFO "stmfb: Checking for defect header\n");
+    printk(KERN_INFO "[stmfb] Checking for defect header\n");
     if((header1 != 0xffffffff) && (header2 != 0x00ffffff))
     {
-      printk(KERN_WARNING "stmfb: Edid failed!\n");
+      printk(KERN_WARNING "[stmfb] Edid failed!\n");
 #endif
       stmhdmi_invalidate_edid_info(hdmi);
       return -EINVAL;
 #ifdef __TDT__
     }
-    printk(KERN_INFO "stmfb: Found\n");
+    printk(KERN_INFO "[stmfb] Found\n");
 #endif
   }
 
@@ -806,7 +806,7 @@ int stmhdmi_read_edid(struct stm_hdmi *hdmi)
 
   if(!hdmi->edid_client)
   {
-    printk(KERN_WARNING "stmfb: No EDID client found\n");
+    printk(KERN_WARNING "[stmfb] No EDID client found\n");
     return -ENODEV;
   }
 
@@ -825,6 +825,7 @@ int stmhdmi_read_edid(struct stm_hdmi *hdmi)
   ctrl_outb(0x40, 0xa2800000);
 #endif
 #if defined(QBOXHD) || defined(QBOXHD_MINI)
+
   for(retry=0;retry<10;retry++)
 #else
   for(retry=0;retry<5;retry++)
@@ -846,7 +847,7 @@ int stmhdmi_read_edid(struct stm_hdmi *hdmi)
     int result = i2c_transfer(hdmi->edid_client->adapter, &msgs[0], 2);
     if(result != 2)
     {
-      printk(KERN_WARNING "stmfb: i2c_transfer failed with %d!!!\n", result);
+      printk(KERN_WARNING "[stmfb] i2c_transfer failed with %d!!!\n", result);
       res = -EIO;
       continue;
     }
@@ -854,13 +855,13 @@ int stmhdmi_read_edid(struct stm_hdmi *hdmi)
 
     if(hdmi->edid_info.raw[0][0] != 0)
     {
-      printk(KERN_WARNING "stmfb: first EDID byte (%d) is corrupt, attempting to fix..\n",hdmi->edid_info.raw[0][0]);
+      printk(KERN_WARNING "[stmfb] first EDID byte (%d) is corrupt, attempting to fix..\n",hdmi->edid_info.raw[0][0]);
       hdmi->edid_info.raw[0][0] = 0;
     }
 
     if(stmhdmi_edid_checksum(hdmi->edid_info.raw[0]) < 0)
     {
-      printk(KERN_WARNING "stmfb: Invalid extension header checksum block0\n");
+      printk(KERN_WARNING "[stmfb] Invalid extension header checksum block0\n");
 #if defined(DEBUG)
       print_hex_dump_bytes("",DUMP_PREFIX_OFFSET,&(hdmi->edid_info.raw[0][0]),128);
 #endif
@@ -871,7 +872,7 @@ int stmhdmi_read_edid(struct stm_hdmi *hdmi)
     if((hdmi->edid_info.raw[0][STM_EDID_EXTENSION] > 0) &&
        (stmhdmi_edid_checksum(hdmi->edid_info.raw[1]) < 0))
     {
-      printk(KERN_WARNING "stmfb: Invalid extension header checksum block1\n");
+      printk(KERN_WARNING "[stmfb] Invalid extension header checksum block1\n");
 #if defined(DEBUG)
       print_hex_dump_bytes("",DUMP_PREFIX_OFFSET,&(hdmi->edid_info.raw[1][0]),128);
 #endif
@@ -920,7 +921,7 @@ int stmhdmi_safe_edid(struct stm_hdmi *hdmi)
 {
   
 #if defined(__TDT__) //YWDRIVER_MODI d26lf 2011-01-04 hdmi audio out for board 1.4
-  printk(KERN_WARNING "stmfb: Setting Safe EDID\n");
+  printk(KERN_WARNING "[stmfb] Setting Safe EDID\n");
   hdmi->edid_info.display_type = STM_DISPLAY_HDMI;
   strcpy(hdmi->edid_info.monitor_name, "SAFEMODE");
   hdmi->edid_info.tv_aspect        = STM_WSS_4_3;
