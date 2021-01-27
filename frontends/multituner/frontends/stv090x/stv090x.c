@@ -4954,7 +4954,7 @@ static int stv090x_optimize_track(struct stv090x_state *state)
 							goto err;
 					}
 				}
-				else if ((state->dev_ver >= 0x20) ((state->device == STX7111) || (state->device == STXH205)))
+				else if ((state->dev_ver >= 0x20) && ((state->device == STX7111) || (state->device == STXH205)))
 				{
 					if (srate >= 15000000)
 					{
@@ -5273,7 +5273,7 @@ static int stv090x_optimize_track(struct stv090x_state *state)
 	}
 
 	if ((state->delsys == STV090x_DVBS1) || (state->delsys == STV090x_DSS) ||
-			state->device == STX7111) || (state->device == STXH205))
+			(state->device == STX7111) || (state->device == STXH205))
 		stv090x_set_vit_thtracq(state);
 
 	dprintk(10, "%s <\n", __func__);

@@ -612,7 +612,7 @@ TUNER_Error_t STB6000_TunerWrite(STCHIP_Handle_t hTuner)
 	}
 	if(hTunerParams && !hTuner->Error)	
 	{
-        if(hTunerParams->DemodModel != DEMOD_STI7111) && (hTunerParams->DemodModel != DEMOD_STIH205)
+        if((hTunerParams->DemodModel != DEMOD_STI7111) && (hTunerParams->DemodModel != DEMOD_STIH205))
             chipError=ChipSetRegisters(hTuner,hTuner->WrStart,hTuner->WrSize);
         else
         {
@@ -673,7 +673,7 @@ TUNER_Error_t STB6000_TunerRead(STCHIP_Handle_t hTuner)
 	}
 	if(hTunerParams && !hTuner->Error)	
 	{
-        if(hTunerParams->DemodModel != DEMOD_STI7111) && (hTunerParams->DemodModel != DEMOD_STIH205)
+        if((hTunerParams->DemodModel != DEMOD_STI7111) && (hTunerParams->DemodModel != DEMOD_STIH205))
             chipError=ChipGetRegisters(hTuner,hTuner->RdStart,hTuner->RdSize);
         else
         {
