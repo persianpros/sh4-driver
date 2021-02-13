@@ -603,6 +603,7 @@ static int led_pattern_write(struct file *file, const char __user *buf, unsigned
 	long pattern;
 	int ret = -ENOMEM;
 
+	dprintk(100, "%s >\n", __func__);
 	page = (char *)__get_free_page(GFP_KERNEL);
 
 	if (page)
@@ -638,6 +639,7 @@ static int led_pattern_write(struct file *file, const char __user *buf, unsigned
 		}
 		free_page((unsigned long)page);
 	}
+	dprintk(100, "%s <\n", __func__);
 	return ret;
 }
 

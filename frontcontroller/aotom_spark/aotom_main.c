@@ -5,7 +5,7 @@
  * (c) 2011 oSaoYa
  * (c) 2012-2013 Stefan Seyfried
  * (c) 2012-2013 martii
- * (c) 2013-2020 Audioniek
+ * (c) 2013-2021 Audioniek
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,6 +83,7 @@
  *                          switched on with a value of 1, default speed is
  *                          1 rpm; otherwise argument times 50 ms is the time
  *                          for one revolution.
+ * 20210210 Audioniek       Report correct CPU name of front processor.
  * 
  ****************************************************************************/
 
@@ -1180,7 +1181,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetVersion(&fpanel_version))
 			{
-				dprintk(1, "%s Frontpanel CPU type         : %d\n", __func__, fpanel_version.CpuType);
+				dprintk(1, "%s Frontpanel CPU type         : %s\n", __func__, (fpanel_version.CpuType == 2 ? "ATtiny88" : "ATtiny48"));
 				dprintk(1, "%s Frontpanel software version : %d.%d\n", __func__, fpanel_version.swMajorVersion, fpanel_version.swSubVersion);
 				dprintk(1, "%s Frontpanel displaytype      : %s\n", __func__, fp_type[fpanel_version.DisplayInfo]);
 				if (fpanel_version.DisplayInfo == 3)
