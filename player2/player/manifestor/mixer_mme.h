@@ -66,7 +66,8 @@ Date Modification Name
  * currently it seems so that this works for both cpu types
  * (BWC vs. BWD)
  */
-#if (defined(CONFIG_KERNELVERSION) || LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)) && defined(__TDT__)
+#if (defined(CONFIG_KERNELVERSION) || LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)) \
+ &&  defined(__TDT__)
 #if (defined(FORTIS_HDBOX) \
  || defined(OCTAGON1008))
 #define MIXER_NUM_PERIODS 3
@@ -91,7 +92,8 @@ Date Modification Name
  || defined(VIP1_V1) \
  || defined(VIP1_V2) \
  || defined(VIP2) \
- || defined(OCTAGON1008))
+ || defined(OCTAGON1008) \
+ || defined(OPT9600))
 #define MIXER_NUM_PERIODS 4
 #elif defined(__TDT__)
 #define MIXER_NUM_PERIODS 3

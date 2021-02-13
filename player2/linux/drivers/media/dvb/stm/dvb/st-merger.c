@@ -70,9 +70,9 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(DP7001) \
  || defined(EPP8000)
 #define TSMergerBaseAddress 0xFE242000
-#define SWTS_BASE_ADDRESS 0xFE900000 //STi7105 STi7111
+#define SWTS_BASE_ADDRESS 0xFE900000 // STi7105 STi7111
 #else
-#define TSMergerBaseAddress 0x19242000
+#define TSMergerBaseAddress 0x19242000 // STi7100 STi7109
 #define SWTS_BASE_ADDRESS 0x1A300000
 #endif
 
@@ -158,9 +158,9 @@ MODULE_PARM_DESC(camRouting, "Enable camRouting 0=disabled 1=enabled");
  || defined(FOREVER_3434HD) \
  || defined(DP7001) \
  || defined(EPP8000)
-#define SysConfigBaseAddress 0xFE001000
+#define SysConfigBaseAddress 0xFE001000 // STi7105 STi7111
 #else
-#define SysConfigBaseAddress 0x19001000
+#define SysConfigBaseAddress 0x19001000 // STi7100 STi7109
 #endif
 
 #define SYS_CFG0 0x100
@@ -638,6 +638,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(CUBEREVO_MINI_FTA) \
  && !defined(CUBEREVO_3000HD) \
  && !defined(VITAMIN_HD5000) \
+ && !defined(OPT9600) \
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(FOREVER_3434HD) \
@@ -718,7 +719,7 @@ void stm_tsm_init(int use_cimax)
 		if (!reinit)
 		{
 			struct stpio *stream2_pin = stpio_request_pin(1, 3, "STREAM2", STPIO_OUT);
-			/* disbaled on 1 */
+			/* disabled on 1 */
 			stpio_set_pin(stream2_pin, 0);
 		}
 		else
@@ -915,6 +916,7 @@ void stm_tsm_init(int use_cimax)
  || defined(IPBOX9900) \
  || defined(ARIVALINK200) \
  || defined(VITAMIN_HD5000) \
+ || defined(OPT9600) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(FOREVER_3434HD) \
@@ -933,7 +935,8 @@ void stm_tsm_init(int use_cimax)
  || defined(UFC960) \
  || defined(HL101) \
  || defined(VIP1_V1) \
- || defined(VIP1_V2)
+ || defined(VIP1_V2) \
+ || defined(OPT9600)
 		ctrl_outl(0x0, tsm_io + TSM_STREAM0_CFG); //320kb (5*64)
 		ctrl_outl(0x500, tsm_io + TSM_STREAM1_CFG); //320kb (5*64)
 		ctrl_outl(0xa00, tsm_io + TSM_STREAM2_CFG); //256kb (4*64)
@@ -1049,7 +1052,8 @@ void stm_tsm_init(int use_cimax)
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_9500HD) \
  || defined(CUBEREVO_MINI_FTA) \
- || defined(CUBEREVO_3000HD)
+ || defined(CUBEREVO_3000HD) \
+ || defined(OPT9600)
 		ret = ctrl_inl(tsm_io + TSM_STREAM0_CFG);
 		ctrl_outl(ret | (0x40020), tsm_io + TSM_STREAM0_CFG);
 		ret = ctrl_inl(tsm_io + TSM_STREAM4_CFG);
@@ -1081,7 +1085,9 @@ void stm_tsm_init(int use_cimax)
 		ctrl_outl(stream_sync, tsm_io + TSM_STREAM1_SYNC);
 		ctrl_outl(0x0, tsm_io + 0x38 /* reserved ??? */);
 		/* add tag bytes to stream + stream priority */
-#if defined(FORTIS_HDBOX) || defined(OCTAGON1008) || defined(ATEVIO7500)
+#if defined(FORTIS_HDBOX) \
+ || defined(OCTAGON1008) \
+ || defined(ATEVIO7500)
 		ret = ctrl_inl(tsm_io + TSM_STREAM2_CFG);
 		ctrl_outl(ret | (0x40020), tsm_io + TSM_STREAM2_CFG);
 #elif defined(UFS912) \
@@ -1171,6 +1177,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(IPBOX9900) \
  && !defined(ARIVALINK200) \
  && !defined(VITAMIN_HD5000) \
+ && !defined(OPT9600) \
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(FOREVER_3434HD) \
@@ -1239,6 +1246,7 @@ void stm_tsm_init(int use_cimax)
  && !defined(IPBOX9900) \
  && !defined(ARIVALINK200) \
  && !defined(VITAMIN_HD5000) \
+ && !defined(OPT9600) \
  && !defined(FOREVER_NANOSMART) \
  && !defined(FOREVER_9898HD) \
  && !defined(FOREVER_3434HD) \
@@ -1378,7 +1386,8 @@ void stm_tsm_init(int use_cimax)
 		ctrl_outl(0x0001804c ,tsm_io + TS_1394_CFG);
 		ret = ctrl_inl(tsm_io + TSM_1394_DEST);
 		ctrl_outl(ret | 0x1 , tsm_io + TSM_1394_DEST);*/
-#elif defined(OCTAGON1008)
+#elif defined(OCTAGON1008) \
+ || defined(OPT9600)
 		/* route stream 1 to PTI */
 		ret = ctrl_inl(tsm_io + TSM_PTI_SEL);
 		ctrl_outl(ret | 0x2, tsm_io + TSM_PTI_SEL);
@@ -1768,7 +1777,7 @@ void stm_tsm_init(int use_cimax)
 			int options = (n * 0x10000) + STM_SERIAL_NOT_PARALLEL;
 #else
 			int options = n * 0x10000;
-#endif // alt
+#endif // SAGEMCOM88
 			writel(readl(tsm_io + TSM_DESTINATION(0)) | (1 << chan), tsm_io + TSM_DESTINATION(0));
 #if defined(ADB_BOX)
 			if (TsinMode == SERIAL)

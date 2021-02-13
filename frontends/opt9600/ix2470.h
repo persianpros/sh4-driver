@@ -41,7 +41,7 @@ enum ix2470_cpump
 	IX2470_CP_120uA,	/*  120uA */
 	IX2470_CP_260uA,	/*  260uA */
 	IX2470_CP_555uA,	/*  555uA */
-	IX2470_CP_1200uA,	/* 1200uA (alway use this value according to datasheet) */
+	IX2470_CP_1200uA,	/* 1200uA (always use this value according to datasheet) */
 };
 
 struct ix2470_cfg
@@ -50,6 +50,7 @@ struct ix2470_cfg
 	u8 addr;
 	u8 step_size;
 	u8 bb_gain;
+	u8 c_pump;
 	u8 t_lock;
 };
 

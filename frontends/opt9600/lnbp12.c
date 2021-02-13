@@ -63,8 +63,8 @@ struct lnb_state
 };
 
 /*
- * The LNBP12 LNB power controller as used in the Opticum HD9600 series
- * is connected as follows:
+ * The LNBP12 LNB power controller as used in the Opticum HD 9600 and
+ * HD 9600 PRIMA series is connected as follows:
  *
  * Vsel (pin 4): sets the LNB voltage to 13/14V or 18/19V -> PIO2.2
  * EN   (pin 5): switches LNB voltage on (H) or off (L)   -> PIO5.2
@@ -74,13 +74,13 @@ struct lnb_state
  *               therefore as LNB voltage on/off input
  * ENT  (pin 7): switch 22kHz tone on (H) or off (L)      -> PIO2.3
  *               The driver initializes this pin to L
- *               (tone off) and does bother with this
- *               pin any further
+ *               (tone off) and does not bother with
+ *               this pin any further
  * LLC  (pin 9): Elevates LNB voltage by 1V when high     -> PIO2.6
  *               The driver initializes this pin to L
- *               (+1V off) and does bother with this
- *               pin any further
- * MI:  (pin 10): connected to ground
+ *               (+1V off) and does not bother with
+ *               this pin any further
+ * MI: (pin 10): connected to ground
  *
  * The LNBP12 does not provide any pins to monitor its status,
  * e.g. LNB overcurrent.
@@ -89,6 +89,18 @@ struct lnb_state
 #define LNBP12_ENT_PIN  3
 #define LNBP12_LLC_PORT 2
 #define LNBP12_LLC_PIN  6
+
+u16 lnbp12_set_high_lnb_voltage(void *_state, struct dvb_frontend *fe, long arg)
+{
+	struct lnb_state *state = (struct lnb_state *) _state;
+	u16 ret = 0;
+
+	dprintk(150, "%s > (%p, %d)\n", __func__, fe, arg);
+
+	stpio_set_pin(state->lnb_llc_pin, (arg ? 1 : 0));
+	dprintk(150, "%s < (%d)\n", __func__, ret);
+	return ret;
+}
 
 u16 lnbp12_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 {
@@ -145,6 +157,7 @@ void *lnbp12_attach(u32 *lnb, struct avl2108_equipment_s *equipment)
 	memcpy(state->lnb, lnb, sizeof(state->lnb));
 
 	equipment->lnb_set_voltage = lnbp12_set_voltage;
+	equipment->set_high_lnb_voltage = lnbp12_set_high_lnb_voltage;
 
 //	Allocate PIO pins
 #if defined(OPT9600)

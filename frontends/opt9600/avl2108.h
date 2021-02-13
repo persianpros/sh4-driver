@@ -162,6 +162,9 @@ struct avl2108_equipment_s
 
 	/* must be set by lnb */
 	u16(*lnb_set_voltage)(void *lnb_priv, struct dvb_frontend *fe, fe_sec_voltage_t voltage);
+#if defined(OPT9600)
+	u16(*set_high_lnb_voltage)(void *lnb_priv, struct dvb_frontend *fe, long arg);
+#endif
 };
 
 struct avl2108_state

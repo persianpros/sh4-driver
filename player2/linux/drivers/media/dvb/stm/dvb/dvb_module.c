@@ -131,9 +131,9 @@ long DvbGenericUnlockedIoctl(struct file *file, unsigned int foo, unsigned long 
 	}
 #ifdef __TDT__
 	if (swts)
-		printk("swts ->routing streams from dvr0 to tsm to pti to player\n");
+		printk("[player2] swts ->routing streams from dvr0 to tsm to pti to player\n");
 	else
-		printk("no swts ->routing streams from dvr0 direct to the player\n");
+		printk("[player2] no swts ->routing streams from dvr0 direct to the player\n");
 #endif
 #if DVB_API_VERSION < 5
 	Result = dvb_register_adapter(&DvbContext->DvbAdapter, MODULE_NAME, THIS_MODULE, NULL);

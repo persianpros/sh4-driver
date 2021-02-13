@@ -185,7 +185,8 @@ int proc_tsmux_ci0_input_write(struct file *file, const char __user *buf,
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(UFS913)
+ || defined(UFS913) \
+ || defined(OPT9600)
 		if (strcmp(page, "A") == 0)
 		{
 			setCiSource(0, 0);
@@ -226,7 +227,8 @@ int proc_tsmux_ci0_input_read(char *page, char **start, off_t off, int count,
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(UFS913)
+ || defined(UFS913) \
+ || defined(OPT9600)
 	{
 		int source = 0;
 		getCiSource(0, &source);
@@ -276,7 +278,8 @@ int proc_tsmux_ci1_input_write(struct file *file, const char __user *buf,
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(UFS913)
+ || defined(UFS913) \
+ || defined(OPT9600)
 		if (strcmp(page, "A") == 0)
 		{
 			setCiSource(1, 0);
@@ -317,7 +320,8 @@ int proc_tsmux_ci1_input_read(char *page, char **start, off_t off, int count,
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(IPBOX55) \
- || defined(UFS913)
+ || defined(UFS913) \
+ || defined(OPT9600)
 	{
 		int source = 0;
 		getCiSource(1, &source);

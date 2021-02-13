@@ -724,6 +724,7 @@ static inline snd_pcm_uframes_t _ksnd_pcm_avail_update(snd_pcm_substream_t
  || defined(IPBOX55) \
  || defined(CUBEREVO_250HD) \
  || defined(CUBEREVO) \
+ || defined(OPT9600) \
  || defined(QBOXHD) \
  || defined(QBOXHD_MINI))
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
@@ -806,6 +807,7 @@ int ksnd_pcm_htimestamp(ksnd_pcm_t *kpcm, snd_pcm_uframes_t *avail, struct times
  || defined(IPBOX55) \
  || defined(CUBEREVO_250HD) \
  || defined(CUBEREVO) \
+ || defined(OPT9600) \
  || defined(QBOXHD) \
  || defined(QBOXHD_MINI))
 	myavail = _ksnd_pcm_avail_update(kpcm->substream);

@@ -88,16 +88,16 @@ extern int init_ci_controller(struct dvb_adapter *dvb_adap);
 struct dvb_device *CaInit(struct DeviceContext_s *DeviceContext)
 {
 #ifdef __TDT__
-	printk("CaInit()\n");
+	printk("[player2] %s >\n", __func__);
 	if (!caInitialized)
 	{
 		/* the following call creates ca0 associated with the cimax hardware */
-		printk("Initializing CI Controller\n");
+		printk("[player2] Initializing CI Controller\n");
 #if !defined(VIP2) \
- && !defined (SPARK) \
- && !defined (SPARK7162) \
+ && !defined(SPARK) \
+ && !defined(SPARK7162) \
  && !defined(ADB_BOX) \
- && !defined (CUBEREVO_2000HD) \
+ && !defined(CUBEREVO_2000HD) \
  && !defined(SAGEMCOM88) \
  && !defined(PACE7241)
 		init_ci_controller(&DeviceContext->DvbContext->DvbAdapter);
@@ -113,7 +113,7 @@ static int CaOpen(struct inode *Inode, struct file *File)
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
 	int Error;
-	dprintk("CA Open\n");
+	dprintk("[player2] CA Open\n");
 	Error = dvb_generic_open(Inode, File);
 	if (Error < 0)
 		return Error;
@@ -125,7 +125,7 @@ static int CaRelease(struct inode *Inode, struct file *File)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
-	dprintk("CA Release\n");
+	dprintk("[player2] CA Release\n");
 	Context->EncryptionOn = 0;
 	return dvb_generic_release(Inode, File);
 }
@@ -141,7 +141,7 @@ static int CaIoctl(struct inode *Inode,
 	struct PtiSession *pSession = Context->pPtiSession;
 	if (pSession == NULL)
 	{
-		printk("CA is not associated with a session\n");
+		printk("[player2] CA is not associated with a session\n");
 		return -EINVAL;
 	}
 	dprintk("TEST %s : Ioctl %08x\n", __func__, IoctlCode);
@@ -153,12 +153,12 @@ static int CaIoctl(struct inode *Inode,
 			int vLoop;
 			unsigned short pid = service_pid->pid;
 			int descramble_index = service_pid->index;
-			printk("CA_SET_PID index = %d pid %d\n", descramble_index, pid);
+			printk("[player2] CA_SET_PID index = %d pid %d\n", descramble_index, pid);
 			if (descramble_index >= 0)
 			{
 				if (descramble_index >= NUMBER_OF_DESCRAMBLERS)
 				{
-					printk("Error only descramblers 0 - %d supported\n", NUMBER_OF_DESCRAMBLERS - 1);
+					printk("[player2] Error only descramblers 0 - %d supported\n", NUMBER_OF_DESCRAMBLERS - 1);
 					return -1;
 				}
 				pSession->descramblerForPid[pid] = descramble_index;
@@ -181,12 +181,12 @@ static int CaIoctl(struct inode *Inode,
 									if ((err = pti_hal_descrambler_link(pSession->session,
 													    pSession->descramblers[pSession->descramblerindex[vLoop]],
 													    pSession->slots[vLoop])) != 0)
-										printk("Error linking slot %d to descrambler %d, err = %d\n",
+										printk("[player2] Error linking slot %d to descrambler %d, err = %d\n",
 										       pSession->slots[vLoop],
 										       pSession->descramblers[pSession->descramblerindex[vLoop]],
 										       err);
 									else
-										dprintk("linking pid %d slot %d to descrambler %d, session = %d pSession %p\n",
+										dprintk("[player2] linking pid %d slot %d to descrambler %d, session = %d pSession %p\n",
 											pid, pSession->slots[vLoop],
 											pSession->descramblers[pSession->descramblerindex[vLoop]],
 											pSession->session, pSession);
@@ -194,24 +194,24 @@ static int CaIoctl(struct inode *Inode,
 								}
 								else
 								{
-									printk("pid %x is already linked to descrambler %d\n", pid, descramble_index);
+									printk("[player2] pid %x is already linked to descrambler %d\n", pid, descramble_index);
 									return 0;
 								}
 							}
 							else
 							{
-								printk("pid %x no audio or video pid! type=%d slot=%d not linking to descrambler\n", pid, pSession->pes_type[vLoop], pSession->slots[vLoop]);
+								printk("[player2] pid %x no audio or video pid! type=%d slot=%d not linking to descrambler\n", pid, pSession->pes_type[vLoop], pSession->slots[vLoop]);
 								return -1;
 							}
 						}
 						else
 						{
-							printk("pid %x type is not DMX_TYPE_TS! not linking to descrambler\n", pid);
+							printk("[player2] pid %x type is not DMX_TYPE_TS! not linking to descrambler\n", pid);
 							return -1;
 						}
 					}
 				}
-				printk("pid %x not found in pidtable, it might be inactive\n", pid);
+				printk("[player2] pid %x not found in pidtable, it might be inactive\n", pid);
 			}
 			return 0;
 			break;
@@ -219,7 +219,7 @@ static int CaIoctl(struct inode *Inode,
 		case CA_SET_DESCR:
 		{
 			ca_descr_t *descr = (ca_descr_t *) Parameter;
-			dprintk("CA_SET_DESCR\n");
+			dprintk("[player2] CA_SET_DESCR\n");
 			if (descr->index >= 16)
 				return -EINVAL;
 			if (descr->parity > 1)
@@ -236,17 +236,17 @@ static int CaIoctl(struct inode *Inode,
 			dprintk("cw[6] = %d\n", descr->cw[6]);
 			dprintk("cw[7] = %d\n", descr->cw[7]);
 #endif
-			dprintk("Descrambler Index: %d, cw(%d) = %02x %02x %02x %02x %02x %02x %02x %02x\n", descr->index, descr->parity,
+			dprintk("[player2] Descrambler Index: %d, cw(%d) = %02x %02x %02x %02x %02x %02x %02x %02x\n", descr->index, descr->parity,
 				descr->cw[0], descr->cw[1], descr->cw[2], descr->cw[3], descr->cw[4], descr->cw[5], descr->cw[6], descr->cw[7]);
 			if (descr->index < 0 || descr->index >= NUMBER_OF_DESCRAMBLERS)
 			{
-				printk("Error descrambler %d not supported! needs to be in range 0 - %d\n", descr->index, NUMBER_OF_DESCRAMBLERS - 1);
+				printk("[player2] Error descrambler %d not supported! needs to be in range 0 - %d\n", descr->index, NUMBER_OF_DESCRAMBLERS - 1);
 				return -1;
 			}
 			if (&Context->DvbContext->Lock != NULL)
 				mutex_lock(&Context->DvbContext->Lock);
 			if (pti_hal_descrambler_set(pSession->session, pSession->descramblers[descr->index], descr->cw, descr->parity) != 0)
-				printk("Error while setting descrambler keys\n");
+				printk("[player2] Error while setting descrambler keys\n");
 			if (&Context->DvbContext->Lock != NULL)
 				mutex_unlock(&Context->DvbContext->Lock);
 			return 0;
@@ -260,7 +260,7 @@ static int CaIoctl(struct inode *Inode,
 #endif
 			bool useAlt = false;
 			ca_descr_data_t *descr = (ca_descr_data_t *) Parameter;
-			dprintk("CA_SET_DESCR_DATA\n");
+			dprintk("[player2] CA_SET_DESCR_DATA\n");
 			if (descr->index & 0x100)
 			{
 				descr->index &= 0xFF;
@@ -283,7 +283,7 @@ static int CaIoctl(struct inode *Inode,
 #endif
 			if (descr->index < 0 || descr->index >= NUMBER_OF_DESCRAMBLERS)
 			{
-				printk("Error descrambler %d not supported! needs to be in range 0 - %d\n", descr->index, NUMBER_OF_DESCRAMBLERS - 1);
+				printk("[player2] Error descrambler %d not supported! needs to be in range 0 - %d\n", descr->index, NUMBER_OF_DESCRAMBLERS - 1);
 				return -1;
 			}
 			if (&Context->DvbContext->Lock != NULL)
@@ -291,7 +291,7 @@ static int CaIoctl(struct inode *Inode,
 			if (useAlt)
 			{
 				if (pti_hal_descrambler_set_aes(sess, altDescr, descr->data, descr->parity, descr->data_type) != 0)
-					printk("Error while setting descrambler keys\n");
+					printk("[player2] Error while setting descrambler keys\n");
 			}
 			else
 			{
@@ -304,7 +304,7 @@ static int CaIoctl(struct inode *Inode,
 			break;
 		}
 		default:
-			printk("%s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
+			printk("[player2] %s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
 	}
 	return -ENOIOCTLCMD;
 #else
@@ -331,7 +331,7 @@ static int CaIoctl(struct inode *Inode,
 			return 0;
 		}
 		default:
-			printk("%s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
+			printk("[player2] %s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
 	}
 	return -ENOIOCTLCMD;
 #endif

@@ -459,7 +459,7 @@ static u16 avl2108_i2c_repeater_send(void *_state, u8 *buf, u16 size)
 #if 0
 	for (i = 0; i < size; i++)
 	{
-		dprintk(150, "Byte[%i] = 0x%02x\n", i, buf[i]);
+		dprintk(100, "Byte[%i] = 0x%02x\n", i, buf[i]);
 	}
 #endif
 	memset(tmp_buf, 0, I2C_CMD_LEN + 3);
@@ -992,6 +992,16 @@ int avl2108_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 	return ret;
 }
 
+int avl2108_set_high_lnb_voltage(struct dvb_frontend* fe, long arg)
+{
+	struct avl2108_state *state = fe->demodulator_priv;
+	int ret = 0;
+
+//	dprintk(10, "%s(%p, %d)\n", __func__, fe, arge);
+	ret = state->equipment.set_high_lnb_voltage(state->lnb_priv, fe, arg);
+	return ret;
+}
+
 /*****************************
  * DiSEqC, LNB and tone
  *****************************/
@@ -1385,7 +1395,7 @@ static int avl2108_read_status(struct dvb_frontend *fe, fe_status_t *status)
 	else
 	{
 		*status |= FE_HAS_SIGNAL | FE_HAS_CARRIER | FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
-		dprintk(50, "Service locked!\n");
+		dprintk(150, "Service locked!\n");
 	}
 	return 0;
 }
@@ -2003,7 +2013,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 			break;
 		}
 		msleep(/* 10 */ 3);    /* Wait 10ms for demod to lock the channel */
-		dprintk(20, "%s Waiting for lock, retry %d\n", __func__);
+		dprintk(20, "Waiting for lock, retry %d\n", cnt);
 	}
 	while (--cnt);
 
@@ -2058,6 +2068,9 @@ static struct dvb_frontend_ops avl2108_ops =
 	.read_ucblocks           = avl2108_read_ucblocks,
 	.set_tone                = avl2108_set_tone,
 	.set_voltage             = avl2108_set_voltage,
+#if defined(OPT9600)
+	.enable_high_lnb_voltage = avl2108_set_high_lnb_voltage,
+#endif
 	.diseqc_send_master_cmd  = avl2108_send_diseqc_msg,
 	.diseqc_send_burst       = avl2108_diseqc_send_burst,
 

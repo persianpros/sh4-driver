@@ -21,7 +21,7 @@
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/dmx.h>
 
-extern int debug ;
+extern int debug;
 #define dprintk(x...) do { if (debug) printk(KERN_WARNING x); } while (0)
 
 /* Maximum number of channels */

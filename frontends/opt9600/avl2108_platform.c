@@ -3,7 +3,7 @@
  *
  * @author konfetti
  *
- * Version for Opticum HD 9600 series.
+ * Version for Opticum HD 9600 and Opticum HD 9600 PRIMA series.
  *
  * 	Copyright (C) 2011 duckbox
  *
@@ -27,19 +27,6 @@
 #include "avl2108_platform.h"
 #include "avl2108_reg.h"
 #include "avl2108.h"
-//#include "ix2470.h"
-
-
-#if 0
-static const struct ix2470_cfg cfg =
-{
-	.name		= "Sharp IX2470VA",
-	.addr		= I2C_ADDR_IX2470,  // TODO: get from platform config
-	.step_size 	= IX2470_STEP_1000,
-	.bb_gain	= IX2470_GAIN_0dB,
-	.t_lock     = 0
-};
-#endif
 
 short paramDebug = 0;
 #if defined TAGDEBUG
@@ -60,9 +47,10 @@ short paramDebug = 0;
  * Voltage select (pin 4, 13V = low)           : PIO2.2
  * Enable/power off (pin 5, Enable = high)     : PIO5.2
  * Tone enable (pin 7, high = tone on)         : PIO2.3 (currently not used by driver, initialized to 0)
- * 1V Vout lift (pin 9, LLC input, high = +1V) : PIO2.6 (currently not used by driver, initialized to 0)
+ * 1V Vout lift (pin 9, LLC input, high = +1V) : PIO2.6
  *
- * Driver currently does not support the DVB-T frontend of TS models.
+ * Driver currently does not support the DVB-T frontend of TS models
+ * and disables it in the driver initialization by powering it off.
  *
  */
 static struct avl_private_data_s avl_tuner_priv =
@@ -101,6 +89,7 @@ static struct platform_frontend_s avl2108_config =
 			.i2c_bus      = 1,
 
 			.demod_i2c    = 0x0C, // 0x18 >> 1
+//			NOTE: I2C address used for the IX2470 determines tthe value of its ADR input
 			.tuner_i2c    = 0xC0, // ADR input voltage < 0.1 * Vcc
 //			.tuner_i2c    = 0xC2, // ADR input open
 //			.tuner_i2c    = 0xC4, // 0.4 * Vcc < ADR input voltage < 0.6 * Vcc

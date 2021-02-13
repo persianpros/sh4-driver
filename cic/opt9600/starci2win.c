@@ -9,7 +9,7 @@ Implementation of linux dvb dvr input device
 Date        Modification                                    Name
 ----        ------------                                    --------
 01-Nov-06   Created                                         Pete
-05-Jan-21   Modified for Opticum HD 9600 (TS)               Audioniek
+05-Jan-21   Modified for Opticum HD (TS) 9600               Audioniek
 
 ************************************************************************/
 
@@ -28,7 +28,7 @@ Date        Modification                                    Name
 // --- CI switch support ---
 #include "dvb_ca_en50221.h"
 
-#define STARCI2_ADDR         0x3d
+#define STARCI2_ADDR         0x40
 #define STARCI2_I2C_BUS      0
 
 #define SLOT_STATUS_NONE     0x01
@@ -41,6 +41,14 @@ Date        Modification                                    Name
 #define SLOT_RESETS_MAX      5
 
 #define STARCI2_MAX_SLOTS    2
+
+// opt9600 stuff
+#define STARCI_INT_PORT      2
+#define STARCI_INT_PIN       4
+#define STARCI_RESET_PORT    5
+#define STARCI_RESET_PIN     5
+struct stpio_pin *int_pin;
+struct stpio_pin *reset_pin;
 
 static int debug = 0;
 
@@ -150,7 +158,7 @@ int ciintf_detect(void)
 
 	if ((i2c = i2c_get_adapter(STARCI2_I2C_BUS)) == NULL)
 	{
-		printk("[starciwin] %s: Error: Cannot find i2c adapter #0\n", __func__);
+		printk("[starciwin] %s: Error: Cannot find i2c adapter #%d\n", __func__, STARCI2_I2C_BUS);
 		return -ENODEV;
 	}
 	val = i2c_transfer(i2c, msg, 2);
@@ -163,7 +171,7 @@ int ciintf_detect(void)
 	{
 		return -ENODEV;
 	}
-	printk("[starciwin] %s: found supported device on %d@%x\n", __func__, STARCI2_I2C_BUS, STARCI2_ADDR);
+	printk("[starciwin] %s: found supported device on I2C bus %d, address 0x%02x\n", __func__, STARCI2_I2C_BUS, STARCI2_ADDR);
 	return 0;
 }
 
@@ -789,10 +797,32 @@ int init_ci_controller (struct dvb_adapter* dvb_adap)
 	// --- CI switch support ---
 	int result;
 
+	// allocate used PIO pins
+	printk("[starciwin] Initialize PIO %d.%d (STARCI_INT) to input\n", STARCI_INT_PORT, STARCI_INT_PIN);
+	int_pin = stpio_request_pin(STARCI_INT_PORT, STARCI_INT_PIN, "STARCI_INT", STPIO_IN);
+	if (int_pin == NULL)
+	{
+		printk("[starciwin] Request for STPIO STARCI_INT failed; abort\n");
+		goto pio_init_fail;
+	}
+	printk("[starciwin] Initialize PIO %d.%d (STARCI_RESET) to 0\n", STARCI_RESET_PORT, STARCI_RESET_PIN);
+	reset_pin = stpio_request_pin(STARCI_RESET_PORT, STARCI_RESET_PIN, "STARCI_RESET", STPIO_OUT);
+	if (reset_pin == NULL)
+	{
+		printk("[starciwin]Request for STPIO STARCI_RESET failed; abort\n");
+		goto pio_init_fail;
+	}
+
+	// reset STARCI2WIN
+	stpio_set_pin(reset_pin, 1);  // set reset to active
+	msleep(100);
+	stpio_set_pin(reset_pin, 0);  // set reset to inactive
+	msleep(100);
+
 	// do autodetect stuff
 	if (ciintf_detect())
 	{
-		printk("[starciwin] CICAM chip not detected.\n");
+		printk("[starciwin] StarCI2Win chip not detected.\n");
 	}
 	else
 	{
@@ -833,6 +863,12 @@ int init_ci_controller (struct dvb_adapter* dvb_adap)
 		}
 	}  // autodetect
 	return 0;
+
+pio_init_fail:
+	stpio_free_pin(int_pin);
+	stpio_free_pin(reset_pin);
+	printk("[starciwin] Initializing PIO pins failed.\n");
+	return -1;
 }
 EXPORT_SYMBOL(init_ci_controller);
 

@@ -189,6 +189,7 @@ static OSDEV_Status_t AllocatorIoctlAllocateData(AllocatorContext_t *AllocatorCo
 //
 	AllocatorContext->Memory = OSDEV_MallocPartitioned(AllocatorContext->PartitionName,
 							   AllocatorContext->Size);
+	OSDEV_Print("AllocatorIoctlAllocateData : Name: %s, Size: 0x%x\n", AllocatorContext->PartitionName, AllocatorContext->Size);
 	if (AllocatorContext->Memory == NULL)
 	{
 		OSDEV_Print("AllocatorIoctlAllocateData : Unable to allocate memory\n");

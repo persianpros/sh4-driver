@@ -99,7 +99,8 @@ Date Modification Name
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_9500HD) \
  || defined(CUBEREVO_3000HD) \
- || defined(CUBEREVO_MINI_FTA))
+ || defined(CUBEREVO_MINI_FTA) \
+ || defined(OPT9600))
 #define PLAYER_AUDIO_DEFAULT_CODED_FRAME_PARTITION_NAME "BPA2_Region1"
 #else
 #define PLAYER_AUDIO_DEFAULT_CODED_FRAME_PARTITION_NAME "BPA2_Region0"
@@ -127,7 +128,8 @@ Date Modification Name
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_9500HD) \
  || defined(CUBEREVO_3000HD) \
- || defined(CUBEREVO_MINI_FTA))
+ || defined(CUBEREVO_MINI_FTA) \
+ || defined(OPT9600))
 #define PLAYER_VIDEO_DEFAULT_CODED_FRAME_PARTITION_NAME "BPA2_Region1"
 #else
 #define PLAYER_VIDEO_DEFAULT_CODED_FRAME_PARTITION_NAME "BPA2_Region0"
