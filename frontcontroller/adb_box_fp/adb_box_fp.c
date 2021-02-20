@@ -598,7 +598,7 @@ static struct file_operations vfd_fops;
  */
 static int __init fp_module_init(void)
 {
-	dprintk(0, "Front panel PT6302 & PT6958 driver modified by B4Team & Audioniek\n");
+	dprintk(0, "Front panel PT6302 & PT6958 driver\n");
 	dprintk(1, "Driver initializing...\n");
 
 	if (rec != 0)  // limit rec values to 0 (bska/bxzb) or 1 (bxzb/bzzb)

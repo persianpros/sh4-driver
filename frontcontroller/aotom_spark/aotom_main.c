@@ -1143,7 +1143,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetStartUpState(&state))
 			{
-				dprintk(5, "%s Frontpanel startup state: %02X\n", __func__, state);
+				dprintk(5, "%s Front panel startup state: %02X\n", __func__, state);
 				res = put_user(state, (int *) arg);
 			}
 			break;
@@ -1156,7 +1156,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			if (!res)
 			{
 				res = YWPANEL_FP_SetLoopState(state);
-				dprintk(5, "%s Frontpanel loop state set to: %02X\n", __func__, state);
+				dprintk(5, "%s Front panel loop state set to: %02X\n", __func__, state);
 			}
 			break;
 		}
@@ -1166,7 +1166,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetLoopState(&state))
 			{
-				dprintk(5, "%s Frontpanel loop state: %02X\n", __func__, state);
+				dprintk(5, "%s Front panel loop state: %02X\n", __func__, state);
 				res = put_user(state, (int *)arg);
 			}
 			break;
@@ -1181,14 +1181,14 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetVersion(&fpanel_version))
 			{
-				dprintk(1, "%s Frontpanel CPU type         : %s\n", __func__, (fpanel_version.CpuType == 2 ? "ATtiny88" : "ATtiny48"));
-				dprintk(1, "%s Frontpanel software version : %d.%d\n", __func__, fpanel_version.swMajorVersion, fpanel_version.swSubVersion);
-				dprintk(1, "%s Frontpanel displaytype      : %s\n", __func__, fp_type[fpanel_version.DisplayInfo]);
+				dprintk(1, "%s Front panel CPU type         : %s\n", __func__, (fpanel_version.CpuType == 2 ? "ATtiny88" : "ATtiny48"));
+				dprintk(1, "%s Front panel software version : %d.%d\n", __func__, fpanel_version.swMajorVersion, fpanel_version.swSubVersion);
+				dprintk(1, "%s Front panel displaytype      : %s\n", __func__, fp_type[fpanel_version.DisplayInfo]);
 				if (fpanel_version.DisplayInfo == 3)
 				{
 					dprintk(1, "%s Time mode                   : %s\n", __func__, tm_type[bTimeMode]);
 				}
-				dprintk(1, "%s # of frontpanel keys        : %d\n", __func__, fpanel_version.scankeyNum);
+				dprintk(1, "%s # of front panel keys        : %d\n", __func__, fpanel_version.scankeyNum);
 				dprintk(1, "%s Number of version bytes     : %d\n", __func__, sizeof(fpanel_version));
 				res = put_user(fpanel_version.DisplayInfo, (int *)arg);
 				res |= copy_to_user((char *)arg, &fpanel_version, sizeof(fpanel_version));
@@ -1236,7 +1236,7 @@ static struct file_operations vfd_fops =
 };
 
 /*----- Button driver -------*/
-static char *button_driver_name = "Fulan frontpanel buttons driver";
+static char *button_driver_name = "Fulan front panel buttons driver";
 static struct input_dev *button_dev;
 static int bad_polling = 1;
 static struct workqueue_struct *fpwq;

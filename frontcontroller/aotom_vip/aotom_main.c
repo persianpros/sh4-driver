@@ -956,16 +956,16 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetVersion(&fpanel_version))
 			{
-				dprintk(50, "%s Frontpanel CPU type         : %d\n", __func__, fpanel_version.CpuType);
-				dprintk(50, "%s Frontpanel software version : %d.%d\n", __func__, fpanel_version.swMajorVersion, fpanel_version.swSubVersion);
-				dprintk(50, "%s Frontpanel displaytype      : %s\n", __func__, fp_type[fpanel_version.DisplayInfo]);
+				dprintk(50, "%s Front panel CPU type         : %d\n", __func__, fpanel_version.CpuType);
+				dprintk(50, "%s Front panel software version : %d.%d\n", __func__, fpanel_version.swMajorVersion, fpanel_version.swSubVersion);
+				dprintk(50, "%s Front panel displaytype      : %s\n", __func__, fp_type[fpanel_version.DisplayInfo]);
 #if defined(FP_DVFD)
 				if (fpanel_version.DisplayInfo == 3)
 				{
 					dprintk(50, "%s Time mode                   : %s\n", __func__, tm_type[bTimeMode]);
 				}
 #endif
-				dprintk(50, "%s # of frontpanel keys        : %d\n", __func__, fpanel_version.scankeyNum);
+				dprintk(50, "%s # of front panel keys        : %d\n", __func__, fpanel_version.scankeyNum);
 				dprintk(50, "%s Number of version bytes     : %d\n", __func__, sizeof(fpanel_version));
 				res = put_user(fpanel_version.DisplayInfo, (int *)arg);
 				res |= copy_to_user((char *)arg, &fpanel_version, sizeof(fpanel_version));

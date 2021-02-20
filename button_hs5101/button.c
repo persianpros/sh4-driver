@@ -55,7 +55,7 @@
 #define HS5101_BUTTON_MENU  0x20
 #define HS5101_BUTTON_EXIT  0x40
 
-static char                    *button_driver_name = "Homecast 5101 frontpanel buttons driver";
+static char                    *button_driver_name = "Homecast 5101 front panel buttons driver";
 static struct workqueue_struct *button_wq;
 static struct input_dev        *button_dev;
 static struct stpio_pin        *button_clk = NULL;
@@ -229,6 +229,6 @@ void __exit button_exit(void)
 module_init(button_init);
 module_exit(button_exit);
 
-MODULE_DESCRIPTION("Homecast 5101 frontpanel buttons driver");
+MODULE_DESCRIPTION("Homecast 5101 front panel buttons driver");
 MODULE_AUTHOR("corev");
 MODULE_LICENSE("GPL");

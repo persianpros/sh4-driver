@@ -81,7 +81,7 @@ char button_reset = 0;
 unsigned char key_group1, key_group2;
 unsigned int  key_front = 0;
 
-static char *button_driver_name = "nBox frontpanel buttons driver";
+static char *button_driver_name = "nBox front panel buttons driver";
 static struct input_dev *button_dev;
 
 static struct fp_driver fp;

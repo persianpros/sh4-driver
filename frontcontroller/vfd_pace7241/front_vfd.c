@@ -26,7 +26,7 @@
 //#define KEY_L	stm_gpio(5, 7)
 //#define KEY_PWR		stm_gpio(11, 6)
 
-static char *button_driver_name = "pace7241 frontpanel buttons driver";
+static char *button_driver_name = "pace7241 front panel buttons driver";
 static struct input_dev *button_dev;
 static struct workqueue_struct *wq;
 static int bad_polling = 1;

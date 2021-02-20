@@ -20,7 +20,7 @@
 #include "button.h"
 #include "pio.h"
 
-static char *button_driver_name = "Kathrein UFS-910 frontpanel buttons driver";
+static char *button_driver_name = "Kathrein UFS-910 front panel buttons driver";
 static struct input_dev *button_dev;
 static unsigned char button_value = 0;
 static int bad_polling = 1;
@@ -167,6 +167,6 @@ void __exit button_exit(void)
 module_init(button_init);
 module_exit(button_exit);
 
-MODULE_DESCRIPTION("Kathrein UFS-910 frontpanel buttons driver");
+MODULE_DESCRIPTION("Kathrein UFS-910 front panel buttons driver");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

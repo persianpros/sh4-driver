@@ -31,7 +31,7 @@
 #define KEY_L__	stm_gpio(6, 7)
 #define KEY_PWR		stm_gpio(6, 5)
 
-static char *button_driver_name = "SagemCom88 frontpanel buttons driver";
+static char *button_driver_name = "SagemCom88 front panel buttons driver";
 static struct input_dev *button_dev;
 static struct workqueue_struct *wq;
 static int bad_polling = 1;

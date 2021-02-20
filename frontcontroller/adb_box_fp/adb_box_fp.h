@@ -148,7 +148,7 @@ PIO 4.1 [fp_data   ] [Alt-BI (open-drain)] [] 	- DIN
 #define BUTTON_POLL_MSLEEP 1
 #define BUTTON_POLL_DELAY  10
 
-static char                    *button_driver_name = "PT6958 frontpanel buttons driver";
+static char                    *button_driver_name = "PT6958 front panel buttons driver";
 static struct workqueue_struct *button_wq;
 static struct input_dev        *button_dev;
 

@@ -20,7 +20,7 @@
 static int buttoninterval = 350/*ms*/;
 static struct timer_list button_timer;
 
-static char *button_driver_name = "nBox frontpanel buttons driver";
+static char *button_driver_name = "nBox front panel buttons driver";
 static struct input_dev *button_dev;
 
 struct vfd_driver
@@ -915,6 +915,6 @@ vfd_init_fail:
 module_init(vfd_module_init);
 module_exit(vfd_module_exit);
 
-MODULE_DESCRIPTION("PT6958 frontpanel driver");
+MODULE_DESCRIPTION("PT6958 front panel driver");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");

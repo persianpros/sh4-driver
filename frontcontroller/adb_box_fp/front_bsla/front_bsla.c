@@ -59,7 +59,7 @@
 static int buttoninterval = 350 /*ms*/;
 static struct timer_list button_timer;
 
-static char *button_driver_name = "nBox frontpanel buttons driver";
+static char *button_driver_name = "nBox front panel buttons driver";
 static struct input_dev *button_dev;
 
 struct fp_driver
@@ -1962,7 +1962,7 @@ MODULE_PARM_DESC(rec_key, "Key lay out 0=BSKA/BXZB, >1=BSLA/BZZB (default)");
 module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled, >0=enabled (level)");
 
-MODULE_DESCRIPTION("ADB ITI-5800SX PT6958 + PT6302 frontpanel driver");
+MODULE_DESCRIPTION("ADB ITI-5800SX PT6958 + PT6302 front panel driver");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
 // vim:ts=4

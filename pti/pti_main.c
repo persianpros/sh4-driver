@@ -566,7 +566,7 @@ module_exit(pti_exit);
 
 MODULE_DESCRIPTION("PTI driver");
 MODULE_AUTHOR("Open Vision developers");
-MODULE_LICENSE("NO");
+MODULE_LICENSE("GPL");
 
 #ifdef UFS910
 module_param(camRouting, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);

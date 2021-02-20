@@ -59,7 +59,7 @@
 #include "pace_7241_fp.h"
 #include "../vfd/utf.h"
 
-static char *button_driver_name = "Pace HDS-7241 frontpanel buttons";
+static char *button_driver_name = "Pace HDS-7241 front panel buttons";
 static struct input_dev *button_dev;
 static struct workqueue_struct *wq;
 static int bad_polling = 1;

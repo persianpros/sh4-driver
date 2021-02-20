@@ -1049,6 +1049,7 @@ struct ProcStructure_s e2Proc[] =
 #if defined(ADB_BOX) \
  || defined(FORTIS_HDBOX) \
  || defined(ATEVIO7500) \
+ || defined(SPARK) \
  || defined(SPARK7162) \
  || defined(TF7700) \
  || defined(VITAMIN_HD5000) \
@@ -1074,6 +1075,7 @@ struct ProcStructure_s e2Proc[] =
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_3000HD) \
+ || defined(SPARK) \
  || defined(SPARK7162) \
  || defined(TF7700) \
  || defined(HL101) \

@@ -66,7 +66,7 @@ extern short paramDebug;  // debug print level is zero as default (0=nothing, 1=
 #define YWPANEL_FP_INFO_MAX_LENGTH    10
 #define YWPANEL_FP_DATA_MAX_LENGTH    38
 
-static const char Revision[] = "Revision: 0.11 Audioniek";
+static const char Revision[] = "Revision: 0.11";
 typedef unsigned int YWOS_ClockMsec;
 
 typedef struct YWPANEL_I2CData_s

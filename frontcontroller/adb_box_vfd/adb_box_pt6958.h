@@ -20,7 +20,7 @@
 //#define BUTTON_RESET_PIN   2
 
 
-static char                    *button_driver_name = "pt6958 frontpanel buttons driver";
+static char                    *button_driver_name = "pt6958 front panel buttons driver";
 static struct workqueue_struct *button_wq;
 static struct input_dev        *button_dev;
 static struct stpio_pin        *button_do = NULL;
