@@ -123,8 +123,8 @@ static struct platform_device *devices[SNDRV_CARDS];
 #define CARD_HDMI(n, major, minor, freq, chan) \
 	_CARD(n, major, minor, freq, chan, SND_PSEUDO_TOPOLOGY_FLAGS_ENABLE_HDMI_FORMATING)
 
-#if defined CONFIG_CPU_SUBTYPE_STX7200 && !defined CONFIG_DUAL_DISPLAY
-
+#if defined CONFIG_CPU_SUBTYPE_STX7200
+#if !defined CONFIG_DUAL_DISPLAY
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -136,9 +136,7 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 		},
 	},
 };
-
-#elif defined CONFIG_CPU_SUBTYPE_STX7200
-
+#else
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -154,9 +152,20 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 		},
 	},
 };
-
+#endif
 #elif defined CONFIG_CPU_SUBTYPE_STB7100
-
+#if !defined CONFIG_DUAL_DISPLAY
+static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
+{
+	{
+		{
+			CARD_SPDIF("SPDIF", 0, 2, 48000, 2),
+			CARD("Analog", 0, 1, 48000, 2),
+			CARD("HDMI", 0, 0, 48000, 2),
+		},
+	},
+};
+#else
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -204,9 +213,9 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 		},
 	},
 };
-
-#elif defined CONFIG_CPU_SUBTYPE_STX7141 && !defined CONFIG_DUAL_DISPLAY
-
+#endif
+#elif defined CONFIG_CPU_SUBTYPE_STX7141
+#if !defined CONFIG_DUAL_DISPLAY
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -218,26 +227,22 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 		},
 	},
 };
-
-#elif defined CONFIG_CPU_SUBTYPE_STX7105 && !defined CONFIG_DUAL_DISPLAY \
- || defined CONFIG_CPU_SUBTYPE_STX7106 && !defined CONFIG_DUAL_DISPLAY \
- || defined CONFIG_CPU_SUBTYPE_STX7111 && !defined CONFIG_DUAL_DISPLAY \
- || defined CONFIG_CPU_SUBTYPE_STB7100 && !defined CONFIG_DUAL_DISPLAY \
- || defined(CONFIG_CPU_SUBTYPE_STXH205) && !defined CONFIG_DUAL_DISPLAY
-#warning "H205 values haven't been tested"
+#else
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
 		{
-			CARD_SPDIF("SPDIF", 0, 2, 48000, 2),
-			CARD("Analog", 0, 1, 48000, 2),
-			CARD("HDMI", 0, 0, 48000, 2),
+			CARD_SPDIF("SPDIF", 0, 3, 48000, 2),
+			CARD("HDMI", 0, 2, 48000, 2),
+			CARD("Analog0", 0, 0, 48000, 2),
+			CARD("Analog1", 0, 1, 48000, 2),
 		},
 	},
 };
-
-#elif defined CONFIG_CPU_SUBTYPE_STX7108 && !defined CONFIG_DUAL_DISPLAY
+#endif
+#elif defined CONFIG_CPU_SUBTYPE_STX7108
 #warning "7108 values haven't been tested"
+#if !defined CONFIG_DUAL_DISPLAY
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -248,27 +253,7 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 		},
 	},
 };
-
-#elif defined CONFIG_CPU_SUBTYPE_STX7141
-
-static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
-{
-	{
-		{
-			CARD_SPDIF("SPDIF", 0, 3, 48000, 2),
-			CARD("HDMI", 0, 2, 48000, 2),
-		},
-	},
-	{
-		{
-			CARD("Analog0", 0, 0, 48000, 2),
-			CARD("Analog1", 0, 1, 48000, 2),
-		},
-	},
-};
-
-#elif defined CONFIG_CPU_SUBTYPE_STX7108
-#warning "7108 values haven't been tested"
+#else
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -284,9 +269,21 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 		},
 	},
 };
-
-#elif defined CONFIG_CPU_SUBTYPE_STX7105 || defined CONFIG_CPU_SUBTYPE_STX7111 || defined CONFIG_CPU_SUBTYPE_STX7106 || defined(CONFIG_CPU_SUBTYPE_STXH205)
+#endif
+#elif defined CONFIG_CPU_SUBTYPE_STX7105 || defined CONFIG_CPU_SUBTYPE_STX7106 || defined CONFIG_CPU_SUBTYPE_STX7111 || defined CONFIG_CPU_SUBTYPE_STXH205
 #warning "H205 values haven't been tested"
+#if !defined CONFIG_DUAL_DISPLAY
+static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
+{
+	{
+		{
+			CARD_SPDIF("SPDIF", 0, 2, 48000, 2),
+			CARD("Analog", 0, 1, 48000, 2),
+			CARD("HDMI", 0, 0, 48000, 2),
+		},
+	},
+};
+#else
 static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 {
 	{
@@ -301,7 +298,7 @@ static const struct snd_pseudo_mixer_downstream_topology default_topology[] =
 		},
 	},
 };
-
+#endif
 #else /* CONFIG_CPU_SUBTYPE_STxXXXX */
 #error Unsupported CPU subtype/dual display combination
 #endif
