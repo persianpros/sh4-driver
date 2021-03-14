@@ -8,12 +8,6 @@ CCFLAGSY += -I$(CONFIG_STGFB_PATH)/include
 CCFLAGSY += -I$(TREE_ROOT)/include
 CCFLAGSY += -DDEBUG_DVB
 
-
-ifdef SPARK
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark_dvbapi5
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark_common
-endif
-
 ifdef SPARK7162
 CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162
 CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/stv0367
@@ -86,13 +80,12 @@ obj-m += fe-core.o
 endif
 
 ifdef SPARK
-stv090x-objs += spark_dvbapi5/stv090x.o
-stv090x-objs += spark_dvbapi5/stv6110x.o
-stv090x-objs += spark_dvbapi5/ix7306.o
-stv090x-objs += spark_dvbapi5/core.o
-stv090x-objs += spark_common/vz7903.o
-obj-m += stv090x.o
-obj-y += lnb/
+spark-fe-objs += spark/stv090x.o
+spark-fe-objs += spark/stv6110x.o
+spark-fe-objs += spark/ix7306.o
+spark-fe-objs += spark/core.o
+spark-fe-objs += spark/vx7903.o
+obj-m += spark-fe.o
 endif
 
 ifdef SPARK7162
