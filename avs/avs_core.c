@@ -416,7 +416,7 @@ int avs_command_kernel(unsigned int cmd, void *arg)
 		return -1;
 	}
 #endif
-	dprintk("%s > cmd = (0x%02x\n", __func__, cmd);
+	dprintk("%s > cmd = (0x%02x)\n", __func__, cmd);
 
 	switch(devType)
 	{
@@ -509,7 +509,7 @@ EXPORT_SYMBOL(avs_command_kernel);
 
 static int avs_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
-	dprintk("IOCTL (0x%x)\n", (int)arg);
+	dprintk("IOCTL 0x%x (arg=%d)\n", cmd, (int)arg);
 	return avs_command_ioctl(avs_client, cmd, (void *)arg);
 }
 

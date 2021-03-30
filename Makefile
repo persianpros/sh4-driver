@@ -402,8 +402,9 @@ endif
 
 ifdef SPARK7162
 obj-y += smartcard/
-obj-y += i2c_spi/
+#obj-y += i2c_spi/
 obj-y += cec/
+obj-y += rfmod/
 obj-y += dvbt/as102/
 obj-y += dvbt/siano/
 endif

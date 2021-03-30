@@ -50,7 +50,7 @@ static unsigned char t_mute;
 static unsigned char t_vol;
 
 /* hold old values for standby */
-static unsigned char ft_stnby=0;
+static unsigned char ft_stnby = 0;
 
 static struct stpio_pin *scart_tv_sat;
 static struct stpio_pin *scart_vcr_det;
@@ -74,7 +74,6 @@ int vip1_avs_src_sel(int src)
 
 inline int vip1_avs_standby(int type)
 {
-
 	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
@@ -156,14 +155,14 @@ inline int vip1_avs_get_mute(void)
 
 int vip1_avs_set_mode(int vol)
 {
-	switch(vol)
+	switch (vol)
 	{
 		case SAA_MODE_RGB:
 		{
 			stpio_set_pin(scart_cvbs_rgb, 1);
 			break;
 		}
-		case	SAA_MODE_FBAS:
+		case SAA_MODE_FBAS:
 		{
 			stpio_set_pin(scart_cvbs_rgb, 0);
 			break;
@@ -176,24 +175,24 @@ int vip1_avs_set_mode(int vol)
 	return 0;
 }
 
-int vip1_avs_set_encoder(int vol)
+int vip1_avs_set_encoder(int val)
 {
 	return 0;
 }
 
-int vip1_avs_set_wss(int vol)
+int vip1_avs_set_wss(int val)
 {
 	dprintk("[AVS]: %s\n", __func__);
 
-	if (vol == SAA_WSS_43F)
+	if (val == SAA_WSS_43F)
 	{
 		stpio_set_pin(scart_169_43, 0);
 	}
-	else if (vol == SAA_WSS_169F)
+	else if (val == SAA_WSS_169F)
 	{
 		stpio_set_pin(scart_169_43, 1);
 	}
-	else if (vol == SAA_WSS_OFF)
+	else if (val == SAA_WSS_OFF)
 	{
 		stpio_set_pin(scart_169_43, 1);
 	}

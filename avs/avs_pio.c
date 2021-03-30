@@ -65,16 +65,23 @@ int avs_pio_src_sel(int src)
 
 inline int avs_pio_standby(int type)
 {
-	if ((type<0) || (type>1))
+	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
 	}
 
-	if (type==1)
+	if (type)
 	{
 		if (ft_stnby == 0)
 		{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
+#if defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 			stpio_set_pin(avs_format, 0);
 			stpio_set_pin(avs_standby, 1);
 			stpio_set_pin(avs_mode, 0);
@@ -84,13 +91,22 @@ inline int avs_pio_standby(int type)
 			ft_stnby = 1;
 		}
 		else
+		{
 			return -EINVAL;
+		}
 	}
 	else
 	{
 		if (ft_stnby == 1)
 		{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
+#if defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 			stpio_set_pin(avs_format, 0);
 			stpio_set_pin(avs_standby, 0);
 			stpio_set_pin(avs_mode, 0);
@@ -100,60 +116,58 @@ inline int avs_pio_standby(int type)
 			ft_stnby = 0;
 		}
 		else
+		{
 			return -EINVAL;
+		}
 	}
-
 	return 0;
 }
 
 int avs_pio_set_volume(int vol)
 {
-	int c=0;
+	int c = 0;
 
 	dprintk("[AVS]: %s (%d)\n", __func__, vol);
 	c = vol;
 
 	if (c > 63 || c < 0)
+	{
 		return -EINVAL;
-
+	}
 	c = 63 - c;
-
-	c=c/2;
-
+	c = c / 2;
 	t_vol = c;
-
 	return 0;
 }
 
 inline int avs_pio_set_mute(int type)
 {
-	if ((type<0) || (type>1))
+	if ((type < 0) || (type > 1))
 	{
 		return -EINVAL;
 	}
 
-	if (type==AVS_MUTE)
+	if (type == AVS_MUTE)
 	{
-		#if defined(SPARK7162)
+#if defined(SPARK7162)
 		t_mute = 0;
-		#else
+#else
 		t_mute = 1;
-		#endif
+#endif
 	}
 	else
 	{
-		#if defined(SPARK7162)
+#if defined(SPARK7162)
 		t_mute = 1;
-		#else
+#else
 		t_mute = 0;
-		#endif
+#endif
 	}
 
-
-#if defined(SPARK) || defined(SPARK7162)
+#if defined(SPARK) \
+ || defined(SPARK7162)
 	stpio_set_pin(avs_mute, t_mute);
 #endif
-
 	return 0;
 }
 
@@ -162,7 +176,6 @@ int avs_pio_get_volume(void)
 	int c;
 
 	c = t_vol;
-
 	return c;
 }
 
@@ -175,14 +188,17 @@ int avs_pio_set_mode(int val)
 {
 	switch(val)
 	{
-	case SAA_MODE_RGB:
-		stpio_set_pin(avs_mode, 1);
-		break;
-	case SAA_MODE_FBAS:
-		stpio_set_pin(avs_mode, 0);
-		break;
+		case SAA_MODE_RGB:
+		{
+			stpio_set_pin(avs_mode, 1);
+			break;
+		}
+		case SAA_MODE_FBAS:
+		{
+			stpio_set_pin(avs_mode, 0);
+			break;
+		}
 	}
-
 	return 0;
 }
 
@@ -197,21 +213,42 @@ int avs_pio_set_wss(int val)
 
 	if (val == SAA_WSS_43F)
 	{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
+#if defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		stpio_set_pin(avs_standby, 0);
 #endif
 		stpio_set_pin(avs_format, 0);
 	}
 	else if (val == SAA_WSS_169F)
 	{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
+#if defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		stpio_set_pin(avs_standby, 0);
 #endif
 		stpio_set_pin(avs_format, 1);
 	}
 	else if (val == SAA_WSS_OFF)
 	{
-#if defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819) || defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(EPP8000)
+#if defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 		stpio_set_pin(avs_format, 1);
 #endif
 	}
@@ -219,19 +256,18 @@ int avs_pio_set_wss(int val)
 	{
 		return  -EINVAL;
 	}
-
 	return 0;
 }
 
-int avs_pio_command(unsigned int cmd, void *arg )
+int avs_pio_command(unsigned int cmd, void *arg)
 {
-	int val=0;
+	int val = 0;
 
-	dprintk("[AVS]: %s(%d)\n", __func__, cmd);
+	dprintk("[AVS]: %s (cmd=0x%04x)\n", __func__, cmd);
 
 	if (cmd & AVSIOSET)
 	{
-		if ( copy_from_user(&val,arg,sizeof(val)) )
+		if (copy_from_user(&val, arg, sizeof(val)))
 		{
 			return -EFAULT;
 		}
@@ -239,13 +275,21 @@ int avs_pio_command(unsigned int cmd, void *arg )
 		switch (cmd)
 		{
 			case AVSIOSVOL:
+			{
 				return avs_pio_set_volume(val);
+			}
 			case AVSIOSMUTE:
+			{
 				return avs_pio_set_mute(val);
+			}
 			case AVSIOSTANDBY:
+			{
 				return avs_pio_standby(val);
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
 	}
 	else if (cmd & AVSIOGET)
@@ -253,15 +297,20 @@ int avs_pio_command(unsigned int cmd, void *arg )
 		switch (cmd)
 		{
 			case AVSIOGVOL:
+			{
 				val = avs_pio_get_volume();
 				break;
+			}
 			case AVSIOGMUTE:
+			{
 				val = avs_pio_get_mute();
 				break;
+			}
 			default:
+			{
 				return -EINVAL;
+			}
 		}
-
 		return put_user(val,(int*)arg);
 	}
 	else
@@ -276,110 +325,144 @@ int avs_pio_command(unsigned int cmd, void *arg )
 
 		switch(cmd)
 		{
-		case SAAIOSMODE:
-           		 return avs_pio_set_mode(val);
- 	        case SAAIOSENC:
-        		 return avs_pio_set_encoder(val);
-		case SAAIOSWSS:
-			return avs_pio_set_wss(val);
-		case SAAIOSSRCSEL:
-        		return avs_pio_src_sel(val);
-		default:
-			dprintk("[AVS]: %s: SAA command not supported\n", __func__);
-			return -EINVAL;
+			case SAAIOSMODE:
+			{
+				return avs_pio_set_mode(val);
+			}
+			case SAAIOSENC:
+			{
+				return avs_pio_set_encoder(val);
+			}
+			case SAAIOSWSS:
+			{
+				return avs_pio_set_wss(val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return avs_pio_src_sel(val);
+			}
+			default:
+			{
+				dprintk("[AVS]: %s: SAA command 0x%04x not supported\n", __func__, cmd);
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
 int avs_pio_command_kernel(unsigned int cmd, void *arg)
 {
-    int val=0;
+	int val = 0;
 
 	if (cmd & AVSIOSET)
 	{
-		val = (int) arg;
+		val = (int)arg;
 
-      	dprintk("[AVS]: %s: AVSIOSET command\n", __func__);
+		dprintk("[AVS]: %s: AVSIOSET command (0x%04x)\n", __func__, cmd);
 
 		switch (cmd)
 		{
 			case AVSIOSVOL:
-		            return avs_pio_set_volume(val);
-		        case AVSIOSMUTE:
-		            return avs_pio_set_mute(val);
-		        case AVSIOSTANDBY:
-		            return avs_pio_standby(val);
+			{
+				return avs_pio_set_volume(val);
+			}
+			case AVSIOSMUTE:
+			{
+				return avs_pio_set_mute(val);
+			}
+			case AVSIOSTANDBY:
+			{
+				return avs_pio_standby(val);
+			}
 			default:
+			{
+				dprintk("[AVS]: %s: AVSIOSET command 0x%04x not supported\n", __func__, cmd);
 				return -EINVAL;
+			}
 		}
 	}
 	else if (cmd & AVSIOGET)
 	{
-		dprintk("[AVS]: %s: AVSIOGET command\n", __func__);
+		dprintk("[AVS]: %s: AVSIOGET command (0x%04x)\n", __func__, cmd);
 
 		switch (cmd)
 		{
 			case AVSIOGVOL:
-			    val = avs_pio_get_volume();
-			    break;
+			{
+				val = avs_pio_get_volume();
+				break;
+			}
 			case AVSIOGMUTE:
-			    val = avs_pio_get_mute();
-			    break;
+			{
+				val = avs_pio_get_mute();
+				break;
+			}
 			default:
+			{
+				dprintk("[AVS]: %s: AVSIOGET command 0x%04x not supported\n", __func__, cmd);
 				return -EINVAL;
+			}
 		}
-
-		arg = (void *) val;
-	        return 0;
+		arg = (void *)val;
+		return 0;
 	}
 	else
 	{
-		dprintk("[AVS]: %s: SAA command (%d)\n", __func__, cmd);
+		dprintk("[AVS]: %s: SAA command (0x%04x)\n", __func__, cmd);
 
-		val = (int) arg;
+		val = (int)arg;
 
-		switch(cmd)
+		switch (cmd)
 		{
-		case SAAIOSMODE:
-           		 return avs_pio_set_mode(val);
- 	        case SAAIOSENC:
-        		 return avs_pio_set_encoder(val);
-		case SAAIOSWSS:
-			return avs_pio_set_wss(val);
-		case SAAIOSSRCSEL:
-        		return avs_pio_src_sel(val);
-		default:
-			dprintk("[AVS]: %s: SAA command not supported\n", __func__);
-			return -EINVAL;
+			case SAAIOSMODE:
+			{
+				return avs_pio_set_mode(val);
+			}
+			case SAAIOSENC:
+			{
+				return avs_pio_set_encoder(val);
+			}
+			case SAAIOSWSS:
+			{
+				return avs_pio_set_wss(val);
+			}
+			case SAAIOSSRCSEL:
+			{
+				return avs_pio_src_sel(val);
+			}
+			default:
+			{
+				dprintk("[AVS]: %s: SAA command 0x%04x not supported\n", __func__, cmd);
+				return -EINVAL;
+			}
 		}
 	}
-
 	return 0;
 }
 
 int avs_pio_init(void)
 {
 #if defined(SPARK7162)
-	avs_mode	= stpio_request_pin (11, 5, "avs_mode", 	STPIO_OUT);
-	avs_format	= stpio_request_pin (11, 4, "avs_format", 	STPIO_OUT);
-	avs_standby	= stpio_request_pin (11, 3, "avs_standby", 	STPIO_OUT);
-	avs_mute	= stpio_request_pin (11, 2, "avs_mute", 	STPIO_OUT);
+	avs_mode	= stpio_request_pin (11, 5, "avs_mode",	STPIO_OUT);
+	avs_format	= stpio_request_pin (11, 4, "avs_format",	STPIO_OUT);
+	avs_standby	= stpio_request_pin (11, 3, "avs_standby",	STPIO_OUT);
+	avs_mute	= stpio_request_pin (11, 2, "avs_mute",	STPIO_OUT);
 //	avs_src		= NULL;
 #elif defined(SPARK)
-	avs_mode	= stpio_request_pin (6, 0, "avs_mode", 		STPIO_OUT);
-	avs_format	= stpio_request_pin (6, 2, "avs_format", 	STPIO_OUT);
-	avs_standby	= stpio_request_pin (6, 1, "avs_standby", 	STPIO_OUT);
-	avs_mute	= stpio_request_pin (2, 4, "avs_mute", 		STPIO_OUT);
+	avs_mode	= stpio_request_pin (6, 0, "avs_mode",		STPIO_OUT);
+	avs_format	= stpio_request_pin (6, 2, "avs_format",	STPIO_OUT);
+	avs_standby	= stpio_request_pin (6, 1, "avs_standby",	STPIO_OUT);
+	avs_mute	= stpio_request_pin (2, 4, "avs_mute",		STPIO_OUT);
 //	avs_src		= NULL;
-#elif defined(HS7420) || defined(HS7429) || defined(HS7810A) || defined(HS7819)
-	avs_format	= stpio_request_pin (6, 5, "avs0", STPIO_OUT);
-	avs_standby	= stpio_request_pin (6, 6, "avs1", STPIO_OUT);
-	avs_mode	= stpio_request_pin (6, 4, "avs2", STPIO_OUT);
-	avs_mute	= NULL;
-//	avs_src		= NULL;
-#elif defined(FOREVER_NANOSMART) || defined(FOREVER_9898HD) || defined(DP7001) || defined(FOREVER_3434HD) || defined(FOREVER_2424HD) || defined(GPV8000) || defined(EP8000) || defined(EPP8000) //TODO: get correct pin numbers
+#elif defined(HS7420) \
+ || defined(HS7429) \
+ || defined(HS7810A) \
+ || defined(HS7819) \
+ || defined(FOREVER_NANOSMART) \
+ || defined(FOREVER_9898HD) \
+ || defined(DP7001) \
+ || defined(EPP8000)
 	avs_format	= stpio_request_pin (6, 5, "avs0", STPIO_OUT);
 	avs_standby	= stpio_request_pin (6, 6, "avs1", STPIO_OUT);
 	avs_mode	= stpio_request_pin (6, 4, "avs2", STPIO_OUT);
@@ -389,51 +472,67 @@ int avs_pio_init(void)
 	return 0;
 #endif
 
-	if ((avs_mode == NULL) || (avs_format == NULL) || (avs_standby == NULL))
+	if ((avs_mode == NULL) 
+	||  (avs_format == NULL)
+	||  (avs_standby == NULL))
 	{
-		if(avs_mode != NULL)
+		if (avs_mode != NULL)
+		{
 			stpio_free_pin(avs_mode);
+		}
 		else
+		{
 			dprintk("[AVS]: avs_mode error\n");
-		if(avs_format != NULL)
+		}
+		if (avs_format != NULL)
+		{
 			stpio_free_pin (avs_format);
+		}
 		else
+		{
 			dprintk("[AVS]: avs_format error\n");
-
-		if(avs_standby != NULL)
+		}
+		if (avs_standby != NULL)
+		{
 			stpio_free_pin(avs_standby);
+		}
 		else
+		{
 			dprintk("[AVS]: avs_standby error\n");
-
+		}
 		return -1;
 	}
 
-#if defined(SPARK) || defined(SPARK7162)
+#if defined(SPARK) \
+ || defined(SPARK7162)
 	if (avs_mute == NULL)
 	{
 		dprintk("[AVS]: avs_mute error\n");
 		return -1;
 	}
 #endif
-
 	dprintk("[AVS-PIO]: init success\n");
-
-  return 0;
+	return 0;
 }
 
 int avs_pio_exit(void)
 {
-	if(avs_mode != NULL)
+	if (avs_mode != NULL)
+	{
 		stpio_free_pin(avs_mode);
-
-	if(avs_format != NULL)
+	}
+	if (avs_format != NULL)
+	{
 		stpio_free_pin (avs_format);
-
-	if(avs_standby != NULL)
+	}
+	if (avs_standby != NULL)
+	{
 		stpio_free_pin(avs_standby);
-
-	if(avs_mute != NULL)
+	}
+	if (avs_mute != NULL)
+	{
 		stpio_free_pin(avs_mute);
-
-  return 0;
+	}
+	return 0;
 }
+// vim:ts=4
