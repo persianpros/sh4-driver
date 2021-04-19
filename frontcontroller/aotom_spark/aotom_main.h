@@ -1,5 +1,44 @@
+/*
+ * aotom_main.h
+ *
+ * (c) 2010 Spider-Team
+ * (c) 2011 oSaoYa
+ * (c) 2012-2013 Stefan Seyfried
+ * (c) 2012-2013 martii
+ * (c) 2013-2021 Audioniek
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ *
+ * Fulan front panel driver.
+ *
+ * Devices:
+ *	- /dev/vfd (vfd ioctls and read/write function)
+ *
+ *
+ ****************************************************************************/
 #ifndef __AOTOM_MAIN_H__
 #define __AOTOM_MAIN_H__
+
+extern short paramDebug;
+#define TAGDEBUG "[aotom] "
+#define dprintk(level, x...) \
+do \
+{ \
+	if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
+} while (0)
 
 #ifndef __KERNEL__
 typedef unsigned char u8;
@@ -66,7 +105,7 @@ extern short paramDebug;  // debug print level is zero as default (0=nothing, 1=
 #define YWPANEL_FP_INFO_MAX_LENGTH    10
 #define YWPANEL_FP_DATA_MAX_LENGTH    38
 
-static const char Revision[] = "Revision: 0.11";
+static const char Revision[] = "Revision: 0.11 Audioniek";
 typedef unsigned int YWOS_ClockMsec;
 
 typedef struct YWPANEL_I2CData_s

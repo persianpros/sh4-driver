@@ -40,15 +40,20 @@
  * 20181203 Audioniek       /proc/stb/lcd/symbol_circle support added,
  *                          E2 start code on write progress removed.
  * 20200909 Audioniek       /proc/stb/lcd/symbol_timeshift support added.
+ * 20210416 Audioniek       /proc/stb/info/brand, /proc/stb/info/model_name
+ *                          and /proc/stb/info/stb_id added.
  * 
  ****************************************************************************/
 
 #include <linux/proc_fs.h>      /* proc fs */
 #include <asm/uaccess.h>        /* copy_from_user */
 #include <linux/time.h>
+#include <linux/string.h>
+#include <linux/fs.h> 
 //#include <time.h>
 #include <linux/kernel.h>
 #include "aotom_main.h"
+#include "fulan_names.h"
 
 /*
  *  /proc/------
@@ -71,6 +76,11 @@
  *             +--- timemode (rw)           Time display on/off (write on DVFD only)
  *             +--- text (w)                Direct writing of display text
  *
+ *  /proc/stb/info
+ *             +--- brand (r)               Reseller brand name
+ *             +--- model_name (r)          Reseller model name
+ *             +--- stb_id (r)              Reseller STB ID
+ *
  *  /proc/stb/lcd/
  *             |
  *             +--- symbol_circle (rw)       Control of spinner (VFD only)
@@ -83,9 +93,11 @@
 
 //paramDebug: debug print level is zero as default (0=nothing, 1= open/close functions, 5=some detail, 10=all)
 #define TAGDEBUG "[aotom] "
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
+#define dprintk(level, x...) \
+do \
+{ \
+	if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
+} while (0)
 
 /* from e2procfs */
 extern int install_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *write_proc, void *data);
@@ -109,7 +121,6 @@ static int progress_done = 0;
 static u32 led0_pattern = 0;
 static u32 led1_pattern = 0;
 static int led_pattern_speed = 20;
-
 
 int aotomEnableLed(int which, int on)
 {
@@ -240,7 +251,7 @@ static int progress_read(char *page, char **start, off_t off, int count, int *eo
 {
 	int len = 0;
 
-	if (NULL != page)
+	if (page)
 	{
 		len = sprintf(page, "%d", progress);
 	}
@@ -269,7 +280,7 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 		sscanf(myString, "%d", &symbol_circle);
 		kfree(myString);
 
-		if (fp_type == FP_VFD) //VFD display
+		if (fp_type == FP_VFD)  // VFD display
 		{
 			if (symbol_circle > 255)
 			{
@@ -278,7 +289,7 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 			led_state[LED_SPINNER].state = ((symbol_circle < 1) ? 0 : 1);
 			if (symbol_circle != 0)
 			{
-				flashLED(LED_SPINNER, symbol_circle); // start spinner thread
+				flashLED(LED_SPINNER, symbol_circle);  // start spinner thread
 //				aotomSetIcon(ICON_SPINNER, symbol_circle);
 			}
 		}
@@ -299,9 +310,135 @@ static int symbol_circle_read(char *page, char **start, off_t off, int count, in
 {
 	int len = 0;
 
-	if (NULL != page)
+	if (page)
 	{
 		len = sprintf(page, "%d", symbol_circle);
+	}
+	return len;
+}
+
+static unsigned char *get_stb_id(void)
+{
+	struct file *file;
+	mm_segment_t fs;
+	unsigned char procCmdLine[1024];
+	unsigned char *id_string;
+	unsigned char *VendorStbId = "00:00:00:00:00:00:00\0";
+ 	int len;
+
+	file = filp_open("/proc/cmdline", O_RDONLY, 0);
+	if (file == NULL)
+	{
+		dprintk(1, "Error opening /proc/cmdline\n");
+		return NULL;
+	}
+	else
+	{
+        // Get current segment descriptor
+        fs = get_fs();
+        // Set segment descriptor associated to kernel space
+        set_fs(get_ds());
+        // Read the file
+        file->f_op->read(file, procCmdLine, sizeof(procCmdLine), &file->f_pos);
+        // Restore segment descriptor
+        set_fs(fs);
+	}
+    filp_close(file, NULL);
+
+	for (len = 0; len < sizeof(procCmdLine); len++)
+	{
+		if (procCmdLine[len] == 0x0a)
+		{
+			procCmdLine[len] = 0;
+			break;
+		}
+	}
+	if (len > 0 && len < sizeof(procCmdLine))
+	{
+		id_string = strstr(procCmdLine, "STB_ID=");
+		if (id_string != NULL)
+		{
+			strncpy(VendorStbId, id_string + 7, 20);
+		}
+		else
+		{
+			dprintk(1, "No STB_ID found, defaulting to 00:00:00:00:00:00:00\n");
+		}
+	}
+//	dprintk(10, "STB_ID = %s\n", VendorStbId);
+	return VendorStbId;
+}
+
+static int stb_id_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+	unsigned char *stb_id;
+
+	stb_id = get_stb_id();
+
+	if (stb_id != NULL)
+	{
+		if (page)
+		{
+			len = sprintf(page, "%s\n", stb_id);
+		}
+	}
+	return len;
+}
+
+static int brand_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+	int brand_offset = 0;
+	unsigned char *stb_id;
+
+	stb_id = get_stb_id();
+
+	if (stb_id != NULL)
+	{
+		brand_offset = (((int)stb_id[6] & 0x0f) << 4) | ((int)stb_id[7] & 0x0f);
+	
+		if (page)
+		{
+			len = sprintf(page, "%s\n", brand_name[brand_offset]);
+		}
+	}
+	return len;
+}
+
+static int model_name_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+	int brand_offset = 0;
+	int model_code = 0;
+	unsigned char **table = NULL;
+	unsigned char *stb_id;
+
+	stb_id = get_stb_id();
+
+	if (stb_id != NULL)
+	{
+		brand_offset = (((int)stb_id[6] & 0x0f) << 4) | ((int)stb_id[7] & 0x0f);
+		model_code = (((int)stb_id[0] & 0x0f) << 4) | ((int)stb_id[1] & 0x0f);
+
+		if (page)
+		{
+			switch (model_code)
+			{
+				case 0x09:  // spark
+				{
+					table = model_name_09;
+					break;
+				}
+				case 0x0c:  // spark7162
+				default:
+				{
+					table = model_name_0c;
+					break;
+				}
+			}
+			len = sprintf(page, "%s %s\n", brand_name[brand_offset], table[brand_offset]);
+		}
 	}
 	return len;
 }
@@ -351,7 +488,7 @@ static int symbol_timeshift_read(char *page, char **start, off_t off, int count,
 {
 	int len = 0;
 
-	if (NULL != page)
+	if (page)
 	{
 		len = sprintf(page, "%d", symbol_timeshift);
 	}
@@ -468,7 +605,7 @@ static int rtc_offset_read(char *page, char **start, off_t off, int count, int *
 {
 	int len = 0;
 
-	if (NULL != page)
+	if (page)
 	{
 		len = sprintf(page, "%d\n", rtc_offset);
 	}
@@ -549,7 +686,7 @@ static int wakeup_time_read(char *page, char **start, off_t off, int count, int 
 {
 	int len = 0;
 
-	if (NULL != page)
+	if (page)
 	{
 		wakeup_time = YWPANEL_FP_GetPowerOnTime();
 		len = sprintf(page, "%u\n", wakeup_time - rtc_offset);
@@ -564,7 +701,7 @@ static int was_timer_wakeup_read(char *page, char **start, off_t off, int count,
 	int res = 0;
 	YWPANEL_STARTUPSTATE_t State;
 
-	if (NULL != page)
+	if (page)
 	{
 		YWPANEL_FP_GetStartUpState(&State);
 		if (State == YWPANEL_STARTUPSTATE_TIMER)
@@ -845,6 +982,10 @@ struct fp_procs
 } fp_procs[] =
 {
 	{ "progress", progress_read, progress_write },
+//	{ "cmdline", cmdline_read, NULL },
+	{ "stb/info/brand", brand_read, NULL },
+	{ "stb/info/model_name", model_name_read, NULL },
+	{ "stb/info/stb_id", stb_id_read, NULL },
 	{ "stb/fp/rtc", rtc_read, rtc_write },
 	{ "stb/lcd/symbol_circle", symbol_circle_read, symbol_circle_write },
 	{ "stb/lcd/symbol_timeshift", symbol_timeshift_read, symbol_timeshift_write },

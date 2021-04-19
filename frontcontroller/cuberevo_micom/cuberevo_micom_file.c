@@ -1,4 +1,4 @@
-﻿/*
+/*
  * cuberevo_micom_file.c
  *
  * (c) 2011 konfetti

@@ -112,7 +112,7 @@
  *  |
  *  ---------- info
  *  |           |
- *  |           --------- model name
+ *  |           --------- model_name
  *  |
  *  ---------- fp (this is wrong used for e2 I think. on dm800 this is frontprocessor and there is another proc entry for frontend)
  *  |           |
@@ -1025,6 +1025,8 @@ struct ProcStructure_s e2Proc[] =
  || defined(HS7429) \
  || defined(HS7810A) \
  || defined(HS7819) \
+ || defined(SPARK) \
+ || defined(SPARK7162) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
@@ -1033,7 +1035,9 @@ struct ProcStructure_s e2Proc[] =
  || defined(GPV8000) \
  || defined(EP8000) \
  || defined(EPP8000)
+	{cProcEntry, "stb/info/brand",                                                   NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/info/model_name",                                              NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/info/stb_id",                                                  NULL, NULL, NULL, NULL, ""},
 #endif
 
 	{cProcDir,   "stb/ir",                                                           NULL, NULL, NULL, NULL, ""},
@@ -1491,7 +1495,7 @@ int install_e2_procs(char *path, read_proc_t *read_func, write_proc_t *write_fun
 			}
 			else
 			{
-				/* check whther the default entry is installed */
+				/* check whether the default entry is installed */
 				if ((e2Proc[i].entry->read_proc != e2Proc[i].read_proc) || (e2Proc[i].entry->write_proc != e2Proc[i].write_proc))
 				{
 					printk("%s(): entry already in use '%s'\n", __func__, path);
@@ -1514,7 +1518,6 @@ int install_e2_procs(char *path, read_proc_t *read_func, write_proc_t *write_fun
 	}
 	return 0;
 }
-
 EXPORT_SYMBOL(install_e2_procs);
 
 int cpp_install_e2_procs(const char *path, read_proc_t *read_func, write_proc_t *write_func, void *instance)
@@ -1556,7 +1559,6 @@ int cpp_install_e2_procs(const char *path, read_proc_t *read_func, write_proc_t 
 	}
 	return 0;
 }
-
 EXPORT_SYMBOL(cpp_install_e2_procs);
 
 int remove_e2_procs(char *path, read_proc_t *read_func, write_proc_t *write_func)

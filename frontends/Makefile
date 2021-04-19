@@ -10,15 +10,19 @@ CCFLAGSY += -DDEBUG_DVB
 
 ifdef SPARK7162
 CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/stv0367
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/stv0367/stv0367qam
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/stv0367/stv0367ter
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/6158
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/include
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/demod/m3501
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/demod/stv0367
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/demod/stv0367/stv0367cab
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/demod/stv0367/stv0367ter
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/demod/mn88472
 CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/tuner
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/tuner/dummy
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/tuner/ix7306
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/tuner/vx7903
+CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/tuner/sn761640
 CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/tuner/MxL301_Ext
 CCFLAGSY += -I$(TREE_ROOT)/frontends/spark7162/tuner/MxL603
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark_dvbapi5
-CCFLAGSY += -I$(TREE_ROOT)/frontends/spark_common
 
 CCFLAGSY += -Wall -DCONFIG_DVB_DUMMY_FE #-Werror
 
@@ -89,35 +93,32 @@ obj-m += spark-fe.o
 endif
 
 ifdef SPARK7162
-spark7162-objs += spark7162/spark7162.o
-spark7162-objs += spark_common/ioarch.o
-spark7162-objs += spark7162/D3501.o
+spark7162-fe-objs += spark7162/spark7162-fe.o
+spark7162-fe-objs += spark7162/tuner/ioarch.o
 
-spark7162-objs += spark_dvbapi5/ix7306.o
-spark7162-objs += spark_common/vz7903.o
-spark7162-objs += spark_common/dvb_dummy_fe.o
-spark7162-objs += spark7162/base/sharp7803.o
-spark7162-objs += spark7162/base/sharp6465.o
-spark7162-objs += spark7162/base/sharp5469c.o
+# DVB-S(2) demodulator (all models)
+spark7162-fe-objs += spark7162/demod/m3501/m3501.o
 
-spark7162-objs += spark7162/stv0367/D0367.o
-spark7162-objs += spark7162/stv0367/D0367ter.o
-spark7162-objs += spark7162/stv0367/D0367cab.o
+# DVB-T demodulator (early production)
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367ter.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367cab.o
 
-spark7162-objs += spark7162/stv0367/stv0367ter/chip_0367ter.o
-spark7162-objs += spark7162/stv0367/stv0367ter/stv0367ofdm_drv.o
-spark7162-objs += spark7162/stv0367/stv0367ter/d0367_ter.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367ter/chip_0367ter.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367ter/stv0367ter_drv.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367ter/stv0367_ter.o
 
-spark7162-objs += spark7162/stv0367/stv0367qam/chip_0367qam.o
-spark7162-objs += spark7162/stv0367/stv0367qam/stv0367qam_drv.o
-spark7162-objs += spark7162/stv0367/stv0367qam/d0367_qam.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367cab/chip_0367cab.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367cab/stv0367cab_drv.o
+spark7162-fe-objs += spark7162/demod/stv0367/stv0367cab/stv0367_cab.o
 
-spark7162-objs += spark7162/6158/d6158.o
-spark7162-objs += spark7162/6158/d6158_dvb.o
-spark7162-objs += spark7162/6158/nim_panic6158.o
-spark7162-objs += spark7162/6158/MN88472_autoctrl.o
-spark7162-objs += spark7162/6158/MN88472_register.o
-spark7162-objs += spark7162/6158/MN88472_variable.o
+# DVB-T(2)/C demodulator (late production)
+spark7162-fe-objs += spark7162/demod/mn88472/mn88472.o
+spark7162-fe-objs += spark7162/demod/mn88472/mn88472_dvb.o
+spark7162-fe-objs += spark7162/demod/mn88472/nim_mn88472.o
+spark7162-fe-objs += spark7162/demod/mn88472/mn88472_autoctrl.o
+spark7162-fe-objs += spark7162/demod/mn88472/mn88472_register.o
+spark7162-fe-objs += spark7162/demod/mn88472/mn88472_variable.o
 
 spark7162-objs += spark7162/tuner/MxL301_Ext/mxl301rf.o
 spark7162-objs += spark7162/tuner/MxL301_Ext/mxl_common.o
@@ -125,11 +126,31 @@ spark7162-objs += spark7162/tuner/MxL301_Ext/mxl_spur_table.o
 spark7162-objs += spark7162/tuner/MxL301_Ext/mxL_user_define.o
 spark7162-objs += spark7162/tuner/MxL301_Ext/tun_mxl301.o
 
-spark7162-objs += spark7162/tuner/MxL603/MxL603_TunerApi.o
-spark7162-objs += spark7162/tuner/MxL603/MxL603_TunerCfg.o
-spark7162-objs += spark7162/tuner/MxL603/tun_mxl603.o
+# DVB-S(2) tuner (early production)
+spark7162-fe-objs += spark7162/tuner/ix7306/sharp_ix7306.o
 
-obj-m += spark7162.o
+# DVB-S(2) tuner (late production)
+spark7162-fe-objs += spark7162/tuner/vx7903/sharp_vx7903.o
+
+# DVB-T/C tuner (early production)
+spark7162-fe-objs += spark7162/tuner/sn761640/sn761640t.o
+spark7162-fe-objs += spark7162/tuner/sn761640/sn761640c.o
+
+# DVB-T(2)/C tuner (late production)
+spark7162-fe-objs += spark7162/tuner/MxL301_Ext/mxl301rf.o
+spark7162-fe-objs += spark7162/tuner/MxL301_Ext/mxl_common.o
+spark7162-fe-objs += spark7162/tuner/MxL301_Ext/mxl_spur_table.o
+spark7162-fe-objs += spark7162/tuner/MxL301_Ext/mxL_user_define.o
+spark7162-fe-objs += spark7162/tuner/MxL301_Ext/tun_mxl301.o
+
+spark7162-fe-objs += spark7162/tuner/MxL603/MxL603_TunerApi.o
+spark7162-fe-objs += spark7162/tuner/MxL603/MxL603_TunerCfg.o
+spark7162-fe-objs += spark7162/tuner/MxL603/tun_mxl603.o
+
+# Dummy front end to replace tuners not on main board
+spark7162-fe-objs += spark7162/tuner/dummy/dvb_dummy_fe.o
+
+obj-m += spark7162-fe.o
 endif
 
 ifdef UFS912

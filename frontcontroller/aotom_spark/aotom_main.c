@@ -81,8 +81,8 @@
  *                          E2 start code on write progress removed.
  * 20181204 Audioniek       Spinner slowed down by a factor of 10; when
  *                          switched on with a value of 1, default speed is
- *                          1 rpm; otherwise argument times 50 ms is the time
- *                          for one revolution.
+ *                          1 revolution per second; otherwise argument times
+ *                          50 ms is the time for one revolution.
  * 20210210 Audioniek       Report correct CPU name of front processor.
  * 
  ****************************************************************************/
@@ -112,9 +112,6 @@
 
 short paramDebug = 0;  //debug print level is zero as default (0=nothing, 1= open/close functions, 5=some detail, 10=all)
 #define TAGDEBUG "[aotom] "
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
 
 #define NO_KEY_PRESS     -1
 #define KEY_PRESS_DOWN    1
@@ -168,7 +165,7 @@ int aotomSetBrightness(int level)
 	{
 		level = 7;
 	}
-	dprintk(5, "%s Set brightness level 0x%02X\n", __func__, level);
+	dprintk(20, "%s Set brightness level 0x%02X\n", __func__, level);
 	res = YWPANEL_FP_SetBrightness(level);
 
 	return res;
@@ -179,7 +176,8 @@ int aotomSetIcon(int which, int on)
 	int res = 0;
 	int first, last;
 
-	dprintk(5, "%s > Icon number %d, state %d\n", __func__, which, on);
+	dprintk(150, "%s >\n", __func__);
+	dprintk(20, "Icon number %d, state %d\n", which, on);
 
 	if (fp_type == FP_DVFD)
 	{
@@ -194,7 +192,7 @@ int aotomSetIcon(int which, int on)
 
 	if (which < first || which > last)
 	{
-		printk("[aotom] Icon number %d out of range.\n", which);
+		dprintk(1, "Icon number %d out of range.\n", which);
 		return -EINVAL;
 	}
 
@@ -204,7 +202,7 @@ int aotomSetIcon(int which, int on)
 	}
 	res = YWPANEL_FP_ShowIcon(which, on);
 
-	dprintk(10, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return res;
 }
 
@@ -582,18 +580,18 @@ int aotomSetTime(char *time)
 {
 	int res = 0;
 
-	dprintk(5, "%s >\n", __func__);
-	dprintk(10, "%s time: %02d:%02d:%02d\n", __func__, time[2], time[3], time[4]);
+	dprintk(150, "%s >\n", __func__);
+	dprintk(20, "Time to set: %02d:%02d:%02d\n", time[2], time[3], time[4]);
 
 	res = VFD_Show_Time(time[2], time[3], time[4]);
 	YWPANEL_FP_ControlTimer(true);
-	dprintk(5, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return res;
 }
 
 int vfd_init_func(void)
 {
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 	printk("Fulan VFD module initializing\n");
 	return 0;
 }
@@ -605,7 +603,7 @@ static ssize_t AOTOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	struct vfd_ioctl_data data;
 
-	dprintk(5, "%s > (len %d, offs %d)\n", __func__, len, (int) *off);
+	dprintk(150, "%s > (len %d, offs %d)\n", __func__, len, (int) *off);
 
 	kernel_buf = kmalloc(len + 1, GFP_KERNEL);
 
@@ -614,7 +612,7 @@ static ssize_t AOTOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	if (kernel_buf == NULL)
 	{
-		printk("%s returns no memory <\n", __func__);
+		dprintk(1, "%s returns no memory <\n", __func__);
 		return -ENOMEM;
 	}
 	copy_from_user(kernel_buf, buff, len);
@@ -623,7 +621,7 @@ static ssize_t AOTOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	kfree(kernel_buf);
 
-	dprintk(10, "%s < res %d len %d\n", __func__, res, len);
+	dprintk(150, "%s < res %d len %d\n", __func__, res, len);
 
 	if (res < 0)
 	{
@@ -650,11 +648,11 @@ static int AOTOMdev_open(struct inode *inode, struct file *filp)
 {
 	int minor;
 
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 
 	minor = MINOR(inode->i_rdev);
 
-	dprintk(1, "Open minor %d\n", minor);
+	dprintk(70, "Open minor %d\n", minor);
 
 	if (minor != FRONTPANEL_MINOR_VFD)
 	{
@@ -662,7 +660,7 @@ static int AOTOMdev_open(struct inode *inode, struct file *filp)
 	}
 	open_count++;
 
-	dprintk(5, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -670,18 +668,17 @@ static int AOTOMdev_close(struct inode *inode, struct file *filp)
 {
 	int minor;
 
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 
 	minor = MINOR(inode->i_rdev);
 
-	dprintk(1, "Close minor %d\n", minor);
+	dprintk(70, "Close minor %d\n", minor);
 
 	if (open_count > 0)
 	{
 		open_count--;
 	}
-
-	dprintk(5, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -692,7 +689,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 {
 	static int mode = 0;
 	int res = -EINVAL;
-	dprintk(5, "%s > 0x%.8x\n", __func__, cmd);
+	dprintk(150, "%s > 0x%.8x\n", __func__, cmd);
 
 	if (down_interruptible(&write_sem))
 	{
@@ -738,16 +735,16 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 					case LOG_OFF:
 					case LOG_ON:
 					{
-						dprintk(10, "%s Set LED %d to 0x%2X\n", __func__, led_nr, aotom_data.u.led.on);
+						dprintk(20, "%s Set LED %d to 0x%2X\n", __func__, led_nr, aotom_data.u.led.on);
 						res = YWPANEL_FP_SetLed(led_nr, aotom_data.u.led.on);
 						led_state[led_nr].state = aotom_data.u.led.on;
 						break;
 					}
 					default:  // toggle for (aotom_data.u.led.on * 10) ms
 					{
-						dprintk(10, "%s Blink LED %d for 10ms\n", __func__, led_nr);
+						dprintk(20, "%s Blink LED %d for 10ms\n", __func__, led_nr);
 						flashLED(led_nr, aotom_data.u.led.on * 10);
-						res = 0;  //was missing, reporting blink as illegal value
+						res = 0;  // was missing, reporting blink as illegal value
 					}
 				}
 			}
@@ -772,14 +769,14 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			{
 				switch (aotom_data.u.icon.icon_nr)
 				{
-					case 0: //icon number is the same as the LED number
+					case 0: // icon number is the same as the LED number
 					{
 						res = YWPANEL_FP_SetLed(LED_RED, aotom_data.u.icon.on);
 						led_state[LED_RED].state = aotom_data.u.icon.on;
 						break;
 					}
-					case 1: //icon number is the same as the LED number
-					case ICON_DOT2: //(RC feedback)
+					case 1:  // icon number is the same as the LED number
+					case ICON_DOT2:  // (RC feedback)
 					{
 						res = YWPANEL_FP_SetLed(LED_GREEN, aotom_data.u.icon.on);
 						led_state[LED_GREEN].state = aotom_data.u.icon.on;
@@ -800,10 +797,10 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 					}
 				}
 			}
-			else //VFD and DVFD
+			else // VFD and DVFD
 			{
 				int icon_nr = aotom_data.u.icon.icon_nr;
-				//e2 icons work around
+				// e2 icons work around
 				if (icon_nr >= 256)
 				{
 					icon_nr >>= 8;
@@ -813,7 +810,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 						{
 							case 17:
 							{
-								icon_nr = ICON_DOUBLESCREEN; //widescreen
+								icon_nr = ICON_DOUBLESCREEN;  // widescreen
 								break;
 							}
 							case 19:
@@ -855,19 +852,19 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 							}
 							default:
 							{
-								printk("[aotom] Tried to set unknown icon number %d.\n", icon_nr);
+								dprintk(1, "Tried to set unknown icon number %d.\n", icon_nr);
 //								icon_nr = 29; //no additional symbols at the moment: show alert instead
 								break;
 							}
 						}
 					}
-					else //DVFD
+					else  // DVFD
 					{
 						switch (icon_nr)
 						{
 							case 17:
 							{
-								icon_nr = ICON_DOUBLESCREEN2; //widescreen
+								icon_nr = ICON_DOUBLESCREEN2;  // widescreen
 								break;
 							}
 							case 19:
@@ -946,13 +943,13 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 							led_state[LED_SPINNER].state = aotom_data.u.icon.on;
 							if (aotom_data.u.icon.on)
 							{
-								flashLED(LED_SPINNER, aotom_data.u.icon.on * 10); // start spinner thread
+								flashLED(LED_SPINNER, aotom_data.u.icon.on * 10);  // start spinner thread
 							}
 						}
 						res = 0;
 						break;
 					}
-					case ICON_DOT2: // RC feedback from evremote2
+					case ICON_DOT2:  // RC feedback from evremote2
 					{
 						if (fp_type == FP_DVFD)
 						{
@@ -1013,7 +1010,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			res = get_user(uTime, (int *)arg);
 			if (! res)
 			{
-				dprintk(5, "%s Set FP time to: %d\n", __func__, uTime);
+				dprintk(20, "%s Set FP time to: %d\n", __func__, uTime);
 				res = YWPANEL_FP_SetTime(uTime);
 				YWPANEL_FP_ControlTimer(true);
 			}
@@ -1021,7 +1018,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDSETTIME:
 		{
-			dprintk(5, "%s Set FP time to: %d\n", __func__, (int)aotom_data.u.time.time);
+			dprintk(20, "%s Set FP time to: %d\n", __func__, (int)aotom_data.u.time.time);
 			res = aotomSetTime(aotom_data.u.time.time);
 			break;
 		}
@@ -1030,7 +1027,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			u32 uTime = 0;
 
 			uTime = YWPANEL_FP_GetTime();
-			dprintk(5, "%s FP time: %d\n", __func__, uTime);
+			dprintk(20, "%s FP time: %d\n", __func__, uTime);
 			res = put_user(uTime, (int *)arg);
 			break;
 		}
@@ -1042,7 +1039,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		{
 			u32 uTime = 0;
 			uTime = YWPANEL_FP_GetPowerOnTime();
-			dprintk(5, "%s Power on time: %d\n", __func__, uTime);
+			dprintk(20, "%s Power on time: %d\n", __func__, uTime);
 			res = put_user(uTime, (int *) arg);
 			break;
 		}
@@ -1059,22 +1056,15 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		{
 			int TimeMode;
 
-			if (fp_type)
+			if (fp_type == FP_DVFD)
 			{
-				if (fp_type == FP_DVFD)
-				{
-					TimeMode = bTimeMode;
-				}
-				else
-				{
-					TimeMode = 1; // clock is always on on VFD
-				}
-				res = put_user(TimeMode, (int *)arg);
+				TimeMode = bTimeMode;
 			}
-			else //LED
+			else
 			{
-				res = 0;
+				TimeMode = (fp_type == FP_VFD ? 1 : 0);  // clock is always on on VFD, off on others
 			}
+			res = put_user(TimeMode, (int *)arg);
 			break;
 		}
 		case VFDDISPLAYCHARS:
@@ -1100,10 +1090,10 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDDISPLAYWRITEONOFF:
 		{
-			dprintk(5, "%s Set light 0x%02X\n", __func__, aotom_data.u.light.onoff);
+			dprintk(20, "%s Set light 0x%02X\n", __func__, aotom_data.u.light.onoff);
 			switch (aotom_data.u.light.onoff)
 			{
-				case 0: //whole display off
+				case 0: // whole display off
 				{
 					YWPANEL_FP_SetLed(LED_RED, LOG_OFF);
 					if (fp_type != FP_VFD)
@@ -1113,7 +1103,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 					res = YWPANEL_FP_ShowContentOff();
 					break;
 				}
-				case 1: //whole display on
+				case 1:  // whole display on
 				{
 					res = YWPANEL_FP_ShowContent();
 					YWPANEL_FP_SetLed(LED_RED, led_state[LED_RED].state);
@@ -1143,7 +1133,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetStartUpState(&state))
 			{
-				dprintk(5, "%s Front panel startup state: %02X\n", __func__, state);
+				dprintk(20, "%s Frontpanel startup state: %02X\n", __func__, state);
 				res = put_user(state, (int *) arg);
 			}
 			break;
@@ -1156,7 +1146,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			if (!res)
 			{
 				res = YWPANEL_FP_SetLoopState(state);
-				dprintk(5, "%s Front panel loop state set to: %02X\n", __func__, state);
+				dprintk(20, "%s Frontpanel loop state set to: %02X\n", __func__, state);
 			}
 			break;
 		}
@@ -1166,7 +1156,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetLoopState(&state))
 			{
-				dprintk(5, "%s Front panel loop state: %02X\n", __func__, state);
+				dprintk(20, "%s Frontpanel loop state: %02X\n", __func__, state);
 				res = put_user(state, (int *)arg);
 			}
 			break;
@@ -1181,15 +1171,15 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 			if (YWPANEL_FP_GetVersion(&fpanel_version))
 			{
-				dprintk(1, "%s Front panel CPU type         : %s\n", __func__, (fpanel_version.CpuType == 2 ? "ATtiny88" : "ATtiny48"));
-				dprintk(1, "%s Front panel software version : %d.%d\n", __func__, fpanel_version.swMajorVersion, fpanel_version.swSubVersion);
-				dprintk(1, "%s Front panel displaytype      : %s\n", __func__, fp_type[fpanel_version.DisplayInfo]);
+				dprintk(20, "%s Frontpanel CPU type         : %s\n", __func__, (fpanel_version.CpuType == 2 ? "ATtiny88" : "ATtiny48"));
+				dprintk(20, "%s Frontpanel software version : %d.%d\n", __func__, fpanel_version.swMajorVersion, fpanel_version.swSubVersion);
+				dprintk(20, "%s Frontpanel displaytype      : %s\n", __func__, fp_type[fpanel_version.DisplayInfo]);
 				if (fpanel_version.DisplayInfo == 3)
 				{
-					dprintk(1, "%s Time mode                   : %s\n", __func__, tm_type[bTimeMode]);
+					dprintk(20, "%s Time mode                   : %s\n", __func__, tm_type[bTimeMode]);
 				}
-				dprintk(1, "%s # of front panel keys        : %d\n", __func__, fpanel_version.scankeyNum);
-				dprintk(1, "%s Number of version bytes     : %d\n", __func__, sizeof(fpanel_version));
+				dprintk(20, "%s # of frontpanel keys        : %d\n", __func__, fpanel_version.scankeyNum);
+//				dprintk(20, "%s Number of version bytes     : %d\n", __func__, sizeof(fpanel_version));
 				res = put_user(fpanel_version.DisplayInfo, (int *)arg);
 				res |= copy_to_user((char *)arg, &fpanel_version, sizeof(fpanel_version));
 			}
@@ -1212,7 +1202,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		default:
 		{
-			printk("[aotom] Unknown IOCTL 0x%08x.\n", cmd);
+			dprintk(1, "Unknown IOCTL 0x%08x.\n", cmd);
 		}
 		case 0x5305:
 		case 0x5401:
@@ -1222,7 +1212,7 @@ static int AOTOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 	}
 	up(&write_sem);
-	dprintk(5, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return res;
 }
 
@@ -1236,7 +1226,7 @@ static struct file_operations vfd_fops =
 };
 
 /*----- Button driver -------*/
-static char *button_driver_name = "Fulan front panel buttons driver";
+static char *button_driver_name = "Fulan front panel button driver";
 static struct input_dev *button_dev;
 static int bad_polling = 1;
 static struct workqueue_struct *fpwq;
@@ -1253,7 +1243,7 @@ static void button_bad_polling(struct work_struct *work)
 		button_value = YWPANEL_FP_GetKeyValue();
 		if (button_value != INVALID_KEY)
 		{
-			dprintk(5, "Got button: %02X\n", button_value);
+			dprintk(70, "Got button: %02X\n", button_value);
 
 			switch (fp_type)
 			{
@@ -1303,7 +1293,7 @@ static void button_bad_polling(struct work_struct *work)
 				}
 				default:
 				{
-					dprintk(5, "[BTN] Unknown button_value %02X\n", button_value);
+					dprintk(1, "%s: Unknown button_value %02X\n", __func__, button_value);
 				}
 			}
 		}
@@ -1347,10 +1337,10 @@ static int button_input_open(struct input_dev *dev)
 	fpwq = create_workqueue("button");
 	if (queue_work(fpwq, &button_obj))
 	{
-		dprintk(5, "[BTN] Queue_work successful.\n");
+		dprintk(20, "[BTN] Queue_work successful.\n");
 		return 0;
 	}
-	dprintk(5, "[BTN] Queue_work not successful, exiting.\n");
+	dprintk(1, "[BTN] Queue_work not successful, exiting.\n");
 	return 1;
 }
 
@@ -1366,7 +1356,7 @@ static void button_input_close(struct input_dev *dev)
 	if (fpwq)
 	{
 		destroy_workqueue(fpwq);
-		dprintk(5, "[BTN] Workqueue destroyed.\n");
+		dprintk(20, "[BTN] Workqueue destroyed.\n");
 	}
 }
 
@@ -1374,7 +1364,7 @@ int button_dev_init(void)
 {
 	int error;
 
-	dprintk(5, "[BTN] Allocating and registering button device\n");
+	dprintk(20, "[BTN] Allocating and registering button device\n");
 
 	button_dev = input_allocate_device();
 	if (!button_dev)
@@ -1406,7 +1396,7 @@ int button_dev_init(void)
 
 void button_dev_exit(void)
 {
-	dprintk(5, "[BTN] Unregistering button device.\n");
+	dprintk(20, "[BTN] Unregistering button device.\n");
 	input_unregister_device(button_dev);
 }
 
@@ -1463,10 +1453,10 @@ static int aotom_rtc_read_time(struct device *dev, struct rtc_time *tm)
 {
 	u32 uTime = 0;
 
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 	uTime = YWPANEL_FP_GetTime();
 	rtc_time_to_tm(uTime, tm);
-	dprintk(5, "%s < %d\n", __func__, uTime);
+	dprintk(150, "%s < %d\n", __func__, uTime);
 	return 0;
 }
 
@@ -1480,10 +1470,10 @@ static int aotom_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	int res = 0;
 
 	u32 uTime = tm2time(tm);
-	dprintk(5, "%s > uTime %d\n", __func__, uTime);
+	dprintk(150, "%s > uTime %d\n", __func__, uTime);
 	res = YWPANEL_FP_SetTime(uTime);
 	YWPANEL_FP_ControlTimer(true);
-	dprintk(5, "%s < res: %d\n", __func__, res);
+	dprintk(150, "%s < res: %d\n", __func__, res);
 	return res;
 }
 
@@ -1491,26 +1481,26 @@ static int aotom_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *al)
 {
 	u32 a_time = 0;
 
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 	a_time = YWPANEL_FP_GetPowerOnTime();
 	if (al->enabled)
 	{
 		rtc_time_to_tm(a_time, &al->time);
 	}
-	dprintk(5, "%s < Enabled: %d RTC alarm time: %d time: %d\n", __func__, al->enabled, (int)&a_time, a_time);
+	dprintk(150, "%s < Enabled: %d RTC alarm time: %d time: %d\n", __func__, al->enabled, (int)&a_time, a_time);
 	return 0;
 }
 
 static int aotom_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *al)
 {
 	u32 a_time = 0;
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 	if (al->enabled)
 	{
 		a_time = tm2time(&al->time);
 	}
 	YWPANEL_FP_SetPowerOnTime(a_time);
-	dprintk(5, "%s < Enabled: %d time: %d\n", __func__, al->enabled, a_time);
+	dprintk(150, "%s < Enabled: %d time: %d\n", __func__, al->enabled, a_time);
 	return 0;
 }
 
@@ -1528,7 +1518,7 @@ static int __devinit aotom_rtc_probe(struct platform_device *pdev)
 
 	/* I have no idea where the pdev comes from, but it needs the can_wakeup = 1
 	 * otherwise we don't get the wakealarm sysfs attribute... :-) */
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 	printk("Fulan front panel real time clock\n");
 	pdev->dev.power.can_wakeup = 1;
 	rtc = rtc_device_register("aotom", &pdev->dev, &aotom_rtc_ops, THIS_MODULE);
@@ -1537,17 +1527,17 @@ static int __devinit aotom_rtc_probe(struct platform_device *pdev)
 		return PTR_ERR(rtc);
 	}
 	platform_set_drvdata(pdev, rtc);
-	dprintk(5, "%s < %p\n", __func__, rtc);
+	dprintk(150, "%s < %p\n", __func__, rtc);
 	return 0;
 }
 
 static int __devexit aotom_rtc_remove(struct platform_device *pdev)
 {
 	struct rtc_device *rtc = platform_get_drvdata(pdev);
-	dprintk(5, "%s %p >\n", __func__, rtc);
+	dprintk(150, "%s %p >\n", __func__, rtc);
 	rtc_device_unregister(rtc);
 	platform_set_drvdata(pdev, NULL);
-	dprintk(5, "%s <\n", __func__);
+	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1569,7 +1559,7 @@ static int __init aotom_init_module(void)
 {
 	int i;
 
-	dprintk(5, "%s >\n", __func__);
+	dprintk(150, "%s >\n", __func__);
 	printk("Fulan front panel driver %s\n", Revision);
 
 	if (YWPANEL_FP_Init())
@@ -1604,13 +1594,12 @@ static int __init aotom_init_module(void)
 			led_state[i].led_task = kthread_run(led_thread, (void *)i, "led_thread");
 		}
 	}
-
 	register_reboot_notifier(&aotom_reboot_block);
 
 	i = platform_driver_register(&aotom_rtc_driver);
 	if (i)
 	{
-		dprintk(5, "%s platform_driver_register failed: %d\n", __func__, i);
+		dprintk(1, "%s platform_driver_register failed: %d\n", __func__, i);
 	}
 	else
 	{
@@ -1619,13 +1608,12 @@ static int __init aotom_init_module(void)
 
 	if (IS_ERR(rtc_pdev))
 	{
-		dprintk(5, "%s platform_device_register_simple failed: %ld\n", __func__, PTR_ERR(rtc_pdev));
+		dprintk(1, "%s platform_device_register_simple failed: %ld\n", __func__, PTR_ERR(rtc_pdev));
 	}
 
 	create_proc_fp();
 
-	dprintk(5, "%s <\n", __func__);
-
+	dprintk(150, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1671,7 +1659,7 @@ static void __exit aotom_cleanup_module(void)
 	{
 		msleep(1);
 	}
-	dprintk(5, "[BTN] Unloading...\n");
+	dprintk(20, "[BTN] Unloading...\n");
 	button_dev_exit();
 
 	unregister_chrdev(VFD_MAJOR, "VFD");
