@@ -20,13 +20,7 @@ if [ $# -eq 1 ]; then
        stfbcontrol he
        if [ $modelcheck == "spark" ]; then
           fp_control -c #everthing off
-          #handle red led
-          redled=`cat /etc/enigma2/settings | grep vfdicon.dstandbyredledon | cut -d "=" -f2`
-          if [ "$redled"=="true" ]; then
-             fp_control -l 0 1
-          else
-             fp_control -l 0 0
-          fi
+          fp_control -l 0 0
           fp_control -e
           echo "0" > /proc/progress
           halt
@@ -35,13 +29,7 @@ if [ $# -eq 1 ]; then
           fp_control -sst
           fp_control -tm 1
           fp_control -e
-          #handle red led
-          redled=`cat /etc/enigma2/settings | grep vfdicon.dstandbyredledon | cut -d "=" -f2`
-          if [ "$redled"=="true" ]; then
-             fp_control -l 0 1
-          else
-             fp_control -l 0 0
-          fi
+          fp_control -l 0 0
           echo "0" > /proc/progress
           halt
        fi
