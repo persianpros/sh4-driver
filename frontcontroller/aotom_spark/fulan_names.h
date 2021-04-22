@@ -195,7 +195,7 @@ unsigned char *model_name_0c[70] =  // index is third digit
 	"Unknown",              // 0x12
 	"Unknown",              // 0x13
 	"Unknown",              // 0x14
-	"Z500",                 // 0x15  Superbox
+	"Z500",                 // 0x15 Superbox
 	"Unknown",              // 0x16
 	"Unknown",              // 0x17
 	"Unknown",              // 0x18

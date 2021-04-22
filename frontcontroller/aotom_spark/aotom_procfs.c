@@ -42,6 +42,7 @@
  * 20200909 Audioniek       /proc/stb/lcd/symbol_timeshift support added.
  * 20210416 Audioniek       /proc/stb/info/brand, /proc/stb/info/model_name
  *                          and /proc/stb/info/stb_id added.
+ * 20210422 Audioniek       Removed brand name from /proc/stb/info/model_name.
  * 
  ****************************************************************************/
 
@@ -437,7 +438,7 @@ static int model_name_read(char *page, char **start, off_t off, int count, int *
 					break;
 				}
 			}
-			len = sprintf(page, "%s %s\n", brand_name[brand_offset], table[brand_offset]);
+			len = sprintf(page, "%s\n", table[brand_offset]);
 		}
 	}
 	return len;
