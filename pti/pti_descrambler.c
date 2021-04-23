@@ -144,6 +144,7 @@ void pti_descrambler_set(u32 tc_descrambler_index, int Parity, u8 *Data)
 	KeyValidity &= ~TCKEY_ALGORITHM_MASK;
 	KeyValidity &= ~(TCKEY_CHAIN_ALG_MASK | TCKEY_CHAIN_MODE_LR | TCKEY_ALGORITHM_MASK);
 	KeyValidity |= TCKEY_ALGORITHM_DVB;
+//	KeyValidity |= TCKEY_ALGORITHM_DSS; With this All PowerVu will be ok but no DVB support so we need to find a conditional way to use TCKEY_ALGORITHM_DVB and TCKEY_ALGORITHM_DSS together
 	/* fixme: das hab ich geaendert im gegensatz zum orig */
 
 	/* das habe ich auskommentiert warum diese umständliche Prüfung ?
