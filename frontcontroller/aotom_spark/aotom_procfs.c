@@ -370,6 +370,17 @@ static unsigned char *get_stb_id(void)
 	return VendorStbId;
 }
 
+static int oem_name_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "Fulan\n");
+	}
+	return len;
+}
+
 static int stb_id_read(char *page, char **start, off_t off, int count, int *eof, void *data)
 {
 	int len = 0;
@@ -387,7 +398,7 @@ static int stb_id_read(char *page, char **start, off_t off, int count, int *eof,
 	return len;
 }
 
-static int brand_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+static int brand_name_read(char *page, char **start, off_t off, int count, int *eof, void *data)
 {
 	int len = 0;
 	int brand_offset = 0;
@@ -984,7 +995,8 @@ struct fp_procs
 {
 	{ "progress", progress_read, progress_write },
 //	{ "cmdline", cmdline_read, NULL },
-	{ "stb/info/brand", brand_read, NULL },
+	{ "stb/info/OEM", oem_name_read, NULL },
+	{ "stb/info/brand", brand_name_read, NULL },
 	{ "stb/info/model_name", model_name_read, NULL },
 	{ "stb/info/stb_id", stb_id_read, NULL },
 	{ "stb/fp/rtc", rtc_read, rtc_write },

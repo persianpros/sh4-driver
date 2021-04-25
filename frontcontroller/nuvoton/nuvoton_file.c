@@ -1255,7 +1255,7 @@ int nuvotonSetStandby(char *wtime)
 
 	dprintk(100, "%s >\n", __func__);
 
-//	res = nuvotonWriteString("Standby", strlen("Standby"));
+//	res = nuvotonWriteString("Standby ...", strlen("Standby ..."));
 
 	/* set wakeup time */
 	memset(buffer, 0, sizeof(buffer));
@@ -1473,11 +1473,11 @@ int nuvotonSetTimeFormat(char format)
  || defined(HS7429)  // VFD models
 int nuvotonSetDisplayOnOff(char level)
 {
-	int  res = 0;
-	int  i;
-	char buf[128];
-	int  len;
-	int  ibuf[ICON_MAX];
+	int           res = 0;
+	int           i;
+	unsigned char buf[128] = { 0 };
+	int           len;
+	int           ibuf[ICON_MAX];
 
 	dprintk(100, "%s >\n", __func__);
 
@@ -1962,6 +1962,7 @@ int nuvotonWriteString(unsigned char *aBuf, int len)
 	{
 		aBuf[i] = ' ';  // pad string with spaces at end
 	}
+	// TODO: insert UTF-8 handling
 	// now display 8 characters from left to right
 	for (i = 0; i < 8 ; i++)
 	{

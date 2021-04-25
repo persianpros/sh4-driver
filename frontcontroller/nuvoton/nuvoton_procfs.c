@@ -41,6 +41,7 @@
  *                          adding it to E2 itself.
  * 20190102 Audioniek       /proc/stb/lcd/symbol_circle support added.
  * 20191202 Audioniek       /proc/stb/lcd/symbol_timeshift support added.
+ * 20210425 Audioniek       Fixed buildproblem with /proc/power/vfd.
  * 
  ****************************************************************************/
 
@@ -57,14 +58,15 @@
  *             |
  *             +--- progress (rw)           Progress of E2 startup in %
  *
- *  /proc/stb/fp
+ *  /proc/stb/power
  *             |
- *             +--- model_name (r)          Reseller name, based on resellerID
+ *             +--- vfd (rw)                Front panel display on/off
  *
  *  /proc/stb/fp
  *             |
  *             +--- version (r)             SW version of boot loader (hundreds = major, ten/units = minor)
  *             +--- resellerID (r)          resellerID in boot loader
+ *             +--- model_name (r)          Reseller name, based on resellerID
  *             +--- rtc (rw)                RTC time (UTC, seconds since Unix epoch))
  *             +--- rtc_offset (rw)         RTC offset in seconds from UTC
  *             +--- wakeup_time (rw)        Next wakeup time (absolute, local, seconds since Unix epoch)
@@ -89,6 +91,7 @@ extern int remove_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *wri
 extern int nuvotonWriteString(char *buf, size_t len);
 #if !defined(HS7110)
 extern int nuvotonSetBrightness(int level);
+extern int nuvotonSetDisplayOnOff(char level);
 #endif
 extern void clear_display(void);
 extern int nuvotonGetTime(char *time);
@@ -108,6 +111,7 @@ static int symbol_circle = 0;
 static int timeshift = 0;
 static int old_icon_state;
 #endif
+static int vfd_on = 1;
 static u32 led0_pattern = 0;
 static u32 led1_pattern = 0;
 static int led_pattern_speed = 20;
@@ -317,6 +321,58 @@ static int timeshift_read(char *page, char **start, off_t off, int count, int *e
 	if (NULL != page)
 	{
 		len = sprintf(page,"%d", timeshift);
+	}
+	return len;
+}
+#endif
+
+#if !defined(HS7110)
+static int vfd_onoff_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+	int i = 0;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &vfd_on);
+		kfree(myString);
+
+		vfd_on = (vfd_on == 0 ? 0 : 1);
+		ret = nuvotonSetDisplayOnOff((char)vfd_on);
+		if (ret)
+		{
+			goto out;
+		}
+		/* always return count to avoid endless loop */
+		ret = count;
+		goto out;
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int vfd_onoff_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page,"%d", lastdata.display_on);
 	}
 	return len;
 }
@@ -807,6 +863,133 @@ static int oled_brightness_write(struct file *file, const char __user *buf, unsi
 }
 #endif
 
+static int oem_name_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "Fortis\n");
+	}
+	return len;
+}
+
+static int brand_name_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
+{
+	int len = 0;
+	unsigned int data[2];
+	unsigned char reseller1;
+	unsigned char reseller2;
+	unsigned char reseller3;
+	unsigned char reseller4;
+	unsigned char **table = NULL;
+	
+	len = nuvotonGetVersion(data);
+	if (len == 0)
+	{
+		reseller1 = data[1] >> 24;
+		reseller2 = (data[1] >> 16) & 0xff;
+		reseller3 = (data[1] >> 8) & 0xff;
+		reseller4 = (data[1]) & 0xff;
+
+		dprintk(50, "Found resellerID %02x%02x%02x%02x\n", reseller1, reseller2, reseller3, reseller4);
+		switch ((reseller1 << 8) + reseller3)
+		{
+			case 0x2000:  // FS9000
+			{
+				table = FS9000_brand_table;
+				break;
+			}
+			case 0x2001:  // FS9200
+			{
+				table = FS9200_brand_table;
+				break;
+			}
+			case 0x2003:  // HS9510
+			{
+				if (reseller4 == 0x03)  // evaluate 4th reseller byte
+				{
+					table = HS9510_03_brand_table;
+				}
+				else if (reseller4 == 0x02)  // evaluate 4th reseller byte
+				{
+					table = HS9510_02_brand_table;
+				}
+				else if (reseller4 == 0x01)  // evaluate 4th reseller byte
+				{
+					table = HS9510_01_brand_table;
+				}
+				else
+				{
+					table = HS9510_00_brand_table;
+				}
+				break;
+			}
+			case 0x2006:  // ??
+			{
+				table = FS9000_06_brand_table;
+				break;
+			}
+			case 0x2300:  // HS8200
+			default:
+			{
+				table = HS8200_brand_table;
+				break;
+			}
+			case 0x2500:  // HS7420
+			{
+				table = HS7420_brand_table;
+				break;
+			}
+			case 0x2502:  // HS7110
+			{
+				table = HS7110_brand_table;
+				break;
+			}
+			case 0x2503:  // HS7810A
+			{
+				table = HS7810A_brand_table;
+				break;
+			}
+			case 0x2700:  // HS7119
+			{
+				table = HS7119_brand_table;
+				break;
+			}
+			case 0x2701:  // HS7119_01
+			{
+				table = HS7119_01_brand_table;
+				break;
+			}
+			case 0x2710:  // HS7119_10
+			{
+				table = HS7119_10_brand_table;
+				break;
+			}
+			case 0x2720:  // HS7819
+			{
+				table = HS7819_brand_table;
+				break;
+			}
+			case 0x2730:  // HS7429
+			{
+				table = HS7429_brand_table;
+				break;
+			}
+		}
+	}
+	else
+	{
+		dprintk(1, "Get version failed (ret = %d).\n", len);
+		return -1;
+	}
+	if (NULL != page)
+	{
+		len = sprintf(page, "%s\n", table[reseller2]);
+	}
+	return len;
+}
+
 static int model_name_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
 {
 	int len = 0;
@@ -825,88 +1008,88 @@ static int model_name_read(char *page, char **start, off_t off, int count, int *
 		reseller3 = (data[1] >> 8) & 0xff;
 		reseller4 = (data[1]) & 0xff;
 
-		dprintk(1,"Found resellerID %02x%02x%02x%02x\n", reseller1, reseller2, reseller3, reseller4);
+		dprintk(50, "Found resellerID %02x%02x%02x%02x\n", reseller1, reseller2, reseller3, reseller4);
 		switch ((reseller1 << 8) + reseller3)
 		{
 			case 0x2000:  // FS9000
 			{
-				table = FS9000_table;
+				table = FS9000_name_table;
 				break;
 			}
 			case 0x2001:  // FS9200
 			{
-				table = FS9200_table;
+				table = FS9200_name_table;
 				break;
 			}
 			case 0x2003:  // HS9510
 			{
 				if (reseller4 == 0x03)  // evaluate 4th reseller byte
 				{
-					table = HS9510_3_table;
+					table = HS9510_03_name_table;
 				}
 				else if (reseller4 == 0x02)  // evaluate 4th reseller byte
 				{
-					table = HS9510_2_table;
+					table = HS9510_02_name_table;
 				}
 				else if (reseller4 == 0x01)  // evaluate 4th reseller byte
 				{
-					table = HS9510_1_table;
+					table = HS9510_01_name_table;
 				}
 				else
 				{
-					table = HS9510_0_table;
+					table = HS9510_00_name_table;
 				}
 				break;
 			}
 			case 0x2006:  // ??
 			{
-				table = FS9000_06_table;
+				table = FS9000_06_name_table;
 				break;
 			}
 			case 0x2300:  // HS8200
 			default:
 			{
-				table = HS8200_table;
+				table = HS8200_name_table;
 				break;
 			}
 			case 0x2500:  // HS7420
 			{
-				table = HS7420_table;
+				table = HS7420_name_table;
 				break;
 			}
 			case 0x2502:  // HS7110
 			{
-				table = HS7110_table;
+				table = HS7110_name_table;
 				break;
 			}
 			case 0x2503:  // HS7810A
 			{
-				table = HS7810A_table;
+				table = HS7810A_name_table;
 				break;
 			}
 			case 0x2700:  // HS7119
 			{
-				table = HS7119_table;
+				table = HS7119_name_table;
 				break;
 			}
 			case 0x2701:  // HS7119_01
 			{
-				table = HS7119_01_table;
+				table = HS7119_01_name_table;
 				break;
 			}
 			case 0x2710:  // HS7119_10
 			{
-				table = HS7119_10_table;
+				table = HS7119_10_name_table;
 				break;
 			}
 			case 0x2720:  // HS7819
 			{
-				table = HS7819_table;
+				table = HS7819_name_table;
 				break;
 			}
 			case 0x2730:  // HS7429
 			{
-				table = HS7429_table;
+				table = HS7429_name_table;
 				break;
 			}
 		}
@@ -938,6 +1121,8 @@ struct fp_procs
 } fp_procs[] =
 {
 	{ "progress", progress_read, progress_write },
+	{ "stb/info/OEM", oem_name_read, NULL },
+	{ "stb/info/brand", brand_name_read, NULL },
 	{ "stb/info/model_name", model_name_read, NULL },
 	{ "stb/fp/rtc", read_rtc, write_rtc },
 	{ "stb/fp/rtc_offset", read_rtc_offset, write_rtc_offset },
@@ -946,8 +1131,10 @@ struct fp_procs
 	{ "stb/fp/led_pattern_speed", led_pattern_speed_read, led_pattern_speed_write },
 #if !defined(HS7110)
 	{ "stb/fp/oled_brightness", NULL, oled_brightness_write },
+	{ "stb/power/vfd", vfd_onoff_read, vfd_onoff_write },
 #else
 	{ "stb/fp/oled_brightness", NULL, NULL },
+	{ "stb/power/vfd", NULL, NULL },
 #endif
 	{ "stb/fp/text", NULL, text_write },
 	{ "stb/fp/wakeup_time", wakeup_time_read, wakeup_time_write },
