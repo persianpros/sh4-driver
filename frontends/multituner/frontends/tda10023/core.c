@@ -40,7 +40,11 @@
 
 #include "tuner.h"
 
-short paramDebug = 150;
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[core] "
 
 /* saved platform config */
 static struct platform_frontend_config_s* frontend_cfg = NULL;

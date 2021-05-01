@@ -44,7 +44,7 @@ tda10024-objs +=  frontends/tda10024_mxl201/tda10024.o
 tda10024-objs +=  frontends/tda10024_mxl201/mxl201.o
 obj-m += tda10024.o
 
-# DVB-T tuner: TDA18272 tuner and CXD2820 demodulator
+# DVB-T2 tuner: TDA18272 tuner and CXD2820 demodulator
 cxd2820-objs +=   frontends/cxd2820_tda18272/cxd2820.o
 cxd2820-objs +=   frontends/cxd2820_tda18272/tda18272.o
 obj-m += cxd2820.o

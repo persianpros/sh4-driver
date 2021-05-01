@@ -66,16 +66,6 @@
 		Y[3] =(u8)((X) & 0xFF); \
 	} while (0)
 
-#if defined TAGDEBUG
-#undef TAGDEBUG
-#endif
-#define TAGDEBUG "[avl6222] "
-
-#define dprintk(level, x...) do \
-{ \
-	if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-} while (0)
-
 /*---------------------------------------------------------------------
  * Definitions
  *---------------------------------------------------------------------*/

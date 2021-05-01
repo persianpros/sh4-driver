@@ -31,35 +31,39 @@
 #include "dvb_frontend.h"
 #include "equipment.h"
 
-static short paramDebug;
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
 #define TAGDEBUG "[lnb_pio] "
 
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
 
 #if defined(IPBOX9900)
-extern int _12v_isON; //defined in e2_proc ->I will implement a better mechanism later
+extern int _12v_isON;  // defined in e2_proc ->I will implement a better mechanism later
 #endif
+
 struct lnb_state
 {
 	struct stpio_pin *lnb_pin;
 	struct stpio_pin *lnb_enable_pin;
-
-	u32 lnb[6];
+	u32              lnb[6];
 };
 
 u16 lnb_pio_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 {
 	struct lnb_state *state = (struct lnb_state *) _state;
-	u16 ret = 0;
 
-	dprintk(10, "%s(%p, %d)\n", __FUNCTION__, fe, voltage);
+	dprintk(10, "%s(%p, %d)\n", __func__, fe, voltage);
 
 	switch (voltage)
 	{
 		case SEC_VOLTAGE_OFF:
 		{
+			dprintk(10, "Set LNB voltage off\n");
 #if defined(IPBOX9900)
 			if (_12v_isON == 0)
 			{
@@ -71,10 +75,11 @@ u16 lnb_pio_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t 
 #else
 			stpio_set_pin (state->lnb_enable_pin, !state->lnb[2]);
 #endif
-	        	break;
+			break;
 		}
-		case SEC_VOLTAGE_13: //vertical
+		case SEC_VOLTAGE_13:  // vertical
 		{
+			dprintk(10, "Set LNB voltage vertical\n");
 			if (state->lnb_enable_pin)
 			{
 				stpio_set_pin(state->lnb_enable_pin, state->lnb[2]);
@@ -83,8 +88,9 @@ u16 lnb_pio_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t 
 			dprintk(10, "%s: v %p %d\n", __func__, state->lnb_pin, state->lnb[5]);
 			break;
 		}
-		case SEC_VOLTAGE_18: //horizontal
+		case SEC_VOLTAGE_18:  // horizontal
 		{
+			dprintk(10, "Set LNB voltage horizontal\n");
 			if (state->lnb_enable_pin)
 			{
 				stpio_set_pin(state->lnb_enable_pin, state->lnb[2]);
@@ -98,7 +104,7 @@ u16 lnb_pio_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t 
 			return -EINVAL;
 		}
 	}
-	return ret;
+	return 0;
 }
 
 void *lnb_pio_attach(u32 *lnb, struct equipment_s *equipment)
@@ -108,12 +114,11 @@ void *lnb_pio_attach(u32 *lnb, struct equipment_s *equipment)
 	memcpy(state->lnb, lnb, sizeof(state->lnb));
 	equipment->lnb_set_voltage = lnb_pio_set_voltage;
 	state->lnb_enable_pin = stpio_request_pin(lnb[0], lnb[1], "lnb_enab", STPIO_OUT);
-	printk("lnb_enable_pin %p\n", state->lnb_enable_pin);
+	dprintk(10, "lnb_enable_pin %p\n", state->lnb_enable_pin);
 	stpio_set_pin(state->lnb_enable_pin, lnb[2]);
 	state->lnb_pin = stpio_request_pin(lnb[3], lnb[4], "lnb_sel", STPIO_OUT);
 	return state;
 }
-
 EXPORT_SYMBOL(lnb_pio_attach);
 
 /* ******************************* */
@@ -122,13 +127,13 @@ EXPORT_SYMBOL(lnb_pio_attach);
 
 int __init lnbpio_init(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	return 0;
 }
 
 static void lnbpio_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);

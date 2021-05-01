@@ -21,6 +21,14 @@
   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+
 #define MXL201_LT_OFF    0 
 #define MXL201_LT_ON     1
 

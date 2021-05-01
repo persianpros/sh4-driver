@@ -20,48 +20,6 @@
  *
  */
 
-/*
- * Fortis HDBOX 9200 Frontpanel driver.
- *
- * Devices:
- *  - /dev/vfd (vfd ioctls and read/write function)
- *  - /dev/rc  (reading of key events)
- *
- * BUGS:
- * - exiting the rcS leads to no data receiving from ttyAS0 ?!?!?
- * - some Icons are missing
- * - buttons (see evremote)
- * - GetWakeUpMode not tested (dont know the meaning of the mode ;) )
- *
- * Unknown Commands:
- * 0x02 0x40 0x03
- * 0x02 0xce 0x10
- * 0x02 0xce 0x30
- * 0x02 0x72
- * 0x02 0x93
- * The next two are written by the app every keypress. At first I think
- * this is the visual feedback but doing this manual have no effect.
- * 0x02, 0x93, 0x01, 0x00, 0x08, 0x03
- * 0x02, 0x93, 0xf2, 0x0a, 0x00, 0x03
- *
- * New commands from octagon1008:
- * 0x02 0xd0 x03
- *
- * 0x02 0xc4 0x20 0x00 0x00 0x00 0x03
- *
- * fixme icons: must be mapped somewhere!
- * 0x00 dolby
- * 0x01 dts
- * 0x02 video
- * 0x03 audio
- * 0x04 link
- * 0x05 hdd
- * 0x06 disk
- * 0x07 DVB
- * 0x08 DVD
- * fixme: usb icon at the side and some other?
- */
-
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/termbits.h>

@@ -57,6 +57,12 @@
 
 #include "lnb.h"
 
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[cx24116] "
+
 #define cx24116_SEARCH_RANGE_KHZ 5000
 #define cMaxError 5
 

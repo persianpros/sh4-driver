@@ -4,6 +4,8 @@
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add irq handling
  *
+ * Frontpanel driver for Fortis 1st, 2nd and 3rd generation HD receivers
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -94,27 +96,6 @@
  * 20200104 Audioniek       Improve nuvotonGetVersion return value
  *                          determination.
  *
- *****************************************************************************
- *
- * Note on model designations: Three Fortis models have historically been
- * indicated by a reseller model number instead of the generic internal Fortis
- * model designation:
- *
- * FORTIS_HDBOX: Strictly speaking the FS9000. The chosen name is confusing,
- *               as HDBOX is one of the resellers selling Fortis receivers.
- *               In Germany the FS9000 was sold as Octagon SF1018 and
- *               Atevio AV7000.
- *               The FS9200 is completely hardware compatible with the FS9000
- *               and does not have a separate designation. In Germany this
- *               model was sold as Astro ASR1200.
- * OCTAGON1008:  The HS9510 and its variants. In Germany sold as
- *               Octagon SF1008P, Octagon SF1008SE, Atevio AV700 and
- *               Astro ASR1100.
- * ATEVIO7500:   The HS8200. In Germany sold as Octagon SF1028, Atevio AV7500,
- *               Atemio AV7600 and Opticum Actus Duo.
- * All other Fortis models are designated by the internal Fortis model
- * number that can be found on the component side of the main board, usually
- * near the front panel.
  */
 
 

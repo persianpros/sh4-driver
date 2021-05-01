@@ -1,7 +1,7 @@
 /*
  * nuvoton.h
  *
- * Frontpanel driver for Fortis HDBOX and Octagon 1008
+ * Frontpanel driver for Fortis 1st, 2nd and 3rd generation HD receivers
  *
  * (c) 2009 Dagobert@teamducktales
  * (c) 2010 Schischu & konfetti: Add irq handling

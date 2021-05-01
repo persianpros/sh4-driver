@@ -1,6 +1,14 @@
 #ifndef avl6222_platform_123
 #define avl6222_platform_123
 
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+
 struct avl_private_data_s
 {
 	u16 demod_freq;

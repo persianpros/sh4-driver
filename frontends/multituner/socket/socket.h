@@ -1,6 +1,3 @@
-#ifndef socket_123
-#define socket_123
-
 /*
  * @brief socket.h
  *
@@ -24,6 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#ifndef socket_123
+#define socket_123
 
 #include "dvb_frontend.h"
 

@@ -6,6 +6,7 @@
 #define cLNB_A8293   3
 
 #include "equipment.h"
+#include "frontend_platform.h"  // for dprintk definition
 
 extern void *lnbh221_attach(u32 *lnb, struct equipment_s *equipment);
 extern void *lnb_pio_attach(u32 *lnb, struct equipment_s *equipment);

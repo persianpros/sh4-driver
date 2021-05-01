@@ -44,17 +44,16 @@
 #define RSTV6110_MAX     8
 
 extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[stv6110a] "
-
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
 
 struct stv6110_state
 {
 	struct equipment_s equipment;
-	u8  regs[RSTV6110_MAX]; /* stv6110a tuner register saves */
-	u32 mclk; /* stv6110a masterclock setting */
+	u8  regs[RSTV6110_MAX];  /* stv6110a tuner register saves */
+	u32 mclk;  /* stv6110a masterclock setting */
 	u32 max_lpf;
 };
 
@@ -193,7 +192,7 @@ u16 stv6110_tuner_lock(struct dvb_frontend *fe, u32 frequency, u32 srate, u32 _l
 
 	state->regs[RSTV6110_CTRL2] = (state->regs[RSTV6110_CTRL2] & 0xf0) + 2 / 2; /* bbgain */
 	ret = stv6110_commit(fe);
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(50, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -221,7 +220,7 @@ u16 stv6110_tuner_lock_status(struct dvb_frontend *fe)
 			res = AVL2108_ERROR_GENERIC;
 		}
 	}
-	dprintk(50, "%s(): lock status: %u, buf: 0x%X\n", __func__, res, ucTemp);
+	dprintk(50, "%s: lock status: %u, buf: 0x%X\n", __func__, res, ucTemp);
 	return res;
 }
 
@@ -231,9 +230,9 @@ u16 stv6110_tuner_init(struct dvb_frontend *fe)
 	u16 ret = 0;
 	u8 buf0[] = { 0x07, 0x11, 0xdc, 0x85, 0x17, 0x01, 0xe6, 0x1e };
 
-	dprintk(50, "%s(): >\n", __func__);
+	dprintk(50, "%s >\n", __func__);
 	memcpy(state->regs, buf0, 8);
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(50, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -253,4 +252,3 @@ int stv6110a_attach(struct dvb_frontend *fe, void *demod_priv, struct equipment_
 	return 0;
 }
 // vim:ts=4
-

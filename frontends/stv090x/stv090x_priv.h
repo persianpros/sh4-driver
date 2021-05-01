@@ -208,7 +208,7 @@ struct stv090x_long_frame_crloop
 
 struct stv090x_short_frame_crloop
 {
-	enum stv090x_modulation	modulation;
+	enum stv090x_modulation modulation;
 
 	u8 crl_2;  /*      SR <   3M */
 	u8 crl_5;  /*  3 < SR <=  7M */

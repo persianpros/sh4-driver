@@ -49,13 +49,14 @@
 #include "stv0288.h"
 
 #include "lnb.h"
+#include "frontend_platform.h"  // for dprintk definition
 
 extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[stv0288] "
 
-#define dprintk(level, x...) do { \
-if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-} while (0)
 
 int tuner_write_for_agc_stv0288( struct dvb_frontend *fe );
 

@@ -39,9 +39,13 @@
 
 #include "equipment.h"
 
-#define eprintk(args...) do { \
-		printk("avl2108: ERROR: " args); \
-	} while (0)
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
 
 /* Error codes */
 #define AVL2108_OK            0  /*< No error */

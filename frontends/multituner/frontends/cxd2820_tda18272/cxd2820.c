@@ -41,14 +41,11 @@
 #include "frontend_platform.h"
 #include "socket.h"
 
-short paramDebug = 1;  // 1: always show errors
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[cxd2820] "
-
-#define dprintk(level, x...) \
-do \
-{ \
-	if ((paramDebug) && (paramDebug >= level)) printk(TAGDEBUG x); \
-} while (0)
 
 extern int tda18272_attach(struct dvb_frontend *fe, struct tda18272_private_data_s *tda18272, u8 i2c_addr, int (*i2c_readwrite)(void *p, u8 i2c_addr, u8 read, u8 *pbytes, u32 nbytes), void *private);
 extern int tda18272_setup_dvbt(struct dvb_frontend *fe);
@@ -1889,7 +1886,7 @@ static void cxd2820_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	struct dvb_frontend   *frontend;
 	struct cxd2820_config *cfg;
 
-	dprintk(1, "%s\n", __func__);
+	dprintk(100, "%s\n", __func__);
 
 	if (numSockets + 1 == cMaxSockets)
 	{
@@ -1954,7 +1951,7 @@ static int cxd2820_demod_detect(struct socket_s *socket, struct frontend_s *fron
 {
 	struct stpio_pin *pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 
-	dprintk(10, "%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	dprintk(100, "%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
 	if (pin != NULL)
 	{
@@ -1999,15 +1996,15 @@ static int cxd2820_demod_detect(struct socket_s *socket, struct frontend_s *fron
 		return -1;
 	}
 	stpio_free_pin(pin);
-	dprintk(1, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
 static int cxd2820_demod_attach(struct dvb_adapter *adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-	dprintk(10, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	cxd2820_register_frontend(adapter, socket);
-	dprintk(10, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -2021,7 +2018,7 @@ static int cxd2820_probe(struct platform_device *pdev)
 	struct frontend_s frontend;
 	struct cxd2820_s* data;
 
-	dprintk(10, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
 	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
@@ -2040,7 +2037,7 @@ static int cxd2820_probe(struct platform_device *pdev)
 	{
 		dprintk(1, "failed to register frontend\n");
 	}
-	dprintk(10, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -2068,15 +2065,15 @@ int __init cxd2820_init_module(void)
 {
 	int ret;
 
-	dprintk(10, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	ret = platform_driver_register(&cxd2820_driver);
-	dprintk(10, "%s < %d\n", __func__, ret);
+	dprintk(100, "%s < %d\n", __func__, ret);
 	return ret;
 }
 
 static void cxd2820_cleanup_module(void)
 {
-	dprintk(10, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);

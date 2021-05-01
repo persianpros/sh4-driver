@@ -40,13 +40,10 @@
 #include "cxd2820_platform.h"
 
 extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[tda18272] "
-
-#define dprintk(level, x...) \
-do \
-{ \
-	if ((paramDebug) && (paramDebug >= level)) printk(TAGDEBUG x); \
-} while (0)
 
 /* ************************************************** */
 
@@ -744,9 +741,9 @@ static int tda18272_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 	struct tda18272_state *state = fe->tuner_priv;
 	int                   res = 0;
 
-	dprintk(10, "%s: >\n", __func__);
+	dprintk(100, "%s: >\n", __func__);
 	*bandwidth = state->bw;
-	dprintk(10, "%s: < res %d, bw %d\n", __func__, res, *bandwidth);
+	dprintk(10, "%s: < res = %d, bw = %d\n", __func__, res, *bandwidth);
 	return res;
 }
 
@@ -756,7 +753,7 @@ static int tda18272_get_status(struct dvb_frontend *fe, u32 *status)
 	int                   res = 0;
 	u8                    bytes[3] = {0,1,0};
 
-	dprintk(10, "%s: >\n", __func__);
+	dprintk(100, "%s: >\n", __func__);
 
 	*status = 0;
 
@@ -766,7 +763,7 @@ static int tda18272_get_status(struct dvb_frontend *fe, u32 *status)
 
 	*status = bytes[0] << 16;
 
-	dprintk(10, "%s: < res %d, status %d\n", __func__, res, *status);
+	dprintk(10, "%s: < res = %d, status = %d\n", __func__, res, *status);
 	return res;
 }
 
@@ -801,10 +798,10 @@ static struct dvb_tuner_ops tda18272_tuner_ops =
 
 int tda18272_attach(struct dvb_frontend *fe, struct tda18272_private_data_s *tda18272, u8 i2c_addr, int (*i2c_readwrite)(void* p, u8 i2c_addr, u8 read, u8* pbytes, u32 nbytes), void* private)
 {
-	struct tda18272_state* state = kmalloc(sizeof(struct tda18272_state), GFP_KERNEL);
-	struct tda18272_config*  cfg = kmalloc(sizeof(struct tda18272_config), GFP_KERNEL);
+	struct tda18272_state *state = kmalloc(sizeof(struct tda18272_state), GFP_KERNEL);
+	struct tda18272_config *cfg = kmalloc(sizeof(struct tda18272_config), GFP_KERNEL);
 
-	dprintk(10, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	memcpy(&fe->ops.tuner_ops, &tda18272_tuner_ops, sizeof(struct dvb_tuner_ops));
 	fe->tuner_priv = state;
@@ -822,7 +819,7 @@ int tda18272_attach(struct dvb_frontend *fe, struct tda18272_private_data_s *tda
 	state->power     = 1;
 	state->initDone  = 0;
 
-	dprintk(10, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 
 	return 0;
 }

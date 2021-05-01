@@ -120,12 +120,6 @@ spark7162-fe-objs += spark7162/demod/mn88472/mn88472_autoctrl.o
 spark7162-fe-objs += spark7162/demod/mn88472/mn88472_register.o
 spark7162-fe-objs += spark7162/demod/mn88472/mn88472_variable.o
 
-spark7162-objs += spark7162/tuner/MxL301_Ext/mxl301rf.o
-spark7162-objs += spark7162/tuner/MxL301_Ext/mxl_common.o
-spark7162-objs += spark7162/tuner/MxL301_Ext/mxl_spur_table.o
-spark7162-objs += spark7162/tuner/MxL301_Ext/mxL_user_define.o
-spark7162-objs += spark7162/tuner/MxL301_Ext/tun_mxl301.o
-
 # DVB-S(2) tuner (early production)
 spark7162-fe-objs += spark7162/tuner/ix7306/sharp_ix7306.o
 

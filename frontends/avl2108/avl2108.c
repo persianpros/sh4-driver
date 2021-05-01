@@ -2045,8 +2045,8 @@ void avl2108_register_frontend(struct dvb_adapter *dvb_adap)
 #ifdef ATEVIO7500
 	/* fixme: I think we should move this to st-merger.c */
 
-	/* set the muxer pin otherwise startci output will
-	 * not properly passed to tsmerger.
+	/* set the muxer pin otherwise starci output will
+	 * not be properly passed to tsmerger.
 	 */
 	pin = stpio_request_pin(5, 3, "tuner2_mux", STPIO_OUT);
 	stpio_set_pin(pin, 0);

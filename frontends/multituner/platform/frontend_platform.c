@@ -29,16 +29,24 @@
 
 #include "frontend_platform.h"
 
-#if defined(ATEVIO7500)
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#define TAGDEBUG "[frontend_platform] "
 
-#include "at7500_platform.h"
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+
+#if defined(ATEVIO7500)
+#include "atevio7500_platform.h"
 
 #elif defined(OCTAGON1008)
-
 #include "octagon1008_platform.h"
 
 #elif defined(UFS922)
-
 #include "ufs922_platform.h"
 
 #elif defined (CUBEREVO_MINI2) \
@@ -46,17 +54,14 @@
    || defined (CUBEREVO_250HD) \
    || defined (CUBEREVO_MINI_FTA) \
    || defined (CUBEREVO_3000HD)
-
 #include "cuberevo_mini_platform.h"
 
 #elif defined (CUBEREVO) \
    || defined (CUBEREVO_9500HD) \
    || defined (CUBEREVO_2000HD)
-
 #include "cuberevo_platform.h"
 
 #elif defined(UFS913)
-
 #include "ufs913_platform.h"
 
 #else
@@ -77,10 +82,13 @@ int __init frontend_platform_init(void)
 	return ret;
 }
 
+module_init(frontend_platform_init);
+
+module_param(paramDebug, short, 0644);
+MODULE_PARM_DESC(paramDebug, "Activates frontend debugging (default:0)");
+
 MODULE_DESCRIPTION("Frontend platform module");
 
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
-
-module_init(frontend_platform_init);
 // vim:ts=4

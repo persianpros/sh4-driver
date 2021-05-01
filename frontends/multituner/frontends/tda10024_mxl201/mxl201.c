@@ -41,11 +41,10 @@
 #include "mxl201.h"
 
 extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[mxl201] "
-
-#define dprintk(level, x...) do { \
-if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-} while (0)
 
 /* ************************************************** */
 
@@ -961,7 +960,7 @@ int mxl201_attach(struct dvb_frontend *fe, struct mxl201_private_data_s *mxl201,
 	state->i2c = i2c;
 	state->i2c_address = i2c_address;
 
-	printk("%s 0x%p 0x%x\n", __func__, i2c, i2c_address);
+	dprintk(10, "%s 0x%p 0x%x\n", __func__, i2c, i2c_address);
 
 	memcpy(&fe->ops.tuner_ops, &mxl201_tuner_ops, sizeof(struct dvb_tuner_ops));
 	fe->tuner_priv = state;

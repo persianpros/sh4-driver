@@ -47,13 +47,13 @@
 #include "stv6110x_priv.h"
 
 #include "core.h"
+#include "frontend_platform.h"  // for dprintk definition
 
 extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[stv6110a] "
-
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
 
 static int stv6110x_set_refclock(struct dvb_frontend *fe, u32 refclock);
 static int stv6110x_get_frequency(struct dvb_frontend *fe, u32 *frequency);

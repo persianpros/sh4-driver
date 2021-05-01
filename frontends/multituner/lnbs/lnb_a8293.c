@@ -8,15 +8,19 @@
 #include "dvb_frontend.h"
 #include "equipment.h"
 
-static short paramDebug;
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
 #define TAGDEBUG "[a8293] "
 
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
 
 #if defined(IPBOX9900)
-extern int _12v_isON; //defined in e2_proc ->I will implement a better mechanism later
+extern int _12v_isON;  // defined in e2_proc ->I will implement a better mechanism later
 #endif
 
 struct lnb_state
@@ -70,7 +74,8 @@ u16 a8293_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t vo
 {
 	struct lnb_state *state = (struct lnb_state *) _state;
 	unsigned char reg = state->lnb[5];
-	dprintk(1, "%s (%x)\n", __func__, voltage);
+
+	dprintk(10, "%s (%x)\n", __func__, voltage);
 
 	if (voltage != SEC_VOLTAGE_OFF)
 	{
@@ -80,7 +85,7 @@ u16 a8293_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t vo
 	{
 		case SEC_VOLTAGE_OFF:
 		{
-			dprintk(1, "set voltage off\n");
+			dprintk(10, "Set LNB voltage off\n");
 #if defined(IPBOX9900)
 			if (_12v_isON == 0)
 			{
@@ -93,14 +98,14 @@ u16 a8293_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t vo
 		}
 		case SEC_VOLTAGE_13:
 		{
-			dprintk(1, "set voltage vertical\n");
+			dprintk(10, "Set LNB voltage vertical\n");
 			reg |= state->lnb[3];
 			a8293_write(state, reg);
 			break;
 		}
 		case SEC_VOLTAGE_18:
 		{
-			dprintk(1, "set voltage horizontal\n");
+			dprintk(10, "Set LNB voltage horizontal\n");
 			reg |= state->lnb[4];
 			a8293_write(state, reg);
 			break;
@@ -108,7 +113,6 @@ u16 a8293_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t vo
 		default:
 		{
 			return -EINVAL;
-			break;
 		}
 	}
 	return 0;
@@ -123,7 +127,7 @@ void *lnb_a8293_attach(u32 *lnb, struct equipment_s *equipment)
 	memcpy(state->lnb, lnb, sizeof(state->lnb));
 	equipment->lnb_set_voltage = a8293_set_voltage;
 	state->i2c = i2c_get_adapter(lnb[0]);
-	dprintk(0, "i2c adapter = %p\n", state->i2c);
+	dprintk(10, "i2c adapter = %p\n", state->i2c);
 
 //TODO: make it configurable
 
@@ -141,23 +145,20 @@ void *lnb_a8293_attach(u32 *lnb, struct equipment_s *equipment)
 		/* setup pio6 */
 		u32 reg = ctrl_inl(0xfd026030);
 
-		dprintk(1, "%s: reg = 0x%08x\n", __func__, reg);
+		dprintk(10, "%s: reg = 0x%08x\n", __func__, reg);
 		reg |= 0x00000001;
-		dprintk(1, "%s: reg = 0x%08x\n", __func__, reg);
+		dprintk(10, "%s: reg = 0x%08x\n", __func__, reg);
 		ctrl_outl(reg, 0xfd026030);
 		reg = ctrl_inl(0xfd026000);
-		printk("%s: reg = 0x%08x\n", __func__, reg);
+		dprintk(10, "%s: reg = 0x%08x\n", __func__, reg);
 		reg &= ~(0x0000001);
-		printk("%s: reg = 0x%08x\n", __func__, reg);
+		dprintk(10, "%s: reg = 0x%08x\n", __func__, reg);
 		ctrl_outl(reg, 0xfd026000);
 	}
 #endif
 	return state;
 }
-
 EXPORT_SYMBOL(lnb_a8293_attach);
-
-/* ---------------------------------------------------------------------- */
 
 /* ******************************* */
 /* module functions                */
@@ -165,13 +166,13 @@ EXPORT_SYMBOL(lnb_a8293_attach);
 
 int __init lnb_a8293_init(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	return 0;
 }
 
 static void lnb_a8293_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);

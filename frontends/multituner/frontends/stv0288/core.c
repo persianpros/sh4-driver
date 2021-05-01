@@ -42,7 +42,11 @@
 #include "tuner.h"
 #include "lnb.h"
 
-short paramDebug = 150;
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[core] "
 
 /* saved platform config */
 static struct platform_frontend_config_s* frontend_cfg = NULL;
@@ -299,6 +303,6 @@ module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
 MODULE_DESCRIPTION ("STV0288 demodulator driver");
-MODULE_AUTHOR      ("konfetti");
+MODULE_AUTHOR      ("Open Vision developers");
 MODULE_LICENSE     ("GPL");
 // vim:ts=4

@@ -49,9 +49,14 @@
 #include "tuner.h"
 #include "lnb.h"
 
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[avl6222] "
+
 //---------------------------------------------------------------------
 
-short paramDebug = 0;
 static int lockError = 0;
 static short demodLock = 0;
 static short tunerLock = 0;
@@ -936,6 +941,7 @@ int avl6222_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 	mutex_unlock(&state->lock);
 	return ret;
 }
+EXPORT_SYMBOL(avl6222_set_voltage);
 
 /*---------------------------------------------------------------------
  * DiSEqC, LNB, Tone functions
@@ -1308,6 +1314,7 @@ int avl6222_set_tone(struct dvb_frontend *fe, fe_sec_tone_mode_t tone)
 	}
 	return 0;
 }
+EXPORT_SYMBOL(avl6222_set_tone);
 
 /*---------------------------------------------------------------------
  * Status functions
@@ -2237,8 +2244,6 @@ static void avl6222_cleanup(void)
 	dprintk(100, "%s <>\n", __func__);
 }
 
-//---------------------------------------------------------------------
-
 module_init(avl6222_init);
 module_exit(avl6222_cleanup);
 
@@ -2249,13 +2254,4 @@ MODULE_DESCRIPTION("Availink AVL6222 Demod");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_VERSION("1.0");
 MODULE_LICENSE("GPL");
-
-//---------------------------------------------------------------------
-
-EXPORT_SYMBOL(avl6222_set_tone);
-EXPORT_SYMBOL(avl6222_set_voltage);
-
-//---------------------------------------------------------------------
-
-//---------------------------------------------------------------------
 // vim:ts=4

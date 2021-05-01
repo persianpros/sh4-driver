@@ -41,6 +41,14 @@
 
 #include "tda1002x.h"
 
+#include "frontend_platform.h"  // for dprintk definition
+
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[tda10023] "
+
 #define REG0_INIT_VAL 0x23
 
 struct tda10023_state

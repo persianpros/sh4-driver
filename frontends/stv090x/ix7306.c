@@ -67,8 +67,9 @@ static int ix7306_write(struct ix7306_state *state, u8 *buf, u8 len)
 	struct i2c_msg msg = { .addr = config->addr, .flags = 0, .buf = buf, .len = len };
 
 	if (state->fe->ops.i2c_gate_ctrl)
+	{
 		state->fe->ops.i2c_gate_ctrl(state->fe, 1);
-
+	}
 	ret = i2c_transfer(state->i2c, &msg, 1);
 	if (ret != 1)
 	{
@@ -76,8 +77,9 @@ static int ix7306_write(struct ix7306_state *state, u8 *buf, u8 len)
 	}
 
 	if (state->fe->ops.i2c_gate_ctrl)
+	{
 		state->fe->ops.i2c_gate_ctrl(state->fe, 0);
-
+	}
 	return ret;
 }
 
@@ -94,19 +96,20 @@ static int ix7306_read(struct ix7306_state *state, u8 *buf)
 	};
 
 	if (state->fe->ops.i2c_gate_ctrl)
+	{
 		state->fe->ops.i2c_gate_ctrl(state->fe, 1);
-
+	}
 	ret = i2c_transfer(state->i2c, msg, 2);
 	if (ret != 2)
 	{
-		printk("ix7306_read I/O Error %d, addr=0x%02x, reg: 0x%02X, ret = %d (expected 2)\n",
-		       ret, config->addr, buf[0], ret);
+		printk("ix7306_read I/O Error %d, addr=0x%02x, reg: 0x%02X, ret = %d (expected 2)\n", ret, config->addr, buf[0], ret);
 		return -EREMOTEIO;
 	}
 
 	if (state->fe->ops.i2c_gate_ctrl)
+	{
 		state->fe->ops.i2c_gate_ctrl(state->fe, 0);
-
+	}
 	return ret;
 }
 
@@ -207,14 +210,19 @@ static int calculate_pll_step_QM1D1B0004(int byte4)
 	int R;
 	int pll_step;
 	REF = byte4 & 0x01;
-	if (REF == 0) R = 4;
-	else R = 8;
-
+	if (REF == 0)
+	{
+		R = 4;
+	}
+	else
+	{
+		R = 8;
+	}
 	pll_step = calculate_pll_xtal_QM1D1B0004() / R;
 	return pll_step;
 }
 
-static	int calculate_pll_xtal_QM1D1B0004()
+static int calculate_pll_xtal_QM1D1B0004()
 {
 	return 4000;
 }
@@ -224,15 +232,21 @@ static int calculate_dividing_factor_of_prescaler(int *byte_)
 	int PSC;
 	PSC = (*(byte_ + 4) >> 4);
 	PSC &= 0x01;
-	if (PSC)		return 16;	//PSC=1
-	else		return 32;	//PSC=0
-
+	if (PSC)
+	{
+		return 16;	//PSC=1
+	}
+	else
+	{
+		return 32;	//PSC=0
+	}
 }
 
 static void calculate_pll_lpf_bw_from_baud_QM1D1B0004(long baud, int *byte_)
 {
 	long LPF;
-	if (baud > 0) //calculate LPF automatically
+
+	if (baud > 0)  // calculate LPF automatically
 	{
 		LPF = calculate_LPF_from_baud(baud);
 		calculate_pll_lpf_to_byte(LPF, byte_);
@@ -242,7 +256,8 @@ static void calculate_pll_lpf_bw_from_baud_QM1D1B0004(long baud, int *byte_)
 static long calculate_LPF_from_baud(long baud)
 {
 	long LPF;
-	if ((34000 < baud)) LPF = 34000;
+
+	if ((34000 < baud))                    LPF = 34000;
 	if ((32000 < baud) && (baud <= 34000)) LPF = 34000;
 	if ((30000 < baud) && (baud <= 32000)) LPF = 32000;
 	if ((28000 < baud) && (baud <= 30000)) LPF = 30000;
@@ -255,14 +270,20 @@ static long calculate_LPF_from_baud(long baud)
 	if ((14000 < baud) && (baud <= 16000)) LPF = 16000;
 	if ((12000 < baud) && (baud <= 14000)) LPF = 16000;
 	if ((10000 < baud) && (baud <= 12000)) LPF = 14000;
-	if ((8000 < baud) && (baud <= 10000)) LPF = 14000;
-	if ((6000 < baud) && (baud <= 8000)) LPF = 12000;
-	if ((4000 < baud) && (baud <= 6000)) LPF = 10000;
-	if (baud <= 4000)	LPF = 10000;
+	if (( 8000 < baud) && (baud <= 10000)) LPF = 14000;
+	if (( 6000 < baud) && (baud <=  8000)) LPF = 12000;
+	if (( 4000 < baud) && (baud <=  6000)) LPF = 10000;
+	if (  baud <= 4000)                    LPF = 10000;
 
 
-//	if(baud>=20000) LPF=34000;
-//	else LPF=20000;
+//	if (baud >= 20000)
+//	{
+//		LPF = 34000;
+//	}
+//	else
+//	{
+//		LPF = 20000;
+//	}
 	return LPF;
 }
 
@@ -306,19 +327,20 @@ static void pll_setdata_QM1D1B0004(struct dvb_frontend *fe, int *byte_)
 
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData, 4) < 0)
+	{
 		goto err;
-
+	}
 	ucOperData[2] |= 0x04;	//TM=1
 
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData + 2, 1) < 0)
+	{
 		goto err;
-
+	}
 	msleep(12);
 
-
 	ucOperData[2] = byte3;
-	//[040108] TM bit always finis with "1".
+	//[040108] TM bit always finish with "1".
 	ucOperData[2] |= 0x04;	//TM=1
 	/********************************************************************
 	*(byte_+3)|=0x04;	//TM=1
@@ -329,14 +351,16 @@ static void pll_setdata_QM1D1B0004(struct dvb_frontend *fe, int *byte_)
 
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData + 2, 2) < 0)
+	{
 		goto err;
-
+	}
 	ucOperData[0] = byte1;
 
 	/*write tuner*/
 	if (ix7306_write(state, ucOperData, 1) < 0)
+	{
 		goto err;
-
+	}
 	return;
 
 err:
@@ -345,7 +369,7 @@ err:
 
 static int ix7306_set_freq(struct dvb_frontend *fe, u32 freq_KHz, u32 tuner_BW)
 {
-	u32			tuner_bw_K = tuner_BW / 1000;
+	u32 tuner_bw_K = tuner_BW / 1000;
 
 	memset(reg_data, 0, sizeof(reg_data));
 	reg_data[1] = 0x44;
@@ -354,7 +378,6 @@ static int ix7306_set_freq(struct dvb_frontend *fe, u32 freq_KHz, u32 tuner_BW)
 	reg_data[4] = 0x42;
 
 	tun_setfreq_QM1D1B0004(fe, freq_KHz, tuner_bw_K, &reg_data[0]);
-
 	return 0;
 }
 
@@ -375,7 +398,6 @@ static int ix7306_set_state(struct dvb_frontend *fe,
 		printk("%s: Unknown parameter (param=%d)\n", __func__, param);
 		return -EINVAL;
 	}
-
 	return 0;
 }
 
@@ -389,17 +411,22 @@ static int ix7306_get_state(struct dvb_frontend *fe,
 	switch (param)
 	{
 		case DVBFE_TUNER_FREQUENCY:
+		{
 			tstate->frequency = state->frequency;
 			break;
+		}
 		case DVBFE_TUNER_BANDWIDTH:
+		{
 			tstate->bandwidth = state->bandwidth; /* FIXME! need to calculate Bandwidth */
 			break;
+		}
 		default:
+		{
 			printk("%s: Unknown parameter (param=%d)\n", __func__, param);
 			err = -EINVAL;
 			break;
+		}
 	}
-
 	return err;
 }
 
@@ -427,7 +454,6 @@ static int ix7306_get_status(struct dvb_frontend *fe, u32 *status)
 	{
 		printk("%s: Tuner Phase Not Locked result - 0x%x, 0x%x,\n", __func__, result[0], result[1]);
 	}
-
 	return err;
 }
 
@@ -442,33 +468,35 @@ static int ix7306_release(struct dvb_frontend *fe)
 
 static struct dvb_tuner_ops ix7306_ops =
 {
-
-	.info = {
-		.name		= "IX7306",
-		.frequency_min	=  950000,
-		.frequency_max	= 2150000,
+	.info =
+	{
+		.name           = "IX7306",
+		.frequency_min  =  950000,
+		.frequency_max  = 2150000,
 		.frequency_step = 0
 	},
 
-	.set_state	= ix7306_set_state,
-	.get_state	= ix7306_get_state,
-	.get_status	= ix7306_get_status,
-	.release	= ix7306_release
+	.set_state  = ix7306_set_state,
+	.get_state  = ix7306_get_state,
+	.get_status = ix7306_get_status,
+	.release    = ix7306_release
 };
 
 int ix7306_get_frequency(struct dvb_frontend *fe, u32 *frequency)
 {
-	struct dvb_frontend_ops	*frontend_ops = NULL;
-	struct dvb_tuner_ops	*tuner_ops = NULL;
-	struct tuner_state	t_state;
-	int err = 0;
+	struct dvb_frontend_ops *frontend_ops = NULL;
+	struct dvb_tuner_ops    *tuner_ops    = NULL;
+	struct tuner_state      t_state;
+	int                     err           = 0;
 
 	if (&fe->ops)
+	{
 		frontend_ops = &fe->ops;
-
+	}
 	if (&frontend_ops->tuner_ops)
+	{
 		tuner_ops = &frontend_ops->tuner_ops;
-
+	}
 	if (tuner_ops->get_state)
 	{
 		if ((err = tuner_ops->get_state(fe, DVBFE_TUNER_FREQUENCY, &t_state)) < 0)
@@ -484,20 +512,22 @@ int ix7306_get_frequency(struct dvb_frontend *fe, u32 *frequency)
 
 int ix7306_set_frequency(struct dvb_frontend *fe, u32 frequency)
 {
-	struct ix7306_state *state = fe->tuner_priv;
-	struct dvb_frontend_ops	*frontend_ops = NULL;
-	struct dvb_tuner_ops	*tuner_ops = NULL;
-	struct tuner_state	t_state;
-	int err = 0;
+	struct ix7306_state     *state        = fe->tuner_priv;
+	struct dvb_frontend_ops *frontend_ops = NULL;
+	struct dvb_tuner_ops    *tuner_ops    = NULL;
+	struct tuner_state      t_state;
+	int                     err           = 0;
 
 	t_state.frequency = frequency;
 	t_state.bandwidth = state->bandwidth;
 	if (&fe->ops)
+	{
 		frontend_ops = &fe->ops;
-
+	}
 	if (&frontend_ops->tuner_ops)
+	{
 		tuner_ops = &frontend_ops->tuner_ops;
-
+	}
 	if (tuner_ops->set_state)
 	{
 		if ((err = tuner_ops->set_state(fe, DVBFE_TUNER_FREQUENCY, &t_state)) < 0)
@@ -521,17 +551,19 @@ int ix7306_set_bandwidth(struct dvb_frontend *fe, u32 bandwidth)
 }
 int ix7306_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 {
-	struct dvb_frontend_ops	*frontend_ops = &fe->ops;
-	struct dvb_tuner_ops	*tuner_ops = &frontend_ops->tuner_ops;
-	struct tuner_state	t_state;
-	int err = 0;
+	struct dvb_frontend_ops *frontend_ops = &fe->ops;
+	struct dvb_tuner_ops    *tuner_ops    = &frontend_ops->tuner_ops;
+	struct tuner_state      t_state;
+	int                     err           = 0;
 
 	if (&fe->ops)
+	{
 		frontend_ops = &fe->ops;
-
+	}
 	if (&frontend_ops->tuner_ops)
+	{
 		tuner_ops = &frontend_ops->tuner_ops;
-
+	}
 	if (tuner_ops->get_state)
 	{
 		if ((err = tuner_ops->get_state(fe, DVBFE_TUNER_BANDWIDTH, &t_state)) < 0)
@@ -547,16 +579,16 @@ int ix7306_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 
 static struct tuner_devctl ix7306_ctl =
 {
-	.tuner_init				= NULL,
-	.tuner_set_mode			= NULL,
-	.tuner_set_frequency	= ix7306_set_frequency,
-	.tuner_get_frequency	= ix7306_get_frequency,
-	.tuner_set_bandwidth	= ix7306_set_bandwidth,
-	.tuner_get_bandwidth	= ix7306_get_bandwidth,
-	.tuner_set_bbgain		= NULL,
-	.tuner_get_bbgain		= NULL,
-	.tuner_set_refclk		= NULL,
-	.tuner_get_status		= ix7306_get_status,
+	.tuner_init          = NULL,
+	.tuner_set_mode      = NULL,
+	.tuner_set_frequency = ix7306_set_frequency,
+	.tuner_get_frequency = ix7306_get_frequency,
+	.tuner_set_bandwidth = ix7306_set_bandwidth,
+	.tuner_get_bandwidth = ix7306_get_bandwidth,
+	.tuner_set_bbgain    = NULL,
+	.tuner_get_bbgain    = NULL,
+	.tuner_set_refclk    = NULL,
+	.tuner_get_status    = ix7306_get_status,
 };
 
 struct tuner_devctl *ix7306_attach(struct dvb_frontend *fe,
@@ -566,8 +598,9 @@ struct tuner_devctl *ix7306_attach(struct dvb_frontend *fe,
 	struct ix7306_state *state = NULL;
 
 	if ((state = kzalloc(sizeof(struct ix7306_state), GFP_KERNEL)) == NULL)
+	{
 		goto exit;
-
+	}
 	state->config		= config;
 	state->i2c			= i2c;
 	state->devctl		= &ix7306_ctl;
@@ -577,9 +610,7 @@ struct tuner_devctl *ix7306_attach(struct dvb_frontend *fe,
 	fe->tuner_priv		= state;
 	fe->ops.tuner_ops	= ix7306_ops;
 
-	printk("%s: Attaching %s IX7306 8PSK/QPSK tuner\n",
-	       __func__, config->name);
-
+	printk("%s: Attaching %s IX7306 8PSK/QPSK tuner\n", __func__, config->name);
 	return state->devctl;
 
 exit:
@@ -587,3 +618,4 @@ exit:
 	return NULL;
 }
 EXPORT_SYMBOL(ix7306_attach);
+// vim:ts=4

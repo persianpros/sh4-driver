@@ -32,6 +32,13 @@
 
 #include "equipment.h"
 #include "avl6222.h"
+#include "frontend_platform.h"  // for dprintk definition
+
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[stv6110a] "
 
 #define RSTV6110_CTRL1   0
 #define RSTV6110_CTRL2   1
@@ -43,22 +50,6 @@
 #define RSTV6110_STAT3   7
 
 #define RSTV6110_MAX     8
-
-extern short paramDebug;
-#if defined TAGDEBUG
-#undef TAGDEBUG
-#endif
-#define TAGDEBUG "[stv6110a] "
-
-#if !defined dprintk
-#define dprintk(level, x...) do \
-{ \
-	if ((paramDebug) && (paramDebug > level)) \
-	{ \
-		printk(TAGDEBUG x); \
-	} \
-} while (0)
-#endif
 
 struct stv6110_state
 {

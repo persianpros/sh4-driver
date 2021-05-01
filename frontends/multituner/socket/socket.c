@@ -34,6 +34,17 @@
 
 #include "socket.h"
 
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+
+#define TAGDEBUG "[socket] "
+
 static int         numSockets = 0;
 struct socket_s    *sockets = NULL;
 struct dvb_adapter *adapter = NULL;
@@ -58,7 +69,7 @@ int socket_register_frontend(struct frontend_s *frontend)
 {
 	if (numFrontends + 1 == cMaxFrontends)
 	{
-		printk("maximum number frontends reached\n");
+		dprintk(1, "Error: maximum number frontends reached\n");
 		return -1;
 	}
 	addFrontend(frontend);
@@ -73,7 +84,7 @@ int socket_register_adapter(struct dvb_adapter *_adapter)
 
 	if (adapter != NULL)
 	{
-		printk("%s: already in use\n", __func__);
+		dprintk(1, "%s: Error, socket already in use\n", __func__);
 		return -ENODEV;
 	}
 	adapter = _adapter;
@@ -84,7 +95,7 @@ int socket_register_adapter(struct dvb_adapter *_adapter)
 		{
 			if (frontends[j].demod_detect(&sockets[i], &frontends[j]) == 0)
 			{
-				printk("found %s on socket %s\n", frontends[j].name, sockets[i].name);
+				dprintk(10, "Found %s on socket %s\n", frontends[j].name, sockets[i].name);
 
 				frontends[j].demod_attach(adapter, &sockets[i], &frontends[j]);
 				break;
@@ -104,7 +115,7 @@ static int socket_probe(struct platform_device *pdev)
 	struct tunersocket_s *socket_config = pdev->dev.platform_data;
 	int    i;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	numSockets = socket_config->numSockets;
 	sockets = (struct socket_s *) kzalloc(sizeof(struct socket_s) * numSockets, GFP_KERNEL);
@@ -118,19 +129,19 @@ static int socket_probe(struct platform_device *pdev)
 	{
 		sockets[i] = socket_config->socketList[i];
 
-		printk("***************************\n");
-		printk("socket     %d\n", i + 1);
-		printk("name       %s\n", sockets[i].name);
-		printk("pio port   %d\n", sockets[i].tuner_enable[0]);
-		printk("pio pin    %d\n", sockets[i].tuner_enable[1]);
-		printk("active l/h %d\n", sockets[i].tuner_enable[2]);
-		printk("i2c_bus    %d\n", sockets[i].i2c_bus);
+		dprintk(0, "***************************\n");
+		dprintk(0, "socket     %d\n", i + 1);
+		dprintk(0, "name       %s\n", sockets[i].name);
+		dprintk(0, "pio port   %d\n", sockets[i].tuner_enable[0]);
+		dprintk(0, "pio pin    %d\n", sockets[i].tuner_enable[1]);
+		dprintk(0, "active l/h %d\n", sockets[i].tuner_enable[2]);
+		dprintk(0, "i2c_bus    %d\n", sockets[i].i2c_bus);
 	}
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
-static int socket_remove(struct device *pdev)
+static int socket_remove(struct platform_device *pdev)
 {
 	return 0;
 }
@@ -154,25 +165,28 @@ int __init socket_init(void)
 {
 	int ret;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	ret = platform_driver_register(&socket_driver);
-	printk("%s < %d\n", __func__, ret);
+	dprintk(100, "%s < %d\n", __func__, ret);
 	return ret;
 }
 
 static void socket_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	driver_unregister((struct device_driver *)&socket_driver);
 }
+
+module_init(socket_init);
+module_exit(socket_cleanup);
+
+module_param(paramDebug, short, 0644);
+MODULE_PARM_DESC(paramDebug, "Activates frontend debugging (default:0)");
 
 MODULE_DESCRIPTION("Multituner Socket Handling");
 
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
-
-module_init(socket_init);
-module_exit(socket_cleanup);
 // vim:ts=4

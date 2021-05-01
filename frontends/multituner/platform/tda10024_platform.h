@@ -2,7 +2,7 @@
 #define tda_platform_123
 
 /*
- * @brief tda_platform.h
+ * @brief tda10024_platform.h
  *
  * @author konfetti
  *
@@ -23,6 +23,14 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
   
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+
 struct tda10024_private_data_s
 {
 	u32 ts_out;	

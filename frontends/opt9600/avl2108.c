@@ -721,7 +721,7 @@ static u16 avl2108_channel_lock(struct dvb_frontend *fe, struct avl2108_tuning *
 		{
 			if (tuning->lock_mode == LOCK_MODE_ADAPTIVE)
 			{
-				/* fixme: atevio7500 sets here 0. nevertheless 1 is the correct
+				/* fixme: atevio7500 sets here 0. Nevertheless 1 is the correct
 				 * value and seems to work.
 				 */
 				ret |= avl2108_i2c_write16(state, REG_LOCK_MODE, 1);

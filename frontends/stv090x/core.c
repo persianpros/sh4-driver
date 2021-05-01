@@ -21,12 +21,12 @@ static struct core *core[MAX_DVB_ADAPTERS];
 static struct stv090x_config tt1600_stv090x_config =
 {
 #if defined(FORTIS_HDBOX)
-	.device			= STV0903,
-	.demod_mode		= STV090x_DUAL	/*STV090x_SINGLE*/,
-	.xtal			= 8000000,
-	.ts1_mode		= STV090x_TSMODE_DVBCI	/*STV090x_TSMODE_SERIAL_CONTINUOUS*/,
-	.ts2_mode		= STV090x_TSMODE_NOTSET,
-	.repeater_level		= STV090x_RPTLEVEL_16,
+	.device         = STV0903,
+	.demod_mode     = STV090x_DUAL	/*STV090x_SINGLE*/,
+	.xtal           = 8000000,
+	.ts1_mode       = STV090x_TSMODE_DVBCI	/*STV090x_TSMODE_SERIAL_CONTINUOUS*/,
+	.ts2_mode       = STV090x_TSMODE_NOTSET,
+	.repeater_level = STV090x_RPTLEVEL_16,
 #elif defined(UFS912) \
  || defined(HS7110) \
  || defined(HS7810A) \
@@ -37,12 +37,12 @@ static struct stv090x_config tt1600_stv090x_config =
  || defined(ATEMIO520) \
  || defined(ATEMIO530) \
  || defined(SPARK)
-	.device			= STX7111,
-	.demod_mode		= STV090x_DUAL,
-	.xtal			= 30000000,
-	.ts1_mode		= STV090x_TSMODE_DVBCI,
-	.ts2_mode		= STV090x_TSMODE_SERIAL_CONTINUOUS,
-	.repeater_level		= STV090x_RPTLEVEL_64,
+	.device         = STX7111,
+	.demod_mode     = STV090x_DUAL,
+	.xtal           = 30000000,
+	.ts1_mode       = STV090x_TSMODE_DVBCI,
+	.ts2_mode       = STV090x_TSMODE_SERIAL_CONTINUOUS,
+	.repeater_level = STV090x_RPTLEVEL_64,
 #elif defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
@@ -66,28 +66,27 @@ static struct stv090x_config tt1600_stv090x_config =
 #else
 #warning Architecture not supported
 #endif
-	.clk_mode		= STV090x_CLK_EXT,
-	.address		= 0x68,
-	.ref_clk		= 16000000,
-	.ts1_clk		= 0, /* these regs are not set in orig */
-	.ts2_clk		= 0, /* these regs are not set in orig */
-
+	.clk_mode       = STV090x_CLK_EXT,
+	.address        = 0x68,
+	.ref_clk        = 16000000,
+	.ts1_clk        = 0, /* these regs are not set in orig */
+	.ts2_clk        = 0, /* these regs are not set in orig */
 #if !defined(SPARK)
-	.tuner_bbgain           = 10,
-	.adc1_range             = STV090x_ADC_1Vpp,
-	.adc2_range             = STV090x_ADC_2Vpp,
-	.diseqc_envelope_mode   = false,
+	.tuner_bbgain         = 10,
+	.adc1_range           = STV090x_ADC_1Vpp,
+	.adc2_range           = STV090x_ADC_2Vpp,
+	.diseqc_envelope_mode = false,
 #endif
-	.tuner_init             = NULL,
-	.tuner_set_mode         = NULL,
-	.tuner_set_frequency    = NULL,
-	.tuner_get_frequency    = NULL,
-	.tuner_set_bandwidth    = NULL,
-	.tuner_get_bandwidth    = NULL,
-	.tuner_set_bbgain       = NULL,
-	.tuner_get_bbgain       = NULL,
-	.tuner_set_refclk       = NULL,
-	.tuner_get_status       = NULL,
+	.tuner_init           = NULL,
+	.tuner_set_mode       = NULL,
+	.tuner_set_frequency  = NULL,
+	.tuner_get_frequency  = NULL,
+	.tuner_set_bandwidth  = NULL,
+	.tuner_get_bandwidth  = NULL,
+	.tuner_set_bbgain     = NULL,
+	.tuner_get_bbgain     = NULL,
+	.tuner_set_refclk     = NULL,
+	.tuner_get_status     = NULL,
 };
 
 static struct stv6110x_config stv6110x_config =
@@ -185,6 +184,7 @@ static struct dvb_frontend *frontend_init(struct core_config *cfg, int i)
 		goto error_out;
 	}
 	return frontend;
+
 error_out:
 	printk("[stv090x] Frontend registration failed!\n");
 	if (frontend)
@@ -283,6 +283,7 @@ static struct dvb_frontend *init_stv090x_device(struct dvb_adapter *adapter, str
 		goto error;
 	}
 	return frontend;
+
 error:
 	if (cfg->tuner_enable_pin != NULL)
 	{
@@ -296,20 +297,23 @@ error:
 struct plat_tuner_config tuner_resources[] =
 {
 #if defined(FORTIS_HDBOX)
-	[0] = {
+	[0] =
+	{
 		.adapter = 0,
 		.i2c_bus = 0,
 		.i2c_addr = 0x68,
 		.tuner_enable = {2, 2, 1},
 	},
-	[1] = {
+	[1] =
+	{
 		.adapter = 0,
 		.i2c_bus = 1,
 		.i2c_addr = 0x68,
 		.tuner_enable = {2, 4, 1},
 	},
 #elif defined(UFS912)
-	[0] = {
+	[0] =
+	{
 		.adapter = 0,
 		.i2c_bus = 3,
 		.i2c_addr = 0x68,
@@ -330,26 +334,30 @@ struct plat_tuner_config tuner_resources[] =
  || defined(FOREVER_2424HD) \
  || defined(GPV8000) \
  || defined(EP8000)
-	[0] = {
+	[0] =
+	{
 		.adapter = 0,
 		.i2c_bus = 3,
 		.i2c_addr = 0x68,
 		.tuner_enable = {3, 3, 1},
 	},
 #elif defined(SPARK)
-	[0] = {
+	[0] =
+	{
 		.adapter = 0,
 		.i2c_bus = 3,
 		.i2c_addr = 0x68,
 	},
 #elif defined(EPP8000)
-	[0] = {
+	[0] =
+	{
 		.adapter = 0,
 		.i2c_bus = 3, //TODO: get correct number
 		.i2c_addr = 0x68,
 		.tuner_enable = {3, 3, 1}, //TODO: get correct number
 	},
-	[1] = {
+	[1] =
+	{
 		.adapter = 0,
 		.i2c_bus = 3, //TODO: get correct number
 		.i2c_addr = 0x68,
@@ -387,11 +395,9 @@ void stv090x_register_frontend(struct dvb_adapter *dvb_adap)
 			core[i]->frontend[vLoop] = init_stv090x_device(core[i]->dvb_adapter, &tuner_resources[vLoop], vLoop);
 		}
 	}
-
 	printk(KERN_INFO "[stv090x] %s: <\n", __FUNCTION__);
 	return;
 }
-
 EXPORT_SYMBOL(stv090x_register_frontend);
 
 int __init stv090x_init(void)
@@ -404,7 +410,6 @@ int __init stv090x_init(void)
 	{
 		tunerType = SHARP7306;
 	}
-
 	printk("[stv090x] module stv090x loaded, tuner: %s\n", tuner);
 	return 0;
 }

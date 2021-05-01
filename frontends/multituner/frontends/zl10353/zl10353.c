@@ -36,6 +36,13 @@
 
 #include "zl10353_priv.h"
 #include "zl10353.h"
+#include "frontend_platform.h"  // for dprintk definition
+
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[zl10353] "
 
 struct zl10353_state
 {

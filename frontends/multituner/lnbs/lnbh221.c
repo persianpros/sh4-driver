@@ -23,15 +23,19 @@
 #include "dvb_frontend.h"
 #include "equipment.h"
 
-static short paramDebug;
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
 #define TAGDEBUG "[lnbh221] "
 
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
 
 #if defined(IPBOX9900)
-extern int _12v_isON; //defined in e2_proc ->I will implement a better mechanism later
+extern int _12v_isON;  // defined in e2_proc ->I will implement a better mechanism later
 #endif
 
 struct lnb_state
@@ -78,7 +82,7 @@ static int writereg_lnb_supply(struct lnb_state *state, char data)
 	msg.buf = &buf;
 	msg.len = 1;
 
-	dprintk(100, "%s:  write 0x%02x to 0x%02x\n", __FUNCTION__, data, msg.addr);
+	dprintk(100, "%s:  write 0x%02x to 0x%02x\n", __func__, data, msg.addr);
 
 	if ((ret = i2c_transfer(state->i2c, &msg, 1)) != 1)
 	{
@@ -89,7 +93,7 @@ static int writereg_lnb_supply(struct lnb_state *state, char data)
 		msg.len = 1;
 		if ((ret = i2c_transfer(state->i2c, &msg, 1)) != 1)
 		{
-			printk("%s: writereg error(err == %i)\n", __FUNCTION__, ret);
+			printk("%s: writereg error(err == %i)\n", __func__, ret);
 			ret = -EREMOTEIO;
 		}
 	}
@@ -99,14 +103,14 @@ static int writereg_lnb_supply(struct lnb_state *state, char data)
 u16 lnbh221_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t voltage)
 {
 	struct lnb_state *state = (struct lnb_state *) _state;
-	u16 ret = 0;
 
-	dprintk(10, "%s(%p, %d)\n", __FUNCTION__, fe, voltage);
+	dprintk(10, "%s(%p, %d)\n", __func__, fe, voltage);
 
 	switch (voltage)
 	{
 		case SEC_VOLTAGE_OFF:
 		{
+			dprintk(10, "Set LNB voltage off\n");
 #if defined(IPBOX9900)
 			if (_12v_isON == 0)
 			{
@@ -115,15 +119,17 @@ u16 lnbh221_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t 
 #else
 			writereg_lnb_supply(state, state->lnb[3]);
 #endif
-	        	break;
+			break;
 		}
-		case SEC_VOLTAGE_13: //vertical
+		case SEC_VOLTAGE_13:  // vertical
 		{
+			dprintk(10, "Set LNB voltage vertical\n");
 			writereg_lnb_supply(state, state->lnb[4]);
 			break;
 		}
-		case SEC_VOLTAGE_18: //horizontal
+		case SEC_VOLTAGE_18:  // horizontal
 		{
+			dprintk(10, "Set LNB voltage horizontal\n");
 			writereg_lnb_supply(state, state->lnb[5]);
 			break;
 		}
@@ -132,7 +138,7 @@ u16 lnbh221_set_voltage(void *_state, struct dvb_frontend *fe, fe_sec_voltage_t 
 			return -EINVAL;
 		}
 	}
-	return ret;
+	return 0;
 }
 
 void *lnbh221_attach(u32 *lnb, struct equipment_s *equipment)
@@ -142,7 +148,7 @@ void *lnbh221_attach(u32 *lnb, struct equipment_s *equipment)
 	memcpy(state->lnb, lnb, sizeof(state->lnb));
 	equipment->lnb_set_voltage = lnbh221_set_voltage;
 	state->i2c = i2c_get_adapter(lnb[0]);
-	printk("i2c adapter = %p\n", state->i2c);
+	dprintk(10, "i2c adapter = %p\n", state->i2c);
 	return state;
 }
 EXPORT_SYMBOL(lnbh221_attach);
@@ -153,13 +159,13 @@ EXPORT_SYMBOL(lnbh221_attach);
 
 int __init lnbh221_init(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	return 0;
 }
 
 static void lnbh221_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);

@@ -53,11 +53,10 @@
 
 extern int bbgain;
 extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[stv090x] "
-
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
 
 struct mutex demod_lock;
 

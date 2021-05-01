@@ -38,7 +38,7 @@ enum stv090x_demodulator
 
 enum stv090x_device
 {
-	STV0903	=  0,
+	STV0903 = 0,
 	STV0900,
 	STX7111,
 	STXH205
@@ -52,8 +52,8 @@ enum stv090x_mode
 
 enum stv090x_tsmode
 {
-	STV090x_TSMODE_NOTSET = 0,
-	STV090x_TSMODE_SERIAL_PUNCTURED	= 1,
+	STV090x_TSMODE_NOTSET           = 0,
+	STV090x_TSMODE_SERIAL_PUNCTURED = 1,
 	STV090x_TSMODE_SERIAL_CONTINUOUS,
 	STV090x_TSMODE_PARALLEL_PUNCTURED,
 	STV090x_TSMODE_DVBCI
@@ -105,11 +105,11 @@ struct stv090x_config
 	u32 ts1_clk;
 	u32 ts2_clk;
 
-	enum stv090x_i2crpt		repeater_level;
+	enum stv090x_i2crpt repeater_level;
 
-	u8   tuner_bbgain; /* default: 10db */
-	enum stv090x_adc_range adc1_range; /* default: 2Vpp */
-	enum stv090x_adc_range adc2_range; /* default: 2Vpp */
+	u8   tuner_bbgain;  /* default: 10db */
+	enum stv090x_adc_range adc1_range;  /* default: 2Vpp */
+	enum stv090x_adc_range adc2_range;  /* default: 2Vpp */
 	bool diseqc_envelope_mode;
 
 	int (*tuner_init)(struct dvb_frontend *fe);
@@ -130,4 +130,4 @@ extern struct dvb_frontend *stv090x_attach(const struct stv090x_config *config,
 					   enum stv090x_demodulator demod,
 					   enum stv090x_tuner tuner);
 
-#endif /* __STV090x_H */
+#endif // __STV090x_H

@@ -43,7 +43,12 @@
 #include "tuner.h"
 #include "lnb.h"
 
-short paramDebug = 0;
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[core] "
+
 int bbgain = -1;
 
 /* saved platform config */

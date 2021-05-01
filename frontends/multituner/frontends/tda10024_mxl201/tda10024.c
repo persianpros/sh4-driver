@@ -42,12 +42,11 @@
 #include "tda10024.h"
 #include "socket.h"
 
-short paramDebug = 201;
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[tda10024] "
-
-#define dprintk(level, x...) do { \
-if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-} while (0)
 
 extern int mxl201_attach(struct dvb_frontend *fe, struct mxl201_private_data_s *mxl201, struct i2c_adapter *i2c, u8 i2c_address);
 
@@ -97,8 +96,8 @@ struct tda10024_state
 /* ****************************************** */
 
 static u8 tda10024_init_tab[] =
-{ 
-	0x2A,0x0F, 0xFF,0x64, 0x28,0x0B, 0x29,0x80, 
+{
+	0x2A,0x0F, 0xFF,0x64, 0x28,0x0B, 0x29,0x80,
 	0x00,0x33, 0xFF,0x64, 0x01,0x30, 0x02,0x9B,
 	0x03,0x1A, 0x04,0x52, 0x05,0x26, 0x06,0x77,
 	0x07,0x1A, 0x08,0x23, 0x09,0x6C, 0x0A,0x00,
@@ -121,24 +120,24 @@ static u8 tda10024_init_tab[] =
 };
 
 static u8 tda10024_gate_on[] =
-{ 
-	0x0F,0xC0, 0x0F,0xC0, 0xFF,0xFF 
+{
+	0x0F,0xC0, 0x0F,0xC0, 0xFF,0xFF
 };
 
 static u8 tda10024_gate_off[] =
-{ 
-	0x0F,0x40, 0xFF,0xFF 
-}; 
+{
+	0x0F,0x40, 0xFF,0xFF
+};
 
 static u8 tda10024_ucb_clear[] =
-{ 
-	0x10,0x18, 0x10,0x38, 0xFF,0xFF 
-}; 
+{
+	0x10,0x18, 0x10,0x38, 0xFF,0xFF
+};
 
 static u8 tda10024_power_d0[] =
 {
 	0xFF,0xFF
-}; 
+};
 
 static u8 tda10024_ts_off[] =
 {
@@ -156,39 +155,39 @@ static u8 tda10024_ts_ser[] =
 };
 
 static u8 tda10024_qam256_dvbc_ac[] =
-{ 
+{
 	0x04,0x52, 0x05,0x26, 0x08,0x23, 0x09,0x6C,
-	0x1C,0xB0, 0xB4,0x5C, 0xB6,0x3C, 0x00,0x32, 
-	0x00,0x33, 0xFF,0xFF 
-}; 
+	0x1C,0xB0, 0xB4,0x5C, 0xB6,0x3C, 0x00,0x32,
+	0x00,0x33, 0xFF,0xFF
+};
 
 static u8 tda10024_qam128_dvbc_ac[] =
-{ 
+{
 	0x04,0x52, 0x05,0x36, 0x08,0x34, 0x09,0x7E,
-	0x1C,0xB0, 0xB4,0x70, 0xB6,0x4C, 0x00,0x2E, 
-	0x00,0x2F, 0xFF,0xFF 
-}; 
+	0x1C,0xB0, 0xB4,0x70, 0xB6,0x4C, 0x00,0x2E,
+	0x00,0x2F, 0xFF,0xFF
+};
 
 static u8 tda10024_qam64_dvbc_ac[] =
-{ 
+{
 	0x04,0x52, 0x05,0x46, 0x08,0x43, 0x09,0x6A,
-	0xB4,0x6A, 0xB6,0x44, 0x00,0x2C, 0x00,0x2B, 
-	0xFF,0xFF 
-}; 
+	0xB4,0x6A, 0xB6,0x44, 0x00,0x2C, 0x00,0x2B,
+	0xFF,0xFF
+};
 
 static u8 tda10024_qam32_dvbc_ac[] =
-{ 
+{
 	0x04,0x52, 0x05,0x64, 0x08,0x74, 0x09,0x96,
 	0x1C,0xB0, 0xB4,0x8C, 0xB6,0x57, 0x00,0x27,
-	0x00,0x26, 0x00,0x27, 0xFF,0xFF 
+	0x00,0x26, 0x00,0x27, 0xFF,0xFF
 };
 
 static u8 tda10024_qam16_dvbc_ac[] =
-{ 
+{
 	0x04,0x52, 0x05,0x87, 0x08,0xA2, 0x09,0x91,
-	0x1C,0xB0, 0xB4,0x8C, 0xB6,0x57, 0x00,0x22, 
-	0x00,0x23, 0xFF,0xFF 
-}; 
+	0x1C,0xB0, 0xB4,0x8C, 0xB6,0x57, 0x00,0x22,
+	0x00,0x23, 0xFF,0xFF
+};
 
 static u8 tda10024_sr_7000[] =
 {
@@ -209,7 +208,7 @@ static u8 tda10024_sr_6900[] =
 	0x03,0x1A, 0x0A,0x99, 0x0B,0x99, 0x0C,0x1B,
 	0x0D,0x94, 0x0E,0xB2, 0x37,0x02, 0x38,0xBC,
 	0x3D,0x02, 0xFF,0xFF
-}; 
+};
 
 static u8 tda10024_sr_6875[] =
 {
@@ -236,8 +235,8 @@ static u8 tda10024_sr_5274[] =
 {
 	0x03,0x1A, 0x0A,0x93, 0x0B,0x18, 0x0C,0x15,
 	0x0D,0xC2, 0x0E,0xB2, 0x37,0x02, 0x38,0xBC,
-	0x3D,0x02, 0xFF,0xFF 
-}; 
+	0x3D,0x02, 0xFF,0xFF
+};
 
 static u8 tda10024_sr_5217[] =
 {
@@ -250,14 +249,14 @@ static u8 tda10024_sr_5200[] =
 {
 	0x03,0x1A, 0x0A,0xCC, 0x0B,0xCC, 0x0C,0x14,
 	0x0D,0xC5, 0x0E,0xB2, 0x37,0x02, 0x38,0xBC,
-	0x3D,0x82, 0xFF,0xFF 
+	0x3D,0x82, 0xFF,0xFF
 };
 
 static u8 tda10024_sr_5361[] =
 {
 	0x03,0x1A, 0x0A,0xA9, 0x0B,0x71, 0x0C,0x15,
 	0x0D,0xBF, 0x0E,0xB2, 0x37,0x02, 0x38,0xBC,
-	0x3D,0x02, 0xFF,0xFF 
+	0x3D,0x02, 0xFF,0xFF
 };
 
 static u8 tda10024_sr_5057[] =
@@ -331,7 +330,7 @@ static int tda10024_lookup_snr(s32 val, s32 table[][2], u32 size)
 {
 	u32  ret = 0, i;
 
-	dprintk(10, "%s: val %d\n", __func__, val);
+	dprintk(100, "%s > val %d\n", __func__, val);
 
 	size= (size / (sizeof(u32) << 1)) - 1;
 
@@ -341,9 +340,9 @@ static int tda10024_lookup_snr(s32 val, s32 table[][2], u32 size)
 		{
 			if (TDA10024_INRANGE(table[i+1][0], val, table[i][0]) )
 			{
-				ret = table[i + 1][1] + 
+				ret = table[i + 1][1] +
 					  (table[i][1] - table[i + 1][1]) *
-					  (val - table[i+1][0]) / 
+					  (val - table[i+1][0]) /
 					  (table[i][0] - table[i+1][0]);
 				break;
 			}
@@ -353,24 +352,24 @@ static int tda10024_lookup_snr(s32 val, s32 table[][2], u32 size)
 	{
 		ret = (val > table[0][0]) ? table[0][1] : table[size][1];
 	}
-	dprintk(10, "%s: < ret %d\n", __func__, ret);
+	dprintk(100, "%s < ret = %d\n", __func__, ret);
 	return ret;
 }
 
 /* ********************* i2c *********************** */
 
 static int tda10024_i2c_write(struct tda10024_state *state, u32 index, u32 num, u8 *buf)
-{ 
-	int            res = 0, i; 
-	u8             bytes[256]; 
+{
+	int            res = 0, i;
+	u8             bytes[256];
 	struct i2c_msg msg[2];
- 
-	bytes[0] = (u8)index; 
+
+	bytes[0] = (u8)index;
 
 	for (i = 0; i < num; i++)
 	{
 		bytes[i + 1] = buf[i];
-	} 
+	}
 	{
 		u8 dstr[1024];
 
@@ -379,7 +378,7 @@ static int tda10024_i2c_write(struct tda10024_state *state, u32 index, u32 num, 
 		{
 			sprintf(dstr, "%s 0x%02x", dstr, bytes[i]);
 		}
-		dprintk(200, "%s(): n: %u b: %s\n", __func__, num + 1, dstr);
+		dprintk(200, "%s n: %u b: %s\n", __func__, num + 1, dstr);
 	}
 	/* write */
 	msg[0].addr  = state->i2c_address;
@@ -389,11 +388,11 @@ static int tda10024_i2c_write(struct tda10024_state *state, u32 index, u32 num, 
 
 	if ((res = i2c_transfer(state->i2c, msg, 1)) != 1)
 	{
-		printk("%s: 2. error on i2c_transfer 0x%02x %d (%d)\n", __func__, index, num, res);
+		dprintk(1, "%s: 2. error on i2c_transfer 0x%02x %d (%d)\n", __func__, index, num, res);
 		return res;
 	}
-	return 0;  
-} 
+	return 0;
+}
 
 static u8 tda10024_i2c_read(struct tda10024_state *state, u32 index, u32 num, u8* buf)
 {
@@ -417,7 +416,7 @@ static u8 tda10024_i2c_read(struct tda10024_state *state, u32 index, u32 num, u8
 
 	if (( ret = i2c_transfer(state->i2c, msg, 2)) != 2)
 	{
-		printk("%s: 2. error on i2c_transfer (%d)\n", __func__, ret);
+		dprintk(1, "%s: 2. error on i2c_transfer (%d)\n", __func__, ret);
 		return ret;
 	}
 	{
@@ -429,7 +428,7 @@ static u8 tda10024_i2c_read(struct tda10024_state *state, u32 index, u32 num, u8
 		{
 			sprintf(dstr, "%s 0x%02x", dstr, buf[i]);
 		}
-		dprintk(200, "%s(): n: %u r: 0x%02x b: %s\n", __func__, num, index, dstr);
+		dprintk(200, "%s: n: %u r: 0x%02x b: %s\n", __func__, num, index, dstr);
 	}
 	return 0;
 }
@@ -451,7 +450,7 @@ static int tda10024_i2c_write_bulk(struct tda10024_state *state, u8 *bytes)
  * not sure what's the sense of this...
  */
 
-	dprintk(10, "%s: >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	for ( ; ; bytes += 2)
 	{
@@ -465,7 +464,7 @@ static int tda10024_i2c_write_bulk(struct tda10024_state *state, u8 *bytes)
 				res |= tda10024_i2c_write(state, a , r, buf);
 				if (res != 0)
 				{
-					printk("%s: writing data failed (%d)\n", __func__, res);
+					dprintk(1, "%s: writing data failed (%d)\n", __func__, res);
 					return -1;
 				}
 			}
@@ -495,7 +494,7 @@ static int tda10024_i2c_write_bulk(struct tda10024_state *state, u8 *bytes)
 			}
 		}
 	}
-	dprintk(10, "%s: < res %d\n", __func__, res);
+	dprintk(100, "%s < res %d\n", __func__, res);
 	return res;
 }
 
@@ -504,9 +503,9 @@ static int tda10024_gate_ctrl(struct dvb_frontend *fe, int enable)
 	struct tda10024_state *state = fe->demodulator_priv;
 	int res = 0;
 
-	dprintk(40, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	res = tda10024_i2c_write_bulk(state , enable ? tda10024_gate_on : tda10024_gate_off);
-	dprintk(40, "%s < %d\n", __func__, res);
+	dprintk(100, "%s < %d\n", __func__, res);
 	return res;
 }
 /* ********************* i2c end *********************** */
@@ -515,7 +514,7 @@ static int tda10024_set_ts_out(struct tda10024_state* state, u32 ts_out)
 {
 	int res = 0;
 
-	dprintk(10, "%s: >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	switch (ts_out)
 	{
@@ -536,12 +535,12 @@ static int tda10024_set_ts_out(struct tda10024_state* state, u32 ts_out)
 		}
 		default:
 		{
-			printk("%s: wrong paramter %d\n", __func__, ts_out);
+			dprintk(1, "%s: wrong parameter %d\n", __func__, ts_out);
 			res = -1;
 			break;
 		}
 	}
-	dprintk(10, "%s: < res %d\n", __func__, res);
+	dprintk(100, "%s < res = %d\n", __func__, res);
 	return res;
 }
 
@@ -558,8 +557,8 @@ static int tda10024_read_status(struct dvb_frontend *fe, fe_status_t *status)
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
-		return res;        
+		dprintk(1, "%s: Error reading data (%d)\n", __func__, res);
+		return res;
 	}
 
 	if ((bytes[1] < state->config->agc_th))
@@ -577,9 +576,9 @@ static int tda10024_read_status(struct dvb_frontend *fe, fe_status_t *status)
 	if (bytes[0] & 0x8)
 	{
 		*status |= FE_HAS_LOCK;
-		dprintk(40, "%s: FE_HAS_LOCK\n", __func__);
+		dprintk(20, "%s: FE_HAS_LOCK\n", __func__);
 	}
-	dprintk(100, "%s: < res %d, status %d\n", __func__, res, *status);
+	dprintk(100, "%s < res = %d, status = %d\n", __func__, res, *status);
 	return res;
 }
 
@@ -591,16 +590,16 @@ static int tda10024_read_ber(struct dvb_frontend *fe, u32* ber)
 
 	*ber = 0;
 
-	res |= tda10024_i2c_read(state , 0x14, 3, &bytes[0]); 
+	res |= tda10024_i2c_read(state , 0x14, 3, &bytes[0]);
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
-		return res;        
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
+		return res;
 	}
 	*ber = ((bytes[0] | bytes[1] << 8 | bytes[2] << 16) * state->ber_dep);
 
-	dprintk(40, "%s: < res %d ber %d\n", __func__, res, *ber);
+	dprintk(40, "%s: < res = %d ber = %d\n", __func__, res, *ber);
 	return res;
 }
 
@@ -616,14 +615,14 @@ static int tda10024_read_signal_strength(struct dvb_frontend *fe, u16 *signal_st
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
-		return res;        
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
+		return res;
 	}
 	if (byte > 0)
 	{
 		*signal_strength = (u16) (0xFFFF - ((byte << 8) | byte));
 	}
-	dprintk(40, "%s: < res %d, singnal_strength %d\n", __func__, res, *signal_strength);
+	dprintk(40, "%s: < res = %d, singnal_strength = %d\n", __func__, res, *signal_strength);
 	return res;
 }
 
@@ -633,14 +632,14 @@ static int tda10024_read_snr(struct dvb_frontend *fe, u16 *snr)
 	u8  bytes[1];
 	int res = 0;
 
-	*snr=0;
+	*snr = 0;
 
 	res |= tda10024_i2c_read(state , 0x18, 1, &bytes[0]);
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
-		return res;        
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
+		return res;
 	}
 
 	if (state->mod == QAM_16)
@@ -680,8 +679,8 @@ static int tda10024_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
-		return res;        
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
+		return res;
 	}
 	state->ucb += ucb = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
 
@@ -693,11 +692,11 @@ static int tda10024_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 
 		if (res != 0)
 		{
-			printk("%s: error reading data (%d)\n", __func__, res);
-			return res;        
+			dprintk(1, "%s: error reading data (%d)\n", __func__, res);
+			return res;
 		}
 	}
-	dprintk(40, "%s: < res %d, ucb %d\n", __func__, res, *ucblocks);
+	dprintk(40, "%s: < res = %d, ucb = %d\n", __func__, res, *ucblocks);
 	return res;
 }
 
@@ -705,7 +704,7 @@ static void tda10024_release(struct dvb_frontend *fe)
 {
 	struct tda10024_state *state = fe->demodulator_priv;
 
-	dprintk(10, "%s()\n",__func__);
+	dprintk(100, "%s >\n",__func__);
 	kfree(state);
 }
 
@@ -715,13 +714,13 @@ struct dvb_frontend* tda10024_attach(struct tda10024_config *config, struct mxl2
 {
 	struct tda10024_state* state = NULL;
 
-	dprintk(40, "%s: >\n", __func__);
+	dprintk(40, "%s >\n", __func__);
 
 	/* Allocate memory for the internal state */
 	state = kmalloc(sizeof(struct tda10024_state), GFP_KERNEL);
 	if (state == NULL)
 	{
-		printk("Unable to kmalloc\n");
+		dprintk(1, "%s Unable to kmalloc\n", __func__);
 		return NULL;
 	}
 	/* Setup the state used everywhere */
@@ -738,7 +737,7 @@ struct dvb_frontend* tda10024_attach(struct tda10024_config *config, struct mxl2
 
 	mxl201_attach(&state->frontend, mxl201, i2c, config->tuner_address);
 
-	dprintk(40, "%s: <\n", __func__);
+	dprintk(40, "%s <\n", __func__);
 	return &state->frontend;
 }
 
@@ -748,11 +747,11 @@ static int tda10024_init(struct dvb_frontend* fe)
 	int res = 0;
 	u8  byte;
 
-	dprintk(40, "%s: >\n", __func__);
+	dprintk(40, "%s >\n", __func__);
 
 	if (state->initDone == 1)
 	{
-		 printk("%s: init already done. ignoring ... <\n", __func__);
+		 dprintk(1, "%s: init already done. ignoring ... <\n", __func__);
 		 return 0;
 	}
 	res |= tda10024_i2c_write_bulk(state, tda10024_power_d0);
@@ -760,7 +759,7 @@ static int tda10024_init(struct dvb_frontend* fe)
 	res |= tda10024_i2c_write_bulk(state, tda10024_ucb_clear);
 
 	state->mod = QAM_64;
-	res |= tda10024_i2c_read(state ,0x10 , 1, &byte);
+	res |= tda10024_i2c_read(state, 0x10, 1, &byte);
 
 	switch (byte & 0xC0)
 	{
@@ -789,24 +788,24 @@ static int tda10024_init(struct dvb_frontend* fe)
 
 	if (res != 0)
 	{
-		printk("%s: error reading data (%d)\n", __func__, res);
-		return res;        
+		dprintk(1, "%s: error reading data (%d)\n", __func__, res);
+		return res;
 	}
 	state->initDone = 1;
-	dprintk(40, "%s: < res %d\n", __func__, res);
+	dprintk(40, "%s < res = %d\n", __func__, res);
 	return res;
 }
 
 static int tda10024_sleep(struct dvb_frontend *fe)
 {
-	dprintk(10, "%s()\n",__func__);
+	dprintk(100, "%s <>\n",__func__);
 	return 0;
 }
 
 #if DVB_API_VERSION >= 5
 static int tda10024_set_property(struct dvb_frontend *fe, struct dtv_property *tvp)
 {
-	dprintk(20, "%s()\n", __func__);
+	dprintk(100, "%s <>\n", __func__);
 	return 0;
 }
 
@@ -828,7 +827,7 @@ static int tda10024_get_property(struct dvb_frontend *fe, struct dtv_property *t
 			}
 		}
 	}
-	dprintk(20, "%s()\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 #else
@@ -836,11 +835,15 @@ static struct dvbfe_info dvbc_info =
 {
 	.name = "NXP TDA10024 DVB-C",
 	.delivery = DVBFE_DELSYS_DVBC,
-	.delsys = {
-		.dvbc.modulation = DVBFE_MOD_QAM16 | DVBFE_MOD_QAM32 | DVBFE_MOD_QAM64
-		                 | DVBFE_MOD_QAM128 | DVBFE_MOD_QAM256 | DVBFE_MOD_QAMAUTO
+	.delsys =
+	{
+		.dvbc.modulation = DVBFE_MOD_QAM16
+		                 | DVBFE_MOD_QAM32
+		                 | DVBFE_MOD_QAM64
+		                 | DVBFE_MOD_QAM128
+		                 | DVBFE_MOD_QAM256
+		                 | DVBFE_MOD_QAMAUTO
 	},
-
 	.frequency_min = 47000000,
 	.frequency_max = 897000000,
 	.frequency_step = 62500,
@@ -851,13 +854,13 @@ static struct dvbfe_info dvbc_info =
 
 static int tda10024_get_info (struct dvb_frontend *fe, struct dvbfe_info *fe_info)
 {
-	dprintk (10, "%s\n", __FUNCTION__);
+	dprintk (100, "%s >\n", __func__);
 
 	switch (fe_info->delivery)
 	{
 		case DVBFE_DELSYS_DVBC:
 		{
-			dprintk (10, "%s(DVBC)\n", __FUNCTION__);
+			dprintk (10, "%s (DVBC)\n", __func__);
 			memcpy (fe_info, &dvbc_info, sizeof (dvbc_info));
 			break;
 		}
@@ -870,47 +873,47 @@ static int tda10024_get_info (struct dvb_frontend *fe, struct dvbfe_info *fe_inf
 }
 #endif
 
-static void tda10024_sr_calc(u32 sr, u8 *bulk) 
-{ 
+static void tda10024_sr_calc(u32 sr, u8 *bulk)
+{
 	u32 uBDR, uBDRI, uNDec, uSFil;
- 
-	dprintk(40, "%s: >sr %d\n", __func__, sr);
 
-	if (sr < 4000000) 
-	{ 
-		uNDec = 1; 
-		uSFil = 0; 
-	} 
-	else if (sr < 5203000) 
-	{ 
-		uNDec = 0; 
-		uSFil = 0x82; 
-	} 
-	else 
-	{ 
-		uNDec = 0; 
-		uSFil = 0; 
+	dprintk(40, "%s: > sr = %d\n", __func__, sr);
+
+	if (sr < 4000000)
+	{
+		uNDec = 1;
+		uSFil = 0;
 	}
-	bulk[0] = 0x3D; bulk[1] = (u8)(uSFil ? 0x82 : 0x02); 
+	else if (sr < 5203000)
+	{
+		uNDec = 0;
+		uSFil = 0x82;
+	}
+	else
+	{
+		uNDec = 0;
+		uSFil = 0;
+	}
+	bulk[0] = 0x3D; bulk[1] = (u8)(uSFil ? 0x82 : 0x02);
 	bulk[2] = 0x03; bulk[3] = (u8)((uNDec<<6) | 0xA);
 
-	uBDRI   = 64000000*16; 
-	uBDRI   >>= uNDec; 
-	uBDRI   += sr/2; 
-	uBDRI   /= sr; 
+	uBDRI   = 64000000*16;
+	uBDRI   >>= uNDec;
+	uBDRI   += sr/2;
+	uBDRI   /= sr;
 	uBDRI = (uBDRI > 255) ? 255 : uBDRI;
 
-	/*uBDR = _mul64div32(1<<(24+uNDec), sr, 64000000);*/ 
+	/*uBDR = _mul64div32(1<<(24+uNDec), sr, 64000000);*/
 	uBDR = (68719 * ( sr >> 10)) >> 8;
- 
-	bulk[4] = 0x0A; bulk[5] = (u8)(uBDR); 
-	bulk[6] = 0x0B; bulk[7] = (u8)(uBDR >> 8); 
-	bulk[8] = 0x0C; bulk[9] = (u8)(uBDR >> 16); 
-	bulk[10] = 0x0D; bulk[11] = (u8)uBDRI; 
-	bulk[12] = bulk[13] = 0xFF; 
 
-	dprintk(40, "%s: <\n", __func__);
-} 
+	bulk[4] = 0x0A; bulk[5] = (u8)(uBDR);
+	bulk[6] = 0x0B; bulk[7] = (u8)(uBDR >> 8);
+	bulk[8] = 0x0C; bulk[9] = (u8)(uBDR >> 16);
+	bulk[10] = 0x0D; bulk[11] = (u8)uBDRI;
+	bulk[12] = bulk[13] = 0xFF;
+
+	dprintk(40, "%s <\n", __func__);
+}
 
 #define TDA10024_ABOUT(x,y) ((y-1000<(x))&((x)<y+1000))
 static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_parameters *p)
@@ -926,10 +929,10 @@ static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_pa
 
 #if DVB_API_VERSION >= 5
 	symbol_rate = c->symbol_rate;
-	printk("%s: symbol_rate %d, modulation %d\n", __func__, symbol_rate, c->modulation);
+	dprintk(10, "%s: symbol_rate = %d, modulation = %d\n", __func__, symbol_rate, c->modulation);
 #else
 	symbol_rate = p->u.qam.symbol_rate;
-	printk("%s: symbol_rate %d, modulation %d\n", __func__, symbol_rate, p->u.qam.modulation);
+	dprintk(10, "%s: symbol_rate = %d, modulation = %d\n", __func__, symbol_rate, p->u.qam.modulation);
 #endif
 
 	if (state->power)
@@ -939,86 +942,86 @@ static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_pa
 	}
 	if (res != 0)
 	{
-		printk("%s: oops, setting power failed %d\n", __func__, res);
+		dprintk(1, "%s: Oops, setting power failed %d\n", __func__, res);
 	}
 	res = fe->ops.tuner_ops.set_params(fe, p);
 
-	if (res != 0) 
+	if (res != 0)
 	{
-		printk("%s: Tuner set failed (%d)\n", __func__, res);
+		dprintk(1, "%s: Tuner set failed (%d)\n", __func__, res);
 		return res;
 	}
 
-	if (fe->ops.i2c_gate_ctrl)  
+	if (fe->ops.i2c_gate_ctrl)
 	{
 		res |= fe->ops.i2c_gate_ctrl(fe, 0);
 	}
 	if (res == 0)
 	{
 		if (fe->ops.info.symbol_rate_min > symbol_rate
-		||  symbol_rate > fe->ops.info.symbol_rate_max) 
+		||  symbol_rate > fe->ops.info.symbol_rate_max)
 		{
-			printk("%s: symbol rate out of range\n", __func__);
+			dprintk(1, "%s: Symbol rate out of range\n", __func__);
 			res = -1;
 		}
-		else if (TDA10024_ABOUT(symbol_rate,7000000)) 
+		else if (TDA10024_ABOUT(symbol_rate,7000000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_7000);
 		}
-		else  if (TDA10024_ABOUT(symbol_rate,6952000)) 
+		else  if (TDA10024_ABOUT(symbol_rate,6952000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_6952);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,6900000)) 
+		else if (TDA10024_ABOUT(symbol_rate,6900000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_6900);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,6875000)) 
+		else if (TDA10024_ABOUT(symbol_rate,6875000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_6875);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,6125000)) 
+		else if (TDA10024_ABOUT(symbol_rate,6125000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_6125);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,6000000)) 
+		else if (TDA10024_ABOUT(symbol_rate,6000000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_6000);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,5361000)) 
+		else if (TDA10024_ABOUT(symbol_rate,5361000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_5361);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,5274000)) 
+		else if (TDA10024_ABOUT(symbol_rate,5274000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_5274);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,5217000)) 
+		else if (TDA10024_ABOUT(symbol_rate,5217000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_5217);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,5200000)) 
+		else if (TDA10024_ABOUT(symbol_rate,5200000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_5200);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,5057000)) 
+		else if (TDA10024_ABOUT(symbol_rate,5057000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_5057);
 		}
-		else if (TDA10024_ABOUT(symbol_rate,4000000)) 
+		else if (TDA10024_ABOUT(symbol_rate, 4000000))
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_sr_4000);
 		}
 		else
 		{
-			 printk("%s: no about value ... calc ...\n", __func__);
+			 dprintk(1, "%s: no about value ... calc ...\n", __func__);
 			 tda10024_sr_calc(symbol_rate, bytes);
 			 res |= tda10024_i2c_write_bulk(state, bytes);
 		}
 	}
 	else
 	{
-		printk("%s: 1. oops an error...\n", __func__);
+		dprintk(1, "%s: 1. Oops an error...\n", __func__);
 	}
 	if (res == 0)
 	{
@@ -1031,7 +1034,7 @@ static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_pa
 #endif
 		{
 /* fixme: not implemented !!! */
-			printk("%s: qam auto currently not implemented\n", __func__);
+			dprintk(1, "%s: qam auto currently not implemented\n", __func__);
 		}
 		else
 		{
@@ -1041,15 +1044,15 @@ static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_pa
 			state->mod = p->u.qam.modulation;
 #endif
 		}
-		if (state->mod == QAM_256) 
+		if (state->mod == QAM_256)
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_qam256_dvbc_ac);
 		}
-		else if (state->mod == QAM_128) 
+		else if (state->mod == QAM_128)
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_qam128_dvbc_ac);
 		}
-		else if (state->mod == QAM_64) 
+		else if (state->mod == QAM_64)
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_qam64_dvbc_ac);
 		}
@@ -1057,19 +1060,19 @@ static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_pa
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_qam32_dvbc_ac);
 		}
-		else if (state->mod == QAM_16) 
+		else if (state->mod == QAM_16)
 		{
 			res |= tda10024_i2c_write_bulk(state, tda10024_qam16_dvbc_ac);
 		}
 		else
 		{
-			printk("%s: wrong qam delivered\n", __func__);
+			dprintk(1, "%s: wrong qam delivered\n", __func__);
 			res = -1;
 		}
 	}
 	else
 	{
-		printk("%s: 2. oops an error ...\n", __func__);
+		dprintk(1, "%s: 2. oops an error ...\n", __func__);
 	}
 	if (res == 0)
 	{
@@ -1078,9 +1081,9 @@ static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_pa
 
 	if (res != 0)
 	{
-		printk("%s: error clearing lock status\n", __func__);
+		dprintk(1, "%s: error clearing lock status\n", __func__);
 	}
- 
+
 	cnt = 10; /* FIXME think on this */
 	do
 	{
@@ -1097,27 +1100,28 @@ static int tda10024_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_pa
 		}
 		else
 		{
-			printk("%s: error reading status %d\n", __func__, res);
+			dprintk(1, "%s: error reading status %d\n", __func__, res);
 			break;
 		}
 		msleep(20); /* fixme: think on this */
-		printk("%s: waiting for lock %d ...\n", __func__, cnt);
+		dprintk(20, "%s: Waiting for lock %d ...\n", __func__, cnt);
 	} while (--cnt);
 
-	if (cnt == 0) 
+	if (cnt == 0)
 	{
-		printk("%s(%d): timeout tuning!\n", __func__, res);
+		dprintk(1, "%s(%d): timeout tuning!\n", __func__, res);
 	}
 	else
 	{
-		dprintk(1, "%s(%d,%d): Tuner successfully set!\n", __func__, res, cnt);
+		dprintk(20, "%s(%d,%d): Tuner successfully set!\n", __func__, res, cnt);
 	}
 	return res;
 }
 
 static struct dvb_frontend_ops tda10024_ops =
 {
-	.info = {
+	.info =
+	{
 		.name = "TDA10024 DVB-C",
 		.type = FE_QAM,
 		.frequency_stepsize = 62500,
@@ -1126,15 +1130,15 @@ static struct dvb_frontend_ops tda10024_ops =
 		.symbol_rate_min = 3000000,
 		.symbol_rate_max = 7000000,
 
-		.caps = 
-			FE_CAN_QAM_16 | FE_CAN_QAM_32 | FE_CAN_QAM_64 |
-			FE_CAN_QAM_128 | FE_CAN_QAM_256 
-#ifdef WE_CAN_QAM_AUTO            
-			|
-			FE_CAN_QAM_AUTO
+		.caps = FE_CAN_QAM_16
+		      | FE_CAN_QAM_32
+		      | FE_CAN_QAM_64
+		      | FE_CAN_QAM_128
+		      | FE_CAN_QAM_256
+#ifdef WE_CAN_QAM_AUTO
+		      | FE_CAN_QAM_AUTO
 #endif
 	},
-
 	.release              = tda10024_release,
 
 	.init                 = tda10024_init,
@@ -1161,11 +1165,11 @@ static void tda10024_register_frontend(struct dvb_adapter *dvb_adap, struct sock
 	struct dvb_frontend* frontend;
 	struct tda10024_config* cfg;
 
-	printk("%s\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	if (numSockets + 1 == cMaxSockets)
 	{
-		printk("Max number sockets reached ... cannot register\n");
+		dprintk(1, "%s: Max number sockets reached ... cannot register\n");
 		return;
 	}
 	socketList[numSockets] = *socket;
@@ -1174,13 +1178,13 @@ static void tda10024_register_frontend(struct dvb_adapter *dvb_adap, struct sock
 
 	if (cfg == NULL)
 	{
-		printk("tda10024: error malloc\n");
+		dprintk(1, "%s malloc error\n", __func__);
 		return;
 	}
 	cfg->tuner_no = numSockets + 1;
 	cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 
-	printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+	dprintk(20, "%s tuner_enable_pin %p\n", __func__, cfg->tuner_enable_pin);
 	stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
 	stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
 
@@ -1196,14 +1200,14 @@ static void tda10024_register_frontend(struct dvb_adapter *dvb_adap, struct sock
 	cfg->power           = tda10024.power;
 	cfg->agc_th          = tda10024.agc_th;
 
-	printk("%s: ts_out %d %d\n", __func__, cfg->ts_out, tda10024.ts_out);
-	printk("%s: power %d %d\n", __func__, cfg->power, tda10024.power);
+	dprintk(20, "%s: ts_out %d %d\n", __func__, cfg->ts_out, tda10024.ts_out);
+	dprintk(20, "%s: power %d %d\n", __func__, cfg->power, tda10024.power);
 
 	frontend =  tda10024_attach(cfg, &mxl201, i2c_get_adapter(socket->i2c_bus));
 
 	if (frontend == NULL)
 	{
-		printk("tda10024_: tda10024_attach failed\n");
+		dprintk(1, "%s Attching TDA10024 failed\n");
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -1214,7 +1218,7 @@ static void tda10024_register_frontend(struct dvb_adapter *dvb_adap, struct sock
 	}
 	if (dvb_register_frontend (dvb_adap, frontend))
 	{
-		printk ("%s: Frontend registration failed !\n", __FUNCTION__);
+		dprintk (1, "%s: Frontend registration failed !\n", __func__);
 		if (frontend->ops.release)
 		{
 			frontend->ops.release (frontend);
@@ -1228,7 +1232,7 @@ static int tda10024_demod_detect(struct socket_s *socket, struct frontend_s *fro
 {
 	struct stpio_pin *pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 
-	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	dprintk(40, "%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
 	if (pin != NULL)
 	{
@@ -1251,34 +1255,33 @@ static int tda10024_demod_detect(struct socket_s *socket, struct frontend_s *fro
 
 		if (res != 0)
 		{
-			printk("%s: 1. failed to detect demod %d\n", __func__, res);
+			dprintk(1, "%s: 1. failed to detect demod %d\n", __func__, res);
 			stpio_free_pin(pin);
 			return -1;
 		}
 		if (bytes[0] != 0x7D)
 		{
-			printk("%s: 2. failed to detect demod\n", __func__);
+			dprintk(1, "%s: 2. failed to detect demod\n", __func__);
 			stpio_free_pin(pin);
 			return -1;
 		}
-
 	}
 	else
 	{
-		printk("%s: failed to allocate pio pin\n", __func__);
+		dprintk(1, "%s: failed to allocate pio pin\n", __func__);
 		return -1;
 	}
 
 stpio_free_pin(pin);
-	printk("%s <\n", __func__);
+	dprintk(40, "%s <\n", __func__);
 	return 0;
 }
 
 static int tda10024_demod_attach(struct dvb_adapter* adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	tda10024_register_frontend(adapter, socket);
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1292,7 +1295,7 @@ static int tda10024_probe (struct platform_device *pdev)
 	struct frontend_s frontend;
 	struct tda10024_s* data;
 
-	printk("%s >\n", __func__);
+	dprintk(40, "%s >\n", __func__);
 
 	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
 	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
@@ -1301,7 +1304,7 @@ static int tda10024_probe (struct platform_device *pdev)
 	tda10024 = *data->tda10024;
 	mxl201   = *data->mxl201;
 
-	printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
+	dprintk(10, "Found frontend \"%s\" in platform config\n", frontend_cfg->name);
 
 	frontend.demod_detect = tda10024_demod_detect;
 	frontend.demod_attach = tda10024_demod_attach;
@@ -1309,11 +1312,9 @@ static int tda10024_probe (struct platform_device *pdev)
 
 	if (socket_register_frontend(&frontend) < 0)
 	{
-		printk("failed to register frontend\n");
+		dprintk(1, "%s Failed to register frontend\n");
 	}
-
-	printk("%s <\n", __func__);
-
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -1326,7 +1327,8 @@ static struct platform_driver tda10024_driver =
 {
 	.probe = tda10024_probe,
 	.remove = tda10024_remove,
-	.driver	= {
+	.driver	=
+	{
 		.name	= "tda10024",
 		.owner  = THIS_MODULE,
 	},
@@ -1340,15 +1342,15 @@ int __init tda10024_init_module(void)
 {
 	int ret;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	ret = platform_driver_register (&tda10024_driver);
-	printk("%s < %d\n", __func__, ret);
+	dprintk(100, "%s < %d\n", __func__, ret);
 	return ret;
 }
 
 static void tda10024_cleanup_module(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);

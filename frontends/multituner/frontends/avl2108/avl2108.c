@@ -44,11 +44,17 @@
 #include "avl2108_reg.h"
 
 #include "avl2108_platform.h"
-#include "frontend_platform.h"
+
 #include "socket.h"
 
 #include "tuner.h"
 #include "lnb.h"
+
+short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[avl2108] "
 
 #define AVL2108_DEMOD_FW "dvb-fe-avl2108.fw" /*< Demod fw used for locking */
 
@@ -77,13 +83,6 @@
 		Y[1] =(u8)((X) >> 16); \
 		Y[2] =(u8)((X) >> 8); \
 		Y[3] =(u8)((X) & 0xFF); \
-	} while (0)
-
-short paramDebug = 0;
-#define TAGDEBUG "[avl2108] "
-
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
 	} while (0)
 
 #define cError1 (1 << 0)
@@ -145,18 +144,18 @@ struct avl2108_pllconf
 const struct avl2108_pllconf pll_conf[] =
 {
 	/* For all parallel modes and all serial modes below 30M (symbol rate) */
-	{10, 0, 335, 6, 5, 4000, 11200, 16800, 19200},  /*< Reference clock 4M;   --> 112, 168, 192 */
-	{10, 0, 299, 6, 5, 4500, 11250, 16875, 19286},  /*< Reference clock 4.5M; --> 112.5, 168.75, 192.86 */
-	{10, 1, 269, 6, 5, 10000, 11250, 16875, 19286}, /*< Reference clock 10M;  --> 112.5, 168.75, 192.86 */
-	{10, 0, 83, 6, 5, 16000, 11200, 16800, 19200},  /*< Reference clock 16M;  --> 112, 168, 192 */
-	{10, 0, 49, 6, 5, 27000, 11250, 16875, 19286},  /*< Reference clock 27M;  --> 112.5, 168.75, 192.86 */
+	{ 10, 0, 335, 6, 5, 4000, 11200, 16800, 19200 },  /*< Reference clock 4M;   --> 112, 168, 192 */
+	{ 10, 0, 299, 6, 5, 4500, 11250, 16875, 19286 },  /*< Reference clock 4.5M; --> 112.5, 168.75, 192.86 */
+	{ 10, 1, 269, 6, 5, 10000, 11250, 16875, 19286 }, /*< Reference clock 10M;  --> 112.5, 168.75, 192.86 */
+	{ 10, 0, 83, 6, 5, 16000, 11200, 16800, 19200 },  /*< Reference clock 16M;  --> 112, 168, 192 */
+	{ 10, 0, 49, 6, 5, 27000, 11250, 16875, 19286 },  /*< Reference clock 27M;  --> 112.5, 168.75, 192.86 */
 
 	/* for all modes */
-	{10, 0, 335, 6, 4, 4000, 11200, 16800, 22400},  /*< Reference clock 4M;   --> 112, 168, 224 */
-	{10, 0, 299, 6, 4, 4500, 11250, 16875, 22500},  /*< Reference clock 4.5M; --> 112.5, 168.75, 225 */
-	{10, 1, 269, 6, 4, 10000, 11250, 16875, 22500}, /*< Reference clock 10M;  --> 112.5, 168.75, 225 */
-	{10, 0, 83, 6, 4, 16000, 11200, 16800, 22400},  /*< Reference clock 16M;  --> 112, 168, 224 */
-	{10, 0, 49, 6, 4, 27000, 11250, 16875, 22500}   /*< Reference clock 27M;  --> 112.5, 168.75, 225 */
+	{ 10, 0, 335, 6, 4, 4000, 11200, 16800, 22400 },  /*< Reference clock 4M;   --> 112, 168, 224 */
+	{ 10, 0, 299, 6, 4, 4500, 11250, 16875, 22500 },  /*< Reference clock 4.5M; --> 112.5, 168.75, 225 */
+	{ 10, 1, 269, 6, 4, 10000, 11250, 16875, 22500 }, /*< Reference clock 10M;  --> 112.5, 168.75, 225 */
+	{ 10, 0, 83, 6, 4, 16000, 11200, 16800, 22400 },  /*< Reference clock 16M;  --> 112, 168, 224 */
+	{ 10, 0, 49, 6, 4, 27000, 11250, 16875, 22500 }   /*< Reference clock 27M;  --> 112.5, 168.75, 225 */
 };
 
 const unsigned short pll_array_size = sizeof(pll_conf) / sizeof(struct avl2108_pllconf);
@@ -175,25 +174,27 @@ static struct socket_s socketList[cMaxSockets];
 static u16 avl2108_i2c_writereg(struct avl2108_state *state, u8 *data, u16 *size)
 {
 	struct i2c_msg msg =
-	{ .addr = state->config->demod_address,
-	  .flags = 0, .buf = data, .len = *size
+	{
+		.addr = state->config->demod_address,
+		.flags = 0, .buf = data, .len = *size
 	};
 	int err;
 
 	{
 		u8 i;
 		u8 dstr[512];
+
 		dstr[0] = '\0';
 		for (i = 0; i < *size; i++)
 		{
-			sprintf(dstr, "%s 0x%02x", dstr, data[i]);
+			sprintf(dstr, "%s: 0x%02x", dstr, data[i]);
 		}
 		dprintk(200, "%s(): %u b: %s\n", __func__, *size, dstr);
 	}
 
 	if ((err = i2c_transfer(state->i2c, &msg, 1)) != 1)
 	{
-		eprintk("%s(): error: %i, size %d\n", __func__, err, *size);
+		dprintk(1, "%s: Error: %i, size %d\n", __func__, err, *size);
 		return AVL2108_ERROR_I2C; //return -EREMOTEIO;
 	}
 	return AVL2108_OK;
@@ -221,12 +222,12 @@ static u16 avl2108_i2c_readreg(struct avl2108_state *state, u8 *data, u16 *size)
 	}
 	else
 	{
-		eprintk("%s(): Unsupported data size: %d\n", __func__, *size);
+		dprintk(1, "%s: Unsupported data size: %d\n", __func__, *size);
 		return AVL2108_ERROR_I2C;
 	}
 	if ((ret = i2c_transfer(state->i2c, &msg, 1)) != 1)
 	{
-		eprintk("%s(): error: %i\n", __func__, ret);
+		dprintk(1, "%s: Error: %i\n", __func__, ret);
 		return AVL2108_ERROR_I2C; //return -EREMOTEIO;
 	}
 	if (*size == 2)
@@ -477,7 +478,7 @@ static u16 avl2108_i2c_repeater_exec(struct avl2108_state *state, u8 *buf, u8 si
 	{
 		ret = avl2108_i2c_write(state, buf, size);
 	}
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(50, "%s: < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -542,7 +543,8 @@ static u16 avl2108_i2c_repeater_recv(void *_state, u8 *buf, u16 size)
 		}
 		ret = avl2108_i2c_read(state, REG_I2C_RSP, buf, size);
 	}
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(50, "%s: < status = %u\n", __func__, ret);
+// vim:ts=4
 	return ret;
 }
 
@@ -1212,7 +1214,7 @@ static int avl2108_send_diseqc_msg(struct dvb_frontend *fe, struct dvb_diseqc_ma
 	ret = avl2108_diseqc_send_mod_data(fe, d->msg, d->msg_len);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("%s(): Output %u modulation bytes: fail!\n", __func__, d->msg_len);
+		dprintk(1, "%s: Output %u modulation bytes: fail!\n", __func__, d->msg_len);
 	}
 	else
 	{
@@ -1278,7 +1280,7 @@ static int avl2108_diseqc_send_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 	ret = avl2108_diseqc_switch_mode(fe);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("%s(): Tone-burst failed!\n", __func__);
+		dprintk(1, "%s: Tone-burst failed!\n", __func__);
 		return 0;
 	}
 	/* No data in the FIFO */
@@ -1304,7 +1306,7 @@ static int avl2108_diseqc_send_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 	ret |= avl2108_i2c_write32(state, REG_DISEQC_TX_CTRL, x1);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("%s(): Tone-burst failed!\n", __func__);
+		dprintk(1, "%s: Tone-burst failed!\n", __func__);
 		return 0;
 	}
 	else
@@ -1314,7 +1316,7 @@ static int avl2108_diseqc_send_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 	ret = avl2108_diseqc_get_tx_status(fe, &tx_status);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("%s(): Tune-burst sent failed: %d\n", __func__, tx_status.tx_done);
+		dprintk(1, "%s(): Tune-burst sent failed: %d\n", __func__, tx_status.tx_done);
 	}
 	else
 	{
@@ -1334,7 +1336,7 @@ int avl2108_set_tone(struct dvb_frontend *fe, fe_sec_tone_mode_t tone)
 	u16 ret;
 	u32 x1;
 
-	dprintk(10, "%s >", __func__);
+	dprintk(10, "%s: >", __func__);
 
 	if (tone == SEC_TONE_ON)
 	{
@@ -1412,7 +1414,7 @@ static int avl2108_read_status(struct dvb_frontend *fe, fe_status_t *status)
 	if (lock_status != 1)
 	{
 		*status = 0;
-		eprintk("Could not get lock status!\n");
+		dprintk(1, "Could not get lock status!\n");
 	}
 	else
 	{
@@ -1552,7 +1554,7 @@ struct dvb_frontend *avl2108_attach(struct avl2108_config *config, struct i2c_ad
 	state = kmalloc(sizeof(struct avl2108_state), GFP_KERNEL);
 	if (state == NULL)
 	{
-		eprintk("Unable to kmalloc\n");
+		dprintk(1, "%s: Unable to kmalloc\n", __func__);
 		return NULL;
 	}
 
@@ -1567,7 +1569,7 @@ struct dvb_frontend *avl2108_attach(struct avl2108_config *config, struct i2c_ad
 	/* Get version and patch (debug only) number */
 	if (avl2108_get_version(state, &version) != AVL2108_OK)
 	{
-		eprintk("Could not get version");
+		dprintk(1, "%s: Could not get version\n", __func__);
 		kfree(state);
 		return NULL;
 	}
@@ -1635,14 +1637,14 @@ static int avl2108_initfe(struct dvb_frontend *fe)
 	ret = avl2108_setup_pll(state, (const struct avl2108_pllconf *)(pll_conf + state->config->pll_config));
 	if (ret != AVL2108_OK)
 	{
-		eprintk("PLL initialization failed!");
+		dprintk(1, "%s: PLL initialization failed!\n", __func__);
 		return -1;
 	}
 	mdelay(1);
 	ret = avl2108_load_firmware(fe);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("Demod firmware load failed!");
+		dprintk(1, "%s: Demod firmware load failed!\n", __func__);
 		return -1;
 	}
 	/* Wait for the demod to boot */
@@ -1650,13 +1652,13 @@ static int avl2108_initfe(struct dvb_frontend *fe)
 	ret = avl2108_get_demod_status(fe);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("Boot failed!\n");
+		dprintk(1, "%s: Boot failed!\n", __func__);
 		return -1;
 	}
 	ret = avl2108_demod_init(fe);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("Demod Initialization failed!\n");
+		dprintk(1, "%s: Demod Initialization failed!\n", __func__);
 		return -1;
 	}
 	if (state->equipment.tuner_load_fw)
@@ -1664,7 +1666,7 @@ static int avl2108_initfe(struct dvb_frontend *fe)
 		ret = state->equipment.tuner_load_fw(fe);
 		if (ret != AVL2108_OK)
 		{
-			eprintk("Tuner firmware load failed!");
+			dprintk(1, "%s: Tuner firmware load failed!\n", __func__);
 			return -1;
 		}
 	}
@@ -1697,14 +1699,14 @@ static int avl2108_initfe(struct dvb_frontend *fe)
 
 	if (ret != AVL2108_OK)
 	{
-		eprintk("Tuner initialization failed!\n");
+		dprintk(1, "%s: Tuner initialization failed!\n", __func__);
 		return -1;
 	}
 	/* tuner init end */
 	ret = avl2108_diseqc_init(fe);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("Diseqc initialization failed!\n");
+		dprintk(1, "%s: Diseqc initialization failed!\n", __func__);
 		return -1;
 	}
 	dprintk(10, "AVL2108: Demod and tuner successfully initialized!\n");
@@ -1727,7 +1729,7 @@ static int avl2108_sleep(struct dvb_frontend *fe)
 	ret = avl2108_cpu_halt(fe);
 	if (ret != AVL2108_OK)
 	{
-		eprintk("Tuner cpu halt failed!\n");
+		dprintk(1, "%s Tuner cpu halt failed!\n", __func__);
 		return -1;
 	}
 	return 0;
@@ -1936,7 +1938,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 		ret = avl2108_cpu_halt(fe);
 		if (ret != AVL2108_OK)
 		{
-			eprintk("%s: failed to halt cpu %d\n", __func__, cnt);
+			dprintk(1, "%s: failed to halt cpu %d\n", __func__, cnt);
 			msleep(50);
 			continue;
 		}
@@ -1949,7 +1951,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 
 	if (cnt == 0)
 	{
-		eprintk("%s: Tuner cpu halt failed ... resetting demod\n", __func__);
+		dprintk(1, "%s: Tuner cpu halt failed ... resetting demod\n", __func__);
 
 		stpio_set_pin(state->config->tuner_enable_pin, !state->config->tuner_active_lh);
 		stpio_set_pin(state->config->tuner_enable_pin, state->config->tuner_active_lh);
@@ -1966,7 +1968,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 		if (ret != AVL2108_OK)
 		{
 			lockError |= cError8;
-			eprintk("%s: failed to halt cpu after init ... bye bye\n", __func__);
+			dprintk(1, "%s: failed to halt cpu after init ... bye bye\n", __func__);
 			mutex_unlock(&state->lock);
 			return -1;
 		}
@@ -1986,7 +1988,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	if (ret != AVL2108_OK)
 	{
 		lockError |= cError2;
-		eprintk("Tuner set failed!\n");
+		dprintk(1, "%s: Tuner set failed!\n", __func__);
 		mutex_unlock(&state->lock);
 		return -1;
 	}
@@ -2016,13 +2018,13 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 			{
 				msleep(5);  /* Wait 5ms for tuner to lock the channel */
 			}
-			dprintk(10, "%s(): Waiting for tuner lock: %d\n", __func__, cnt);
+			dprintk(10, "%s: Waiting for tuner lock: %d\n", __func__, cnt);
 			continue;
 		}
 		else if (ret != AVL2108_OK)
 		{
 			lockError |= cError3;
-			eprintk("Failed while checking lock status!\n");
+			dprintk(1, "%s: Failed while checking lock status!\n", __func__);
 			mutex_unlock(&state->lock);
 			return -1;
 		}
@@ -2033,14 +2035,14 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	}
 	while (--cnt);
 
-	dprintk(1, "%s(): Tuner successfully set!\n", __func__);
+	dprintk(10, "%s: Tuner successfully set!\n", __func__);
 
 	/* Be sure that we are in demod status, if not, set it */
 	avl2108_get_mode(state, &func_mode);
 	if (func_mode != FUNC_MODE_DEMOD)
 	{
 		lockError |= cError4;
-		dprintk(1, "Functional mode is not set for demodulation, changing it");
+		dprintk(1, "%s: Functional mode is not set for demodulation, changing it\n", __func__);
 		avl2108_set_functional_mode(fe);
 	}
 	/* Channel lock */
@@ -2069,7 +2071,7 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	if (ret != AVL2108_OK)
 	{
 		lockError |= cError5;
-		eprintk("Channel set failed!\n");
+		dprintk(1, "%s: Channel set failed!\n", __func__);
 		mutex_unlock(&state->lock);
 		return -1;
 	}
@@ -2136,17 +2138,17 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 	if (cnt == 0)
 	{
 		lockError |= cError1;
-		eprintk("%s(): Time out!\n", __func__);
+		dprintk(1, "%s: Time out!\n", __func__);
 		mutex_unlock(&state->lock);
 		return -ETIMEDOUT;
 	}
-	dprintk(1, "%s(): Service locked!!! (tuner %d)\n", __func__, state->config->tuner_no);
+	dprintk(20, "%s: Service locked!!! (tuner %d)\n", __func__, state->config->tuner_no);
 
 	ret = avl2108_reset_stats(fe);
 	if (ret != AVL2108_OK)
 	{
 		lockError |= cError6;
-		eprintk("Could not reset stats!\n");
+		dprintk(1, "%s: Could not reset stats!\n", __func__);
 	}
 	else
 	{
@@ -2158,22 +2160,30 @@ static int avl2108_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_par
 
 static struct dvb_frontend_ops avl2108_ops =
 {
-	.info = {
-		.name = "Availink AVL2108 DVB-S2",
-		.type = FE_QPSK,
-		.frequency_min = 950000,
-		.frequency_max = 2150000,
-		.frequency_stepsize = 1011,  /* kHz for QPSK frontends */
+	.info =
+	{
+		.name                = "Availink AVL2108 DVB-S2",
+		.type                = FE_QPSK,
+		.frequency_min       =  950000,
+		.frequency_max       = 2150000,
+		.frequency_stepsize  = 1011,  /* kHz for QPSK frontends */
 		.frequency_tolerance = 5000,
-		.symbol_rate_min = 800000,  /* Min = 800K */
-		.symbol_rate_max = 50000000,  /* Max = 50M */
-		.caps = FE_CAN_INVERSION_AUTO |
-		FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 | FE_CAN_FEC_3_4 |
-		FE_CAN_FEC_4_5 | FE_CAN_FEC_5_6 | FE_CAN_FEC_6_7 |
-		FE_CAN_FEC_7_8 | FE_CAN_FEC_8_9 | FE_CAN_FEC_AUTO |
-		FE_CAN_QPSK    | FE_CAN_RECOVER /*| FE_CAN_MUTE_TS*/
+		.symbol_rate_min     = 800000,  /* Min = 800K */
+		.symbol_rate_max     = 50000000,  /* Max = 50M */
+		.caps                = FE_CAN_INVERSION_AUTO
+		                     | FE_CAN_FEC_1_2
+		                     | FE_CAN_FEC_2_3
+		                     | FE_CAN_FEC_3_4
+		                     | FE_CAN_FEC_4_5
+		                     | FE_CAN_FEC_5_6
+		                     | FE_CAN_FEC_6_7
+		                     | FE_CAN_FEC_7_8
+		                     | FE_CAN_FEC_8_9
+		                     | FE_CAN_FEC_AUTO
+		                     | FE_CAN_QPSK
+		                     | FE_CAN_RECOVER
+	 	/*                   | FE_CAN_MUTE_TS */
 	},
-
 	.init                   = avl2108_initfe,
 	.release                = avl2108_release,
 	.sleep                  = avl2108_sleep,
@@ -2207,7 +2217,7 @@ static void avl2108_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (numSockets + 1 == cMaxSockets)
 	{
-		printk("Max number sockets reached ... cannot register\n");
+		dprintk(1, "%s: Max number sockets reached ... cannot register\n", __func__);
 		return;
 	}
 	socketList[numSockets] = *socket;
@@ -2217,7 +2227,7 @@ static void avl2108_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (cfg == NULL)
 	{
-		printk("avl2108: error malloc\n");
+		dprintk(1, "%s: malloc error\n", __func__);
 		return;
 	}
 	cfg->tuner_no = numSockets;
@@ -2226,7 +2236,7 @@ static void avl2108_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 						  "tun_enab",
 						  STPIO_OUT);
 
-	printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+	dprintk(20, "%s tuner_enable_pin %p\n", __func__, cfg->tuner_enable_pin);
 	stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
 	stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
 	msleep(250);
@@ -2258,7 +2268,7 @@ static void avl2108_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (frontend == NULL)
 	{
-		printk("avl2108: avl2108_attach failed\n");
+		dprintk(1, "%s: avl2108 attach failed\n", __func__);
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -2269,7 +2279,7 @@ static void avl2108_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	}
 	if (dvb_register_frontend(dvb_adap, frontend))
 	{
-		printk("%s: Frontend registration failed !\n", __FUNCTION__);
+		dprintk(1, "%s: Frontend registration failed !\n", __func__);
 		if (frontend->ops.release)
 		{
 			frontend->ops.release(frontend);
@@ -2294,7 +2304,7 @@ static int avl2108_demod_detect(struct socket_s *socket, struct frontend_s *fron
 						  "tun_enab",
 						  STPIO_OUT);
 
-	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	dprintk(40, "%s: > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
 	if (pin != NULL)
 	{
@@ -2312,13 +2322,13 @@ static int avl2108_demod_detect(struct socket_s *socket, struct frontend_s *fron
 
 		if (ret != 2)
 		{
-			printk("%s(): i2c-error: %i\n", __func__, ret);
+			dprintk(1, "%s(): i2c-error: %i\n", __func__, ret);
 			stpio_free_pin(pin);
 			return -EREMOTEIO;
 		}
 		if (b1[0] == 0x99)
 		{
-			printk("%s: Detected SP2237\n", __func__);
+			dprintk(1, "%s: Detected SP2237\n", __func__);
 		}
 		else
 		{
@@ -2340,28 +2350,28 @@ static int avl2108_demod_detect(struct socket_s *socket, struct frontend_s *fron
 			kfree(state.config);
 			if (ret != AVL2108_OK)
 			{
-				printk("%s: failed to detect avl2108 0x%x\n", __func__, b1[0]);
+				dprintk(1, "%s: Failed to detect avl2108 0x%x\n", __func__, b1[0]);
 				stpio_free_pin(pin);
 				return -1;
 			}
-			printk("%s: Detected avl2108\n", __func__);
+			dprintk(20, "%s: Detected avl2108\n", __func__);
 		}
 	}
 	else
 	{
-		printk("failed to allocate pio pin\n");
+		dprintk(1, "%s: Failed to allocate pio pin\n", __func__);
 		return 1;
 	}
 	stpio_free_pin(pin);
-	printk("%s <\n", __func__);
+	dprintk(40, "%s: <\n", __func__);
 	return 0;
 }
 
 static int avl2108_demod_attach(struct dvb_adapter *adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s: >\n", __func__);
 	avl2108_register_frontend(adapter, socket);
-	printk("%s <\n", __func__);
+	dprintk(100, "%s: <\n", __func__);
 	return 0;
 }
 
@@ -2374,19 +2384,19 @@ static int avl2108_probe(struct platform_device *pdev)
 	struct platform_frontend_config_s *plat_data = pdev->dev.platform_data;
 	struct frontend_s frontend;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s: >\n", __func__);
 	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
 	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
-	printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
+	dprintk(10, "%s: Found frontend \"%s\" in platform config\n", frontend_cfg->name);
 	frontend.demod_detect = avl2108_demod_detect;
 	frontend.demod_attach = avl2108_demod_attach;
 	frontend.name         = "avl2108";
 
 	if (socket_register_frontend(&frontend) < 0)
 	{
-		printk("failed to register frontend\n");
+		dprintk(1, "%s: Failed to register frontend\n");
 	}
-	printk("%s <\n", __func__);
+	dprintk(100, "%s: <\n", __func__);
 	return 0;
 }
 
@@ -2399,7 +2409,8 @@ static struct platform_driver avl2108_driver =
 {
 	.probe  = avl2108_probe,
 	.remove = avl2108_remove,
-	.driver	= {
+	.driver	=
+	{
 		.name	= "avl2108",
 		.owner  = THIS_MODULE,
 	},
@@ -2413,15 +2424,15 @@ int __init avl2108_init(void)
 {
 	int ret;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s: >\n", __func__);
 	ret = platform_driver_register(&avl2108_driver);
-	printk("%s < %d\n", __func__, ret);
+	dprintk(100, "%s: < %d\n", __func__, ret);
 	return ret;
 }
 
 static void avl2108_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s: <>\n", __func__);
 }
 
 module_param(paramDebug, short, 0644);

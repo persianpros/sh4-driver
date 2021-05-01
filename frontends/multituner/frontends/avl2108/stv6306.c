@@ -39,11 +39,10 @@
 #include "avl2108_reg.h"
 
 extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[stv6306] "
-
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
 
 extern short useOriginTimings;
 
@@ -206,7 +205,7 @@ static u16 stv6306_tuner_lock_ext(struct dvb_frontend *fe, u32 freq, u32 srate, 
 
 	ret = state->equipment.demod_i2c_repeater_send(fe->demodulator_priv, data + 2, 2);
 
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(50, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -224,7 +223,7 @@ static u16 stv6306_tuner_lock_status_ext(struct dvb_frontend *fe)
 			ret = AVL2108_ERROR_PREV;
 		}
 	}
-	dprintk(50, "%s(): lock status: %u, buf: 0x%X\n", __func__, ret, buf);
+	dprintk(50, "%s: lock status: %u, buf: 0x%X\n", __func__, ret, buf);
 	return ret;
 }
 
@@ -242,21 +241,21 @@ static u16 stv6306_load_firmware(struct dvb_frontend *fe)
 	u32 i = 4;
 	int fw_ret;
 
-	dprintk(5, "%s(): Uploading tuner firmware (%s)...\n", __func__, STV6306_DEMOD_FW);
+	dprintk(50, "%s: Uploading tuner firmware (%s)...\n", __func__, STV6306_DEMOD_FW);
 	fw_ret = request_firmware(&fw, STV6306_DEMOD_FW, &state->i2c->dev);
 	if (fw_ret)
 	{
-		printk("%s(): Firmware upload failed. Timeout or file not found \n", __func__);
+		dprintk(1, "%s: Firmware upload failed. Timeout or file not found \n", __func__);
 		return AVL2108_ERROR_GENERIC;
 	}
-	printk("firmware download done successful\n");
+	dprintk(20, "Firmware download done successful\n");
 	data_size = extract_32(fw->data);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 	buffer = kmalloc(fw->size, GFP_KERNEL);
 	memcpy(buffer, fw->data, fw->size);
 #endif
-	printk("data_size %d\n", data_size);
+	dprintk(50, "Data_size %d\n", data_size);
 	while (i < data_size)
 	{
 		buf_size = extract_32(fw->data + i);
@@ -274,7 +273,7 @@ static u16 stv6306_load_firmware(struct dvb_frontend *fe)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 	kfree(buffer);
 #endif
-	dprintk(10, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(10, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 
@@ -289,7 +288,7 @@ static u16 stv6306_tuner_lock_int(struct dvb_frontend *fe, u32 freq, u32 lpf)
 	{
 		max_tries = 40;
 	}
-	dprintk(1, "%s(): freq: %u, lpf: %u\n", __func__, freq, lpf);
+	dprintk(10, "%s: freq: %u, lpf: %u\n", __func__, freq, lpf);
 
 	ret = state->equipment.demod_i2c_write16(fe->demodulator_priv, REG_TUNER_FREQ_100KHZ, freq);
 
@@ -298,10 +297,10 @@ static u16 stv6306_tuner_lock_int(struct dvb_frontend *fe, u32 freq, u32 lpf)
 	/* Wait up to 1s if we locked */
 	while (state->equipment.demod_get_op_status(fe->demodulator_priv) != AVL2108_OK)
 	{
-		dprintk(10, "%s(): Waiting for tuner lock: %u\n", __func__, timeout);
+		dprintk(10, "%s: Waiting for tuner lock: %u\n", __func__, timeout);
 		if ((++timeout) >= max_tries)
 		{
-			eprintk("%s(): %u: Timeout!\n", __func__, timeout);
+			dprintk(1, "%s: %u: Timeout!\n", __func__, timeout);
 			ret |= AVL2108_ERROR_TIMEOUT;
 			break;
 		}
@@ -336,7 +335,7 @@ static u16 stv6306_tuner_lock_status_int(struct dvb_frontend *fe)
 		{
 			if ((++timeout) >= max_tries)
 			{
-				eprintk("%s(): %u: Timeout!\n", __func__, timeout);
+				dprintk(1, "%s(): %u: Timeout!\n", __func__, timeout);
 				return (AVL2108_ERROR_TIMEOUT);
 			}
 			if (useOriginTimings == 1)
@@ -362,7 +361,7 @@ static u16 stv6306_tuner_lock_status_int(struct dvb_frontend *fe)
 		}
 	}
 
-	dprintk(1, "%s(): lock status: %u\n", __func__, ret);
+	dprintk(50, "%s < lock status: %u\n", __func__, ret);
 	return ret;
 }
 
@@ -402,10 +401,10 @@ static u16 stv6306_tuner_init(struct dvb_frontend *fe)
 {
 	u16 ret = 0;
 
-	dprintk(50, "%s(): >\n", __func__);
+	dprintk(50, "%s >\n", __func__);
 	/* nothing to do here ? */
 
-	dprintk(50, "Leaving %s() with status %u\n", __func__, ret);
+	dprintk(50, "%s < status = %u\n", __func__, ret);
 	return ret;
 }
 

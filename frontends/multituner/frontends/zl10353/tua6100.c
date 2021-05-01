@@ -33,6 +33,13 @@
 #include <asm/types.h>
 
 #include "tua6100.h"
+#include "frontend_platform.h"  // for dprintk definition
+
+extern short paramDebug;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
+#define TAGDEBUG "[tua6100] "
 
 struct tua6100_priv
 {
