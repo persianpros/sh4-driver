@@ -713,7 +713,8 @@ int rtw_init_netdev_name(struct net_device *pnetdev, const char *ifname)
 	return 0;
 }
 
-static const struct device_type wlan_type = {
+static struct device_type wlan_type =
+{
 	.name = "wlan",
 };
 

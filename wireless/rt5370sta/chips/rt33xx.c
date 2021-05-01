@@ -1053,7 +1053,7 @@ VOID RT33xx_AsicTxAlcGetAutoAgcOffset(
 	IN PCHAR					pAgcCompensate,
 	IN PCHAR 					pDeltaPowerByBbpR1)
 {
-	const TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTable = pAd->chipCap.TxPowerTuningTable_2G;
+	TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTable = pAd->chipCap.TxPowerTuningTable_2G;
 	PTX_POWER_TUNING_ENTRY_STRUCT pTxPowerTuningEntry = NULL;
 	BBP_R49_STRUC 	BbpR49;
 	UCHAR 			RFValue = 0;

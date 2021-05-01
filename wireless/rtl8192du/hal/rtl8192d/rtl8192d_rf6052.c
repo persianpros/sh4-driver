@@ -1199,17 +1199,15 @@ PHY_RFShadowRecorverFlagSetAll(
 	}
 		
 }	/* PHY_RFShadowCompareFlagSetAll */
-VOID
-PHY_RFShadowRefresh(
-	IN	PADAPTER			Adapter);
-VOID
-PHY_RFShadowRefresh(
-	IN	PADAPTER			Adapter)
-{
-	u32		eRFPath;
-	u32		Offset;
 
-	for (eRFPath = 0; eRFPath < RF6052_MAX_PATH; eRFPath++)
+VOID PHY_RFShadowRefresh(IN	PADAPTER Adapter);
+
+VOID PHY_RFShadowRefresh(IN	PADAPTER Adapter)
+{
+	u32 eRFPath;
+	u32 Offset;
+
+	for (eRFPath = 0; eRFPath < RF6052_MAX_PATH - 1; eRFPath++)
 	{
 		for (Offset = 0; Offset <= RF6052_MAX_REG; Offset++)
 		{

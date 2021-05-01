@@ -2778,7 +2778,7 @@ VOID RT5390_AsicTxAlcGetAutoAgcOffset(
 	IN PCHAR				pAgcCompensate,
 	IN PCHAR 				pDeltaPowerByBbpR1)
 {
-	const TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTable = pAd->chipCap.TxPowerTuningTable_2G;
+	TX_POWER_TUNING_ENTRY_STRUCT *TxPowerTuningTable = pAd->chipCap.TxPowerTuningTable_2G;
 	PTX_POWER_TUNING_ENTRY_STRUCT pTxPowerTuningEntry = NULL;
 	UCHAR 			RFValue = 0;
 	CHAR 			desiredTssi = 0;

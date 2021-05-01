@@ -697,7 +697,7 @@ VOID	RTUSBBulkOutNullFrame(
 	IN	PRTMP_ADAPTER	pAd,
 	IN	UCHAR BulkOutPipeId)
 {
-	PTX_CONTEXT		pNullContext;
+	PTX_CONTEXT		pNullContext = NULL;
 	PURB			pUrb;
 	int				ret = 0;
 	unsigned long	IrqFlags;
