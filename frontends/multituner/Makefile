@@ -65,167 +65,159 @@ ifdef CUBEREVO
 cx24116-objs +=   frontends/cx24116/cx24116.o
 obj-m += cx24116.o
 
+stv090x-objs +=   frontends/stv090x/core.o
 stv090x-objs +=   frontends/stv090x/stv090x.o
 stv090x-objs +=   frontends/stv090x/stv6110x.o
-stv090x-objs +=   frontends/stv090x/core.o
 obj-m += stv090x.o
 
-tda10023-objs +=  frontends/tda10023/tda10023.o
 tda10023-objs +=  frontends/tda10023/core.o
+tda10023-objs +=  frontends/tda10023/tda10023.o
 obj-m += tda10023.o
 
-zl10353-objs +=    frontends/zl10353/zl10353.o
 zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
 obj-m += zl10353.o
 
-stv0288-objs +=    frontends/stv0288/stv0288.o
 stv0288-objs +=    frontends/stv0288/core.o
+stv0288-objs +=    frontends/stv0288/stv0288.o
 obj-m += stv0288.o
 
 else ifdef CUBEREVO_MINI
 cx24116-objs +=    frontends/cx24116/cx24116.o
 obj-m += cx24116.o
 
+stv090x-objs +=    frontends/stv090x/core.o
 stv090x-objs +=    frontends/stv090x/stv090x.o
 stv090x-objs +=    frontends/stv090x/stv6110x.o
-stv090x-objs +=    frontends/stv090x/core.o
 obj-m += stv090x.o
 
-tda10023-objs +=   frontends/tda10023/tda10023.o
 tda10023-objs +=   frontends/tda10023/core.o
+tda10023-objs +=   frontends/tda10023/tda10023.o
 obj-m += tda10023.o
 
-zl10353-objs +=    frontends/zl10353/zl10353.o
 zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
 obj-m += zl10353.o
 
-stv0288-objs +=    frontends/stv0288/stv0288.o
 stv0288-objs +=    frontends/stv0288/core.o
+stv0288-objs +=    frontends/stv0288/stv0288.o
 obj-m += stv0288.o
 
 else ifdef CUBEREVO_MINI2
 cx24116-objs +=    frontends/cx24116/cx24116.o
 obj-m += cx24116.o
 
+stv090x-objs +=    frontends/stv090x/core.o
 stv090x-objs +=    frontends/stv090x/stv090x.o
 stv090x-objs +=    frontends/stv090x/stv6110x.o
-stv090x-objs +=    frontends/stv090x/core.o
 obj-m += stv090x.o
 
-tda10023-objs +=   frontends/tda10023/tda10023.o
 tda10023-objs +=   frontends/tda10023/core.o
+tda10023-objs +=   frontends/tda10023/tda10023.o
 obj-m += tda10023.o
 
-zl10353-objs +=    frontends/zl10353/zl10353.o
 zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
 obj-m += zl10353.o
 
-stv0288-objs +=    frontends/stv0288/stv0288.o
 stv0288-objs +=    frontends/stv0288/core.o
+stv0288-objs +=    frontends/stv0288/stv0288.o
 obj-m += stv0288.o
 
-else ifdef CUBEREVO_250HD
+else ifdef CUBEREVO_MINI_FTA  # !does not have pluggable tuner, either fixed DVB-S2 or DVB-T
 cx24116-objs +=    frontends/cx24116/cx24116.o
 obj-m += cx24116.o
 
+stv090x-objs +=    frontends/stv090x/core.o
 stv090x-objs +=    frontends/stv090x/stv090x.o
 stv090x-objs +=    frontends/stv090x/stv6110x.o
-stv090x-objs +=    frontends/stv090x/core.o
 obj-m += stv090x.o
 
-tda10023-objs +=   frontends/tda10023/tda10023.o
-tda10023-objs +=   frontends/tda10023/core.o
-obj-m += tda10023.o
+stv0288-objs +=    frontends/stv0288/core.o
+stv0288-objs +=    frontends/stv0288/stv0288.o
+obj-m += stv0288.o
 
-zl10353-objs +=    frontends/zl10353/zl10353.o
 zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
 obj-m += zl10353.o
 
-stv0288-objs +=    frontends/stv0288/stv0288.o
+else ifdef CUBEREVO_250HD  # !does not have pluggable tuner, either fixed DVB-S2 or DVB-T
+cx24116-objs +=    frontends/cx24116/cx24116.o
+obj-m += cx24116.o
+
+stv090x-objs +=    frontends/stv090x/core.o
+stv090x-objs +=    frontends/stv090x/stv090x.o
+stv090x-objs +=    frontends/stv090x/stv6110x.o
+obj-m += stv090x.o
+
 stv0288-objs +=    frontends/stv0288/core.o
+stv0288-objs +=    frontends/stv0288/stv0288.o
 obj-m += stv0288.o
+
+zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
+obj-m += zl10353.o
 
 else ifdef CUBEREVO_9500HD
 cx24116-objs +=    frontends/cx24116/cx24116.o
 obj-m += cx24116.o
 
+stv090x-objs +=    frontends/stv090x/core.o
 stv090x-objs +=    frontends/stv090x/stv090x.o
 stv090x-objs +=    frontends/stv090x/stv6110x.o
-stv090x-objs +=    frontends/stv090x/core.o
 obj-m += stv090x.o
 
-tda10023-objs +=   frontends/tda10023/tda10023.o
 tda10023-objs +=   frontends/tda10023/core.o
+tda10023-objs +=   frontends/tda10023/tda10023.o
 obj-m += tda10023.o
 
-zl10353-objs +=    frontends/zl10353/zl10353.o
 zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
 obj-m += zl10353.o
 
-stv0288-objs +=    frontends/stv0288/stv0288.o
 stv0288-objs +=    frontends/stv0288/core.o
+stv0288-objs +=    frontends/stv0288/stv0288.o
 obj-m += stv0288.o
 
 else ifdef CUBEREVO_2000HD
 cx24116-objs +=    frontends/cx24116/cx24116.o
 obj-m += cx24116.o
 
+stv090x-objs +=    frontends/stv090x/core.o
 stv090x-objs +=    frontends/stv090x/stv090x.o
 stv090x-objs +=    frontends/stv090x/stv6110x.o
-stv090x-objs +=    frontends/stv090x/core.o
 obj-m += stv090x.o
 
-tda10023-objs +=   frontends/tda10023/tda10023.o
 tda10023-objs +=   frontends/tda10023/core.o
+tda10023-objs +=   frontends/tda10023/tda10023.o
 obj-m += tda10023.o
 
-zl10353-objs +=    frontends/zl10353/zl10353.o
 zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
 obj-m += zl10353.o
 
-stv0288-objs +=    frontends/stv0288/stv0288.o
 stv0288-objs +=    frontends/stv0288/core.o
-obj-m += stv0288.o
-
-else ifdef CUBEREVO_MINI_FTA
-cx24116-objs +=    frontends/cx24116/cx24116.o
-obj-m += cx24116.o
-
-stv090x-objs +=    frontends/stv090x/stv090x.o
-stv090x-objs +=    frontends/stv090x/stv6110x.o
-stv090x-objs +=    frontends/stv090x/core.o
-obj-m += stv090x.o
-
-tda10023-objs +=   frontends/tda10023/tda10023.o
-tda10023-objs +=   frontends/tda10023/core.o
-obj-m += tda10023.o
-
-zl10353-objs +=    frontends/zl10353/zl10353.o
-zl10353-objs +=    frontends/zl10353/core.o
-obj-m += zl10353.o
-
 stv0288-objs +=    frontends/stv0288/stv0288.o
-stv0288-objs +=    frontends/stv0288/core.o
 obj-m += stv0288.o
 
 else ifdef CUBEREVO_3000HD
 cx24116-objs +=    frontends/cx24116/cx24116.o
 obj-m += cx24116.o
 
+stv090x-objs +=    frontends/stv090x/core.o
 stv090x-objs +=    frontends/stv090x/stv090x.o
 stv090x-objs +=    frontends/stv090x/stv6110x.o
-stv090x-objs +=    frontends/stv090x/core.o
 obj-m += stv090x.o
 
-tda10023-objs +=   frontends/tda10023/tda10023.o
 tda10023-objs +=   frontends/tda10023/core.o
+tda10023-objs +=   frontends/tda10023/tda10023.o
 obj-m += tda10023.o
 
-zl10353-objs +=    frontends/zl10353/zl10353.o
 zl10353-objs +=    frontends/zl10353/core.o
+zl10353-objs +=    frontends/zl10353/zl10353.o
 obj-m += zl10353.o
 
-stv0288-objs +=    frontends/stv0288/stv0288.o
 stv0288-objs +=    frontends/stv0288/core.o
+stv0288-objs +=    frontends/stv0288/stv0288.o
 obj-m += stv0288.o
 endif

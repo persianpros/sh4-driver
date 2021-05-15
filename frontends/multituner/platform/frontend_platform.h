@@ -23,6 +23,15 @@
 #ifndef _platform_123
 #define _platform_123
 
+extern short paramDebug;
+#define dprintk(level, x...) do \
+{ \
+	if ((paramDebug) && (paramDebug >= level) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+
 struct platform_frontend_config_s
 {
 	char *name;

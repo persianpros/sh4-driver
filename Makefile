@@ -277,7 +277,11 @@ endif
 ifndef VIP2
 ifndef SPARK
 ifndef SPARK7162
+ifndef CUBEREVO_MINI_FTA
+ifndef CUBEREVO_250HD
 obj-y += cic/
+endif
+endif
 endif
 endif
 endif

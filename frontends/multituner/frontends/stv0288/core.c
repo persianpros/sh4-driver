@@ -42,7 +42,7 @@
 #include "tuner.h"
 #include "lnb.h"
 
-extern short paramDebug;
+short paramDebug = 0;
 #if defined TAGDEBUG
 #undef TAGDEBUG
 #endif
@@ -103,9 +103,9 @@ static void stv0288_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (numSockets + 1 == cMaxSockets)
 	{
-		printk("Max. number of sockets reached... cannot register\n");
+		dprintk(1, "Max. number of sockets reached... cannot register\n");
 		return;
-		}
+	}
 	socketList[numSockets] = *socket;
 	numSockets++;
 
@@ -115,13 +115,13 @@ static void stv0288_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (cfg == NULL)
 	{
-		printk("stv0288: error malloc\n");
-	        return;
+		dprintk(1, "stv0288: error malloc\n");
+		return;
 	}
 	if (socket->tuner_enable[0] != -1)
 	{
 		cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
-		printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+		dprintk(20, "tuner_enable_pin %p\n", cfg->tuner_enable_pin);
 		stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
 		stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
 		msleep(250);
@@ -136,14 +136,14 @@ static void stv0288_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	cfg->usedLNB       = priv->usedLNB;
 	memcpy(cfg->lnb, socket->lnb, sizeof(cfg->lnb));
 
-	cfg->inittab               = priv->inittab;
-	cfg->min_delay_ms          = priv->min_delay_ms;
+	cfg->inittab       = priv->inittab;
+	cfg->min_delay_ms  = priv->min_delay_ms;
 
-	frontend =  stv0288_attach(cfg, i2c_get_adapter(socket->i2c_bus));
+	frontend = stv0288_attach(cfg, i2c_get_adapter(socket->i2c_bus));
 
 	if (frontend == NULL)
 	{
-		printk("stv0288: stv0288_attach failed\n");
+		dprintk(1, "stv0288: stv0288_attach failed\n");
 		if (cfg->tuner_enable_pin)
 		{
 			stpio_free_pin(cfg->tuner_enable_pin);
@@ -167,7 +167,7 @@ static void stv0288_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 #endif
 	if (dvb_register_frontend (dvb_adap, frontend))
 	{
-		printk ("%s: Frontend registration failed !\n", __FUNCTION__);
+		dprintk(1, "%s: Frontend registration failed !\n", __FUNCTION__);
 		if (frontend->ops.release)
 		{
 			frontend->ops.release (frontend);
@@ -182,13 +182,13 @@ static int stv0288_demod_detect(struct socket_s *socket, struct frontend_s *fron
 	int              id;
 	struct stpio_pin *pin = NULL;
    
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	if (socket->tuner_enable[0] != -1)
 	{
 		pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 	}  
-	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	dprintk(20, "%s: i2c-%d addr 0x%x\n", socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
 	if (pin != NULL)
 	{
@@ -204,31 +204,31 @@ static int stv0288_demod_detect(struct socket_s *socket, struct frontend_s *fron
 	/* register 0x00 contains 0x11 for STV0288  */
 	if (id != 0x11)
 	{
-		printk ("id = %02x\n", id);
-		printk ("Invalid probe, probably not a STV0288 device\n");
+		dprintk(50, "id = %02x\n", id);
+		dprintk(1, "Invalid probe, probably not a STV0288 device\n");
 
 		if (pin != NULL)
 		{
 			stpio_free_pin(pin);
 		}
-	   return -EREMOTEIO;
+		return -EREMOTEIO;
 	}
-	printk("%s: Detected STV0288\n", __func__);
+	dprintk(20, "Detected STV0288\n");
    
 	if (pin != NULL)
 	{
 		stpio_free_pin(pin);
 	}
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
 static int stv0288_demod_attach(struct dvb_adapter* adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	stv0288_register_frontend(adapter, socket);
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -241,12 +241,12 @@ static int stv0288_probe (struct platform_device *pdev)
 	struct platform_frontend_config_s *plat_data = pdev->dev.platform_data;
 	struct frontend_s frontend;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
 	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
 
-	printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
+	dprintk(20, "Found frontend \"%s\" in platform config\n", frontend_cfg->name);
 
 	frontend.demod_detect = stv0288_demod_detect;
 	frontend.demod_attach = stv0288_demod_attach;
@@ -254,15 +254,13 @@ static int stv0288_probe (struct platform_device *pdev)
 	
 	if (socket_register_frontend(&frontend) < 0)
 	{
-	    printk("failed to register frontend\n");
+		dprintk(1, "Failed to register frontend\n");
 	}
-
-	printk("%s <\n", __func__);
-
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
-static int stv0288_remove (struct platform_device *pdev)
+static int stv0288_remove(struct platform_device *pdev)
 {
 	return 0;
 }
@@ -285,15 +283,15 @@ int __init stv0288_init(void)
 {
 	int ret;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	ret = platform_driver_register (&stv0288_driver);
-	printk("%s < %d\n", __func__, ret);
+	dprintk(100, "%s < %d\n", __func__, ret);
 	return ret;
 }
 
 static void stv0288_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 }
 
 module_init (stv0288_init);

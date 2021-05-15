@@ -57,9 +57,7 @@ extern short paramDebug;
 #endif
 #define TAGDEBUG "[stv0288] "
 
-
 int tuner_write_for_agc_stv0288( struct dvb_frontend *fe );
-
 
 #if DVB_API_VERSION < 5
 static struct dvbfe_info dvbs_info =
@@ -69,14 +67,20 @@ static struct dvbfe_info dvbs_info =
 	.delsys =
 	{
 		.dvbs.modulation = DVBFE_MOD_QPSK,
-		.dvbs.fec = DVBFE_FEC_1_2 | DVBFE_FEC_2_3
-		          | DVBFE_FEC_3_4 | DVBFE_FEC_5_6 | DVBFE_FEC_7_8 | DVBFE_MOD_QPSK | DVBFE_FEC_AUTO},
-	.frequency_min = 950000,
-	.frequency_max = 2150000,
-	.frequency_step = 1000,
+		.dvbs.fec        = DVBFE_FEC_1_2
+		                 | DVBFE_FEC_2_3
+		                 | DVBFE_FEC_3_4
+		                 | DVBFE_FEC_5_6
+		                 | DVBFE_FEC_7_8
+		                 | DVBFE_MOD_QPSK
+		                 | DVBFE_FEC_AUTO
+	},
+	.frequency_min       =  950000,
+	.frequency_max       = 2150000,
+	.frequency_step      = 1000,
 	.frequency_tolerance = 0,
-	.symbol_rate_min = 1000000,
-	.symbol_rate_max = 45000000
+	.symbol_rate_min     = 1000000,
+	.symbol_rate_max     = 45000000
 };
 #endif
 
@@ -105,12 +109,13 @@ static int stv0288_writeregI(struct stv0288_state *state, u8 reg, u8 data)
 		.buf = buf,
 		.len = 2
 	};
+
 	dprintk(150, "%s reg = 0x%02x data = 0x%02x\n", __func__, reg, data);
 	ret = i2c_transfer(state->i2c, &msg, 1);
 
 	if (ret != 1)
 	{
-		dprintk(0, "%s: writereg error (reg == 0x%02x, val == 0x%02x, ret == %i)\n", __func__, reg, data, ret);
+		dprintk(1, "%s: writereg error (reg == 0x%02x, val == 0x%02x, ret == %i)\n", __func__, reg, data, ret);
 	}
 	return (ret != 1) ? -EREMOTEIO : 0;
 }
@@ -134,22 +139,23 @@ static u8 stv0288_readreg(struct stv0288_state *state, u8 reg)
 	struct i2c_msg msg[] =
 	{
 		{
-			.addr = state->config->demod_address,
+			.addr  = state->config->demod_address,
 			.flags = 0,
-			.buf = b0,
-			.len = 1
-		}, {
-			.addr = state->config->demod_address,
+			.buf   = b0,
+			.len   = 1
+		},
+		{
+			.addr  = state->config->demod_address,
 			.flags = I2C_M_RD,
-			.buf = b1,
-			.len = 1
+			.buf   = b1,
+			.len   = 1
 		}
 	};
 	ret = i2c_transfer(state->i2c, msg, 2);
 
 	if (ret != 2)
 	{
-		dprintk(0, "%s: readreg error (reg == 0x%02x, ret == %i)\n", __func__, reg, ret);
+		dprintk(1, "%s: readreg error (reg == 0x%02x, ret == %i)\n", __func__, reg, ret);
 	}
 	else
 	{
@@ -163,7 +169,7 @@ static int stv0288_send_diseqc_msg(struct dvb_frontend *fe, struct dvb_diseqc_ma
 	struct stv0288_state *state = fe->demodulator_priv;
 	int i;
 
-	dprintk(10, "%s\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	stv0288_writeregI(state, 0x09, 0);
 	msleep(30);
 	stv0288_writeregI(state, 0x05, 0x16);
@@ -183,9 +189,9 @@ static int stv0288_send_diseqc_burst(struct dvb_frontend *fe, fe_sec_mini_cmd_t 
 {
 	struct stv0288_state *state = fe->demodulator_priv;
 
-	dprintk(10, "%s\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
-	if (stv0288_writeregI(state, 0x05, 0x16))/* burst mode */
+	if (stv0288_writeregI(state, 0x05, 0x16))  /* burst mode */
 	{
 		return -EREMOTEIO;
 	}
@@ -208,7 +214,7 @@ static int stv0288_set_tone(struct dvb_frontend *fe, fe_sec_tone_mode_t tone)
 	{
 		case SEC_TONE_ON:
 		{
-			if (stv0288_writeregI(state, 0x05, 0x10))/* burst mode */
+			if (stv0288_writeregI(state, 0x05, 0x10))  /* burst mode */
 			{
 				return -EREMOTEIO;
 			}
@@ -216,7 +222,7 @@ static int stv0288_set_tone(struct dvb_frontend *fe, fe_sec_tone_mode_t tone)
 		}
 		case SEC_TONE_OFF:
 		{
-			if (stv0288_writeregI(state, 0x05, 0x13))/* burst mode */
+			if (stv0288_writeregI(state, 0x05, 0x13))  /* burst mode */
 			{
 				return -EREMOTEIO;
 			}
@@ -444,7 +450,7 @@ static int stv0288_get_info(struct dvb_frontend *fe, struct dvbfe_info *fe_info)
 /* TODO: The hardware does DSS too, how does the kernel demux handle this? */
 static int stv0288_get_delsys(struct dvb_frontend *fe, enum dvbfe_delsys *fe_delsys)
 {
-	dprintk (10, "%s()\n", __FUNCTION__);
+	dprintk (100 "%s >\n", __FUNCTION__);
 	*fe_delsys = DVBFE_DELSYS_DVBS;
 	return 0;
 }
@@ -452,7 +458,7 @@ static int stv0288_get_delsys(struct dvb_frontend *fe, enum dvbfe_delsys *fe_del
 /* TODO: is this necessary? */
 static enum dvbfe_algo stv0288_get_algo(struct dvb_frontend *fe)
 {
-	dprintk (10, "%s()\n", __FUNCTION__);
+	dprintk (100, "%s >\n", __FUNCTION__);
 	return DVBFE_ALGO_SW;
 }
 #else
@@ -474,7 +480,7 @@ static int stv0288_get_property(struct dvb_frontend *fe, struct dtv_property* tv
 			}
 		}
 	}
-	dprintk(10, "%s()\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 #endif
@@ -486,76 +492,78 @@ static int stv0288_get_tune_settings (struct dvb_frontend *fe, struct dvb_fronte
 {
 	struct stv0288_state *state = fe->demodulator_priv;
 
-	dprintk (10, "%s: > \n", __FUNCTION__);
+	dprintk(100, "%s >\n", __FUNCTION__);
 
 /* FIXME: Hab das jetzt mal eingebaut, da bei SET_FRONTEND DVB-S2 nicht gehandelt wird.
  * Im Prinzip setze ich hier die Werte aus SET_FRONTEND (siehe dvb-core_stv0288) mal von min_delay
  * abgesehen.
  * DIES MUSS MAL BEOBACHTET WERDEN
  */
-  fetunesettings->step_size = state->symbol_rate / 16000;
-  fetunesettings->max_drift = state->symbol_rate / 2000;
-  fetunesettings->min_delay_ms = 500; // For pilot auto tune
+	fetunesettings->step_size = state->symbol_rate / 16000;
+	fetunesettings->max_drift = state->symbol_rate / 2000;
+	fetunesettings->min_delay_ms = 500; // For pilot auto tune
 
-  dprintk (10, KERN_INFO "%s: < \n", __FUNCTION__);
-  return 0;
+	dprintk(100, "%s < \n", __FUNCTION__);
+	return 0;
 }
 
 static struct dvb_frontend_ops stv0288_ops =
 {
 	.info =
 	{
-		.name			= "ST STV0288 DVB-S",
-		.type			= FE_QPSK,
-		.frequency_min		= 950000,
-		.frequency_max		= 2150000,
-		.frequency_stepsize	= 1000,	 /* kHz for QPSK frontends */
-		.frequency_tolerance	= 0,
-		.symbol_rate_min	= 1000000,
-		.symbol_rate_max	= 45000000,
-		.symbol_rate_tolerance	= 500,	/* ppm */
-		.caps = FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 | FE_CAN_FEC_3_4
-		      | FE_CAN_FEC_5_6 | FE_CAN_FEC_7_8
-		      | FE_CAN_QPSK
-		      | FE_CAN_FEC_AUTO
+		.name                  = "ST STV0288 DVB-S",
+		.type                  = FE_QPSK,
+		.frequency_min		   = 950000,
+		.frequency_max         = 2150000,
+		.frequency_stepsize    = 1000,  /* kHz for QPSK frontends */
+		.frequency_tolerance   = 0,
+		.symbol_rate_min       =  1000000,
+		.symbol_rate_max       = 45000000,
+		.symbol_rate_tolerance = 500,  /* ppm */
+		.caps                  = FE_CAN_FEC_1_2
+		                       | FE_CAN_FEC_2_3
+		                       | FE_CAN_FEC_3_4
+		                       | FE_CAN_FEC_5_6
+		                       | FE_CAN_FEC_7_8
+		                       | FE_CAN_QPSK
+		                       | FE_CAN_FEC_AUTO
 	},
-	.release                 = stv0288_release,
-	.init                    = stv0288_init,
-	.sleep                   = stv0288_sleep,
-	.write                   = stv0288_write,
-	.i2c_gate_ctrl           = stv0288_i2c_gate_ctrl,
-	.read_status             = stv0288_read_status,
-	.read_ber                = stv0288_read_ber,
-	.read_signal_strength    = stv0288_read_signal_strength,
-	.read_snr                = stv0288_read_snr,
-	.read_ucblocks           = stv0288_read_ucblocks,
-	.diseqc_send_master_cmd  = stv0288_send_diseqc_msg,
-	.diseqc_send_burst       = stv0288_send_diseqc_burst,
-	.set_tone                = stv0288_set_tone,
-	.set_voltage             = stv0288_set_voltage,
-	.enable_high_lnb_voltage = stv0288_enable_high_lnb_voltage,
-	.set_frontend            = stv0288_set_frontend,
-	.get_frontend            = stv0288_get_frontend,
-	.get_tune_settings       = stv0288_get_tune_settings,
+	.release                   = stv0288_release,
+	.init                      = stv0288_init,
+	.sleep                     = stv0288_sleep,
+	.write                     = stv0288_write,
+	.i2c_gate_ctrl             = stv0288_i2c_gate_ctrl,
+	.read_status               = stv0288_read_status,
+	.read_ber                  = stv0288_read_ber,
+	.read_signal_strength      = stv0288_read_signal_strength,
+	.read_snr                  = stv0288_read_snr,
+	.read_ucblocks             = stv0288_read_ucblocks,
+	.diseqc_send_master_cmd    = stv0288_send_diseqc_msg,
+	.diseqc_send_burst         = stv0288_send_diseqc_burst,
+	.set_tone                  = stv0288_set_tone,
+	.set_voltage               = stv0288_set_voltage,
+	.enable_high_lnb_voltage   = stv0288_enable_high_lnb_voltage,
+	.set_frontend              = stv0288_set_frontend,
+	.get_frontend              = stv0288_get_frontend,
+	.get_tune_settings         = stv0288_get_tune_settings,
 #if DVB_API_VERSION < 5
-	.get_info                = stv0288_get_info,
-	.get_delsys              = stv0288_get_delsys,
-	.get_frontend_algo       = stv0288_get_algo,
+	.get_info                  = stv0288_get_info,
+	.get_delsys                = stv0288_get_delsys,
+	.get_frontend_algo         = stv0288_get_algo,
 #else
-	.get_property 		 = stv0288_get_property,
+	.get_property 		       = stv0288_get_property,
 #endif
-
 };
 
 static unsigned char t_buff[6];
-static long tp_SymbolRate_Bds=0;
-static long tp_Frequency_Khz=0;
-static FE_288_SIGNALTYPE_t tp_signalType=NOAGC1;
+static long tp_SymbolRate_Bds = 0;
+static long tp_Frequency_Khz = 0;
+static FE_288_SIGNALTYPE_t tp_signalType = NOAGC1;
 
 static int pll_tuner_write (struct dvb_frontend *fe, unsigned char *buffer, int bufflen)
 {
 	struct stv0288_state *priv = fe->demodulator_priv;
-	int /*address=0x1,*/ret =0;
+	int /*address=0x1,*/ ret = 0;
 	//register_[address]=0x95;
 
 	struct i2c_msg msg =
@@ -584,9 +592,9 @@ static int pll_tuner_write (struct dvb_frontend *fe, unsigned char *buffer, int 
 
 static void pll_calculate_byte( int cutoff, unsigned char *byte )
 {
-	int data,pd2,pd3,pd4,pd5;
+	int data, pd2, pd3, pd4, pd5;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	//lpf
 	data = (int)((cutoff / 1000) / 2 - 2);
@@ -607,23 +615,23 @@ static int pll_calculate_step( unsigned char byte4 )
 	int pll_step;
 	R10 = byte4 & 0x03;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	switch(R10)
 	{
 		case 0:
 		{
-			Nref = 4 * 1; // step_size = 1 MHz
+			Nref = 4 * 1;  // step_size = 1 MHz
 			break;
 		}
 		case 1:
 		{
-			Nref = 4 * 2; // step_size = 500 KHz
+			Nref = 4 * 2;  // step_size = 500 KHz
 			break;
 		}
 		case 2:
 		{
-			Nref = 4 * 4; // step_size = 250 KHz
+			Nref = 4 * 4;  // step_size = 250 KHz
 			break;
 		}
 		default:
@@ -632,39 +640,50 @@ static int pll_calculate_step( unsigned char byte4 )
 			break;
 		}
 	}
-	pll_step = 4000 / Nref; /* 4 Mhz */
+	pll_step = 4000 / Nref;  /* 4 Mhz */
 	return (pll_step);
 }
 
-static void pll_calculate_divider_byte( int freq_khz )
+static void pll_calculate_divider_byte(int freq_khz)
 {
 	int data;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
-	data= (int) ((freq_khz) / pll_calculate_step(t_buff[2]));
+	data = (int) ((freq_khz) / pll_calculate_step(t_buff[2]));
 	t_buff[0] = (int) ((data >> 8) & 0x7f);
 	t_buff[1] = (int) (data & 0xff);
 }
 
-static void pll_calculate_lpf_cutoff( long baud )
+static void pll_calculate_lpf_cutoff(long baud)
 {
-	int lpf=0;
+	int lpf = 0;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
-	/*BAUD V.S. LPF Cutoff*/
-	if ((45000000 >= baud) && (baud >= 39000000)) lpf = 30000; //LPF=30MHz
-	if ((39000000 > baud) && (baud >= 35000000)) lpf = 28000; //LPF=28MHz
-	if ((35000000 > baud) && (baud >= 30000000)) lpf = 26000; //LPF=26MHz
-	if ((30000000 > baud) && (baud >= 26000000)) lpf = 24000; //LPF=24MHz
-	if ((26000000 > baud) && (baud >= 23000000)) lpf = 22000; //LPF=22MHz
-	if ((23000000 > baud) && (baud >= 21000000)) lpf = 20000; //LPF=20MHz
-	if ((21000000 > baud) && (baud >= 19000000)) lpf = 18000; //LPF=18MHz
-	if ((19000000 > baud) && (baud >= 18000000)) lpf = 16000; //LPF=16MHz
-	if ((18000000 > baud) && (baud >= 17000000)) lpf = 14000; //LPF=14MHz
-	if ((17000000 > baud) && (baud >= 16000000)) lpf = 12000; //LPF=12MHz
-	if (16000000 >baud) lpf = 10000; //LPF=10MHz
+	/* BAUD V.S. LPF Cutoff */
+	if ((45000000 >= baud) && (baud >= 39000000))
+		lpf = 30000;  // LPF = 30MHz
+	if ((39000000 > baud) && (baud >= 35000000))
+		lpf = 28000;  // LPF = 28MHz
+	if ((35000000 > baud) && (baud >= 30000000))
+		lpf = 26000;  // LPF = 26MHz
+	if ((30000000 > baud) && (baud >= 26000000))
+		lpf = 24000;  // LPF = 24MHz
+	if ((26000000 > baud) && (baud >= 23000000))
+		lpf = 22000;  // LPF = 22MHz
+	if ((23000000 > baud) && (baud >= 21000000))
+		lpf = 20000;  // LPF = 20MHz
+	if ((21000000 > baud) && (baud >= 19000000))
+		lpf = 18000;  // LPF = 18MHz
+	if ((19000000 > baud) && (baud >= 18000000))
+		lpf = 16000;  // LPF = 16MHz
+	if ((18000000 > baud) && (baud >= 17000000))
+		lpf = 14000;  // LPF = 14MHz
+	if ((17000000 > baud) && (baud >= 16000000))
+		lpf = 12000;  // LPF = 12MHz
+	if (16000000 > baud)
+		lpf = 10000;  // LPF = 10MHz
 
 	pll_calculate_byte(lpf, t_buff);
 }
@@ -675,15 +694,15 @@ static void pll_setdata( struct dvb_frontend *fe )
 	unsigned char data_4,data_5;
 	unsigned char buffer[4];
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s>\n", __func__);
 
-	//TM=0,LPF=4MHz
+	// TM = 0, LPF = 4MHz
 	//adjustting of VCO & LPF
 	data_4 = t_buff[2];
 	data_5 = t_buff[3];
 
-	t_buff[2] &= 0xE3; //TM=0,LPF=4MHz
-	t_buff[3] &= 0xF3; //LPF=4MHz
+	t_buff[2] &= 0xE3;  // TM = 0, LPF = 4MHz
+	t_buff[3] &= 0xF3;  // LPF = 4MHz
 
 	for (i = 0; i < 4; i++)
 	{
@@ -765,7 +784,7 @@ static int pll_set_freq( struct dvb_frontend *fe, long freq, long baud) //kHz, k
 	//if baud is unknown(blind search mode),
 	//set the LPF cutoff should be widest.
 
-	dprintk(10, "pll_set_freq f %ld b %ld\n", freq, baud);
+	dprintk(10, "%s %ld b %ld\n", __func__, freq, baud);
 
 	if (baud == 0)
 	{
@@ -781,17 +800,17 @@ static int pll_set_freq( struct dvb_frontend *fe, long freq, long baud) //kHz, k
 	return 0;
 }
 
-static long demod_288_tuner_getfreq( void )
+static long demod_288_tuner_getfreq(void)
 {
 	long data;
 	long freq;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	data = ( (t_buff[0] & 0x1F) << 8 ) | t_buff[1];
-	freq = data *(long)(pll_calculate_step(*(t_buff + 2)) );
+	freq = data *(long)(pll_calculate_step(*(t_buff + 2)));
 
-	dprintk(10, "%s<%ld\n", __func__, freq);
+	dprintk(100, "%s < %ld\n", __func__, freq);
 	return freq;
 }
 
@@ -800,14 +819,14 @@ static int demod_288_get_iq_wiring(void)
 	return 1;
 }
 
-static void demod_288_froze_lock( struct stv0288_state *state, int flag,unsigned char *register_)
+static void demod_288_froze_lock(struct stv0288_state *state, int flag,unsigned char *register_)
 {
 	int F288_FROZE_LOCK;
 	int address = 0x50;
 
 	F288_FROZE_LOCK = flag;
 
-	dprintk(10, "::demod_288_froze_lock/flag=%d\n",flag);
+	dprintk(10, "%s: flag = %d\n",__func__, flag);
 
 	register_[address] &= 0xDF;
 	register_[address] |= (F288_FROZE_LOCK << 5);
@@ -836,7 +855,7 @@ static long BinaryFloatDiv(long n1, long n2, int precision)
 	return result;
 }
 
-static long demod_xtal( void )
+static long demod_xtal(void)
 {
 	return 4000000;
 }
@@ -849,12 +868,12 @@ static long demod_288_get_mclk_freq(unsigned char *register_) //Hz
 	long pll_bypass;	/* pll bypass */
 	long ExtClk_Hz;
 
-    dprintk(10, "%s>\n", __func__);
+    dprintk(100, "%s >\n", __func__);
 
 	ExtClk_Hz=demod_xtal();
-	pll_divider=register_[0x40]+1;
-	pll_selratio=( ((register_[0x41]>>2)&0x01)?4:6);
-	pll_bypass=register_[0x41]&0x01;
+	pll_divider=register_[0x40] + 1;
+	pll_selratio=( ((register_[0x41] >> 2) & 0x01) ? 4 : 6);
+	pll_bypass=register_[0x41] & 0x01;
 
 	if (pll_bypass)
 	{
@@ -864,7 +883,7 @@ static long demod_288_get_mclk_freq(unsigned char *register_) //Hz
 	{
 		mclk_Hz=(ExtClk_Hz*pll_divider)/pll_selratio;
 	}
-	dprintk(10, "%s<%ld\n", __func__, mclk_Hz);
+	dprintk(100, "%s < F = %ld\n", __func__, mclk_Hz);
 	return mclk_Hz;
 }
 
@@ -878,7 +897,7 @@ static long demod_288_set_symbolrate(struct stv0288_state *state, long SymbolRat
 	int F288_SYMB_FREQ_MSB = 0x00;
 	int F288_SYMB_FREQ_LSB = 0x00;
 
-	dprintk(10, "%s> sr %ld\n", __func__, SymbolRate);
+	dprintk(100, "%s > sr=%ld\n", __func__, SymbolRate);
 
 	MasterClock_Hz = demod_288_get_mclk_freq(register_); //Hz
 	//	/*
@@ -909,7 +928,7 @@ static long demod_288_set_symbolrate(struct stv0288_state *state, long SymbolRat
 		F288_SYMB_FREQ_MSB = 0x51;
 		F288_SYMB_FREQ_LSB = 0x1e;
 /* ->my tester told with those values _all_ (not only sr 22000) channels
- * works. so this seems to be magic values :D
+ * works. so this seem to be magic values :D
  */
 	}
 	else
@@ -945,7 +964,7 @@ static void demod_288_set_derot_freq( struct stv0288_state *state, long DerotFre
 	int  F288_CARRIER_FREQUENCY_MSB;
 	int  F288_CARRIER_FREQUENCY_LSB;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	MasterClock_Hz=demod_288_get_mclk_freq(register_); //Hz
 	temp=(long)(DerotFreq_Hz / (long)(MasterClock_Hz / 65536L));
@@ -966,7 +985,7 @@ static void demod_288_set_frequency_offset_detector(struct stv0288_state *state,
 {
 	int address = 0x15;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	if (flag)
 	{
@@ -988,7 +1007,7 @@ static long demod_288_calc_derot_freq(struct stv0288_state *state, unsigned char
 	long Itmp;
 	int address;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	address = 0x2B;
 	register_[address] = stv0288_readreg(state,address);
@@ -1009,7 +1028,7 @@ static long demod_288_calc_derot_freq(struct stv0288_state *state, unsigned char
 	dfreq = dfreq / 65536L;
 	dfreq *= 10;
 
-	dprintk(10, "%s<%ld\n", __func__, dfreq);
+	dprintk(10, "%s < F = %ld\n", __func__, dfreq);
 	return dfreq;
 }
 
@@ -1017,7 +1036,7 @@ static long demod_288_get_derot_freq(struct stv0288_state *state, unsigned char 
 {
 	int address = 0x2B;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	register_[address] = stv0288_readreg(state,address);
 	return demod_288_calc_derot_freq(state,register_);
 }
@@ -1032,7 +1051,7 @@ static long demod_288_calc_symbolrate(unsigned char *register_)
 	long Lbyte;
 	int address = 0x28;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	Mclk = (long)(demod_288_get_mclk_freq(register_) / 4096L);  /* MasterClock * 10 / 2^20 */
 	Hbyte=register_[address];
@@ -1044,7 +1063,7 @@ static long demod_288_calc_symbolrate(unsigned char *register_)
 	Ltmp2 = (long)(Lbyte * Mclk) / 256;
 	//tidelgo Ltmp2=(long)(Lbyte * Mclk) / 256 / 16; //V0.03[xxxxxx]
 	Ltmp += Ltmp2;
-	dprintk(10, "%s<%ld\n", __func__, Ltmp);
+	dprintk(100, "%s < sr = %ld\n", __func__, Ltmp);
 	return Ltmp;
 }
 
@@ -1052,7 +1071,7 @@ static long demod_288_get_symbolrate(struct stv0288_state *state, unsigned char 
 {
 	int address = 0x2A;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	register_[address] = stv0288_readreg(state,address);
 
@@ -1068,7 +1087,7 @@ static void demod_288_start_coarse_algorithm(struct stv0288_state *state, int fl
 {
 	int address = 0x50;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	register_[address] &= 0xFE;
 	register_[address]|=(flag);
@@ -1084,7 +1103,7 @@ static long demod_288_coarse(struct stv0288_state *state, unsigned char *registe
 	int F288_COARSE = 1;
 	int address = 0x50;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	register_[address] &= 0xF8;
 	register_[address]|=(F288_AUTOCENTRE << 2);
@@ -1096,7 +1115,7 @@ static long demod_288_coarse(struct stv0288_state *state, unsigned char *registe
 	*Offset_Khz=demod_288_get_derot_freq(state,register_);
 	demod_288_start_coarse_algorithm(state, 0 ,register_); /* stop coarse algorithm */
 
-	dprintk(20, "(demod_288_coarse: symbolrate_Bds=%ld / *Offset_Khz=%ld)\n", symbolrate_Bds, *Offset_Khz);
+	dprintk(20, "%s: symbolrate_Bds=%ld / *Offset_Khz=%ld)\n", __func__, symbolrate_Bds, *Offset_Khz);
 	return symbolrate_Bds;
 }
 
@@ -1104,7 +1123,7 @@ static void demod_288_start_fine_algorithm(struct stv0288_state *state, int flag
 {
 	int address = 0x50;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	register_[address] &= 0xFD;
 	register_[address] |= (flag << 1);
 	stv0288_writeregI(state, address, register_[address]);
@@ -1121,7 +1140,7 @@ static void demod_288_fine(struct stv0288_state *state, long Symbolrate_Bds, lon
 	unsigned char F288_FINE;
 	int flag;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	MasterClock_Hz=demod_288_get_mclk_freq(register_);
 
@@ -1184,7 +1203,7 @@ static void demod_288_start_autocenter_algorithm(struct stv0288_state *state, in
 {
 	int address = 0x50;
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	register_[address] &= 0xFB;
 	register_[address] |= (flag << 2);
@@ -1218,7 +1237,7 @@ static long demod_288_autocenter(struct stv0288_state *state, unsigned char *reg
 	long timeout = 0,timing;
 	demod_288_start_autocenter_algorithm(state, 1 ,register_); /* Start autocentre algorithm */
 
-	dprintk(10, "%s>\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	do
 	{
@@ -1335,7 +1354,7 @@ static int demod_288_waitlock(struct stv0288_state *state, long TData,unsigned c
 	long timeout = 0;
 	int lock;
 
-	dprintk(10, "%s>", __func__);
+	dprintk(100, "%s >", __func__);
 
 	do
 	{
@@ -1418,8 +1437,8 @@ static int demod_288_algo(struct dvb_frontend *fe, unsigned long freq, unsigned 
 	SymbolRate_Bds=baud * 1000; //sps?
 
 	dprintk(20, "SEARCH>> FE_288_Algo::Begin\n");
-	dprintk(20, "SEARCH>> FE_288_Algo::Searched frequency=%ld kHz\n",SearchFreq_Khz);
-	dprintk(20, "SEARCH>> FE_288_Algo::Search range=+/-%ld kHz\n",ABS(MaxOffset_Khz));
+	dprintk(20, "SEARCH>> FE_288_Algo::Searched frequency=%ld kHz\n", SearchFreq_Khz);
+	dprintk(20, "SEARCH>> FE_288_Algo::Search range=+/-%ld kHz\n", ABS(MaxOffset_Khz));
 
 	pll_set_freq(fe, freq, baud); /* Set tuner frequency */
 	tunfreq_Khz=demod_288_tuner_getfreq(); /* Read tuner frequency */
@@ -1505,8 +1524,8 @@ static int demod_288_algo(struct dvb_frontend *fe, unsigned long freq, unsigned 
 			symbolrate_ok = TRUE;
 		}
 		if ((SymbolRate_Bds >= 1000000)	/* Check min symbolrate value */
-		&&  (coarseOffset_Khz>=MinOffset_Khz) /*Check minimum derotator offset criteria */
-		&&  (coarseOffset_Khz<MaxOffset_Khz)/* Check maximum derotator offset criteria */
+		&&  (coarseOffset_Khz >= MinOffset_Khz) /*Check minimum derotator offset criteria */
+		&&  (coarseOffset_Khz < MaxOffset_Khz)/* Check maximum derotator offset criteria */
 		&&  (symbolrate_ok))  /* Check shannon criteria */
 		{
 			unsigned char F288_TMG_LOCK,F288_CF;
@@ -1617,18 +1636,18 @@ static int demod_288_algo(struct dvb_frontend *fe, unsigned long freq, unsigned 
 
 int tuner_write_for_agc_stv0288( struct dvb_frontend *fe )
 {
-	dprintk(10, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	pll_set_freq(fe, 1000, 10); /* Set tuner frequency */
 	return 0;
 }
 
-struct dvb_frontend *stv0288_attach(const struct stv0288_config *config, struct i2c_adapter *i2c)
+struct dvb_frontend *stv0288_attach(struct stv0288_config *config, struct i2c_adapter *i2c)
 {
 	struct stv0288_state *state = NULL;
 	int id;
 
-	dprintk(10, "%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	/* allocate memory for the internal state */
 	state = kmalloc(sizeof(struct stv0288_state), GFP_KERNEL);
@@ -1650,14 +1669,14 @@ struct dvb_frontend *stv0288_attach(const struct stv0288_config *config, struct 
 		state->lnb_priv = lnbh221_attach(state->config->lnb, &state->equipment);
 	}
 	else if (config->usedLNB == cLNB_PIO)
-        {
+	{
 		state->lnb_priv = lnb_pio_attach(state->config->lnb, &state->equipment);
 	}
 	stv0288_writeregI(state, 0x41, 0x04);
 	msleep(200);
 	id = stv0288_readreg(state, 0x00);
 
-	dprintk(1, "stv0288 id %x\n", id);
+	dprintk(20, "stv0288 id: %x\n", id);
 
 	/* register 0x00 contains 0x11 for STV0288  */
 	if (id != 0x11)

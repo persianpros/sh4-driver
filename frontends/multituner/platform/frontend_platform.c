@@ -30,15 +30,10 @@
 #include "frontend_platform.h"
 
 short paramDebug = 0;  // debug print level is zero as default (0=nothing, 1= errors, 10=some detail, 20=more detail, 50=open/close functions, 100=all)
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[frontend_platform] "
-
-#define dprintk(level, x...) do \
-{ \
-	if ((paramDebug) && (paramDebug >= level) || level == 0) \
-	{ \
-		printk(TAGDEBUG x); \
-	} \
-} while (0)
 
 #if defined(ATEVIO7500)
 #include "atevio7500_platform.h"

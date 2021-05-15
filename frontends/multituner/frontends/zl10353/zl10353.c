@@ -56,11 +56,13 @@ struct zl10353_state
 	u32 frequency;
 };
 
+#if 0
 static int debug;
 #define dprintk(args...) \
 	do { \
 		if (debug) printk(KERN_ERR "[zl10353] " args); \
 	} while (0)
+#endif
 
 static int debug_regs;
 
@@ -72,12 +74,13 @@ static int zl10353_write_zero(struct zl10353_state *state, u8 reg)
     u8 buf [] = { reg, data };
     struct i2c_msg msg = { .addr = state->config.demod_address, .flags = 0, .buf = buf, .len = 1 };
 
-    dprintk("w zero: addr = 0x%02x : reg = 0x%02x\n", msg.addr, reg);
+    dprintk(20, "w zero: addr = 0x%02x : reg = 0x%02x\n", msg.addr, reg);
     ret = i2c_transfer (state->i2c, &msg, 1);
 
     if (ret != 1)
-        dprintk("%s: writereg error (reg == 0x%02x ret == %i)\n", __FUNCTION__, reg, ret);
-
+    {
+	    dprintk(1, "%s: writereg error (reg == 0x%02x ret == %i)\n", __func__, reg, ret);
+	}
     return (ret != 1) ? -EREMOTEIO : 0;
 }
 #endif
@@ -90,15 +93,15 @@ static int zl10353_single_write(struct dvb_frontend *fe, u8 reg, u8 val)
 			       .buf = buf, .len = 2 };
 	int err;
 
-	dprintk("w: addr = 0x%02x : reg = 0x%02x val = 0x%02x\n", msg.addr, reg, val);
+	dprintk(20, "w: addr = 0x%02x : reg = 0x%02x val = 0x%02x\n", msg.addr, reg, val);
 	err = i2c_transfer(state->i2c, &msg, 1);
-	if (err != 1) {
-		printk("zl10353: write to reg %x failed (err = %d)!\n", reg, err);
+	if (err != 1)
+	{
+		dprintk(1, "%s: write to reg %x failed (err = %d)!\n", __func__, reg, err);
 		return err;
 	}
 
 	msleep(10);
-
 	return 0;
 }
 
@@ -106,9 +109,12 @@ static int zl10353_write(struct dvb_frontend *fe, u8 *ibuf, int ilen)
 {
 	int err, i;
 	for (i = 0; i < ilen - 1; i++)
+	{
 		if ((err = zl10353_single_write(fe, ibuf[0] + i, ibuf[i + 1])))
+		{
 			return err;
-
+		}
+	}
 	return 0;
 }
 
@@ -117,25 +123,32 @@ static int zl10353_read_register(struct zl10353_state *state, u8 reg)
 	int ret;
 	u8 b0[1] = { reg };
 	u8 b1[1] = { 0 };
-	struct i2c_msg msg[2] = { { .addr = state->config.demod_address,
-				    .flags = 0,
-				    .buf = b0, .len = 1 },
-				  { .addr = state->config.demod_address,
-				    .flags = I2C_M_RD,
-				    .buf = b1, .len = 1 } };
+	struct i2c_msg msg[2] =
+	{
+		{
+			.addr = state->config.demod_address,
+			.flags = 0,
+			.buf = b0,
+			.len = 1
+		},
+		{
+			.addr = state->config.demod_address,
+			.flags = I2C_M_RD,
+			.buf = b1,
+			.len = 1
+		}
+	};
 
-	//dprintk("%s config->address=0x%x \n",__func__, state->config.demod_address);
+	//dprintk(20, "%s config->address=0x%x \n",__func__, state->config.demod_address);
 
 	ret = i2c_transfer(state->i2c, msg, 2);
 
-	if (ret != 2) {
-		printk("%s: readreg error (reg=%d, ret==%i)\n",
-		       __func__, reg, ret);
+	if (ret != 2)
+	{
+		dprintk(1, "%s: readreg error (reg=%d, ret==%i)\n", __func__, reg, ret);
 		return ret;
 	}
-
-	dprintk("r: reg=0x%02x , result=0x%02x\n", reg, b1[0]);
-
+	dprintk(20, "r: reg=0x%02x , result=0x%02x\n", reg, b1[0]);
 	return b1[0];
 }
 
@@ -146,19 +159,29 @@ static void zl10353_dump_regs(struct dvb_frontend *fe)
 	u8 reg;
 
 	/* Dump all registers. */
-	for (reg = 0; ; reg++) {
-		if (reg % 16 == 0) {
+	for (reg = 0; ; reg++)
+	{
+		if (reg % 16 == 0)
+		{
 			if (reg)
+			{
 				printk(KERN_DEBUG "\n");
+			}
 			printk(KERN_DEBUG "%02x:", reg);
 		}
 		ret = zl10353_read_register(state, reg);
 		if (ret >= 0)
+		{
 			printk(KERN_DEBUG " %02x", (u8)ret);
+		}
 		else
+		{
 			printk(KERN_DEBUG " --");
+		}
 		if (reg == 0xff)
+		{
 			break;
+		}
 	}
 	printk(KERN_DEBUG "\n");
 }
@@ -173,32 +196,37 @@ static void zl10353_calc_nominal_rate(struct dvb_frontend *fe,
 	u8 bw;
 
 	if (state->config.adc_clock)
+	{
 		adc_clock = state->config.adc_clock;
-
-	switch (bandwidth) {
-	case BANDWIDTH_6_MHZ:
-		bw = 6;
-		break;
-	case BANDWIDTH_7_MHZ:
-		bw = 7;
-		break;
-	case BANDWIDTH_8_MHZ:
-	default:
-		bw = 8;
-		break;
 	}
-
+	switch (bandwidth)
+	{
+		case BANDWIDTH_6_MHZ:
+		{
+			bw = 6;
+			break;
+		}
+		case BANDWIDTH_7_MHZ:
+		{
+			bw = 7;
+			break;
+		}
+		case BANDWIDTH_8_MHZ:
+		default:
+		{
+			bw = 8;
+			break;
+		}
+	}
 	value = (u64)10 * (1 << 23) / 7 * 125;
 	value = (bw * value) + adc_clock / 2;
 	do_div(value, adc_clock);
 	*nominal_rate = value;
 
-	dprintk("%s: bw %d, adc_clock %d => 0x%x\n",
-		__func__, bw, adc_clock, *nominal_rate);
+	dprintk(20, "%s: bw %d, adc_clock %d => 0x%x\n", __func__, bw, adc_clock, *nominal_rate);
 }
 
-static void zl10353_calc_input_freq(struct dvb_frontend *fe,
-				    u16 *input_freq)
+static void zl10353_calc_input_freq(struct dvb_frontend *fe, u16 *input_freq)
 {
 	struct zl10353_state *state = fe->demodulator_priv;
 	u32 adc_clock = 450560;	/* 45.056  MHz */
@@ -207,22 +235,30 @@ static void zl10353_calc_input_freq(struct dvb_frontend *fe,
 	u64 value;
 
 	if (state->config.adc_clock)
+	{
 		adc_clock = state->config.adc_clock;
+	}
 	if (state->config.if2)
+	{
 		if2 = state->config.if2;
-
+	}
 	if (adc_clock >= if2 * 2)
+	{
 		ife = if2;
-	else {
+	}
+	else
+	{
 		ife = adc_clock - (if2 % adc_clock);
 		if (ife > adc_clock / 2)
+		{
 			ife = adc_clock - ife;
+		}
 	}
 	value = (u64)65536 * ife + adc_clock / 2;
 	do_div(value, adc_clock);
 	*input_freq = -value;
 
-	dprintk("%s: if2 %d, ife %d, adc_clock %d => %d / 0x%x\n",
+	dprintk(20, "%s: if2 %d, ife %d, adc_clock %d => %d / 0x%x\n",
 		__func__, if2, ife, adc_clock, -(int)value, *input_freq);
 }
 
@@ -243,20 +279,22 @@ int pll_lock_check(struct dvb_frontend *fe)
     int pll, plllock;
     int k = 0;
 
-    dprintk("Inside %s()...\n", __FUNCTION__);
+    dprintk(100, "%s >\n", __func__);
     pll = zl10353_read_register(state, 0x08);
 
 	zl10353_single_write(fe, TUNER_GO, 0x02);
 
-	for (k = 0; k < 20; k++) {
+	for (k = 0; k < 20; k++)
+	{
 		pll = zl10353_read_register(state, 0x08);
 		plllock = pll & 0x40;	/* PLL locking check */
-		if (plllock) {
-			dprintk("PLL lock!\n");
+		if (plllock)
+		{
+			dprintk(20, "PLL lock!\n");
 			return 1;
 		}
 	}
-    dprintk("PLL lock fail\n");
+    dprintk(10, "PLL lock fail\n");
     return 0;
 }
 
@@ -280,44 +318,50 @@ void zl10353_pll_write(struct dvb_frontend *fe, int freq)
     TunerB[1] = (unsigned char)((chan_start >> 8) & 0x007f) ;
     TunerB[2] = (unsigned char)(chan_start & 0x00ff);
 
-    if ((freq >= 149000) && (freq < 342000)) {
-        CP=0 << 5; LO=1 << 6;	/* CP 155uA */
-        BS=1 << 6; PT=2 << 1;	/* band select mid 1 */
+    if ((freq >= 149000) && (freq < 342000))
+	{
+        CP = 0 << 5; LO = 1 << 6;	/* CP 155uA */
+        BS = 1 << 6; PT = 2 << 1;	/* band select mid 1 */
     }
-    else if ((freq >= 342000) && (freq < 402000)) {
-        CP=1 << 5; LO = 1 << 6;	/* CP 330uA */
-        BS=1 << 6; PT = 2 << 1;	/* band select mid 2 */
+    else if ((freq >= 342000) && (freq < 402000))
+	{
+        CP = 1 << 5; LO = 1 << 6;	/* CP 330uA */
+        BS = 1 << 6; PT = 2 << 1;	/* band select mid 2 */
     }
-    else if ((freq >= 402000) && (freq < 434000)) {
-        CP=2 << 5; LO = 1 << 6;	/* CP 690uA */
-        BS=1 << 6; PT = 2 << 1;	/* band select mid 3 */
+    else if ((freq >= 402000) && (freq < 434000))
+	{
+        CP = 2 << 5; LO = 1 << 6;	/* CP 690uA */
+        BS = 1 << 6; PT = 2 << 1;	/* band select mid 3 */
     }
-    else if ((freq >= 434000) && (freq < 752000)) {
-        CP=2 << 5; LO = 3 << 6;	/* CP 690uA */
-        BS=2 << 6; PT = 4 << 1;	/* band select high 1 */
+    else if ((freq >= 434000) && (freq < 752000))
+	{
+        CP = 2 << 5; LO = 3 << 6;	/* CP 690uA */
+        BS = 2 << 6; PT = 4 << 1;	/* band select high 1 */
     }
-    else if ((freq >= 752000) && (freq < 859000)) {
-        CP=3 << 5; LO = 3 << 6;	/* CP 1450uA */
-        BS=2 << 6; PT = 4 << 1;	/* band select high 2 */
+    else if ((freq >= 752000) && (freq < 859000))
+	{
+        CP = 3 << 5; LO = 3 << 6;	/* CP 1450uA */
+        BS = 2 << 6; PT = 4 << 1;	/* band select high 2 */
     }
     else
-        printk("Frequency '%d' out of range [150-858]\n", freq);
+	{
+		dprintk(1, "%s: Frequency '%d' out of range [150-858]\n", __func__, freq);
+	}
+    RATIO = 0x13;                      /* Ratio 32 125 Khz */
+    TunerB[3] |= (0x80 | CP | RATIO);  /* Set Charge Pump */
 
-    RATIO = 0x13; 						/* Ratio 32 125 Khz */
-    TunerB[3] |= (0x80 | CP | RATIO) ; 	/* Set Charge Pump */
+	SL = 3 << 4;                  /* PowerMode Full */
+    TunerB[4] |= (BS | SL | PT);  /* Set Charge Pump */
 
-	SL =3 <<4; 						/* PowerMode Full */
-    TunerB[4] |= (BS | SL | PT);	/* Set Charge Pump */
-
-    AT = 0x6; 		/* AGC Threshold  107 */
-    IFE = 1 << 4;	/* IF AGC Enable ON */
-    ATC = 0 << 5;	/* 10 HiSpeed Search */
+    AT = 0x6;      /* AGC Threshold  107 */
+    IFE = 1 << 4;  /* IF AGC Enable ON */
+    ATC = 0 << 5;  /* 10 HiSpeed Search */
 
     TunerB[5] |= ( LO | ATC | IFE | AT);
 
-    SAS = 1 << 7;	/* Saw Filter 1 (digital) */
-    AGD = 0 << 5;	/* AGC Enable */
-    ADS = 0 << 4;	/* ADC */
+    SAS = 1 << 7;  /* Saw Filter 1 (digital) */
+    AGD = 0 << 5;  /* AGC Enable */
+    ADS = 0 << 4;  /* ADC */
     TunerB[6] |= (SAS | AGD | ADS);
 
     zl10353_single_write(fe, TUNER_ADDR, TunerB[0]);
@@ -334,16 +378,19 @@ void zl10353_pll_write(struct dvb_frontend *fe, int freq)
     zl10353_single_write(fe, CONT_0, TunerB[6]);
     zl10353_single_write(fe, TUNER_GO, 0x01);
 
-	dprintk("Tuner Bytes: ");
-	for (i = 0; i < 7; i++)
-		dprintk(" %2.2x", TunerB[i]);
-	dprintk("\n");
-
+	if (paramDebug >= 100)
+	{
+		dprintk(1, "Tuner Bytes: ");
+		for (i = 0; i < 7; i++)
+		{
+			printk(" %2.2x", TunerB[i]);
+		}
+		printk("\n");
+	}
     pll_lock_check(fe);
 }
 
-static int zl10353_set_parameters(struct dvb_frontend *fe,
-				  struct dvb_frontend_parameters *param)
+static int zl10353_set_parameters(struct dvb_frontend *fe, struct dvb_frontend_parameters *param)
 {
 	struct zl10353_state *state = fe->demodulator_priv;
 	u16 nominal_rate, input_freq;
@@ -354,7 +401,7 @@ static int zl10353_set_parameters(struct dvb_frontend *fe,
 
     state->frequency = param->frequency;
 
-	dprintk("%s(): qam %x hierar %x hpcode %x lpcode %x guard %x tmode %x BW: %x Freq %d inversion: %d\n",
+	dprintk(20, "%s(): qam %x hierar %x hpcode %x lpcode %x guard %x tmode %x BW: %x Freq %d inversion: %d\n",
     	__func__, op->constellation, op->hierarchy_information, 
 		op->code_rate_HP, op->code_rate_LP, op->guard_interval, 
 		op->transmission_mode, op->bandwidth, state->frequency, param->inversion);
@@ -388,28 +435,39 @@ static int zl10353_set_parameters(struct dvb_frontend *fe,
 #endif
 
 	if (op->transmission_mode != TRANSMISSION_MODE_AUTO)
+	{
 		acq_ctl |= (1 << 0);
+	}
 	if (op->guard_interval != GUARD_INTERVAL_AUTO)
+	{
 		acq_ctl |= (1 << 1);
+	}
 	zl10353_single_write(fe, ACQ_CTL, acq_ctl);
 
-	switch (op->bandwidth) {
-	case BANDWIDTH_6_MHZ:
-		/* These are extrapolated from the 7 and 8MHz values */
-		zl10353_single_write(fe, MCLK_RATIO, 0x97);
-		zl10353_single_write(fe, BW_CTL, 0x34);
-		zl10353_single_write(fe, AFC_STEP, 0xdd);
-		break;
-	case BANDWIDTH_7_MHZ:
-		zl10353_single_write(fe, MCLK_RATIO, 0x86);
-		zl10353_single_write(fe, BW_CTL, 0x35);
-		zl10353_single_write(fe, AFC_STEP, 0x73);
-		break;
-	case BANDWIDTH_8_MHZ:
-	default:
-		zl10353_single_write(fe, MCLK_RATIO, 0x75);
-		zl10353_single_write(fe, BW_CTL, 0x36);
-		zl10353_single_write(fe, AFC_STEP, 0x75);
+	switch (op->bandwidth)
+	{
+		case BANDWIDTH_6_MHZ:
+		{
+			/* These are extrapolated from the 7 and 8MHz values */
+			zl10353_single_write(fe, MCLK_RATIO, 0x97);
+			zl10353_single_write(fe, BW_CTL, 0x34);
+			zl10353_single_write(fe, AFC_STEP, 0xdd);
+			break;
+		}
+		case BANDWIDTH_7_MHZ:
+		{
+			zl10353_single_write(fe, MCLK_RATIO, 0x86);
+			zl10353_single_write(fe, BW_CTL, 0x35);
+			zl10353_single_write(fe, AFC_STEP, 0x73);
+			break;
+		}
+		case BANDWIDTH_8_MHZ:
+		default:
+		{
+			zl10353_single_write(fe, MCLK_RATIO, 0x75);
+			zl10353_single_write(fe, BW_CTL, 0x36);
+			zl10353_single_write(fe, AFC_STEP, 0x75);
+		}
 	}
 	zl10353_single_write(fe, 0xDC, 0x20);
     zl10353_single_write(fe, 0xDD, 0x03);
@@ -424,115 +482,178 @@ static int zl10353_set_parameters(struct dvb_frontend *fe,
 	zl10353_single_write(fe, INPUT_FREQ_0, lsb(input_freq));
 
 	/* Hint at TPS settings */
-	switch (op->code_rate_HP) {
-	case FEC_2_3:
-		tps |= (1 << 7);
-		break;
-	case FEC_3_4:
-		tps |= (2 << 7);
-		break;
-	case FEC_5_6:
-		tps |= (3 << 7);
-		break;
-	case FEC_7_8:
-		tps |= (4 << 7);
-		break;
-	case FEC_1_2:
-	case FEC_AUTO:
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	switch (op->code_rate_LP) {
-	case FEC_2_3:
-		tps |= (1 << 4);
-		break;
-	case FEC_3_4:
-		tps |= (2 << 4);
-		break;
-	case FEC_5_6:
-		tps |= (3 << 4);
-		break;
-	case FEC_7_8:
-		tps |= (4 << 4);
-		break;
-	case FEC_1_2:
-	case FEC_AUTO:
-		break;
-	case FEC_NONE:
-		if (op->hierarchy_information == HIERARCHY_AUTO ||
-		    op->hierarchy_information == HIERARCHY_NONE)
+	switch (op->code_rate_HP)
+	{
+		case FEC_2_3:
+		{
+			tps |= (1 << 7);
 			break;
-	default:
-		return -EINVAL;
+		}
+		case FEC_3_4:
+		{
+			tps |= (2 << 7);
+			break;
+		}
+		case FEC_5_6:
+		{
+			tps |= (3 << 7);
+			break;
+		}
+		case FEC_7_8:
+		{
+			tps |= (4 << 7);
+			break;
+		}
+		case FEC_1_2:
+		case FEC_AUTO:
+		{
+			break;
+		}
+		default:
+		{
+			return -EINVAL;
+		}
 	}
-
-	switch (op->constellation) {
-	case QPSK:
-		break;
-	case QAM_AUTO:
-	case QAM_16:
-		tps |= (1 << 13);
-		break;
-	case QAM_64:
-		tps |= (2 << 13);
-		break;
-	default:
-		return -EINVAL;
+	switch (op->code_rate_LP)
+	{
+		case FEC_2_3:
+		{
+			tps |= (1 << 4);
+			break;
+		}
+		case FEC_3_4:
+		{
+			tps |= (2 << 4);
+			break;
+		}
+		case FEC_5_6:
+		{
+			tps |= (3 << 4);
+			break;
+		}
+		case FEC_7_8:
+		{
+			tps |= (4 << 4);
+			break;
+		}
+		case FEC_1_2:
+		case FEC_AUTO:
+		{
+			break;
+		}
+		case FEC_NONE:
+		{
+			if (op->hierarchy_information == HIERARCHY_AUTO
+			||  op->hierarchy_information == HIERARCHY_NONE)
+			{
+				break;
+			}
+		}
+		default:
+		{
+			return -EINVAL;
+		}
 	}
-
-	switch (op->transmission_mode) {
-	case TRANSMISSION_MODE_2K:
-	case TRANSMISSION_MODE_AUTO:
-		break;
-	case TRANSMISSION_MODE_8K:
-		tps |= (1 << 0);
-		break;
-	default:
-		return -EINVAL;
+	switch (op->constellation)
+	{
+		case QPSK:
+		{
+			break;
+		}
+		case QAM_AUTO:
+		case QAM_16:
+		{
+			tps |= (1 << 13);
+			break;
+		}
+		case QAM_64:
+		{
+			tps |= (2 << 13);
+			break;
+		}
+		default:
+		{
+			return -EINVAL;
+		}
 	}
-
-	switch (op->guard_interval) {
-	case GUARD_INTERVAL_1_32:
-	case GUARD_INTERVAL_AUTO:
-		break;
-	case GUARD_INTERVAL_1_16:
-		tps |= (1 << 2);
-		break;
-	case GUARD_INTERVAL_1_8:
-		tps |= (2 << 2);
-		break;
-	case GUARD_INTERVAL_1_4:
-		tps |= (3 << 2);
-		break;
-	default:
-		return -EINVAL;
+	switch (op->transmission_mode)
+	{
+		case TRANSMISSION_MODE_2K:
+		case TRANSMISSION_MODE_AUTO:
+		{
+			break;
+		}
+		case TRANSMISSION_MODE_8K:
+		{
+			tps |= (1 << 0);
+			break;
+		}
+		default:
+		{
+			return -EINVAL;
+		}
 	}
-
-	switch (op->hierarchy_information) {
-	case HIERARCHY_AUTO:
-	case HIERARCHY_NONE:
-		break;
-	case HIERARCHY_1:
-		tps |= (1 << 10);
-		break;
-	case HIERARCHY_2:
-		tps |= (2 << 10);
-		break;
-	case HIERARCHY_4:
-		tps |= (3 << 10);
-		break;
-	default:
-		return -EINVAL;
+	switch (op->guard_interval)
+	{
+		case GUARD_INTERVAL_1_32:
+		case GUARD_INTERVAL_AUTO:
+		{
+			break;
+		}
+		case GUARD_INTERVAL_1_16:
+		{
+			tps |= (1 << 2);
+			break;
+		}
+		case GUARD_INTERVAL_1_8:
+		{
+			tps |= (2 << 2);
+			break;
+		}
+		case GUARD_INTERVAL_1_4:
+		{
+			tps |= (3 << 2);
+			break;
+		}
+		default:
+		{
+			return -EINVAL;
+		}
 	}
-
+	switch (op->hierarchy_information)
+	{
+		case HIERARCHY_AUTO:
+		case HIERARCHY_NONE:
+		{
+			break;
+		}
+		case HIERARCHY_1:
+		{
+			tps |= (1 << 10);
+			break;
+		}
+		case HIERARCHY_2:
+		{
+			tps |= (2 << 10);
+			break;
+		}
+		case HIERARCHY_4:
+		{
+			tps |= (3 << 10);
+			break;
+		}
+		default:
+		{
+			return -EINVAL;
+		}
+	}
 	zl10353_single_write(fe, TPS_GIVEN_1, msb(tps));
 	zl10353_single_write(fe, TPS_GIVEN_0, lsb(tps));
 
 	if (fe->ops.i2c_gate_ctrl)
+	{
 		fe->ops.i2c_gate_ctrl(fe, 0);
-
+	}
 	/*
 	 * If there is no tuner attached to the secondary I2C bus, we call
 	 * set_params to program a potential tuner attached somewhere else.
@@ -541,43 +662,51 @@ static int zl10353_set_parameters(struct dvb_frontend *fe,
 
 	if (state->config.no_tuner) 
     {
-		dprintk("%s(): NO tuner\n", __func__);
-		if (fe->ops.tuner_ops.set_params) {
+		dprintk(1, "%s(): NO tuner\n", __func__);
+		if (fe->ops.tuner_ops.set_params)
+		{
 			fe->ops.tuner_ops.set_params(fe, param);
 			if (fe->ops.i2c_gate_ctrl)
+			{
 				fe->ops.i2c_gate_ctrl(fe, 0);
+			}
 		}
 	}
-     else if (fe->ops.tuner_ops.calc_regs) {
-		dprintk("%s(): calc regs\n", __func__);
+	else if (fe->ops.tuner_ops.calc_regs)
+	{
+		dprintk(20, "%s(): calc regs\n", __func__);
 		fe->ops.tuner_ops.calc_regs(fe, param, pllbuf + 1, 5);
 		pllbuf[1] <<= 1;
 		zl10353_write(fe, pllbuf, sizeof(pllbuf));
-	} else {
-		dprintk("%s(): NO tuner and calc regs\n", __func__);
 	}
-
+	else
+	{
+		dprintk(1, "%s(): NO tuner and calc regs\n", __func__);
+	}
 	zl10353_single_write(fe, 0x5F, 0x13);
 
 /* new zl10353_pll_write(fe, param->frequency);*/
 
 	/* If no attached tuner or invalid PLL registers, just start the FSM. */
 	if (state->config.no_tuner || fe->ops.tuner_ops.calc_regs == NULL)
+	{
 		zl10353_single_write(fe, FSM_GO, 0x01);
+	}
 	else
+	{
 		zl10353_single_write(fe, TUNER_GO, 0x01);
-
+	}
 	return 0;
 }
 
-static int zl10353_get_parameters(struct dvb_frontend *fe,
-				  struct dvb_frontend_parameters *param)
+static int zl10353_get_parameters(struct dvb_frontend *fe, struct dvb_frontend_parameters *param)
 {
 	struct zl10353_state *state = fe->demodulator_priv;
 	struct dvb_ofdm_parameters *op = &param->u.ofdm;
 	int s6, s9;
 	u16 tps;
-	static const u8 tps_fec_to_api[8] = {
+	static const u8 tps_fec_to_api[8] =
+	{
 		FEC_1_2,
 		FEC_2_3,
 		FEC_3_4,
@@ -588,78 +717,108 @@ static int zl10353_get_parameters(struct dvb_frontend *fe,
 		FEC_AUTO
 	};
 
-	dprintk("%s()\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	s6 = zl10353_read_register(state, STATUS_6);
 	s9 = zl10353_read_register(state, STATUS_9);
 	if (s6 < 0 || s9 < 0)
+	{
 		return -EREMOTEIO;
+	}
 	if ((s6 & (1 << 5)) == 0 || (s9 & (1 << 4)) == 0)
+	{
 		return -EINVAL;	/* no FE or TPS lock */
-
-	tps = zl10353_read_register(state, TPS_RECEIVED_1) << 8 |
-	      zl10353_read_register(state, TPS_RECEIVED_0);
+	}
+	tps = zl10353_read_register(state, TPS_RECEIVED_1) << 8
+		| zl10353_read_register(state, TPS_RECEIVED_0);
 
 	op->code_rate_HP = tps_fec_to_api[(tps >> 7) & 7];
 	op->code_rate_LP = tps_fec_to_api[(tps >> 4) & 7];
 
-	switch ((tps >> 13) & 3) {
-	case 0:
-		op->constellation = QPSK;
-		break;
-	case 1:
-		op->constellation = QAM_16;
-		break;
-	case 2:
-		op->constellation = QAM_64;
-		break;
-	default:
-		op->constellation = QAM_AUTO;
-		break;
+	switch ((tps >> 13) & 3)
+	{
+		case 0:
+		{
+			op->constellation = QPSK;
+			break;
+		}
+		case 1:
+		{
+			op->constellation = QAM_16;
+			break;
+		}
+		case 2:
+		{
+			op->constellation = QAM_64;
+			break;
+		}
+		default:
+		{
+			op->constellation = QAM_AUTO;
+			break;
+		}
+	}
+	op->transmission_mode = (tps & 0x01) ? TRANSMISSION_MODE_8K : TRANSMISSION_MODE_2K;
+
+	switch ((tps >> 2) & 3)
+	{
+		case 0:
+		{
+			op->guard_interval = GUARD_INTERVAL_1_32;
+			break;
+		}
+		case 1:
+		{
+			op->guard_interval = GUARD_INTERVAL_1_16;
+			break;
+		}
+		case 2:
+		{
+			op->guard_interval = GUARD_INTERVAL_1_8;
+			break;
+		}
+		case 3:
+		{
+			op->guard_interval = GUARD_INTERVAL_1_4;
+			break;
+		}
+		default:
+		{
+			op->guard_interval = GUARD_INTERVAL_AUTO;
+			break;
+		}
 	}
 
-	op->transmission_mode = (tps & 0x01) ? TRANSMISSION_MODE_8K :
-					       TRANSMISSION_MODE_2K;
-
-	switch ((tps >> 2) & 3) {
-	case 0:
-		op->guard_interval = GUARD_INTERVAL_1_32;
-		break;
-	case 1:
-		op->guard_interval = GUARD_INTERVAL_1_16;
-		break;
-	case 2:
-		op->guard_interval = GUARD_INTERVAL_1_8;
-		break;
-	case 3:
-		op->guard_interval = GUARD_INTERVAL_1_4;
-		break;
-	default:
-		op->guard_interval = GUARD_INTERVAL_AUTO;
-		break;
+	switch ((tps >> 10) & 7)
+	{
+		case 0:
+		{
+			op->hierarchy_information = HIERARCHY_NONE;
+			break;
+		}
+		case 1:
+		{
+			op->hierarchy_information = HIERARCHY_1;
+			break;
+		}
+		case 2:
+		{
+			op->hierarchy_information = HIERARCHY_2;
+			break;
+		}
+		case 3:
+		{
+			op->hierarchy_information = HIERARCHY_4;
+			break;
+		}
+		default:
+		{
+			op->hierarchy_information = HIERARCHY_AUTO;
+			break;
+		}
 	}
-
-	switch ((tps >> 10) & 7) {
-	case 0:
-		op->hierarchy_information = HIERARCHY_NONE;
-		break;
-	case 1:
-		op->hierarchy_information = HIERARCHY_1;
-		break;
-	case 2:
-		op->hierarchy_information = HIERARCHY_2;
-		break;
-	case 3:
-		op->hierarchy_information = HIERARCHY_4;
-		break;
-	default:
-		op->hierarchy_information = HIERARCHY_AUTO;
-		break;
-	}
-
-       param->frequency = state->frequency;
+	param->frequency = state->frequency;
 	op->bandwidth = state->bandwidth;
 	param->inversion = INVERSION_AUTO;
-
 	return 0;
 }
 
@@ -669,30 +828,45 @@ static int zl10353_read_status(struct dvb_frontend *fe, fe_status_t *status)
 	int s6, s7, s8;
 
 	if ((s6 = zl10353_read_register(state, STATUS_6)) < 0)
+	{
 		return -EREMOTEIO;
+	}
 	if ((s7 = zl10353_read_register(state, STATUS_7)) < 0)
+	{
 		return -EREMOTEIO;
+	}
 	if ((s8 = zl10353_read_register(state, STATUS_8)) < 0)
+	{
 		return -EREMOTEIO;
-
+	}
 	*status = 0;
 	if (s6 & (1 << 2))
+	{
 		*status |= FE_HAS_CARRIER;
+	}
 	if (s6 & (1 << 1))
+	{
 		*status |= FE_HAS_VITERBI;
+	}
 	if (s6 & (1 << 5))
+	{
 		*status |= FE_HAS_LOCK;
+	}
 	if (s7 & (1 << 4))
+	{
 		*status |= FE_HAS_SYNC;
+	}
 	if (s8 & (1 << 6))
+	{
 		*status |= FE_HAS_SIGNAL;
+	}
 
 	if ((*status & (FE_HAS_CARRIER | FE_HAS_VITERBI | FE_HAS_SYNC)) !=
 	    (FE_HAS_CARRIER | FE_HAS_VITERBI | FE_HAS_SYNC))
+	{
 		*status &= ~FE_HAS_LOCK;
-
-	dprintk("%s(): status: 0x%X\n", __func__, *status);
-
+	}
+	dprintk(20, "%s: status = 0x%X\n", __func__, *status);
 	return 0;
 }
 
@@ -700,10 +874,9 @@ static int zl10353_read_ber(struct dvb_frontend *fe, u32 *ber)
 {
 	struct zl10353_state *state = fe->demodulator_priv;
 
-	*ber = zl10353_read_register(state, RS_ERR_CNT_2) << 16 |
-	       zl10353_read_register(state, RS_ERR_CNT_1) << 8 |
-	       zl10353_read_register(state, RS_ERR_CNT_0);
-
+	*ber = zl10353_read_register(state, RS_ERR_CNT_2) << 16
+	     | zl10353_read_register(state, RS_ERR_CNT_1) << 8
+	     | zl10353_read_register(state, RS_ERR_CNT_0);
 	return 0;
 }
 
@@ -711,11 +884,9 @@ static int zl10353_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 {
 	struct zl10353_state *state = fe->demodulator_priv;
 
-	u16 signal = zl10353_read_register(state, AGC_GAIN_1) << 10 |
-		     zl10353_read_register(state, AGC_GAIN_0) << 2 | 3;
-
+	u16 signal = zl10353_read_register(state, AGC_GAIN_1) << 10
+	           | zl10353_read_register(state, AGC_GAIN_0) << 2 | 3;
 	*strength = ~signal;
-
 	return 0;
 }
 
@@ -725,36 +896,32 @@ static int zl10353_read_snr(struct dvb_frontend *fe, u16 *snr)
 	u8 _snr;
 
 	if (debug_regs)
+	{
 		zl10353_dump_regs(fe);
-
+	}
 	_snr = zl10353_read_register(state, SNR);
 	*snr = (_snr << 8) | _snr;
-
 	return 0;
 }
 
 static int zl10353_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 {
 	struct zl10353_state *state = fe->demodulator_priv;
-       u32 ubl = 0;
+	u32 ubl = 0;
 
-       ubl = zl10353_read_register(state, RS_UBC_1) << 8 |
-	     zl10353_read_register(state, RS_UBC_0);
+	ubl = zl10353_read_register(state, RS_UBC_1) << 8
+	    | zl10353_read_register(state, RS_UBC_0);
 
-       state->ucblocks += ubl;
-       *ucblocks = state->ucblocks;
-
+	state->ucblocks += ubl;
+	*ucblocks = state->ucblocks;
 	return 0;
 }
 
-static int zl10353_get_tune_settings(struct dvb_frontend *fe,
-				     struct dvb_frontend_tune_settings
-					 *fe_tune_settings)
+static int zl10353_get_tune_settings(struct dvb_frontend *fe, struct dvb_frontend_tune_settings *fe_tune_settings)
 {
 	fe_tune_settings->min_delay_ms = 1000;
 	fe_tune_settings->step_size = 0;
 	fe_tune_settings->max_drift = 0;
-
 	return 0;
 }
 
@@ -766,23 +933,32 @@ static int zl10353_init(struct dvb_frontend *fe)
 	int rc = 0;
 
 	if (debug_regs)
+	{
 		zl10353_dump_regs(fe);
+	}
 	if (state->config.parallel_ts)
+	{
 		zl10353_reset_attach[2] &= ~0x20;
+	}
 	if (state->config.clock_ctl_1)
+	{
 		zl10353_reset_attach[3] = state->config.clock_ctl_1;
+	}
 	if (state->config.pll_0)
+	{
 		zl10353_reset_attach[4] = state->config.pll_0;
-
-	/* Do a "hard" reset if not already done */
-	if (zl10353_read_register(state, 0x50) != zl10353_reset_attach[1] ||
-	    zl10353_read_register(state, 0x51) != zl10353_reset_attach[2]) {
-		rc = zl10353_write(fe, zl10353_reset_attach,
-				   sizeof(zl10353_reset_attach));
-		if (debug_regs)
-			zl10353_dump_regs(fe);
 	}
 
+	/* Do a "hard" reset if not already done */
+	if (zl10353_read_register(state, 0x50) != zl10353_reset_attach[1]
+	||  zl10353_read_register(state, 0x51) != zl10353_reset_attach[2])
+	{
+		rc = zl10353_write(fe, zl10353_reset_attach, sizeof(zl10353_reset_attach));
+		if (debug_regs)
+		{
+			zl10353_dump_regs(fe);
+		}
+	}
 	return 0;
 }
 
@@ -791,15 +967,17 @@ static int zl10353_i2c_gate_ctrl(struct dvb_frontend* fe, int enable)
 	struct zl10353_state *state = fe->demodulator_priv;
 	u8 val = 0x0a;
 
-	if (state->config.disable_i2c_gate_ctrl) {
+	if (state->config.disable_i2c_gate_ctrl)
+	{
 		/* No tuner attached to the internal I2C bus */
 		/* If set enable I2C bridge, the main I2C bus stopped hardly */
 		return 0;
 	}
 
 	if (enable)
+	{
 		val |= 0x10;
-
+	}
 	return zl10353_single_write(fe, 0x62, val);
 }
 
@@ -811,20 +989,20 @@ static void zl10353_release(struct dvb_frontend *fe)
 
 static struct dvb_frontend_ops zl10353_ops;
 
-struct dvb_frontend *zl10353_attach(const struct zl10353_config *config,
-				    struct i2c_adapter *i2c)
+struct dvb_frontend *zl10353_attach(struct zl10353_config *config, struct i2c_adapter *i2c)
 {
 	struct zl10353_state *state = NULL;
 #ifdef check_two_times
 	int id;
 #endif
 
-	dprintk("%s()\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	/* allocate memory for the internal state */
 	state = kzalloc(sizeof(struct zl10353_state), GFP_KERNEL);
 	if (state == NULL)
+	{
 		goto error;
-
+	}
 	/* setup the state */
 	state->i2c = i2c;
 	memcpy(&state->config, config, sizeof(struct zl10353_config));
@@ -838,8 +1016,8 @@ struct dvb_frontend *zl10353_attach(const struct zl10353_config *config,
 	id = zl10353_read_register(state, CHIP_ID);
 	if ((id != ID_ZL10353) && (id != ID_CE6230) && (id != ID_CE6231))
 	{
-		printk ("id = %02x\n", id);
-		printk ("Invalid probe, probably not a zl10353 device\n");
+		dprintk(50, "id = %02x\n", id);
+		dprintk(1, "Invalid probe, probably not a zl10353 device\n");
 		
 		goto error;
 	}
@@ -848,75 +1026,85 @@ struct dvb_frontend *zl10353_attach(const struct zl10353_config *config,
 	/* create dvb_frontend */
 	memcpy(&state->frontend.ops, &zl10353_ops, sizeof(struct dvb_frontend_ops));
 	state->frontend.demodulator_priv = state;
-
 	return &state->frontend;
+
 error:
 	kfree(state);
 	return NULL;
 }
+EXPORT_SYMBOL(zl10353_attach);
 
 #if DVB_API_VERSION >= 5
-
 static int zl10353_get_property(struct dvb_frontend *fe, struct dtv_property* tvp)
 {
-    /* get delivery system info */
-    if(tvp->cmd==DTV_DELIVERY_SYSTEM) {
-        switch (tvp->u.data) {
-        case SYS_DVBT:
-            break;
-        default:
-            return -EINVAL;
-        }
-    }
+	/* get delivery system info */
+	if (tvp->cmd == DTV_DELIVERY_SYSTEM)
+	{
+        switch (tvp->u.data)
+		{
+			case SYS_DVBT:
+			{
+				break;
+			}
+			default:
+			{
+				return -EINVAL;
+    		}
+		}
+	}
 
-    dprintk("%s()\n", __func__);
+    dprintk(100, "%s <\n", __func__);
     return 0;
 }
-
 #endif
 
-static struct dvb_frontend_ops zl10353_ops = {
-
-	.info = {
-		.name			= "Zarlink ZL10353 DVB-T",
-		.type			= FE_OFDM,
-		.frequency_min		= 174000000,
-		.frequency_max		= 862000000,
-		.frequency_stepsize	= 166667,
-		.frequency_tolerance	= 0,
-		.caps = FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 |
-			FE_CAN_FEC_3_4 | FE_CAN_FEC_5_6 | FE_CAN_FEC_7_8 |
-			FE_CAN_FEC_AUTO |
-			FE_CAN_QPSK | FE_CAN_QAM_16 | FE_CAN_QAM_64 | FE_CAN_QAM_AUTO |
-			FE_CAN_TRANSMISSION_MODE_AUTO | FE_CAN_GUARD_INTERVAL_AUTO |
-			FE_CAN_HIERARCHY_AUTO | FE_CAN_RECOVER |
-			FE_CAN_MUTE_TS
+static struct dvb_frontend_ops zl10353_ops =
+{
+	.info =
+	{
+		.name                = "Zarlink ZL10353 DVB-T",
+		.type                = FE_OFDM,
+		.frequency_min       = 174000000,
+		.frequency_max       = 862000000,
+		.frequency_stepsize  = 166667,
+		.frequency_tolerance = 0,
+		.caps                = FE_CAN_FEC_1_2
+		                     | FE_CAN_FEC_2_3
+		                     | FE_CAN_FEC_3_4
+		                     | FE_CAN_FEC_5_6
+		                     | FE_CAN_FEC_7_8
+		                     | FE_CAN_FEC_AUTO
+		                     | FE_CAN_QPSK
+		                     | FE_CAN_QAM_16
+		                     | FE_CAN_QAM_64
+		                     | FE_CAN_QAM_AUTO
+		                     | FE_CAN_TRANSMISSION_MODE_AUTO
+		                     | FE_CAN_GUARD_INTERVAL_AUTO
+		                     | FE_CAN_HIERARCHY_AUTO
+		                     | FE_CAN_RECOVER
+		                     | FE_CAN_MUTE_TS
 	},
-
-	.release = zl10353_release,
-
-	.init = zl10353_init,
-	.sleep = zl10353_sleep,
-	.i2c_gate_ctrl = zl10353_i2c_gate_ctrl,
-	.write = zl10353_write,
-
-	.set_frontend = zl10353_set_parameters,
-	.get_frontend = zl10353_get_parameters,
-	.get_tune_settings = zl10353_get_tune_settings,
-
-	.read_status = zl10353_read_status,
-	.read_ber = zl10353_read_ber,
-	.read_signal_strength = zl10353_read_signal_strength,
-	.read_snr = zl10353_read_snr,
-	.read_ucblocks = zl10353_read_ucblocks,
+	.release                 = zl10353_release,
+	.init                    = zl10353_init,
+	.sleep                   = zl10353_sleep,
+	.i2c_gate_ctrl           = zl10353_i2c_gate_ctrl,
+	.write                   = zl10353_write,
+	.set_frontend            = zl10353_set_parameters,
+	.get_frontend            = zl10353_get_parameters,
+	.get_tune_settings       = zl10353_get_tune_settings,
+	.read_status             = zl10353_read_status,
+	.read_ber                = zl10353_read_ber,
+	.read_signal_strength    = zl10353_read_signal_strength,
+	.read_snr                = zl10353_read_snr,
+	.read_ucblocks           = zl10353_read_ucblocks,
 
 #if DVB_API_VERSION >= 5
-	.get_property  = zl10353_get_property,
+	.get_property            = zl10353_get_property,
 #endif
 };
 
-module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, "Turn on/off frontend debugging (default:off).");
+module_param(paramDebug, short, 0644);
+MODULE_PARM_DESC(paramDebug, "Turn on/off frontend debugging (default:off).");
 
 module_param(debug_regs, int, 0644);
 MODULE_PARM_DESC(debug_regs, "Turn on/off frontend register dumps (default:off).");
@@ -924,5 +1112,5 @@ MODULE_PARM_DESC(debug_regs, "Turn on/off frontend register dumps (default:off).
 MODULE_DESCRIPTION("Zarlink ZL10353 DVB-T demodulator driver");
 MODULE_AUTHOR("Chris Pascoe");
 MODULE_LICENSE("GPL");
+// vim:ts=4
 
-EXPORT_SYMBOL(zl10353_attach);

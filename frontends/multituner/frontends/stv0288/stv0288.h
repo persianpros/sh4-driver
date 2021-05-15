@@ -54,18 +54,18 @@ struct stv0288_config
 
 struct stv0288_state
 {
-	struct i2c_adapter          *i2c;
-	const struct stv0288_config *config;
-	struct dvb_frontend         frontend;
+	struct i2c_adapter    *i2c;
+	struct stv0288_config *config;
+	struct dvb_frontend   frontend;
 
-	u8                          initialised:1;
-	u32                         tuner_frequency;
-	u32                         symbol_rate;
-	fe_code_rate_t              fec_inner;
-	int                         errmode;
+	u8                    initialised:1;
+	u32                   tuner_frequency;
+	u32                   symbol_rate;
+	fe_code_rate_t        fec_inner;
+	int                   errmode;
 
-	struct equipment_s          equipment;
-	void*                       lnb_priv;
+	struct equipment_s    equipment;
+	void                  *lnb_priv;
 };
 
 typedef enum
@@ -108,7 +108,7 @@ static inline int stv0288_writereg(struct dvb_frontend *fe, u8 reg, u8 val)
 	return r;
 }
 
-extern struct dvb_frontend *stv0288_attach(const struct stv0288_config *config, struct i2c_adapter *i2c);
+extern struct dvb_frontend *stv0288_attach(struct stv0288_config *config, struct i2c_adapter *i2c);
 
 #endif /* STV0288_H */
 // vim:ts=4

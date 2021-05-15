@@ -57,12 +57,6 @@
 
 #include "lnb.h"
 
-extern short paramDebug;
-#if defined TAGDEBUG
-#undef TAGDEBUG
-#endif
-#define TAGDEBUG "[cx24116] "
-
 #define cx24116_SEARCH_RANGE_KHZ 5000
 #define cMaxError 5
 
@@ -75,12 +69,21 @@ static int cx24116_load_firmware(struct dvb_frontend *fe, const struct firmware 
 static u8 numSockets = 0;
 static struct socket_s socketList[cMaxSockets];
 
-static short paramDebug = 0;
+short paramDebug = 0;
+#if defined TAGDEBUG
+#undef TAGDEBUG
+#endif
 #define TAGDEBUG "[cx24116] "
 
-#define dprintk(level, x...) do { \
-		if (paramDebug > level) printk(TAGDEBUG x); \
-	} while (0)
+#if 0
+#define dprintk(level, x...) do \
+{ \
+	if (paramDebug > level) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+#endif
 
 // Fast i2c delay (1ms ~ 1MHz) is only used to speed up the firmware
 // download. All other read/write operations are executed with the default

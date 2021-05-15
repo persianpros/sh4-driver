@@ -52,7 +52,7 @@ struct zl10353_config
 	u8               tuner_address;
 };
 
-extern struct dvb_frontend* zl10353_attach(const struct zl10353_config *config, struct i2c_adapter *i2c);
+extern struct dvb_frontend* zl10353_attach(struct zl10353_config *config, struct i2c_adapter *i2c);
 int zl10353_set_voltage(struct dvb_frontend* fe, fe_sec_voltage_t voltage);
 
 #endif /* ZL10353_H */

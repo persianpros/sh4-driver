@@ -42,7 +42,7 @@
 
 #include "tuner.h"
 
-extern short paramDebug;
+short paramDebug = 0;
 #if defined TAGDEBUG
 #undef TAGDEBUG
 #endif
@@ -70,7 +70,7 @@ static int zl10353_write_zero(struct i2c_adapter *adapter, u8 addr, u8 reg)
 
 	if (ret != 1)
 	{
-		printk("%s: writereg error (reg == 0x%02x ret == %i)\n", __FUNCTION__, reg, ret);
+		dprintk(1, "%s: writereg error (reg == 0x%02x ret == %i)\n", __func__, reg, ret);
 	}
 	return (ret != 1) ? -EREMOTEIO : 0;
 }
@@ -97,7 +97,7 @@ static int zl10353_read_register(struct i2c_adapter *adapter, u8 addr, u8 reg)
 
 	if (ret != 2)
 	{
-		printk("%s: readreg error (reg=%d, ret==%i)\n", __func__, reg, ret);
+		dprintk(1, "%s: readreg error (reg=%d, ret==%i)\n", __func__, reg, ret);
 		return ret;
 	}
 	return b1[0];
@@ -109,11 +109,11 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	struct zl10353_config         *cfg;
 	struct zl10353_private_data_s *priv;
 
-	printk("%s\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	if (numSockets + 1 == cMaxSockets)
 	{
-		printk("Max. number of sockets reached... cannot register\n");
+		dprintk(1, "Max. number of sockets reached... cannot register\n");
 		return;
 	}
 	socketList[numSockets] = *socket;
@@ -125,14 +125,14 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (cfg == NULL)
 	{
-		printk("zl10353: error malloc\n");
+		dprintk(1, "zl10353: error malloc\n");
 		return;
 	}
 	if (socket->tuner_enable[0] != -1)
 	{
 		cfg->tuner_enable_pin = stpio_request_pin (socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 
-		printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+		dprintk(20, "tuner_enable_pin %p\n", cfg->tuner_enable_pin);
 		stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
 		stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
 		msleep(250);
@@ -157,7 +157,7 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (frontend == NULL)
 	{
-		printk("zl10353: zl10353_attach failed\n");
+		dprintk(1, "zl10353_attach failed\n");
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -168,7 +168,7 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	}
 	if (dvb_pll_attach(frontend, cfg->tuner_address, i2c_get_adapter(socket->i2c_bus), DVB_PLL_TUA6034) == NULL)
 	{
-		printk("tua6034: tua6034_attach failed at i2c-%d addr 0x%02x\n", socket->i2c_bus, cfg->tuner_address);
+		dprintk(1, "tua6034: tua6034_attach failed at i2c-%d addr 0x%02x\n", socket->i2c_bus, cfg->tuner_address);
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -179,7 +179,7 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	}
 	if (dvb_register_frontend (dvb_adap, frontend))
 	{
-		printk ("%s: Frontend registration failed !\n", __FUNCTION__);
+		dprintk (1, "%s: Frontend registration failed !\n", __func__);
 		if (frontend->ops.release)
 		{
 			frontend->ops.release (frontend);
@@ -194,13 +194,13 @@ static int zl10353_demod_detect(struct socket_s *socket, struct frontend_s *fron
 	int              id;
 	struct stpio_pin *pin = NULL;
 	
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	if (socket->tuner_enable[0] != -1)
 	{
 		pin = stpio_request_pin(socket->tuner_enable[0], socket->tuner_enable[1], "tun_enab", STPIO_OUT);
 	}
-	printk("%s > %s: i2c-%d addr 0x%x\n", __func__, socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
+	dprintk(20, "%s: i2c-%d addr 0x%x\n", socket->name, socket->i2c_bus, frontend_cfg->demod_i2c);
 
 	if (pin != NULL)
 	{
@@ -214,29 +214,29 @@ static int zl10353_demod_detect(struct socket_s *socket, struct frontend_s *fron
 	id = zl10353_read_register(i2c_get_adapter(socket->i2c_bus), frontend_cfg->demod_i2c, CHIP_ID);
 	if ((id != ID_ZL10353) && (id != ID_CE6230) && (id != ID_CE6231))
 	{
-		printk ("id = %02x\n", id);
-		printk ("Invalid probe, probably not a zl10353 device\n");
+		dprintk(50, "id = %02x\n", id);
+		dprintk(1, "Invalid probe, probably not a zl10353 device\n");
 		if (pin != NULL)
 		{
 			stpio_free_pin(pin);
 		}
 		return -EREMOTEIO;
 	}
-	printk("%s: Detected zl10353\n", __func__);
+	dprintk(20, "%s: Detected zl10353\n", __func__);
 	
 	if (pin != NULL)
 	{
 		stpio_free_pin(pin);
 	}
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
 static int zl10353_demod_attach(struct dvb_adapter *adapter, struct socket_s *socket, struct frontend_s *frontend)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	zl10353_register_frontend(adapter, socket);
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
@@ -249,12 +249,12 @@ static int zl10353_probe(struct platform_device *pdev)
 	struct platform_frontend_config_s *plat_data = pdev->dev.platform_data;
 	struct frontend_s frontend;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	frontend_cfg = kmalloc(sizeof(struct platform_frontend_config_s), GFP_KERNEL);
 	memcpy(frontend_cfg, plat_data, sizeof(struct platform_frontend_config_s));
 
-	printk("found frontend \"%s\" in platform config\n", frontend_cfg->name);
+	dprintk(20, "Found frontend \"%s\" in platform config\n", frontend_cfg->name);
 
 	frontend.demod_detect = zl10353_demod_detect;
 	frontend.demod_attach = zl10353_demod_attach;
@@ -262,7 +262,7 @@ static int zl10353_probe(struct platform_device *pdev)
 	
 	if (socket_register_frontend(&frontend) < 0)
 	{
-		printk("failed to register frontend\n");
+		dprintk(1, "Failed to register frontend\n");
 	}
 	printk("%s <\n", __func__);
 	return 0;
@@ -275,12 +275,12 @@ static int zl10353_remove(struct platform_device *pdev)
 
 static struct platform_driver zl10353_driver =
 {
-	.probe = zl10353_probe,
+	.probe  = zl10353_probe,
 	.remove = zl10353_remove,
 	.driver	=
 	{
-		.name	= "zl10353",
-		.owner  = THIS_MODULE,
+		.name  = "zl10353",
+		.owner = THIS_MODULE,
 	},
 };
 
@@ -292,15 +292,15 @@ int __init zl10353_init(void)
 {
 	int ret;
 
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 	ret = platform_driver_register(&zl10353_driver);
-	printk("%s < %d\n", __func__, ret);
+	dprintk(100, "%s < %d\n", __func__, ret);
 	return ret;
 }
 
 static void zl10353_cleanup(void)
 {
-	printk("%s >\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 }
 
 module_init (zl10353_init);
@@ -310,6 +310,6 @@ module_param(paramDebug, short, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 MODULE_PARM_DESC(paramDebug, "Debug Output 0=disabled >0=enabled(debuglevel)");
 
 MODULE_DESCRIPTION ("ZL10353 Demodulator driver");
-MODULE_AUTHOR      ("konfetti");
+MODULE_AUTHOR      ("Open Vision developers");
 MODULE_LICENSE     ("GPL");
 // vim:ts=4

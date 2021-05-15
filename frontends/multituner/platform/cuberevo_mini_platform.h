@@ -144,10 +144,10 @@ struct tunersocket_s cuberevo_socket =
 	{
 		[0] =
 		{
-			.name               = "socket-1",
-			.tuner_enable       = {-1, -1, -1},
-			.lnb                = {2, 6, 1, 2, 5, 0},
-			.i2c_bus            = 0,
+			.name         = "socket-1",
+			.tuner_enable = { -1, -1, -1 },
+			.lnb          = { 2, 6, 1, 2, 5, 0 },
+			.i2c_bus      = 0,
 		},
 	},
 };

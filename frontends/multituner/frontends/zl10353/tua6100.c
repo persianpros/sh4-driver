@@ -69,7 +69,7 @@ static int tua6100_sleep(struct dvb_frontend *fe)
 	}
 	if ((ret = i2c_transfer (priv->i2c, &msg, 1)) != 1)
 	{
-		printk("%s: i2c error\n", __func__);
+		dprintk(1, "%s: i2c error\n", __func__);
 	}
 	if (fe->ops.i2c_gate_ctrl)
 	{

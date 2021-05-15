@@ -77,9 +77,14 @@
 short paramDebug = 50;
 #define TAGDEBUG "[avl2108] "
 
-#define dprintk(level, x...) do { \
-		if ((paramDebug) && (paramDebug > level)) printk(TAGDEBUG x); \
-	} while (0)
+#define dprintk(level, x...) \
+do \
+{ \
+	if ((paramDebug) && (paramDebug > level)) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
 
 struct avl2108_diseqc_tx_status
 {

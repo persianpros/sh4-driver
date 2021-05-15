@@ -6263,7 +6263,7 @@ static int stv090x_set_s2rolloff(struct stv090x_state *state)
 	return 0;
 
 err:
-	printk("stv090x_set_s2rolloff: I/O error\n");
+	dprintk(1, "stv090x_set_s2rolloff: I/O error\n");
 	return -1;
 }
 
