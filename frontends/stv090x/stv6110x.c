@@ -77,8 +77,6 @@ static int stv6110x_read_reg(struct stv6110x_state *stv6110x, u8 reg, u8 *data)
 		{ .addr = config->addr, .flags = 0, 	   .buf = b0, .len = 1 },
 		{ .addr = config->addr, .flags = I2C_M_RD, .buf = b1, .len = 1 }
 	};
-
-
 	if (stv6110x->fe->ops.i2c_gate_ctrl)
 	{
 		stv6110x->fe->ops.i2c_gate_ctrl(stv6110x->fe, 1);

@@ -3,9 +3,11 @@
  *
  * @author konfetti
  *
- * 	Copyright (C) 2011 duckbox
+ *  Copyright (C) 2011 duckbox
  *
- *  core part for stv090x demod
+ *  Core part for STM STV090x demodulator
+ *
+ *  Version for Sharp BS2F7VZ0169 frontend (STM STV6110A + STV0903)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -47,7 +49,7 @@ short paramDebug = 0;
 #if defined TAGDEBUG
 #undef TAGDEBUG
 #endif
-#define TAGDEBUG "[core] "
+#define TAGDEBUG "[core_stv09x] "
 
 int bbgain = -1;
 
@@ -73,11 +75,10 @@ static void stv090x_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 		dprintk(1, "Max number sockets reached ... cannot register\n");
 		return;
 	}
-
 	socketList[numSockets] = *socket;
 	numSockets++;
 
-	priv = (struct stv090x_private_data_s *) frontend_cfg->private;
+	priv = (struct stv090x_private_data_s *)frontend_cfg->private;
 
 	cfg = kmalloc(sizeof(struct stv090x_config), GFP_KERNEL);
 
@@ -94,7 +95,7 @@ static void stv090x_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 							  "tun_enab",
 							  STPIO_OUT);
 
-		printk("tuner_enable_pin %p\n", cfg->tuner_enable_pin);
+		dprintk(20, "tuner_enable_pin %p\n", cfg->tuner_enable_pin);
 		stpio_set_pin(cfg->tuner_enable_pin, !socket->tuner_enable[2]);
 		stpio_set_pin(cfg->tuner_enable_pin, socket->tuner_enable[2]);
 
@@ -105,29 +106,29 @@ static void stv090x_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	{
 		cfg->tuner_enable_pin = NULL;
 	}
-	cfg->address               = frontend_cfg->demod_i2c;
-	cfg->tuner_address         = frontend_cfg->tuner_i2c;
-	cfg->usedTuner             = priv->usedTuner;
-	cfg->usedLNB               = priv->usedLNB;
-	cfg->alternativePath       = priv->alternativePath;
-	cfg->shouldSleep           = priv->shouldSleep;
-	cfg->device                = priv->device;
-	cfg->demod_mode            = priv->demod_mode;
-	cfg->clk_mode              = priv->clk_mode;
+	cfg->address              = frontend_cfg->demod_i2c;
+	cfg->tuner_address        = frontend_cfg->tuner_i2c;
+	cfg->usedTuner            = priv->usedTuner;
+	cfg->usedLNB              = priv->usedLNB;
+	cfg->alternativePath      = priv->alternativePath;
+	cfg->shouldSleep          = priv->shouldSleep;
+	cfg->device               = priv->device;
+	cfg->demod_mode           = priv->demod_mode;
+	cfg->clk_mode             = priv->clk_mode;
 
-	cfg->xtal                  = priv->xtal;
-	cfg->ref_clk               = priv->ref_clk;
-	cfg->ts1_mode              = priv->ts1_mode;
-	cfg->ts2_mode              = priv->ts2_mode;
-	cfg->ts1_clk               = priv->ts1_clk;
-	cfg->ts2_clk               = priv->ts2_clk;
-	cfg->repeater_level        = priv->repeater_level;
-	cfg->tuner_bbgain          = priv->tuner_bbgain;
-	cfg->adc1_range            = priv->adc1_range;
+	cfg->xtal                 = priv->xtal;
+	cfg->ref_clk              = priv->ref_clk;
+	cfg->ts1_mode             = priv->ts1_mode;
+	cfg->ts2_mode             = priv->ts2_mode;
+	cfg->ts1_clk              = priv->ts1_clk;
+	cfg->ts2_clk              = priv->ts2_clk;
+	cfg->repeater_level       = priv->repeater_level;
+	cfg->tuner_bbgain         = priv->tuner_bbgain;
+	cfg->adc1_range           = priv->adc1_range;
 
-	cfg->adc2_range            = priv->adc2_range;
-	cfg->diseqc_envelope_mode  = priv->diseqc_envelope_mode;
-	cfg->tuner_refclk          = priv->tuner_refclk;
+	cfg->adc2_range           = priv->adc2_range;
+	cfg->diseqc_envelope_mode = priv->diseqc_envelope_mode;
+	cfg->tuner_refclk         = priv->tuner_refclk;
 
 	memcpy(cfg->lnb, socket->lnb, sizeof(cfg->lnb));
 
@@ -153,7 +154,7 @@ static void stv090x_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (dvb_register_frontend(dvb_adap, frontend))
 	{
-		dprintk(1, "%s: Frontend registration failed !\n", __FUNCTION__);
+		dprintk(1, "%s: Frontend registration failed\n", __func__);
 		if (frontend->ops.release)
 		{
 			frontend->ops.release(frontend);
@@ -314,3 +315,4 @@ MODULE_PARM_DESC(bbgain, "default=-1 (use default config = 10");
 MODULE_DESCRIPTION("Tunerdriver");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
+// vim:ts=

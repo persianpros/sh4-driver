@@ -75,10 +75,12 @@ static struct dvb_device CaDevice =
 #ifdef __TDT__
 static int caInitialized = 0;
 #if !defined(VIP2) \
- && !defined (SPARK) \
- && !defined (SPARK7162) \
- && !defined (ADB_BOX) \
- && !defined (CUBEREVO_2000HD) \
+ && !defined(SPARK) \
+ && !defined(SPARK7162) \
+ && !defined(ADB_BOX) \
+ && !defined(CUBEREVO_2000HD) \
+ && !defined(CUBEREVO_MINI_FTA) \
+ && !defined(CUBEREVO_250HD) \
  && !defined(SAGEMCOM88) \
  && !defined(PACE7241)
 extern int init_ci_controller(struct dvb_adapter *dvb_adap);
@@ -91,15 +93,17 @@ struct dvb_device *CaInit(struct DeviceContext_s *DeviceContext)
 	printk("[player2] %s >\n", __func__);
 	if (!caInitialized)
 	{
-		/* the following call creates ca0 associated with the cimax hardware */
-		printk("[player2] Initializing CI Controller\n");
 #if !defined(VIP2) \
  && !defined(SPARK) \
  && !defined(SPARK7162) \
  && !defined(ADB_BOX) \
  && !defined(CUBEREVO_2000HD) \
+ && !defined(CUBEREVO_MINI_FTA) \
+ && !defined(CUBEREVO_250HD) \
  && !defined(SAGEMCOM88) \
  && !defined(PACE7241)
+		/* the following call creates ca0 associated with the cimax hardware */
+		printk("[player2] Initializing CI Controller\n");
 		init_ci_controller(&DeviceContext->DvbContext->DvbAdapter);
 #endif
 		caInitialized = 1;
@@ -130,10 +134,7 @@ static int CaRelease(struct inode *Inode, struct file *File)
 	return dvb_generic_release(Inode, File);
 }
 
-static int CaIoctl(struct inode *Inode,
-		   struct file *File,
-		   unsigned int IoctlCode,
-		   void *Parameter)
+static int CaIoctl(struct inode *Inode, struct file *File, unsigned int IoctlCode, void *Parameter)
 {
 	struct dvb_device *DvbDevice = (struct dvb_device *)File->private_data;
 	struct DeviceContext_s *Context = (struct DeviceContext_s *)DvbDevice->priv;
@@ -221,9 +222,13 @@ static int CaIoctl(struct inode *Inode,
 			ca_descr_t *descr = (ca_descr_t *) Parameter;
 			dprintk("[player2] CA_SET_DESCR\n");
 			if (descr->index >= 16)
+			{
 				return -EINVAL;
+			}
 			if (descr->parity > 1)
+			{
 				return -EINVAL;
+			}
 #if 0
 			dprintk("index = %d\n", descr->index);
 			dprintk("parity = %d\n", descr->parity);
@@ -244,11 +249,17 @@ static int CaIoctl(struct inode *Inode,
 				return -1;
 			}
 			if (&Context->DvbContext->Lock != NULL)
+			{
 				mutex_lock(&Context->DvbContext->Lock);
+			}
 			if (pti_hal_descrambler_set(pSession->session, pSession->descramblers[descr->index], descr->cw, descr->parity) != 0)
+			{
 				printk("[player2] Error while setting descrambler keys\n");
+			}
 			if (&Context->DvbContext->Lock != NULL)
+			{
 				mutex_unlock(&Context->DvbContext->Lock);
+			}
 			return 0;
 			break;
 		}
@@ -269,9 +280,13 @@ static int CaIoctl(struct inode *Inode,
 				useAlt = true;
 			}
 			if (descr->index >= 16)
+			{
 				return -EINVAL;
+			}
 			if (descr->parity > 1)
+			{
 				return -EINVAL;
+			}
 #if 0
 			if (debug)
 			{
@@ -287,24 +302,34 @@ static int CaIoctl(struct inode *Inode,
 				return -1;
 			}
 			if (&Context->DvbContext->Lock != NULL)
+			{
 				mutex_lock(&Context->DvbContext->Lock);
+			}
 			if (useAlt)
 			{
 				if (pti_hal_descrambler_set_aes(sess, altDescr, descr->data, descr->parity, descr->data_type) != 0)
+				{
 					printk("[player2] Error while setting descrambler keys\n");
+				}
 			}
 			else
 			{
 				if (pti_hal_descrambler_set_aes(pSession->session, pSession->descramblers[descr->index], descr->data, descr->parity, descr->data_type) != 0)
+				{
 					printk("Error while setting descrambler keys\n");
+				}
 			}
 			if (&Context->DvbContext->Lock != NULL)
+			{
 				mutex_unlock(&Context->DvbContext->Lock);
+			}
 			return 0;
 			break;
 		}
 		default:
+		{
 			printk("[player2] %s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
+		}
 	}
 	return -ENOIOCTLCMD;
 #else
@@ -315,24 +340,41 @@ static int CaIoctl(struct inode *Inode,
 		{
 			struct ca_msg *msg;
 			msg = (struct ca_msg *)Parameter;
-//			if (msg->type==1)
-//				tkdma_set_iv(msg->msg);
-//			else if (msg->type==2)
-//				tkdma_set_key(msg->msg,0);
+#if 0
+			if (msg->type==1)
+			{
+				tkdma_set_iv(msg->msg);
+			}
+			else if (msg->type==2)
+			{
+				tkdma_set_key(msg->msg,0);
+			}
+#endif
 			if (msg->type == 3)
+			{
 				Context->EncryptionOn = 1;
+			}
 			else if (msg->type == 4)
+			{
 				Context->EncryptionOn = 0;
+			}
 			else if (msg->type == 7)
+			{
 				memcpy(&Context->StartOffset, msg->msg, sizeof(Context->StartOffset));
+			}
 			else if (msg->type == 8)
+			{
 				memcpy(&Context->EndOffset, msg->msg, sizeof(Context->EndOffset));
-			return -ENOIOCTLCMD;
-			return 0;
+			}
+			return -ENOIOCTLCMD;  // FIXME: ?????
+			return 0;  // FIXME: ?????
 		}
 		default:
+		{
 			printk("[player2] %s: Error - invalid ioctl %08x\n", __FUNCTION__, IoctlCode);
+		}
 	}
 	return -ENOIOCTLCMD;
 #endif
 }
+// vim:ts=4

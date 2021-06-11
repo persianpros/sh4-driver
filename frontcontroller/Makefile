@@ -169,13 +169,13 @@ obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI2
 obj-y += cuberevo_micom/
 else ifdef CUBEREVO_250HD
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_9500HD
 obj-y += ipbox/
 else ifdef CUBEREVO_2000HD
 obj-y += cuberevo_micom/
 else ifdef CUBEREVO_MINI_FTA
-obj-y += ipbox/
+obj-y += cuberevo_micom/
 else ifdef CUBEREVO_3000HD
 obj-y += cuberevo_micom/
 endif

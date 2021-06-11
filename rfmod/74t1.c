@@ -127,10 +127,10 @@ int xxx_74t1_write_2bytes(struct i2c_client *client, unsigned char byte1, unsign
  *
  *  byte1 = address
  *  byte2:
- *	OOR = Out Of Range flag (1 = OOR)
- *	Y1 = Error data, valid only if OOR = 1: 0 = frequency to set too low, 1 = too high
+ *  OOR = Out Of Range flag (1 = OOR)
+ *  Y1 = Error data, valid only if OOR = 1: 0 = frequency to set too low, 1 = too high
  *  Y2 = VCO in use, 0 = High, 1 = Low
- *	X  = Don't care (ignore)
+ *  X  = Don't care (ignore)
  *
  */
 
@@ -157,7 +157,7 @@ int xxx_74t1_write_2bytes(struct i2c_client *client, unsigned char byte1, unsign
  *         11 = 6.5 MHz
  * TPEN  = Test pattern enable: 1=on, 0=noral operation, PowerOn value=0
  * Nx    = PLL Carrier divider bits, PowerOn value dependent on chip revision
- *         F = N / 4 MHz
+ *         F = N / 4 [MHz]
  * X210  = Set Carrier frequency divider (may be used to generate VHF frequencies)
  *         000 = divider = 1 (normal operation for UHF, also PowerOn value)
  *         001 = divider = 2
@@ -165,7 +165,7 @@ int xxx_74t1_write_2bytes(struct i2c_client *client, unsigned char byte1, unsign
  *         011 = divider = 8
  *         100 = divider = 16
  *         Other values are illegal
- *         Note: the driver always set these bits to zero (UHF operation)
+ *         Note: the driver always sets these bits to zero (UHF operation)
  *
  * X543  = Test modes, write as zero for normal operation, PowerOn value=000
  *
@@ -483,11 +483,11 @@ int xxx_74t1_ioctl(struct i2c_client *client, unsigned int cmd, void *arg)
  * Initialize the XXX74T1
  *
  * Initial settings are:
- * - Video carrier channel 21 (471.25MHz, CCIR PAL-G);
- * - Audio carrier 5.5MHz (CCIR PAL-G);
- * - Power mode: software standby;
- * - Picture to sound ratio 16dB;
- * - Peak White Clip off;
+ * - Video carrier          : channel 36 (591.25MHz, CCIR PAL-G);
+ * - Audio carrier          : 5.5MHz (CCIR PAL-G);
+ * - Power mode             : software standby;
+ * - Picture to sound ratio : 16dB;
+ * - Peak White Clip        : off;
  */
 int xxx_74t1_init(struct i2c_client *client)
 {
@@ -499,7 +499,7 @@ int xxx_74t1_init(struct i2c_client *client)
 	memset(byte, 0, sizeof(byte));  // initialize data array
 	
 	// Prepare byte C1 (byte[0])
-	// Note because of previous memset, only the 1 bits need to be set
+	// Note: because of previous memset, only the 1 bits need to be set
 	byte[0] |=  0x80;        // set MSbit
 	byte[0] |=  BIT74T1_SO;  // SO=1 -> sound oscillator off (needed for standby)
 	byte[0] |=  BIT74T1_PS;  // PS=1 -> picture to sound ratio is 16dB (recommended value)

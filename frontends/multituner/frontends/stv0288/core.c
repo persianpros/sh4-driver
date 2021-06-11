@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2011 duckbox
  *
- * core part for demodulator
+ * core part for STM STV0288 DVB-S demodulator
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ short paramDebug = 0;
 #if defined TAGDEBUG
 #undef TAGDEBUG
 #endif
-#define TAGDEBUG "[core] "
+#define TAGDEBUG "[core_stv0288] "
 
 /* saved platform config */
 static struct platform_frontend_config_s* frontend_cfg = NULL;
@@ -78,15 +78,16 @@ static u8 stv0288_readreg(struct i2c_adapter *i2c, u32 demod_address, u8 reg)
 	struct i2c_msg msg[] =
 	{
 		{
-			.addr = demod_address,
+			.addr  = demod_address,
 			.flags = 0,
-			.buf = b0,
-			.len = 1
-		}, {
-			.addr = demod_address,
+			.buf   = b0,
+			.len   = 1
+		},
+		{
+			.addr  = demod_address,
 			.flags = I2C_M_RD,
-			.buf = b1,
-			.len = 1
+			.buf   = b1,
+			.len   = 1
 		}
 	};
 	ret = i2c_transfer(i2c, msg, 2);
@@ -99,7 +100,7 @@ static void stv0288_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	struct stv0288_config         *cfg;
 	struct stv0288_private_data_s *priv;
 
-	printk("%s\n", __func__);
+	dprintk(100, "%s >\n", __func__);
 
 	if (numSockets + 1 == cMaxSockets)
 	{

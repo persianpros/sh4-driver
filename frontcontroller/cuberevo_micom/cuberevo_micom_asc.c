@@ -85,7 +85,7 @@ int direct_asc_read_version(void)
 			{
 				res_nr++;
 
-				//almost all answers for getmicom catched ?
+				// almost all answers for getmicom catched ?
 				if (res_nr == 3)
 				{
 					//read last one

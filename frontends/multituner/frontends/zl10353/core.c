@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2011 duckbox
  *
- * core part for demodulator
+ * Core part for Zarlink ZL10353 demodulator
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ short paramDebug = 0;
 #if defined TAGDEBUG
 #undef TAGDEBUG
 #endif
-#define TAGDEBUG "[core] "
+#define TAGDEBUG "[core_zl10353] "
 
 /* saved platform config */
 static struct platform_frontend_config_s* frontend_cfg = NULL;
@@ -125,7 +125,7 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 
 	if (cfg == NULL)
 	{
-		dprintk(1, "zl10353: error malloc\n");
+		dprintk(1, "malloc error\n");
 		return;
 	}
 	if (socket->tuner_enable[0] != -1)
@@ -153,11 +153,11 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	cfg->clock_ctl_1           = priv->clock_ctl_1;
 	cfg->pll_0                 = priv->pll_0;
 
-	frontend =  zl10353_attach(cfg, i2c_get_adapter(socket->i2c_bus));
+	frontend = zl10353_attach(cfg, i2c_get_adapter(socket->i2c_bus));
 
 	if (frontend == NULL)
 	{
-		dprintk(1, "zl10353_attach failed\n");
+		dprintk(1, "Attaching ZL10353 failed\n");
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -168,7 +168,7 @@ static void zl10353_register_frontend(struct dvb_adapter *dvb_adap, struct socke
 	}
 	if (dvb_pll_attach(frontend, cfg->tuner_address, i2c_get_adapter(socket->i2c_bus), DVB_PLL_TUA6034) == NULL)
 	{
-		dprintk(1, "tua6034: tua6034_attach failed at i2c-%d addr 0x%02x\n", socket->i2c_bus, cfg->tuner_address);
+		dprintk(1, "Attaching TUA6034 PLL failed at i2c-%d addr 0x%02x\n", socket->i2c_bus, cfg->tuner_address);
 
 		if (cfg->tuner_enable_pin)
 		{
@@ -215,14 +215,14 @@ static int zl10353_demod_detect(struct socket_s *socket, struct frontend_s *fron
 	if ((id != ID_ZL10353) && (id != ID_CE6230) && (id != ID_CE6231))
 	{
 		dprintk(50, "id = %02x\n", id);
-		dprintk(1, "Invalid probe, probably not a zl10353 device\n");
+		dprintk(1, "Invalid probe, probably not a ZL10353 device\n");
 		if (pin != NULL)
 		{
 			stpio_free_pin(pin);
 		}
 		return -EREMOTEIO;
 	}
-	dprintk(20, "%s: Detected zl10353\n", __func__);
+	dprintk(20, "%s: ZL10353 detected\n", __func__);
 	
 	if (pin != NULL)
 	{
@@ -264,7 +264,7 @@ static int zl10353_probe(struct platform_device *pdev)
 	{
 		dprintk(1, "Failed to register frontend\n");
 	}
-	printk("%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 

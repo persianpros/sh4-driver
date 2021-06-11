@@ -29,6 +29,11 @@
  * Date     By              Description
  * --------------------------------------------------------------------------
  * 20190215 Audioniek       Initial version based on nuvoton_procfs.c.
+ * 20210522 Audioniek       Version number is now the actual number read from
+ *                          the front processor.
+ * 20210423 Audioniek       /proc/stb/lcd/symbol_timeshift support added.
+ * 20210606 Audioniek       /proc/stb/lcd/symbol_circle support added.
+ * 20210606 Audioniek       /proc/stb/power support added.
  * 
  ****************************************************************************/
 
@@ -44,9 +49,14 @@
  *             |
  *             +--- progress (rw)           Progress of E2 startup in %
  *
+ *  /proc/stb/power
+ *             |
+ *             +--- vfd (rw)                Front panel display on/off
+ *
  *  /proc/stb/fp
  *             |
- *             +--- version (r)             SW version of front panel (hundreds = major, ten/units = minor)
+ *             +--- version (r)             SW version of front panel
+ *             +--- fan (rw)                Control of fan (CUBEREVO & 9500HD only)
  *             +--- rtc (rw)                RTC time (UTC, seconds since Unix epoch))
  *             +--- rtc_offset (rw)         RTC offset in seconds from UTC
  *             +--- wakeup_time (rw)        Next wakeup time (absolute, local, seconds since Unix epoch)
@@ -59,7 +69,8 @@
  *
  *  /proc/stb/lcd/
  *             |
- *             +--- symbol_circle (rw)       Control of spinner (CUBEREVO only)
+ *             +--- symbol_circle (rw)       Control of spinner (CUBEREVO & 9500HD only)
+ *             +--- symbol_timeshift (rw)    Control of timeshift icon (CUBEREVO, MINI, MINI2, 2000HD, 3000HD & 9500HD only)
  */
 
 /* from e2procfs */
@@ -67,7 +78,7 @@ extern int install_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *wr
 extern int remove_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *write_proc);
 
 /* from other micom modules */
-extern int micomWriteString(char *buf, size_t len);
+extern int micomWriteString(char *buf, size_t len, int center_flag);
 extern int micomSetBrightness(int level);
 extern void clear_display(void);
 extern int micomGetTime(char *time);
@@ -76,14 +87,31 @@ extern int micomSetLED(int level);
 extern int micomGetWakeUpTime(char *time);
 extern int micomSetWakeUpTime(char *time);
 extern int micomGetWakeUpMode(int *wakeup_mode);
+extern int micomSetFan(int on);
+extern int micomSetIcon(int which, int on);
+extern int micomSetDisplayOnOff(char level);
 //extern int micomGetVersion(unsigned int *data);
 //extern static int rtc_time2tm(char *uTime, struct rtc_time *tm);
+
+/* version of fp */
+extern int micom_ver, micom_major, micom_minor;
+
 
 /* Globals */
 static int progress = 0;
 static u32 led0_pattern = 0;
 static u32 led1_pattern = 0;
 static int led_pattern_speed = 20;
+static int vfd_on = 1;
+#if defined(CUBEREVO_MINI) \
+ ||   defined(CUBEREVO_MINI2) \
+ ||   defined(CUBEREVO_2000HD) \
+ ||   defined(CUBEREVO_3000HD) \
+ ||   defined(CUBEREVO) \
+ ||   defined(CUBEREVO_9500)
+static int timeshift = 0;
+static int spinner_speed = 0;
+#endif
 
 static int progress_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
@@ -126,6 +154,187 @@ static int progress_read(char *page, char **start, off_t off, int count, int *eo
 	return len;
 }	
 
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+static int symbol_circle_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+	int i = 0;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &spinner_speed);
+		kfree(myString);
+
+		if (spinner_speed != 0)
+		{  // spinner on
+			if (spinner_speed > 255)
+			{
+				spinner_speed = 255;  // set maximum value
+			}
+			if (spinner_state.state == 0)  // if spinner not active
+			{
+				if (spinner_speed == 1)  // handle special value 1
+				{
+					spinner_state.period = 1000;
+				}
+				else
+				{
+					spinner_state.period = spinner_speed * 40;  // set user specified speed
+				}
+				spinner_state.state = 1;
+				lastdata.icon_state[ICON_SPINNER] = 1;
+				up(&spinner_state.sem);
+			}
+		}
+		else
+		{  // spinner off
+			if (spinner_state.state != 0)
+			{
+				spinner_state.state = 0;
+				lastdata.icon_state[ICON_SPINNER] = 0;
+			}
+		}
+		/* always return count to avoid endless loop */
+		ret = count;
+		goto out;
+	}
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int symbol_circle_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page,"%d", spinner_speed);
+	}
+	return len;
+}
+#endif
+
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+static int timeshift_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+	int i = 0;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &timeshift);
+		kfree(myString);
+
+		timeshift = (timeshift == 0 ? 0 : 1);
+		ret = micomSetIcon(ICON_TIMESHIFT, timeshift);
+		if (ret)
+		{
+			goto out;
+		}
+		/* always return count to avoid endless loop */
+		ret = count;
+		goto out;
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int timeshift_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page,"%d", timeshift);
+	}
+	return len;
+}
+#endif
+
+static int vfd_onoff_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+	int i = 0;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &vfd_on);
+		kfree(myString);
+
+		vfd_on = (vfd_on == 0 ? 0 : 1);
+		ret = micomSetDisplayOnOff((char)vfd_on);
+		if (ret)
+		{
+			goto out;
+		}
+		/* always return count to avoid endless loop */
+		ret = count;
+		goto out;
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int vfd_onoff_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page,"%d", lastdata.display_on);
+	}
+	return len;
+}
 static int text_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
 	char *page;
@@ -138,7 +347,11 @@ static int text_write(struct file *file, const char __user *buf, unsigned long c
 		ret = -EFAULT;
 		if (copy_from_user(page, buf, count) == 0)
 		{
-			ret = micomWriteString(page, count);
+#if defined(CENTERED_DISPLAY)
+			ret = micomWriteString(page, count, 1);
+#else
+			ret = micomWriteString(page, count, 0);
+#endif
 			if (ret >= 0)
 			{
 				ret = count;
@@ -165,10 +378,19 @@ int	tm_yday     //days since January 1     0-365
 time_t long seconds //UTC since epoch  
 */
 
-int date2days(int year, int mon, int day, int *yday)
+#define LEAPYEAR(year) (!((year) % 4) && (((year) % 100) || !((year) % 400)))
+#define YEARSIZE(year) (LEAPYEAR(year) ? 366 : 365)
+static const int _ytab[2][12] =
+{
+	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+	{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+};
+
+int date2days(int year, int mon, int day)
 {
 	int days;
 
+//	dprintk(100, "%s >\n", __func__);
 	// process the days in the current month
 	day--; // do not count today
 	days = day;
@@ -180,7 +402,6 @@ int date2days(int year, int mon, int day, int *yday)
 		days += _ytab[LEAPYEAR(year)][mon - 1];
 		mon--;
 	}
-	*yday = days;
 	// process the remaining years
 	year--; // do not count current year, as it is done already
 	while (year >= 0)
@@ -189,6 +410,7 @@ int date2days(int year, int mon, int day, int *yday)
 		year--;
 	}
 	days += 10957; // add days since linux epoch
+//	dprintk(100, "%s < (days = %d)\n", __func__, days);
 	return days;
 }
 
@@ -198,6 +420,7 @@ time_t calcGetMicomTime(char *time)
 	int year, mon, day, days;
 	int hour, min, sec;
 
+//	dprintk(100, "%s >\n", __func__);
 	year = ((time[5] >> 4) * 10) + (time[5] & 0x0f);
 	mon  = ((time[4] >> 4) * 10) + (time[4] & 0x0f);
 	day  = ((time[3] >> 4) * 10) + (time[3] & 0x0f);
@@ -205,13 +428,17 @@ time_t calcGetMicomTime(char *time)
 	min  = ((time[1] >> 4) * 10) + (time[1] & 0x0f);
 	sec  = ((time[0] >> 4) * 10) + (time[0] & 0x0f);
 
+//	dprintk(10, "%s Time/date: %02d:%02d:%02d %02d-%02d-20%02d\n", __func__, hour, min, sec, day, mon, year);
 	// calculate the number of days since linux epoch
-	days = date2days(year, mon, day, 0);
+	days = date2days(year, mon, day);
+//	dprintk(10, "%s days = %d\n", __func__, days);
 	time_local += days * 86400;
+//	dprintk(10, "%s time_local = %d\n", __func__, time_local);
 	// add the time
 	time_local += (hour * 3600);
 	time_local += (min * 60);
 	time_local += sec;
+//	dprintk(100, "%s < (time_local = %d seconds)\n", __func__, time_local);
 	return time_local;
 }
 
@@ -271,6 +498,7 @@ static int read_rtc(char *page, char **start, off_t off, int count, int *eof, vo
 
 	memset(fptime, 0, sizeof(fptime));
 	res = micomGetTime(fptime);  // get front panel clock time (local)
+	dprintk(1, "Time/date: %02x:%02x:%02x %02x-%02x-20%02x\n", fptime[2], fptime[1], fptime[0], fptime[3], fptime[4], fptime[5]);
 	rtc_time = calcGetMicomTime(fptime) - rtc_offset;  // return UTC
 
 	if (NULL != page)
@@ -450,38 +678,10 @@ static int was_timer_wakeup_read(char *page, char **start, off_t off, int count,
 }
 
 static int fp_version_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
-{ // TODO: return string with year
+{
 	int len = 0;
-	int version = -1;
 
-	switch (front_seg_num)
-	{
-		case 12:
-		{
-			version = 0;
-			break;
-		}
-		case 13:
-		{
-			version = 1;
-			break;
-		}
-		case 14:
-		{
-			version = 2;
-			break;
-		}
-		case 4:
-		{
-			version = 3;
-			break;
-		}
-		default:
-		{
-			return -EFAULT;
-		}
-	}
-	len = sprintf(page, "%d\n", version);
+	len = sprintf(page, "%d.%02d.%02d\n", micom_ver, micom_major, micom_minor);
 	return len;
 }
 
@@ -616,6 +816,8 @@ static int led_pattern_speed_read(char *page, char **start, off_t off, int count
 	return len;
 }
 
+#if !defined(CUBEREVO_MINI_FTA) \
+ && !defined(CUBEREVO_250HD)
 static int oled_brightness_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
 	char *page;
@@ -640,6 +842,49 @@ static int oled_brightness_write(struct file *file, const char __user *buf, unsi
 	}
 	return ret;
 }
+#endif
+
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+static int fan_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+	char wtime[5];
+	int	w_time;
+
+	if (NULL != page)
+	{
+		
+		len = sprintf(page, "%d\n", lastdata.fan);
+	}
+	return len;
+}
+
+static int fan_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char *page;
+	long on;
+	int ret = -ENOMEM;
+
+	page = (char *)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+
+		if (copy_from_user(page, buf, count) == 0)
+		{
+			page[count - 1] = '\0';
+
+			on = simple_strtol(page, NULL, 10);
+			micomSetFan((int)on);
+			ret = count;
+		}
+		free_page((unsigned long)page);
+	}
+	return ret;
+}
+#endif
 
 /*
 static int null_write(struct file *file, const char __user *buf, unsigned long count, void *data)
@@ -656,18 +901,35 @@ struct fp_procs
 } fp_procs[] =
 {
 	{ "progress", progress_read, progress_write },
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500)
+	{ "stb/fp/fan", fan_read, fan_write },
+#endif
 	{ "stb/fp/rtc", read_rtc, write_rtc },
 	{ "stb/fp/rtc_offset", read_rtc_offset, write_rtc_offset },
 	{ "stb/fp/led0_pattern", led0_pattern_read, led0_pattern_write },
 	{ "stb/fp/led1_pattern", led1_pattern_read, led1_pattern_write },
 	{ "stb/fp/led_pattern_speed", led_pattern_speed_read, led_pattern_speed_write },
+#if !defined(CUBEREVO_MINI_FTA) \
+ && !defined(CUBEREVO_250HD)
 	{ "stb/fp/oled_brightness", NULL, oled_brightness_write },
+#endif
 	{ "stb/fp/text", NULL, text_write },
 	{ "stb/fp/wakeup_time", wakeup_time_read, wakeup_time_write },
 	{ "stb/fp/was_timer_wakeup", was_timer_wakeup_read, NULL },
 	{ "stb/fp/version", fp_version_read, NULL },
-#if 0 //#if defined(CUBEREVO)
-	{ "stb/lcd/symbol_circle", symbol_circle_read, symbol_circle_write }
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+	{ "stb/lcd/symbol_circle", symbol_circle_read, symbol_circle_write },
+#endif
+	{ "stb/power/vfd", vfd_onoff_read, vfd_onoff_write },
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO) \
+ || defined(CUBEREVO_9500)
+	{ "stb/lcd/symbol_timeshift", timeshift_read, timeshift_write }
 #endif
 };
 

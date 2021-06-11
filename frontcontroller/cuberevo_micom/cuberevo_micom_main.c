@@ -32,17 +32,57 @@
  *
  ****************************************************************************************
  *
+ * This driver covers the following models:
+ * 
+ * CubeRevo 200HD: 4 character LED (7seg)
+ * CubeRevo 250HD / AB IPBox 91HD / Vizyon revolution 800HD: 4 character LED (7seg)
+ * CubeRevo Mini / AB IPBox 900HD / Vizyon revolution 810HD: 14 character dot matrix VFD (14seg)
+ * CubeRevo Mini II / AB IBbox 910HD / Vizyon revolution 820HD PVR: 14 character dot matrix VFD (14seg)
+ * Early CubeRevo / AB IPBox 9000HD / Vizyon revolution 8000HD PVR: 13 character 14 segment VFD (13grid)
+ * Late CubeRevo / AB IPBox 9000HD / Vizyon revolution 8000HD PVR: 12 character dot matrix VFD (12dotmatrix)
+ * CubeRevo 2000HD: 14 character dot matrix VFD (14seg) NOT TESTED!
+ * CubeRevo 3000HD: 14 character dot matrix VFD (14seg) NOT TESTED!
+ * CubeRevo 7000HD: 12 character dot matrix VFD (12dotmatrix) NOT TESTED!
+ * CubeRevo 9500HD: 12 character dot matrix VFD (12dotmatrix) NOT TESTED!
+ *
+ * CAUTION:
+ * As internet info on some models is very sparse there are some assumptions on which the
+ * code in this driver is based. These are:
+ *
+ * 1. In general, the model names of the Cuberevo models are used to identify a certain
+ *    hardware model. This is consistent with the indications on the various PCBs in
+ *    actual receivers.
+ * 2. This driver does not distinguish between models with (a) cardreader(s) and the
+ *    same models without. This concerns:
+ *    - Cuberevo 200HD (without) - Cuberevo 250HD (with);
+ *    - Cuberevo Mini (without) - Cuberevo Mini II (with);
+ *    - Cuberevo 2000HD (without) - Cuberevo 3000HD (with).
+ * 3. Regarding the Cuberevo models 7000HD and 9500HD some further assumptions are
+ *    made:
+ *    - These models seem to be variants of the CubeRevo, but housed in a somewhat
+ *      smaller cabinet and with fixed tuners instead of plugable ones. Both twin
+ *      DVB-S(2) and DVB-S(2) / DVB-T models seem to exist. Again the difference
+ *      between these two models may very well be the presence of (a) cardsreader(s);
+ *      9500HD has them, the 7000HD probably not
+ *    - All info found so far on there two models seems to indicate they always
+ *      have a 12 character VFD display, the same as found on the later
+ *      CubeRevo Revision 2.
+ ****************************************************************************************
+ *
  * Changes
  *
  * Date     By              Description
  * --------------------------------------------------------------------------------------
  * 20190215 Audioniek       procfs added.
  * 20190216 Audioniek       Start of work on RTC driver.
+ * 20190302 Audioniek       RTC driver finished.
+ * 20210604 Audioniek       Spinner on 12dotmatrix added.
  *
  ****************************************************************************************/
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/termbits.h>
+#include <linux/kthread.h>
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/delay.h>
@@ -91,8 +131,8 @@
 #define EVENT_ANSWER_UNKNOWN2            0xef
 
 // Globals
-const char *driver_version = "1.08Audioniek";
-short paramDebug = 10;
+const char *driver_version = "1.09Audioniek";
+short paramDebug = 0;
 int waitTime = 1000;
 static unsigned char expectEventData = 0;
 static unsigned char expectEventId   = 1;
@@ -478,7 +518,7 @@ static void processResponse(void)
 				RCVBufferEnd = (RCVBufferEnd + cPackageSizeWakeUpReason) % BUFFERSIZE;
 				break;
 			}
-			default: // Ignore Response
+			default:  // Ignore Response
 			{
 				dprintk(1, "Invalid Response %02x\n", expectEventData);
 				dprintk(1, "start %d end %d\n",  RCVBufferStart,  RCVBufferEnd);
@@ -492,6 +532,7 @@ static void processResponse(void)
 			}
 		}
 	}
+
 out_switch:
 	expectEventId = 1;
 	expectEventData = 0;
@@ -586,6 +627,130 @@ int micomTask(void *dummy)
 	return 0;
 }
 
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+/*********************************************************************
+ *
+ * set_circle_segs: (Re)set the circle segments of the spinner.
+ *
+ * Input is byte, LSbit is state for ICON_Circ1, MSbit for ICON_Circ8.
+ */
+int clr_circle_segs(void)
+{
+	int i;
+	char buffer[5];
+	int res = 0;
+
+	// these values stay the same during the loop
+	buffer[0] = VFD_SETSEGMENTI + 1;  // all sgm values are 1
+	buffer[4] = 0x00;
+
+	for (i = 0; i < 8; i++)  // bit counter
+	{
+		buffer[1] = 0x00;  // off
+		buffer[2] = micomIcons[ICON_Circ1 + i].codelsb;
+		buffer[3] = micomIcons[ICON_Circ1 + i].codemsb;
+		res |= micomWriteCommand(buffer, 5, 0);
+		msleep(1);
+	}
+	return res;
+}
+
+/*********************************************************************
+ *
+ * spinner_thread: Thread to display the spinner on
+ * 12dotmatrix display.
+ *
+ */
+static int spinner_thread(void *arg)
+{
+	int i, j = 0;
+	int res = 0;
+	unsigned char byte;
+	char buffer[5];
+
+	memset(buffer, 0, sizeof(buffer));
+
+	if (spinner_state.status == SPINNER_THREAD_STATUS_RUNNING)
+	{
+		return 0;
+	}
+	dprintk(20, "%s: starting\n", __func__);
+	spinner_state.status = SPINNER_THREAD_STATUS_INIT;
+
+	spinner_state.status = SPINNER_THREAD_STATUS_RUNNING;
+	dprintk(20, "%s: started\n", __func__);
+
+	while (!kthread_should_stop())
+	{
+		if (!down_interruptible(&spinner_state.sem))
+		{
+			if (kthread_should_stop())
+			{
+				break;
+			}
+
+			while (!down_trylock(&spinner_state.sem));
+			{
+				dprintk(20, "Start spinner, period = %d ms\n", spinner_state.period);
+				// inner circle on
+				buffer[0] = VFD_SETSEGMENTII;
+				buffer[1] = 0x01;
+				buffer[2] = 0x04;
+				buffer[3] = 0x00;
+				buffer[4] = 0x00;
+				res = micomWriteCommand(buffer, 5, 0);
+
+				// all circle segments off
+				res |= clr_circle_segs();
+
+				while ((spinner_state.state) && !kthread_should_stop())
+				{
+					spinner_state.status == SPINNER_THREAD_STATUS_RUNNING;
+//					buffer[0] = VFD_SETSEGMENTI + micomIcons[ICON_Circ1 + i].seg;
+					buffer[0] = VFD_SETSEGMENTI + 1;
+					buffer[4] = 0x00;
+					for (j = 0; j < 2; j++)
+					{
+						for (i = 0; i < 8; i++)
+						{
+							buffer[1] = j;
+							buffer[2] = micomIcons[ICON_Circ1 + i].codelsb;
+							buffer[3] = micomIcons[ICON_Circ1 + i].codemsb;
+							res |= micomWriteCommand(buffer, 5, 0);
+							msleep(spinner_state.period);
+						}
+					}
+				}
+				// all circle segments off
+				res |= clr_circle_segs();
+
+				// inner circle off
+				buffer[0] = VFD_SETSEGMENTII;
+				buffer[1] = 0x00;
+				buffer[2] = 0x04;
+				buffer[3] = 0x00;
+				buffer[4] = 0x00;
+				res |= micomWriteCommand(buffer, 5, 0);
+				spinner_state.status = SPINNER_THREAD_STATUS_HALTED;
+				dprintk(20, "%s: Spinner stopped\n", __func__);
+			}
+		}
+	}
+	dprintk(20, "%s stopped\n", __func__);
+	spinner_state.status = SPINNER_THREAD_STATUS_STOPPED;
+	spinner_state.task = 0;
+	return res;
+}
+#endif
+
+/************************************************
+ *
+ * The CubeRevo, Mini and Mini II models have a
+ * battery backed up front panel clock and thus
+ * have a true RTC.
+ *
+ */
 //-- RTC driver -----------------------------------
 #if defined CONFIG_RTC_CLASS
 /* struct rtc_time
@@ -802,7 +967,7 @@ static int __init micom_init_module(void)
 	}
 	else
 	{
-		dprintk(1, "Cannot get irq\n");
+		dprintk(1, "FP: Cannot get IRQ\n");
 	}
 	msleep(waitTime);
 	micom_init_func();
@@ -811,6 +976,15 @@ static int __init micom_init_module(void)
 	{
 		dprintk(1, "Unable to get major %d for VFD/MICOM\n", VFD_MAJOR);
 	}
+
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+	spinner_state.state = 0;
+	spinner_state.period = 0;
+	spinner_state.status = SPINNER_THREAD_STATUS_STOPPED;
+	sema_init(&spinner_state.sem, 0);
+	spinner_state.task = kthread_run(spinner_thread, (void *)ICON_SPINNER, "spinner_thread");
+#endif
 
 #if defined CONFIG_RTC_CLASS
 	i = platform_driver_register(&micom_rtc_driver);
@@ -839,6 +1013,16 @@ static void __exit micom_cleanup_module(void)
 	printk("[micom] MICOM front processor module unloading\n");
 	remove_proc_fp();
 
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+	if (!(spinner_state.status == SPINNER_THREAD_STATUS_STOPPED) && spinner_state.task)
+	{
+		dprintk(50, "Stopping spinner thread\n");
+		up(&spinner_state.sem);
+		kthread_stop(spinner_state.task);
+	}
+#endif
+
 #if defined CONFIG_RTC_CLASS
 	platform_driver_unregister(&micom_rtc_driver);
 	platform_set_drvdata(rtc_pdev, NULL);
@@ -857,6 +1041,8 @@ module_exit(micom_cleanup_module);
 MODULE_DESCRIPTION("MICOM frontcontroller module (CubeRevo Mini)");
 #elif defined(CUBEREVO_MINI2)
 MODULE_DESCRIPTION("MICOM frontcontroller module (CubeRevo Mini II)");
+#elif defined(CUBEREVO_MINI_FTA)
+MODULE_DESCRIPTION("MICOM frontcontroller module (CubeRevo mini FTA (200HD))");
 #elif defined(CUBEREVO_250HD)
 MODULE_DESCRIPTION("MICOM frontcontroller module (CubeRevo 250HD)");
 #elif defined(CUBEREVO)

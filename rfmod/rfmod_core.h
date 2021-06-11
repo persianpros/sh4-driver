@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- * rfmod_core.c  Enigma2 compatible RF modulator driver
+ * rfmod_core.h  Enigma2 compatible RF modulator driver
  *
  * (c) 2021 Audioniek
  *

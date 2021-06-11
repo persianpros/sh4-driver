@@ -3,7 +3,7 @@
  *
  * (c) ? Gustav Gans
  * (c) 2014 skl
- * (c) 2015 Audioniek
+ * (c) 2015-2021 Audioniek
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,8 +84,8 @@
  *
  *  /proc/stb/lcd/
  *             |
- *             +--- symbol_circle (rw)       Control of spinner (VFD only)
- *             +--- symbol_timeshift (rw)    Control of TimeShift icon (#43, VFD only)
+ *             +--- symbol_circle (rw)      Control of spinner (VFD only)
+ *             +--- symbol_timeshift (rw)   Control of TimeShift icon (#43, VFD only)
  *
  *  /proc/stb/power/
  *             |
@@ -335,16 +335,16 @@ static unsigned char *get_stb_id(void)
 	}
 	else
 	{
-        // Get current segment descriptor
-        fs = get_fs();
-        // Set segment descriptor associated to kernel space
-        set_fs(get_ds());
-        // Read the file
-        file->f_op->read(file, procCmdLine, sizeof(procCmdLine), &file->f_pos);
-        // Restore segment descriptor
-        set_fs(fs);
+		// Get current segment descriptor
+		fs = get_fs();
+		// Set segment descriptor associated to kernel space
+		set_fs(get_ds());
+		// Read the file
+		file->f_op->read(file, procCmdLine, sizeof(procCmdLine), &file->f_pos);
+		// Restore segment descriptor
+		set_fs(fs);
 	}
-    filp_close(file, NULL);
+	filp_close(file, NULL);
 
 	for (len = 0; len < sizeof(procCmdLine); len++)
 	{

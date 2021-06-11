@@ -1,5 +1,5 @@
 /*
- * ufs922_fan.c
+ * ipbox_fan.c
  * 
  * (c) 2009 Dagobert@teamducktales
  *
@@ -22,7 +22,7 @@
 /* 
  * Description:
  *
- * ufs922 fan controller controlling driver
+ * ipbox fan controller controlling driver
  */
 
 #include <linux/proc_fs.h>  	/* proc fs */ 
@@ -53,8 +53,7 @@ unsigned long fan_registers;
 struct stpio_pin* fan_pin = NULL;
 static int fan_stat = 0;
 
-int proc_fan_write(struct file *file, const char __user *buf,
-                           unsigned long count, void *data)
+int proc_fan_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
 	char 		*page;
 	char		*myString;
@@ -69,8 +68,9 @@ int proc_fan_write(struct file *file, const char __user *buf,
 		unsigned int value;
 		ret = -EFAULT;
 		if (copy_from_user(page, buf, count))
+		{
 			goto out;
-
+		}
 		myString = (char *) kmalloc(count + 1, GFP_KERNEL);
 		strncpy(myString, page, count);
 		myString[count] = '\0';
@@ -81,81 +81,91 @@ int proc_fan_write(struct file *file, const char __user *buf,
 		kfree(myString);
 		
 		if (value == 1)  //FAN ON
-                     fan_stat = 1;
-                else
-                     fan_stat = 0;
-
-                if(fan_pin)
-		     stpio_set_pin(fan_pin, fan_stat);
+        {
+             fan_stat = 1;
+		}
+		else
+        {
+			fan_stat = 0;
+		}
+		if (fan_pin)
+		{
+			stpio_set_pin(fan_pin, fan_stat);
+		}
 	}
-
 	ret = count;
+
 out:
-	
 	free_page((unsigned long)page);
 	return ret;
 }
 
-int proc_fan_read(char *page, char **start, off_t off, int count,
-			  int *eof, void *data_unused)
+int proc_fan_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
 {
 	int len = 0;
 //	printk("%s %d\n", __FUNCTION__, count);
-        int rv = 0;
-        if (fan_pin)
-    		rv = stpio_get_pin(fan_pin);
+	int rv = 0;
+
+	if (fan_pin)
+	{
+		rv = stpio_get_pin(fan_pin);
+	}
 	//printk("%s %d\n", __FUNCTION__, rv);	 
 
-	if ( rv == 1  )
+	if (rv == 1)
+	{
 		len = sprintf(page, "1\n");
-        else
+	}
+	else
+	{
 		len = sprintf(page, "0\n");
-
-        return len;
+	}
+	return len;
 }
 
 struct e2_procs
 {
-  char *name;
-  read_proc_t *read_proc;
-  write_proc_t *write_proc;
+	char *name;
+	read_proc_t *read_proc;
+	write_proc_t *write_proc;
 } e2_procs[] =
 {
-  {"stb/misc/fan", proc_fan_read, proc_fan_write}
+	{
+		"stb/misc/fan", proc_fan_read, proc_fan_write
+	}
 };
 
 static int __init init_fan_module(void)
 {
-  install_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc, NULL);
+	install_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc, NULL);
 
-  fan_registers = (unsigned long) ioremap(0x18010000, 0x100);
-  printk("fan_registers = 0x%.8lx\n", fan_registers);
+	fan_registers = (unsigned long) ioremap(0x18010000, 0x100);
+	printk("fan_registers = 0x%.8lx\n", fan_registers);
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17)
-  fan_pin = stpio_request_pin (4, 7, "fan ctrl", STPIO_OUT);
-  stpio_set_pin(fan_pin, 1);
+	fan_pin = stpio_request_pin (4, 7, "fan ctrl", STPIO_OUT);
+	stpio_set_pin(fan_pin, 1);
 #else
-  fan_pin = stpio_request_pin (4, 7, "fan ctrl", STPIO_ALT_OUT);
+	fan_pin = stpio_request_pin (4, 7, "fan ctrl", STPIO_ALT_OUT);
 #endif
-
-  return 0;
+	return 0;
 }
 
 static void __exit cleanup_fan_module(void)
 {
-    remove_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc);
+	remove_e2_procs(e2_procs[0].name, e2_procs[0].read_proc, e2_procs[0].write_proc);
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17) 
-    if (fan_pin != NULL) {
-    	stpio_set_pin(fan_pin, 0);
-    	stpio_free_pin (fan_pin);
-    }	
+	if (fan_pin != NULL)
+	{
+		stpio_set_pin(fan_pin, 0);
+		stpio_free_pin (fan_pin);
+	}
 #else      
-    if (fan_pin != NULL)
-    	stpio_free_pin (fan_pin);
+	if (fan_pin != NULL)
+	{
+		stpio_free_pin (fan_pin);
+	}
 #endif
-
-
-    	
 }
 
 module_init(init_fan_module);
@@ -164,4 +174,4 @@ module_exit(cleanup_fan_module);
 MODULE_DESCRIPTION("ipbox99xx fan controlling");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
-
+// vim:ts=4
