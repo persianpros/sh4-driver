@@ -1,5 +1,6 @@
-/*
- * vfd.c
+/*************************************************************************
+ *
+ * ufs910_fp.c
  *
  * 11. Nov 2007 - captaintrip
  *
@@ -20,6 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
+ *************************************************************************
+ *
+ * Frontpanel river for Kathrein UFS910
  */
 
 #include <asm/io.h>
@@ -30,11 +34,18 @@
 #include <linux/kernel.h>
 #include <linux/mm.h>
 
-#include "vfd.h"
+#include "ufs910_fp.h"
 #include "utf.h"
 
 int debug = 0;
-#define dprintk(x...) do { if (debug) printk(KERN_WARNING x); } while (0)
+#define dprintk(x...) \
+do \
+{ \
+	if (debug) \
+	{ \
+		printk(KERN_WARNING x); \
+	} \
+} while (0)
 
 /* konfetti: bugfix*/
 static struct vfd_ioctl_data lastdata;
@@ -42,10 +53,9 @@ static struct vfd_ioctl_data lastdata;
 /* konfetti: quick and dirty open handling */
 typedef struct
 {
-	struct file 	*fp;
-	int	read;
+	struct file      *fp;
+	int              read;
 	struct semaphore sem;
-
 } tVFDOpen;
 
 static tVFDOpen vOpen;
@@ -95,7 +105,7 @@ static int VFD_Write_Char_ML9208(unsigned char data, int current__, int length)
 	{
 		Wait_Port_Ready();
 		SCP_TXD_DATA = data;
-		SCP_TXD_START = 0x01; //start transmit
+		SCP_TXD_START = 0x01;  // start transmit
 	}
 	else
 	{
@@ -143,7 +153,6 @@ static int VFD_Write_Chars(unsigned char *data, int  length)
 	{
 		VFD_Write_Char_ML9208(data[i], i, length);
 	}
-
 	dprintk("%s <\n", __func__);
 	return 0;
 }
@@ -171,35 +180,53 @@ static int VFD_DCRAM_Write(struct vfd_ioctl_data *data)
 		write_data[data->length - i] = ROM_Char_Table[data->data[i]];
 #else
 		if (data->data[i] < 0x80)
+		{
 			write_data[j] = ROM_Char_Table[data->data[i]];
+		}
 		else if (data->data[i] < 0xE0)
 		{
 			switch (data->data[i])
 			{
 				case 0xc2:
+				{
 					UTF_Char_Table = UTF_C2;
 					break;
+				}
 				case 0xc3:
+				{
 					UTF_Char_Table = UTF_C3;
 					break;
+				}
 				case 0xc4:
+				{
 					UTF_Char_Table = UTF_C4;
 					break;
+				}
 				case 0xc5:
+				{
 					UTF_Char_Table = UTF_C5;
 					break;
+				}
 				case 0xd0:
+				{
 					UTF_Char_Table = UTF_D0;
 					break;
+				}
 				case 0xd1:
+				{
 					UTF_Char_Table = UTF_D1;
 					break;
+				}
 				default:
+				{
 					UTF_Char_Table = NULL;
+				}
 			}
 			i++;
 			if (UTF_Char_Table)
+			{
 				write_data[j] = UTF_Char_Table[data->data[i] & 0x3f];
+			}
 			else
 			{
 				sprintf(&write_data[j], "%02x", data->data[i - 1]);
@@ -210,13 +237,21 @@ static int VFD_DCRAM_Write(struct vfd_ioctl_data *data)
 		else
 		{
 			if (data->data[i] < 0xF0)
+			{
 				i += 2;
+			}
 			else if (data->data[i] < 0xF8)
+			{
 				i += 3;
+			}
 			else if (data->data[i] < 0xFC)
+			{
 				i += 4;
+			}
 			else
+			{
 				i += 5;
+			}
 			write_data[j] = 0x20;
 		}
 #endif
@@ -229,7 +264,6 @@ static int VFD_DCRAM_Write(struct vfd_ioctl_data *data)
 	dprintk("%s <\n", __func__);
 	return 0;
 }
-
 
 static int VFD_CGRAM_Write(struct vfd_ioctl_data *data)
 {
@@ -252,14 +286,16 @@ static int VFD_CGRAM_Write(struct vfd_ioctl_data *data)
 	}
 
 	for (i = 0 ; i < data->length; i++)
+	{
 		write_data[i + 1] = data->data[i];
+	}
 	VFD_Write_Chars(write_data, data->length + 1);
 
 	dprintk("%s <\n", __func__);
 	return 0;
 }
 
-static int VFD_SetRemote()
+static int VFD_SetRemote(void)
 {
 	unsigned char write_data[2];
 
@@ -300,7 +336,9 @@ static int VFD_Display_DutyCycle_Write(struct vfd_ioctl_data *data)
 
 	write_data[0] = GRAY_LEVEL_ON_COMMAND;
 	for (ii = 0; ii < 16  ; ii++)
+	{
 		write_data[ii + 1] = 0x05;
+	}
 	VFD_Write_Chars(write_data, 17);
 	dprintk("%s <\n", __func__);
 	return 0;
@@ -320,7 +358,7 @@ static int VFD_Number_Of_Digit_Set(struct vfd_ioctl_data *data)
 	return 0;
 }
 
-//2 Turn ON : Turn on all vfd light and  standby mode.
+//2 Turn ON : Turn on all vfd light and standby mode.
 //2 Turn OFF : Turn off all vfd ligth and go to standby mod.
 static int VFD_Display_Write_On_Off(struct vfd_ioctl_data *data)
 {
@@ -328,9 +366,13 @@ static int VFD_Display_Write_On_Off(struct vfd_ioctl_data *data)
 
 	dprintk("%s >\n", __func__);
 	if (data->start_address == 0x01)
+	{
 		data->start_address = 0x00; //light normal
+	}
 	else
+	{
 		data->start_address = 0x02; //light off
+	}
 	write_data[0] = (data->start_address & 0x03) | LIGHT_ON_COMMAND;
 	if (data->length != 0)
 	{
@@ -338,8 +380,8 @@ static int VFD_Display_Write_On_Off(struct vfd_ioctl_data *data)
 		return -1;
 	}
 	VFD_Write_Chars(write_data, data->length + 1);
-	//now standby mode setting
 
+	// now standby mode setting
 	dprintk("%s <\n", __func__);
 	return 0;
 }
@@ -353,7 +395,9 @@ static int VFD_TEST_Write(struct vfd_ioctl_data *data)
 	dprintk("%s >\n", __func__);
 	write_data[0] = data->start_address;
 	for (i = 0 ; i < data->length; i++)
+	{
 		write_data[i + 1] = data->data[i];
+	}
 	VFD_Write_Chars(write_data, data->length + 1);
 	dprintk("%s <\n", __func__);
 	return 0;
@@ -395,29 +439,28 @@ int vfd_init_func(void)
 
 	dprintk("%s >\n", __func__);
 	printk("Kathrein UFS910 VFD module initializing\n");
-	SCP_PORT = 0; //use serial controller port
+	SCP_PORT = 0;  // use serial controller port
 	ROM_Char_Table = ROM_KATHREIN;
 
-	//display write on
-	data.start_address = 0x01; //means light normal
+	// display write on
+	data.start_address = 0x01;  // means light normal
 	data.length = 0;
 	VFD_Display_Write_On_Off(&data);
 
-	//digit-set ->Dagobert ->Origsoft does this after VFD_Display_Write_On_Off
+	// digit-set ->Dagobert ->Origsoft does this after VFD_Display_Write_On_Off
 	data.start_address = 0xE0;
 	data.length = 0;
 	VFD_Number_Of_Digit_Set(&data);
 
-	//set full brightness
+	// set full brightness
 	data.start_address = 0x07;
 	data.length = 0;
 	VFD_Display_DutyCycle_Write(&data);
 
-	//clear display
+	// clear display
 	DisplayVFDString("", 0);
 
-	//VFD_SetRemote();
-
+	// VFD_SetRemote();
 	dprintk("%s <\n", __func__);
 	return 0;
 }
@@ -433,16 +476,18 @@ static ssize_t VFDdev_write(struct file *filp, const char *buff, size_t len, lof
 		dprintk("%s return no mem<\n", __func__);
 		return -ENOMEM;
 	}
-
 	copy_from_user(kernel_buf, buff, len);
 
 	/* Dagobert: echo add a \n which will be counted as a char
 	 */
 	if (kernel_buf[len - 1] == '\n')
+	{
 		DisplayVFDString(kernel_buf, len - 1);
+	}
 	else
+	{
 		DisplayVFDString(kernel_buf, len);
-
+	}
 	kfree(kernel_buf);
 
 	dprintk("%s <\n", __func__);
@@ -474,11 +519,13 @@ static ssize_t VFDdev_read(struct file *filp, char __user *buff, size_t len, lof
 	}
 
 	if (len > lastdata.length)
+	{
 		len = lastdata.length;
-
+	}
 	if (len > 16)
+	{
 		len = 16;
-
+	}
 	vOpen.read = len;
 	copy_to_user(buff, lastdata.data, len);
 
@@ -502,7 +549,6 @@ int VFDdev_open(struct inode *inode, struct file *filp)
 
 	dprintk("%s <\n", __func__);
 	return 0;
-
 }
 
 int VFDdev_close(struct inode *inode, struct file *filp)
@@ -514,7 +560,6 @@ int VFDdev_close(struct inode *inode, struct file *filp)
 		vOpen.fp = NULL;
 		vOpen.read = 0;
 	}
-
 	dprintk("%s <\n", __func__);
 	return 0;
 }
@@ -527,31 +572,49 @@ static int VFDdev_ioctl(struct inode *Inode, struct file *File, unsigned int cmd
 	switch (cmd)
 	{
 		case VFDDCRAMWRITE:
+		{
 			VFD_DCRAM_Write((struct vfd_ioctl_data *)arg);
 			break;
+		}
 		case VFDBRIGHTNESS:
+		{
 			VFD_Display_DutyCycle_Write((struct vfd_ioctl_data *)arg);
 			break;
+		}
 		case VFDDISPLAYWRITEONOFF:
+		{
 			VFD_Display_Write_On_Off((struct vfd_ioctl_data *)arg);
 			break;
+		}
 		case VFDDRIVERINIT:
+		{
 			vfd_init_func();
 			break;
+		}
 		case VFDICONDISPLAYONOFF:
+		{
 			VFD_Icon_Display_On_Off((struct vfd_ioctl_data *)arg);
 			break;
+		}
 		case VFDCGRAMWRITE:
+		{
 			VFD_CGRAM_Write((struct vfd_ioctl_data *)arg);
 			break;
+		}
 		case VFDCGRAMWRITE2:
+		{
 			VFD_CGRAM_Write((struct vfd_ioctl_data *)arg);
 			break;
+		}
 		case 0x5305:
+		{
 			break;
+		}
 		default:
+		{
 			printk("VFD: unknown IOCTL 0x%x\n", cmd);
 			break;
+		}
 	}
 	dprintk("%s <\n", __func__);
 	return 0;
@@ -559,26 +622,26 @@ static int VFDdev_ioctl(struct inode *Inode, struct file *File, unsigned int cmd
 
 static struct file_operations vfd_fops =
 {
-	.owner = THIS_MODULE,
-	.ioctl = VFDdev_ioctl,
-	.write = VFDdev_write,
-	.read  = VFDdev_read,
-	.open  = VFDdev_open, 	/* konfetti */
+	.owner    = THIS_MODULE,
+	.ioctl    = VFDdev_ioctl,
+	.write    = VFDdev_write,
+	.read     = VFDdev_read,
+	.open     = VFDdev_open,  /* konfetti */
 	.release  = VFDdev_close
-}
-
-
-;
+};
 
 static int __init vfd_init_module(void)
 {
 	dprintk("%s >\n", __func__);
 
 	if (register_chrdev(VFD_MAJOR, "VFD", &vfd_fops))
+	{
 		printk("unable to get major %d for VFD\n", VFD_MAJOR);
+	}
 	else
+	{
 		vfd_init_func();
-
+	}
 	/* konfetti */
 	vOpen.fp = NULL;
 	sema_init(&vOpen.sem, 1);
@@ -600,3 +663,4 @@ module_exit(vfd_cleanup_module);
 MODULE_DESCRIPTION("VFD module for Kathrein UFS910 (Q'n'D port from MARUSYS)");
 MODULE_AUTHOR("Open Vision developers");
 MODULE_LICENSE("GPL");
+// vim:ts=4
