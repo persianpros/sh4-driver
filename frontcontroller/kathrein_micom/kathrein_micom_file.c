@@ -1,4 +1,5 @@
-/*
+/*****************************************************************************
+ *
  * kathrein_micom_file.c
  *
  * (c) 2009 Dagobert@teamducktales
@@ -18,7 +19,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
-******************************************************************************
+ *****************************************************************************
+ *
+ * This driver covers the following models:
+ * 
+ * Kathrein UFS912
+ * Kathrein UFS913
+ * Kathrein UFS922
+ * Kathrein UFC960
+ *
+ ******************************************************************************
  *
  * Changes
  *
@@ -31,6 +41,8 @@
  * 20170313 Audioniek       Display on/off implemented.
  * 20170313 Audioniek       Texts longer than the displaylength are scrolled
  *                          once (/dev/vfd only).
+ * 20210624 Audioniek       Add VFDSETLED mode 0.
+ * 20210701 Audioniek       VFDSETFAN IOCTL on UFS922 added.
  */
 
 #include <asm/io.h>
@@ -53,563 +65,9 @@
 
 #include "kathrein_micom.h"
 #include "kathrein_micom_asc.h"
-#include "../vfd/utf.h"
+#include "../ufs910_fp/utf.h"
 
 /* Global declarations */
-#if defined(UFI510) || defined(UFC960)
-// ROM_PT6315
-unsigned int VFD_CHARTABLE[256] =
-{
-	0x0000, //0x00, icon play
-	0x0000, //0x01, icon stop
-	0x0000, //0x02, icon pause
-	0x0000, //0x03, icon ff
-	0x0000, //0x04, icon rewind
-	0x0000, //0x05, rec
-	0x0000, //0x06, arrow
-	0x0000, //0x07, clock
-	0x0000, //0x08, usb
-	0x0000, //0x09, 1
-	0x0000, //0x0a, 2
-	0x0000, //0x0b, 16_9
-	0x0000, //0x0c, dvb
-	0x0000, //0x0d, hdd
-	0x0000, //0x0e, link
-	0x0000, //0x0f, audio
-
-	0x0000, //0x10, video
-	0x0000, //0x11, dts
-	0x0000, //0x12, dolby
-	0x0000, //0x13, reserved
-	0x0000, //0x14, reserved
-	0x0000, //0x15, reserved
-	0x0000, //0x16, reserved
-	0x0000, //0x17, reserved
-	0x0000, //0x18, reserved
-	0x0000, //0x19, reserved
-	0x0000, //0x1a, reserved
-	0x0000, //0x1b, reserved
-	0x0000, //0x1c, reserved
-	0x0000, //0x1d, reserved
-	0x0000, //0x1e, reserved
-	0x0000, //0x1f, reserved
-
-	0x0000, //0x20, <space>
-	0x4008, //0x21, !
-	0x0000, //0x22, "
-	0x0000, //0x23, #
-	0xC7CB, //0x24, $
-	0x0000, //0x25, %
-	0x0000, //0x26, &
-	0x2000, //0x27, '
-	0x2010, //0x28, (
-	0x1004, //0x29, )
-	0x301C, //0x2a, *
-	0x438A, //0x2b, +
-	0x0004, //0x2c, ,
-	0x0380, //0x2d, -
-	0x0000, //0x2e, .
-	0x2004, //0x2f, /
-
-	0x8C61, //0x30, 0
-	0x410A, //0x31, 1
-	0x8BA1, //0x32, 2
-	0x8BC1, //0x33, 3
-	0x0FC0, //0x34, 4
-	0x87C1, //0x35, 5
-	0x87E1, //0x36, 6
-	0x8840, //0x37, 7
-	0x8FE1, //0x38, 8
-	0x8FC1, //0x39, 9
-	0x4102, //0x3a, :
-	0x4004, //0x3b, ;
-	0x2010, //0x3c, <
-	0x0381, //0x3d, =
-	0x1004, //0x3e, >
-	0x8BA0, //0x3f, ?
-
-	0x0000, //0x40, @
-	0x8FE0, //0x41, A
-	0xA5B1, //0x42, B
-	0x8421, //0x43, C
-	0x9945, //0x44, D
-	0x87A1, //0x45, E
-	0x85A0, //0x46, F
-	0x8731, //0x47, G
-	0x0FE0, //0x48, H
-	0xC10B, //0x49, I
-	0xA015, //0x4a, J
-	0x25B0, //0x4b, K
-	0x0421, //0x4c, L
-	0x3d60, //0x4d, M
-	0x1D70, //0x4e, N
-	0x8c61, //0x4f, O
-
-	0x8FA0, //0x50, P
-	0x8FC0, //0x51, Q
-	0xA5B0, //0x52, R
-	0x87C1, //0x53, S
-	0xC10A, //0x54, T
-	0x0C61, //0x55, U
-	0x2524, //0x56, V
-	0x0D74, //0x57, W
-	0x3114, //0x58, X
-	0x3102, //0x59, Y
-	0xA105, //0x5a, Z
-	0x8421, //0x5b, [
-	0x1010, //0x5c, backslash
-	0x8841, //0x5d, ]
-	0x0014, //0x5e, ^
-	0x0001, //0x5f, _
-
-	0x1000, //0x60, `
-	0x8FE0, //0x61, a
-	0xA5B1, //0x62, b
-	0x8421, //0x63, c
-	0x9945, //0x64, d
-	0x87A1, //0x65, e
-	0x85A0, //0x66, f
-	0x8731, //0x67, g
-	0x0FE0, //0x68, h
-	0xC10B, //0x69, i
-	0xA015, //0x6a, j
-	0x25B0, //0x6b, k
-	0x0421, //0x6c, l
-	0x3d60, //0x6d, m
-	0x1D70, //0x6e, n
-	0x8c61, //0x6f, o
-
-	0x8FA0, //0x70, p
-	0x8FC0, //0x71, q
-	0xA5B0, //0x72, r
-	0x87C1, //0x73, s
-	0xC10A, //0x74, t
-	0x0C61, //0x75, u
-	0x2524, //0x76, v
-	0x0D74, //0x77, w
-	0x3114, //0x78, x
-	0x3102, //0x79, y
-	0xA105, //0x7a, z
-	0x2010, //0x7b, {
-	0x410A, //0x7c, |
-	0x1004, //0x7d, }
-	0x0000, //0x7e, ~
-	0x0000, //0x7f, <DEL>--> all light on
-
-	0x8FE0, //0x80, a-umlaut
-	0x33E1, //0x81, o-umlaut
-	0x3061, //0x82, u-umlaut
-	0x8FE0, //0x83, A-umlaut
-	0x33E1, //0x84, O-umlaut
-	0x3061, //0x85, U-umlaut
-	0xA5B1, //0x86, sz- estset
-	0x0000, //0x87, reserved
-	0x0000, //0x88, reserved
-	0x0000, //0x89, reserved
-	0x0000, //0x8a, reserved
-	0x0000, //0x8b, reserved
-	0x0000, //0x8c, reserved
-	0x0000, //0x8d, reserved
-	0x0000, //0x8e, reserved
-	0x0000, //0x8f,reserved
-
-	0x0000, //0x90, reserved
-	0x0000, //0x91, reserved
-	0x0000, //0x92, reserved
-	0x0000, //0x93, reserved
-	0x0000, //0x94, reserved
-	0x0000, //0x95, reserved
-	0x0000, //0x96, reserved
-	0x0000, //0x97, reserved
-	0x0000, //0x98, reserved
-	0x0000, //0x99, reserved
-	0x0000, //0x9a, reserved
-	0x0000, //0x9b, reserved
-	0x0000, //0x9c, reserved
-	0x0000, //0x9d, reserved
-	0x0000, //0x9e, reserved
-	0x0000, //0x9f, reserved
-
-	0x0000, //0xa0, reserved
-	0x0000, //0xa1, reserved
-	0x0000, //0xa2, reserved
-	0x0000, //0xa3, reserved
-	0x0000, //0xa4, reserved
-	0x0000, //0xa5, reserved
-	0x0000, //0xa6, reserved
-	0x0000, //0xa7, reserved
-	0x0000, //0xa8, reserved
-	0x0000, //0xa9, reserved
-	0x0000, //0xaa, reserved
-	0x0000, //0xab, reserved
-	0x0000, //0xac, reserved
-	0x0000, //0xad, reserved
-	0x0000, //0xae, reserved
-	0x0000, //0xaf, reserved
-
-	0x0000, //0xb0, reserved
-	0x0000, //0xb1, reserved
-	0x0000, //0xb2, reserved
-	0x0000, //0xb3, reserved
-	0x0000, //0xb4, reserved
-	0x0000, //0xb5, reserved
-	0x0000, //0xb6, reserved
-	0x0000, //0xb7, reserved
-	0x0000, //0xb8, reserved
-	0x0000, //0xb9, reserved
-	0x0000, //0xba, reserved
-	0x0000, //0xbb, reserved
-	0x0000, //0xbc, reserved
-	0x0000, //0xbd, reserved
-	0x0000, //0xbe, reserved
-	0x0000, //0xbf, reserved
-
-	0x0000, //0xc0, reserved
-	0x0000, //0xc1, reserved
-	0x0000, //0xc2, reserved
-	0x0000, //0xc3, reserved
-	0x0000, //0xc4, reserved
-	0x0000, //0xc5, reserved
-	0x0000, //0xc6, reserved
-	0x0000, //0xc7, reserved
-	0x0000, //0xc8, reserved
-	0x0000, //0xc9, reserved
-	0x0000, //0xca, reserved
-	0x0000, //0xcb, reserved
-	0x0000, //0xcc, reserved
-	0x0000, //0xcd, reserved
-	0x0000, //0xce, reserved
-	0x0000, //0xcf, reserved
-
-	0x0000, //0xd0, reserved
-	0x0000, //0xd1, reserved
-	0x0000, //0xd2, reserved
-	0x0000, //0xd3, reserved
-	0x0000, //0xd4, reserved
-	0x0000, //0xd5, reserved
-	0x0000, //0xd6, reserved
-	0x0000, //0xd7, reserved
-	0x0000, //0xd8, reserved
-	0x0000, //0xd9, reserved
-	0x0000, //0xda, reserved
-	0x0000, //0xdb, reserved
-	0x0000, //0xdc, reserved
-	0x0000, //0xdd, reserved
-	0x0000, //0xde, reserved
-	0x0000, //0xdf, reserved
-
-	0x0000, //0xe0, reserved
-	0x0000, //0xe1, reserved
-	0x0000, //0xe2, reserved
-	0x0000, //0xe3, reserved
-	0x0000, //0xe4, reserved
-	0x0000, //0xe5, reserved
-	0x0000, //0xe6, reserved
-	0x0000, //0xe7, reserved
-	0x0000, //0xe8, reserved
-	0x0000, //0xe9, reserved
-	0x0000, //0xea, reserved
-	0x0000, //0xeb, reserved
-	0x0000, //0xec, reserved
-	0x0000, //0xed, reserved
-	0x0000, //0xee, All on
-	0x0000, //0xef, All off
-
-	0x0001, //0xf0, All on
-	0x0003, //0xf1, All Off
-	0x0007, //0xf2, reserved
-	0x000f, //0xf3, reserved
-	0x001f, //0xf4, reserved
-	0x003f, //0xf5, reserved
-	0x007f, //0xf6, reserved
-	0x00ff, //0xf7, reserved
-	0x01ff, //0xf8, reserved
-	0x03ff, //0xf9, reserved
-	0x07ff, //0xfa, reserved
-	0x0fff, //0xfb, reserved
-	0x1fff, //0xfc, reserved
-	0x3fff, //0xfd, reserved
-	0x7fff, //0xfe, reserved
-	0xffff, //0xff, reserved
-};
-#else
-// ROM_KATHREIN
-unsigned char VFD_CHARTABLE[256] =
-{
-	0x2e, //0x00, icon play
-	0x8f, //0x01, icon stop
-	0xe4, //0x02, icon pause
-	0xdd, //0x03, icon ff
-	0xdc, //0x04, icon rewind
-	0x10, //0x05,
-	0x10, //0x06,
-	0x10, //0x07,
-	0x10, //0x08,
-	0x10, //0x09,
-	0x10, //0x0a,
-	0x10, //0x0b,
-	0x10, //0x0c,
-	0x10, //0x0d,
-	0x10, //0x0e,
-	0x10, //0x0f,
-
-	0x10, //0x10, reserved
-	0x11, //0x11, reserved
-	0x12, //0x12, reserved
-	0x13, //0x13, reserved
-	0x14, //0x14, reserved
-	0x15, //0x15, reserved
-	0x16, //0x16, reserved
-	0x17, //0x17, reserved
-	0x18, //0x18, reserved
-	0x19, //0x19, reserved
-	0x1a, //0x1a, reserved
-	0x1b, //0x1b, reserved
-	0x1c, //0x1c, reserved
-	0x10, //0x1d, reserved
-	0x10, //0x1e, reserved
-	0x10, //0x1f, reserved
-
-	0x20, //0x20, <space>
-	0x21, //0x21, !
-	0x22, //0x22, "
-	0x23, //0x23, #
-	0x24, //0x24, $
-	0x25, //0x25, %
-	0x26, //0x26, &
-	0x27, //0x27, '
-	0x28, //0x28, (
-	0x29, //0x29, )
-	0x2a, //0x2a, *
-	0x2b, //0x2b, +
-	0x2c, //0x2c, ,
-	0x2d, //0x2d, -
-	0x2e, //0x2e, .
-	0x2f, //0x2f, /
-
-	0x30, //0x30, 0
-	0x31, //0x31, 1
-	0x32, //0x32, 2
-	0x33, //0x33, 3
-	0x34, //0x34, 4
-	0x35, //0x35, 5
-	0x36, //0x36, 6
-	0x37, //0x37, 7
-	0x38, //0x38, 8
-	0x39, //0x39, 9
-	0x3a, //0x3a, :
-	0x3b, //0x3b, ;
-	0x3c, //0x3c, <
-	0x3d, //0x3d, =
-	0x3e, //0x3e, >
-	0x3f, //0x3f, ?
-
-	0x40, //0x40, @
-	0x41, //0x41, A
-	0x42, //0x42, B
-	0x43, //0x43, C
-	0x44, //0x44, D
-	0x45, //0x45, E
-	0x46, //0x46, F
-	0x47, //0x47, G
-	0x48, //0x48, H
-	0x49, //0x49, I
-	0x4a, //0x4a, J
-	0x4b, //0x4b, K
-	0x4c, //0x4c, L
-	0x4d, //0x4d, M
-	0x4e, //0x4e, N
-	0x4f, //0x4f, O
-
-	0x50, //0x50, P
-	0x51, //0x51, Q
-	0x52, //0x52, R
-	0x53, //0x53, S
-	0x54, //0x54, T
-	0x55, //0x55, U
-	0x56, //0x56, V
-	0x57, //0x57, W
-	0x58, //0x58, X
-	0x59, //0x59, Y
-	0x5a, //0x5a, Z
-	0x5b, //0x5b, [
-	0x5c, //0x5c, |
-	0x5d, //0x5d, ]
-	0x5e, //0x5e, ^
-	0x5f, //0x5f, \
-
-	0x60, //0x60, `
-	0x61, //0x61, a
-	0x62, //0x62, b
-	0x63, //0x63, c
-	0x64, //0x64, d
-	0x65, //0x65, e
-	0x66, //0x66, f
-	0x67, //0x67, g
-	0x68, //0x68, h
-	0x69, //0x69, i
-	0x6a, //0x6a, j
-	0x6b, //0x6b, k
-	0x6c, //0x6c, l
-	0x6d, //0x6d, m
-	0x6e, //0x6e, n
-	0x6f, //0x6f, o
-
-	0x70, //0x70, p
-	0x71, //0x71, q
-	0x72, //0x72, r
-	0x73, //0x73, s
-	0x74, //0x74, t
-	0x75, //0x75, u
-	0x76, //0x76, v
-	0x77, //0x77, w
-	0x78, //0x78, x
-	0x79, //0x79, y
-	0x7a, //0x7a, z
-	0x7b, //0x7b, {
-	0x7c, //0x7c, ~
-	0x7d, //0x7d, }
-	0x7e, //0x7e, ~
-	0x7f, //0x7f, <DEL>--> all light on
-
-	0x84, //0x80, a-umlaut
-	0x94, //0x81, o-umlaut
-	0x81, //0x82, u-umlaut
-	0x8e, //0x83, A-umlaut
-	0x99, //0x84, O-umlaut
-	0x9a, //0x85, U-umlaut
-	0xb1, //0x86, - estset
-	0x10, //0x87, reserved
-	0x10, //0x88, reserved
-	0x10, //0x89, reserved
-	0x10, //0x8a, reserved
-	0x10, //0x8b, reserved
-	0x10, //0x8c, reserved
-	0x10, //0x8d, reserved
-	0x10, //0x8e, reserved
-	0x10, //0x8f, reserved
-
-	0x10, //0x90, reserved
-	0x10, //0x91, reserved
-	0x10, //0x92, reserved
-	0x10, //0x93, reserved
-	0x10, //0x94, reserved
-	0x10, //0x95, reserved
-	0x10, //0x96, reserved
-	0x10, //0x97, reserved
-	0x10, //0x98, reserved
-	0x10, //0x99, reserved
-	0x10, //0x9a, reserved
-	0x10, //0x9b, reserved
-	0x10, //0x9c, reserved
-	0x10, //0x9d, reserved
-	0x10, //0x9e, reserved
-	0x10, //0x9f, reserved
-
-	0x10, //0xa0, reserved
-	0x10, //0xa1, reserved
-	0x10, //0xa2, reserved
-	0x10, //0xa3, reserved
-	0x10, //0xa4, reserved
-	0x10, //0xa5, reserved
-	0x10, //0xa6, reserved
-	0x10, //0xa7, reserved
-	0x10, //0xa8, reserved
-	0x10, //0xa9, reserved
-	0x10, //0xaa, reserved
-	0x10, //0xab, reserved
-	0x10, //0xac, reserved
-	0x10, //0xad, reserved
-	0x10, //0xae, reserved
-	0x10, //0xaf, reserved
-
-	0x10, //0xb0, reserved
-	0x10, //0xb1, reserved
-	0x10, //0xb2, reserved
-	0x10, //0xb3, reserved
-	0x10, //0xb4, reserved
-	0x10, //0xb5, reserved
-	0x10, //0xb6, reserved
-	0x10, //0xb7, reserved
-	0x10, //0xb8, reserved
-	0x10, //0xb9, reserved
-	0x10, //0xba, reserved
-	0x10, //0xbb, reserved
-	0x10, //0xbc, reserved
-	0x10, //0xbd, reserved
-	0x10, //0xbe, reserved
-	0x10, //0xbf, reserved
-
-	0x10, //0xc0, reserved
-	0x10, //0xc1, reserved
-	0x10, //0xc2, reserved
-	0x10, //0xc3, reserved
-	0x10, //0xc4, reserved
-	0x10, //0xc5, reserved
-	0x10, //0xc6, reserved
-	0x10, //0xc7, reserved
-	0x10, //0xc8, reserved
-	0x10, //0xc9, reserved
-	0x10, //0xca, reserved
-	0x10, //0xcb, reserved
-	0x10, //0xcc, reserved
-	0x10, //0xcd, reserved
-	0x10, //0xce, reserved
-	0x10, //0xcf, reserved
-
-	0x10, //0xd0, reserved
-	0x10, //0xd1, reserved
-	0x10, //0xd2, reserved
-	0x10, //0xd3, reserved
-	0x10, //0xd4, reserved
-	0x10, //0xd5, reserved
-	0x10, //0xd6, reserved
-	0x10, //0xd7, reserved
-	0x10, //0xd8, reserved
-	0x10, //0xd9, reserved
-	0x10, //0xda, reserved
-	0x10, //0xdb, reserved
-	0x10, //0xdc, reserved
-	0x10, //0xdd, reserved
-	0x10, //0xde, reserved
-	0x10, //0xdf, reserved
-
-	0x10, //0xe0, reserved
-	0x10, //0xe1, reserved
-	0x10, //0xe2, reserved
-	0x10, //0xe3, reserved
-	0x10, //0xe4, reserved
-	0x10, //0xe5, reserved
-	0x10, //0xe6, reserved
-	0x10, //0xe7, reserved
-	0x10, //0xe8, reserved
-	0x10, //0xe9, reserved
-	0x10, //0xea, reserved
-	0x10, //0xeb, reserved
-	0x10, //0xec, reserved
-	0x10, //0xed, reserved
-	0x10, //0xee, reserved
-	0x10, //0xef, reserved
-
-	0x10, //0xf0, reserved
-	0x10, //0xf1, reserved
-	0x10, //0xf2, reserved
-	0x10, //0xf3, reserved
-	0x10, //0xf4, reserved
-	0x10, //0xf5, reserved
-	0x10, //0xf6, reserved
-	0x10, //0xf7, reserved
-	0x10, //0xf8, reserved
-	0x10, //0xf9, reserved
-	0x10, //0xfa, reserved
-	0x10, //0xfb, reserved
-	0x10, //0xfc, reserved
-	0x10, //0xfd, reserved
-	0x10, //0xfe, reserved
-	0x10, //0xff, reserved
-};
-#endif
-
 extern void ack_sem_up(void);
 extern int  ack_sem_down(void);
 extern void micom_putc(unsigned char data);
@@ -619,18 +77,582 @@ int errorOccured = 0;
 char ioctl_data[8];
 tFrontPanelOpen FrontPanelOpen [LASTMINOR];
 
-struct saved_data_s
-{
-	int           length;
-	char          data[20];
-	unsigned char brightness;
-	unsigned char ledbrightness;
-};
+struct saved_data_s lastdata;
 
-static struct saved_data_s lastdata;
+#if defined(UFS922)
+extern unsigned long fan_registers;
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17)
+extern struct stpio_pin *fan_pin1;
+#endif
+extern struct stpio_pin *fan_pin;
+#endif
+
+/***************************************************************************
+ *
+ * Character definitions.
+ *
+ ***************************************************************************/
+#if defined(UFI510) \
+ || defined(UFC960)
+// ROM_PT6315
+unsigned int VFD_CHARTABLE[256] =
+{
+	0x0000,  // 0x00, icon play
+	0x0000,  // 0x01, icon stop
+	0x0000,  // 0x02, icon pause
+	0x0000,  // 0x03, icon ff
+	0x0000,  // 0x04, icon rewind
+	0x0000,  // 0x05, rec
+	0x0000,  // 0x06, arrow
+	0x0000,  // 0x07, clock
+	0x0000,  // 0x08, usb
+	0x0000,  // 0x09, 1
+	0x0000,  // 0x0a, 2
+	0x0000,  // 0x0b, 16_9
+	0x0000,  // 0x0c, dvb
+	0x0000,  // 0x0d, hdd
+	0x0000,  // 0x0e, link
+	0x0000,  // 0x0f, audio
+
+	0x0000,  // 0x10, video
+	0x0000,  // 0x11, dts
+	0x0000,  // 0x12, dolby
+	0x0000,  // 0x13, reserved
+	0x0000,  // 0x14, reserved
+	0x0000,  // 0x15, reserved
+	0x0000,  // 0x16, reserved
+	0x0000,  // 0x17, reserved
+	0x0000,  // 0x18, reserved
+	0x0000,  // 0x19, reserved
+	0x0000,  // 0x1a, reserved
+	0x0000,  // 0x1b, reserved
+	0x0000,  // 0x1c, reserved
+	0x0000,  // 0x1d, reserved
+	0x0000,  // 0x1e, reserved
+	0x0000,  // 0x1f, reserved
+
+	0x0000,  // 0x20, <space>
+	0x4008,  // 0x21, !
+	0x0000,  // 0x22, "
+	0x0000,  // 0x23, #
+	0xC7CB,  // 0x24, $
+	0x0000,  // 0x25, %
+	0x0000,  // 0x26, &
+	0x2000,  // 0x27, '
+	0x2010,  // 0x28, (
+	0x1004,  // 0x29, )
+	0x301C,  // 0x2a, *
+	0x438A,  // 0x2b, +
+	0x0004,  // 0x2c, ,
+	0x0380,  // 0x2d, -
+	0x0000,  // 0x2e, .
+	0x2004,  // 0x2f, /
+
+	0x8C61,  // 0x30, 0
+	0x410A,  // 0x31, 1
+	0x8BA1,  // 0x32, 2
+	0x8BC1,  // 0x33, 3
+	0x0FC0,  // 0x34, 4
+	0x87C1,  // 0x35, 5
+	0x87E1,  // 0x36, 6
+	0x8840,  // 0x37, 7
+	0x8FE1,  // 0x38, 8
+	0x8FC1,  // 0x39, 9
+	0x4102,  // 0x3a, :
+	0x4004,  // 0x3b, ;
+	0x2010,  // 0x3c, <
+	0x0381,  // 0x3d, =
+	0x1004,  // 0x3e, >
+	0x8BA0,  // 0x3f, ?
+
+	0x0000,  // 0x40, @
+	0x8FE0,  // 0x41, A
+	0xA5B1,  // 0x42, B
+	0x8421,  // 0x43, C
+	0x9945,  // 0x44, D
+	0x87A1,  // 0x45, E
+	0x85A0,  // 0x46, F
+	0x8731,  // 0x47, G
+	0x0FE0,  // 0x48, H
+	0xC10B,  // 0x49, I
+	0xA015,  // 0x4a, J
+	0x25B0,  // 0x4b, K
+	0x0421,  // 0x4c, L
+	0x3d60,  // 0x4d, M
+	0x1D70,  // 0x4e, N
+	0x8c61,  // 0x4f, O
+
+	0x8FA0,  // 0x50, P
+	0x8FC0,  // 0x51, Q
+	0xA5B0,  // 0x52, R
+	0x87C1,  // 0x53, S
+	0xC10A,  // 0x54, T
+	0x0C61,  // 0x55, U
+	0x2524,  // 0x56, V
+	0x0D74,  // 0x57, W
+	0x3114,  // 0x58, X
+	0x3102,  // 0x59, Y
+	0xA105,  // 0x5a, Z
+	0x8421,  // 0x5b, [
+	0x1010,  // 0x5c, backslash
+	0x8841,  // 0x5d, ]
+	0x0014,  // 0x5e, ^
+	0x0001,  // 0x5f, _
+
+	0x1000,  // 0x60, `
+	0x8FE0,  // 0x61, a
+	0xA5B1,  // 0x62, b
+	0x8421,  // 0x63, c
+	0x9945,  // 0x64, d
+	0x87A1,  // 0x65, e
+	0x85A0,  // 0x66, f
+	0x8731,  // 0x67, g
+	0x0FE0,  // 0x68, h
+	0xC10B,  // 0x69, i
+	0xA015,  // 0x6a, j
+	0x25B0,  // 0x6b, k
+	0x0421,  // 0x6c, l
+	0x3d60,  // 0x6d, m
+	0x1D70,  // 0x6e, n
+	0x8c61,  // 0x6f, o
+
+	0x8FA0,  // 0x70, p
+	0x8FC0,  // 0x71, q
+	0xA5B0,  // 0x72, r
+	0x87C1,  // 0x73, s
+	0xC10A,  // 0x74, t
+	0x0C61,  // 0x75, u
+	0x2524,  // 0x76, v
+	0x0D74,  // 0x77, w
+	0x3114,  // 0x78, x
+	0x3102,  // 0x79, y
+	0xA105,  // 0x7a, z
+	0x2010,  // 0x7b, {
+	0x410A,  // 0x7c, |
+	0x1004,  // 0x7d, }
+	0x0000,  // 0x7e, ~
+	0x0000,  // 0x7f, <DEL> --> all segments on
+
+	0x8FE0,  // 0x80, a-umlaut
+	0x33E1,  // 0x81, o-umlaut
+	0x3061,  // 0x82, u-umlaut
+	0x8FE0,  // 0x83, A-umlaut
+	0x33E1,  // 0x84, O-umlaut
+	0x3061,  // 0x85, U-umlaut
+	0xA5B1,  // 0x86, sz- estset
+	0x0000,  // 0x87, reserved
+	0x0000,  // 0x88, reserved
+	0x0000,  // 0x89, reserved
+	0x0000,  // 0x8a, reserved
+	0x0000,  // 0x8b, reserved
+	0x0000,  // 0x8c, reserved
+	0x0000,  // 0x8d, reserved
+	0x0000,  // 0x8e, reserved
+	0x0000,  // 0x8f, reserved
+
+	0x0000,  // 0x90, reserved
+	0x0000,  // 0x91, reserved
+	0x0000,  // 0x92, reserved
+	0x0000,  // 0x93, reserved
+	0x0000,  // 0x94, reserved
+	0x0000,  // 0x95, reserved
+	0x0000,  // 0x96, reserved
+	0x0000,  // 0x97, reserved
+	0x0000,  // 0x98, reserved
+	0x0000,  // 0x99, reserved
+	0x0000,  // 0x9a, reserved
+	0x0000,  // 0x9b, reserved
+	0x0000,  // 0x9c, reserved
+	0x0000,  // 0x9d, reserved
+	0x0000,  // 0x9e, reserved
+	0x0000,  // 0x9f, reserved
+
+	0x0000,  // 0xa0, reserved
+	0x0000,  // 0xa1, reserved
+	0x0000,  // 0xa2, reserved
+	0x0000,  // 0xa3, reserved
+	0x0000,  // 0xa4, reserved
+	0x0000,  // 0xa5, reserved
+	0x0000,  // 0xa6, reserved
+	0x0000,  // 0xa7, reserved
+	0x0000,  // 0xa8, reserved
+	0x0000,  // 0xa9, reserved
+	0x0000,  // 0xaa, reserved
+	0x0000,  // 0xab, reserved
+	0x0000,  // 0xac, reserved
+	0x0000,  // 0xad, reserved
+	0x0000,  // 0xae, reserved
+	0x0000,  // 0xaf, reserved
+
+	0x0000,  // 0xb0, reserved
+	0x0000,  // 0xb1, reserved
+	0x0000,  // 0xb2, reserved
+	0x0000,  // 0xb3, reserved
+	0x0000,  // 0xb4, reserved
+	0x0000,  // 0xb5, reserved
+	0x0000,  // 0xb6, reserved
+	0x0000,  // 0xb7, reserved
+	0x0000,  // 0xb8, reserved
+	0x0000,  // 0xb9, reserved
+	0x0000,  // 0xba, reserved
+	0x0000,  // 0xbb, reserved
+	0x0000,  // 0xbc, reserved
+	0x0000,  // 0xbd, reserved
+	0x0000,  // 0xbe, reserved
+	0x0000,  // 0xbf, reserved
+
+	0x0000,  // 0xc0, reserved
+	0x0000,  // 0xc1, reserved
+	0x0000,  // 0xc2, reserved
+	0x0000,  // 0xc3, reserved
+	0x0000,  // 0xc4, reserved
+	0x0000,  // 0xc5, reserved
+	0x0000,  // 0xc6, reserved
+	0x0000,  // 0xc7, reserved
+	0x0000,  // 0xc8, reserved
+	0x0000,  // 0xc9, reserved
+	0x0000,  // 0xca, reserved
+	0x0000,  // 0xcb, reserved
+	0x0000,  // 0xcc, reserved
+	0x0000,  // 0xcd, reserved
+	0x0000,  // 0xce, reserved
+	0x0000,  // 0xcf, reserved
+
+	0x0000,  // 0xd0, reserved
+	0x0000,  // 0xd1, reserved
+	0x0000,  // 0xd2, reserved
+	0x0000,  // 0xd3, reserved
+	0x0000,  // 0xd4, reserved
+	0x0000,  // 0xd5, reserved
+	0x0000,  // 0xd6, reserved
+	0x0000,  // 0xd7, reserved
+	0x0000,  // 0xd8, reserved
+	0x0000,  // 0xd9, reserved
+	0x0000,  // 0xda, reserved
+	0x0000,  // 0xdb, reserved
+	0x0000,  // 0xdc, reserved
+	0x0000,  // 0xdd, reserved
+	0x0000,  // 0xde, reserved
+	0x0000,  // 0xdf, reserved
+
+	0x0000,  // 0xe0, reserved
+	0x0000,  // 0xe1, reserved
+	0x0000,  // 0xe2, reserved
+	0x0000,  // 0xe3, reserved
+	0x0000,  // 0xe4, reserved
+	0x0000,  // 0xe5, reserved
+	0x0000,  // 0xe6, reserved
+	0x0000,  // 0xe7, reserved
+	0x0000,  // 0xe8, reserved
+	0x0000,  // 0xe9, reserved
+	0x0000,  // 0xea, reserved
+	0x0000,  // 0xeb, reserved
+	0x0000,  // 0xec, reserved
+	0x0000,  // 0xed, reserved
+	0x0000,  // 0xee, All on
+	0x0000,  // 0xef, All off
+
+	0x0001,  // 0xf0, All on
+	0x0003,  // 0xf1, All Off
+	0x0007,  // 0xf2, reserved
+	0x000f,  // 0xf3, reserved
+	0x001f,  // 0xf4, reserved
+	0x003f,  // 0xf5, reserved
+	0x007f,  // 0xf6, reserved
+	0x00ff,  // 0xf7, reserved
+	0x01ff,  // 0xf8, reserved
+	0x03ff,  // 0xf9, reserved
+	0x07ff,  // 0xfa, reserved
+	0x0fff,  // 0xfb, reserved
+	0x1fff,  // 0xfc, reserved
+	0x3fff,  // 0xfd, reserved
+	0x7fff,  // 0xfe, reserved
+	0xffff,  // 0xff, reserved
+};
+#else  // UFS9XX
+// ROM_KATHREIN
+unsigned char VFD_CHARTABLE[256] =
+{
+	0x2e,  // 0x00, icon play
+	0x8f,  // 0x01, icon stop
+	0xe4,  // 0x02, icon pause
+	0xdd,  // 0x03, icon ff
+	0xdc,  // 0x04, icon rewind
+	0x10,  // 0x05,
+	0x10,  // 0x06,
+	0x10,  // 0x07,
+	0x10,  // 0x08,
+	0x10,  // 0x09,
+	0x10,  // 0x0a,
+	0x10,  // 0x0b,
+	0x10,  // 0x0c,
+	0x10,  // 0x0d,
+	0x10,  // 0x0e,
+	0x10,  // 0x0f,
+
+	0x10,  // 0x10, reserved
+	0x11,  // 0x11, reserved
+	0x12,  // 0x12, reserved
+	0x13,  // 0x13, reserved
+	0x14,  // 0x14, reserved
+	0x15,  // 0x15, reserved
+	0x16,  // 0x16, reserved
+	0x17,  // 0x17, reserved
+	0x18,  // 0x18, reserved
+	0x19,  // 0x19, reserved
+	0x1a,  // 0x1a, reserved
+	0x1b,  // 0x1b, reserved
+	0x1c,  // 0x1c, reserved
+	0x10,  // 0x1d, reserved
+	0x10,  // 0x1e, reserved
+	0x10,  // 0x1f, reserved
+
+	0x20,  // 0x20, <space>
+	0x21,  // 0x21, !
+	0x22,  // 0x22, "
+	0x23,  // 0x23, #
+	0x24,  // 0x24, $
+	0x25,  // 0x25, %
+	0x26,  // 0x26, &
+	0x27,  // 0x27, '
+	0x28,  // 0x28, (
+	0x29,  // 0x29, )
+	0x2a,  // 0x2a, *
+	0x2b,  // 0x2b, +
+	0x2c,  // 0x2c, ,
+	0x2d,  // 0x2d, -
+	0x2e,  // 0x2e, .
+	0x2f,  // 0x2f, /
+
+	0x30,  // 0x30, 0
+	0x31,  // 0x31, 1
+	0x32,  // 0x32, 2
+	0x33,  // 0x33, 3
+	0x34,  // 0x34, 4
+	0x35,  // 0x35, 5
+	0x36,  // 0x36, 6
+	0x37,  // 0x37, 7
+	0x38,  // 0x38, 8
+	0x39,  // 0x39, 9
+	0x3a,  // 0x3a, :
+	0x3b,  // 0x3b, ;
+	0x3c,  // 0x3c, <
+	0x3d,  // 0x3d, =
+	0x3e,  // 0x3e, >
+	0x3f,  // 0x3f, ?
+
+	0x40,  // 0x40, @
+	0x41,  // 0x41, A
+	0x42,  // 0x42, B
+	0x43,  // 0x43, C
+	0x44,  // 0x44, D
+	0x45,  // 0x45, E
+	0x46,  // 0x46, F
+	0x47,  // 0x47, G
+	0x48,  // 0x48, H
+	0x49,  // 0x49, I
+	0x4a,  // 0x4a, J
+	0x4b,  // 0x4b, K
+	0x4c,  // 0x4c, L
+	0x4d,  // 0x4d, M
+	0x4e,  // 0x4e, N
+	0x4f,  // 0x4f, O
+
+	0x50,  // 0x50, P
+	0x51,  // 0x51, Q
+	0x52,  // 0x52, R
+	0x53,  // 0x53, S
+	0x54,  // 0x54, T
+	0x55,  // 0x55, U
+	0x56,  // 0x56, V
+	0x57,  // 0x57, W
+	0x58,  // 0x58, X
+	0x59,  // 0x59, Y
+	0x5a,  // 0x5a, Z
+	0x5b,  // 0x5b, [
+	0x5c,  // 0x5c, |
+	0x5d,  // 0x5d, ]
+	0x5e,  // 0x5e, ^
+	0x5f,  // 0x5f, \
+
+	0x60,  // 0x60, `
+	0x61,  // 0x61, a
+	0x62,  // 0x62, b
+	0x63,  // 0x63, c
+	0x64,  // 0x64, d
+	0x65,  // 0x65, e
+	0x66,  // 0x66, f
+	0x67,  // 0x67, g
+	0x68,  // 0x68, h
+	0x69,  // 0x69, i
+	0x6a,  // 0x6a, j
+	0x6b,  // 0x6b, k
+	0x6c,  // 0x6c, l
+	0x6d,  // 0x6d, m
+	0x6e,  // 0x6e, n
+	0x6f,  // 0x6f, o
+
+	0x70,  // 0x70, p
+	0x71,  // 0x71, q
+	0x72,  // 0x72, r
+	0x73,  // 0x73, s
+	0x74,  // 0x74, t
+	0x75,  // 0x75, u
+	0x76,  // 0x76, v
+	0x77,  // 0x77, w
+	0x78,  // 0x78, x
+	0x79,  // 0x79, y
+	0x7a,  // 0x7a, z
+	0x7b,  // 0x7b, {
+	0x7c,  // 0x7c, ~
+	0x7d,  // 0x7d, }
+	0x7e,  // 0x7e, ~
+	0x7f,  // 0x7f, <DEL>--> all segments on
+	// Table values seem to match PT6302-005 character generator
+	0x84,  // 0x80, a-umlaut
+	0x94,  // 0x81, o-umlaut
+	0x81,  // 0x82, u-umlaut
+	0x8e,  // 0x83, A-umlaut
+	0x99,  // 0x84, O-umlaut
+	0x9a,  // 0x85, U-umlaut
+	0xb1,  // 0x86, - estset
+	0x10,  // 0x87, reserved
+	0x10,  // 0x88, reserved
+	0x10,  // 0x89, reserved
+	0x10,  // 0x8a, reserved
+	0x10,  // 0x8b, reserved
+	0x10,  // 0x8c, reserved
+	0x10,  // 0x8d, reserved
+	0x10,  // 0x8e, reserved
+	0x10,  // 0x8f, reserved
+
+	0x10,  // 0x90, reserved
+	0x10,  // 0x91, reserved
+	0x10,  // 0x92, reserved
+	0x10,  // 0x93, reserved
+	0x10,  // 0x94, reserved
+	0x10,  // 0x95, reserved
+	0x10,  // 0x96, reserved
+	0x10,  // 0x97, reserved
+	0x10,  // 0x98, reserved
+	0x10,  // 0x99, reserved
+	0x10,  // 0x9a, reserved
+	0x10,  // 0x9b, reserved
+	0x10,  // 0x9c, reserved
+	0x10,  // 0x9d, reserved
+	0x10,  // 0x9e, reserved
+	0x10,  // 0x9f, reserved
+
+	0x10,  // 0xa0, reserved
+	0x10,  // 0xa1, reserved
+	0x10,  // 0xa2, reserved
+	0x10,  // 0xa3, reserved
+	0x10,  // 0xa4, reserved
+	0x10,  // 0xa5, reserved
+	0x10,  // 0xa6, reserved
+	0x10,  // 0xa7, reserved
+	0x10,  // 0xa8, reserved
+	0x10,  // 0xa9, reserved
+	0x10,  // 0xaa, reserved
+	0x10,  // 0xab, reserved
+	0x10,  // 0xac, reserved
+	0x10,  // 0xad, reserved
+	0x10,  // 0xae, reserved
+	0x10,  // 0xaf, reserved
+
+	0x10,  // 0xb0, reserved
+	0x10,  // 0xb1, reserved
+	0x10,  // 0xb2, reserved
+	0x10,  // 0xb3, reserved
+	0x10,  // 0xb4, reserved
+	0x10,  // 0xb5, reserved
+	0x10,  // 0xb6, reserved
+	0x10,  // 0xb7, reserved
+	0x10,  // 0xb8, reserved
+	0x10,  // 0xb9, reserved
+	0x10,  // 0xba, reserved
+	0x10,  // 0xbb, reserved
+	0x10,  // 0xbc, reserved
+	0x10,  // 0xbd, reserved
+	0x10,  // 0xbe, reserved
+	0x10,  // 0xbf, reserved
+
+	0x10,  // 0xc0, reserved
+	0x10,  // 0xc1, reserved
+	0x10,  // 0xc2, reserved
+	0x10,  // 0xc3, reserved
+	0x10,  // 0xc4, reserved
+	0x10,  // 0xc5, reserved
+	0x10,  // 0xc6, reserved
+	0x10,  // 0xc7, reserved
+	0x10,  // 0xc8, reserved
+	0x10,  // 0xc9, reserved
+	0x10,  // 0xca, reserved
+	0x10,  // 0xcb, reserved
+	0x10,  // 0xcc, reserved
+	0x10,  // 0xcd, reserved
+	0x10,  // 0xce, reserved
+	0x10,  // 0xcf, reserved
+
+	0x10,  // 0xd0, reserved
+	0x10,  // 0xd1, reserved
+	0x10,  // 0xd2, reserved
+	0x10,  // 0xd3, reserved
+	0x10,  // 0xd4, reserved
+	0x10,  // 0xd5, reserved
+	0x10,  // 0xd6, reserved
+	0x10,  // 0xd7, reserved
+	0x10,  // 0xd8, reserved
+	0x10,  // 0xd9, reserved
+	0x10,  // 0xda, reserved
+	0x10,  // 0xdb, reserved
+	0x10,  // 0xdc, reserved
+	0x10,  // 0xdd, reserved
+	0x10,  // 0xde, reserved
+	0x10,  // 0xdf, reserved
+
+	0x10,  // 0xe0, reserved
+	0x10,  // 0xe1, reserved
+	0x10,  // 0xe2, reserved
+	0x10,  // 0xe3, reserved
+	0x10,  // 0xe4, reserved
+	0x10,  // 0xe5, reserved
+	0x10,  // 0xe6, reserved
+	0x10,  // 0xe7, reserved
+	0x10,  // 0xe8, reserved
+	0x10,  // 0xe9, reserved
+	0x10,  // 0xea, reserved
+	0x10,  // 0xeb, reserved
+	0x10,  // 0xec, reserved
+	0x10,  // 0xed, reserved
+	0x10,  // 0xee, reserved
+	0x10,  // 0xef, reserved
+
+	0x10,  // 0xf0, reserved
+	0x10,  // 0xf1, reserved
+	0x10,  // 0xf2, reserved
+	0x10,  // 0xf3, reserved
+	0x10,  // 0xf4, reserved
+	0x10,  // 0xf5, reserved
+	0x10,  // 0xf6, reserved
+	0x10,  // 0xf7, reserved
+	0x10,  // 0xf8, reserved
+	0x10,  // 0xf9, reserved
+	0x10,  // 0xfa, reserved
+	0x10,  // 0xfb, reserved
+	0x10,  // 0xfc, reserved
+	0x10,  // 0xfd, reserved
+	0x10,  // 0xfe, reserved
+	0x10,  // 0xff, reserved
+};
+#endif
 
 /* start of code */
-
+/*******************************************************
+ *
+ * Code to communicate with the front processor.
+ *
+ */
 void write_sem_up(void)
 {
 	up(&write_sem);
@@ -679,6 +701,17 @@ int micomWriteCommand(char command, char *buffer, int len, int needAck)
 	return 0;
 }
 
+/*******************************************************************
+ *
+ * Code for the IOCTL functions of the driver.
+ *
+ */
+
+/*******************************************************************
+ *
+ * micomSetRCcode: sets RC code to use.
+ *
+ */
 int micomSetRCcode(int code)
 {
 	char buffer[8];
@@ -692,38 +725,43 @@ int micomSetRCcode(int code)
 	buffer[2] = 0x80;
 	buffer[3] = 0x48;
 	buffer[4] = code & 0x07;  // RC code 1 to 4
-	res = micomWriteCommand(0x55, buffer, 7, NO_ACK);
+	res = micomWriteCommand(CmdSetRCcode, buffer, 7, NO_ACK);
 
 	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = 0x2;
-	res = micomWriteCommand(0x03, buffer, 7, NO_ACK);
+	res = micomWriteCommand(CmdSetModelcode, buffer, 7, NO_ACK);
 	msleep(10);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/*******************************************************************
+ *
+ * micomSetIcon: sets the state of an icon on front panel display.
+ *
+ */
 int micomSetIcon(int which, int on)
 {
 	char buffer[8];
 	int  res = 0;
 
-	dprintk(100, "%s > icon %d, state %s\n", __func__, which, on ? "on" : "off");
-	if (which < 1 || which > 16)
+	dprintk(100, "%s > Icon %d, state %s\n", __func__, which, on ? "on" : "off");
+	if (which < 1 || which > ICON_MAX - 1)
 	{
-		printk("VFD/MICOM icon number %d out of range (1..%d)\n", which, ICON_MAX - 1);
+		dprintk(1, "Icon number %d out of range (1..%d)\n", which, ICON_MAX - 1);
 		return -EINVAL;
 	}
 	memset(buffer, 0, sizeof(buffer));
-	buffer[0] = which;
+	buffer[0] = which - 1;  // icon 1 is on position 0
 
 	if (on == 1)
 	{
-		res = micomWriteCommand(0x11, buffer, 7, NEED_ACK);
+		res = micomWriteCommand(CmdSetIcon, buffer, 7, NEED_ACK);
 	}
 	else
 	{
-		res = micomWriteCommand(0x12, buffer, 7, NEED_ACK);
+		res = micomWriteCommand(CmdClearIcon, buffer, 7, NEED_ACK);
 	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
@@ -731,57 +769,71 @@ int micomSetIcon(int which, int on)
 /* export for later use in e2_proc */
 EXPORT_SYMBOL(micomSetIcon);
 
+/*******************************************************************
+ *
+ * micomSetLED: sets the state of an LED on front panel display.
+ *
+ * LED assigment:
+ *
+ * UFS912 and UFS913
+ * 2 = green (Note: used by evremote2 as RC feedback)
+ * 3 = red   (overrides green)
+ * 4 = left  (not standard, manually built-in)
+ * 5 = right (not standard, manually built-in)
+ *
+ * UFS922
+ * 1 = white, in key AUX
+ * 2 = white, text LIST
+ * 3 = red, power symbol
+ * 4 = white, in key TV/R
+ * 5 = white, text VOLUME
+ * 6 = white, wheel symbols (Note: used by evremote2 as RC feedback)
+ *
+ * UFC960
+ * 2 = green
+ * 3 = red
+ */
 int micomSetLED(int which, int on)
 {
 	char buffer[8];
 	int  res = 0;
+	int  ledmin;
+	int  ledmax;
 
 	dprintk(100, "%s > LED %d, state %s\n", __func__, which, on ? "on" : "off");
 
 #if defined(UFS922)
-	if (which < 1 || which > 6)
-	{
-		printk("VFD/MICOM led number %d out of range (1..6)\n", which);
-		return -EINVAL;
-	}
-#elif defined(UFS912) || defined(UFS913)
-	/* 0x02 = green
-	 * 0x03 = red   (overrides green)
-	 * 0x04 = left  (not standard, manually built-in)
-	 * 0x05 = right (not standard, manually built-in)
-	 */
-	if (which < 2 || which > 5)
-	{
-		printk("VFD/MICOM led number %d out of range (2..5)\n", which);
-		return -EINVAL;
-	}
-#else
-	/* 0x02 = green
-	 * 0x03 = red
-	 */
-	if (which < 2 || which > 3)
-	{
-		printk("VFD/MICOM led number %d out of range (2..3)\n", which);
-		return -EINVAL;
-	}
+	ledmin = LED_AUX;
+	ledmax = LED_WHEEL;
+#elif defined(UFS912) \
+ ||   defined(UFS913)
+	ledmin = LED_GREEN;
+	ledmax = LED_RIGHT;
+#else  // UFC960
+	ledmin = LED_GREEN;
+	ledmax = LED_RED;
 #endif
+	if (which < ledmin || which > ledmax)
+	{
+		dprintk(1, "LED number %d out of range (%d..%d)\n", which, ledmin, ledmax);
+		return -EINVAL;
+	}
 	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = which;
 
-	if (on)
-	{
-		res = micomWriteCommand(0x06, buffer, 7, NEED_ACK);
-	}
-	else
-	{
-		res = micomWriteCommand(0x22, buffer, 7, NEED_ACK);
-	}
+	res = micomWriteCommand((on ? CmdSetLED : CmdClearLED), buffer, 7, NEED_ACK);
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 /* export for later use in e2_proc */
 EXPORT_SYMBOL(micomSetLED);
 
+/*******************************************************************
+ *
+ * micomSetBrightness: sets the brightness of the front panel
+ *                     display.
+ *
+ */
 int micomSetBrightness(char level)
 {
 	char buffer[8];
@@ -791,7 +843,7 @@ int micomSetBrightness(char level)
 
 	if (level < 0 || level > 7)
 	{
-		printk("VFD/MICOM brightness out of range %d\n", level);
+		dprintk(1, "Brightness level %d out of range (valid 0-7)\n", level);
 		return -EINVAL;
 	}
 	if (level != 0)
@@ -806,7 +858,7 @@ int micomSetBrightness(char level)
 	}
 	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = level;
-	res = micomWriteCommand(0x25, buffer, 7, NEED_ACK);
+	res = micomWriteCommand(CmdSetVFDBrightness, buffer, 7, NEED_ACK);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
@@ -814,33 +866,43 @@ int micomSetBrightness(char level)
 /* export for later use in e2_proc */
 EXPORT_SYMBOL(micomSetBrightness);
 
+/*******************************************************************
+ *
+ * micomSetLEDBrightness: sets the brightness of the front panel
+ *                        LEDs.
+ *
+ */
 int micomSetLedBrightness(unsigned char level)
 {
 	unsigned char buffer[8];
 	int  res = 0;
 
-	dprintk(100, "%s > level %d\n", __func__, level);
+	dprintk(10, "%s > level %d\n", __func__, level);
 
-//	if (level < 0 || level > 0xff)
-//	{
-//		printk("VFD/MICOM led brightness %d out of range (0..255)\n", (int)level);
-//		return -EINVAL;
-//	}
+	if (level < 0 || level > 7)
+	{
+		dprintk(1, "LED brightness %d out of range (valid 0-7)\n", (int)level);
+		return -EINVAL;
+	}
 	if (level != 0)
 	{
 		lastdata.ledbrightness = level;
 	}
 	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = level;
-	res = micomWriteCommand(0x07, buffer, 7, NEED_ACK);
-
-	dprintk(100, "%s <\n", __func__);
+	res = micomWriteCommand(CmdSetLEDBrightness, buffer, 7, NEED_ACK);
+	dprintk(10, "%s <\n", __func__);
 	return res;
 }
 /* export for later use in e2_proc */
 EXPORT_SYMBOL(micomSetLedBrightness);
 
 #if defined(UFS922) || defined(UFC960)
+/*******************************************************************
+ *
+ * micomSetModel: set model code.
+ *
+ */
 int micomSetModel(void)
 {  // sets model to 1
 	char buffer[8];
@@ -850,12 +912,17 @@ int micomSetModel(void)
 
 	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = 0x1;
-	res = micomWriteCommand(0x03, buffer, 7, NO_ACK);
+	res = micomWriteCommand(CmdSetModelcode, buffer, 7, NO_ACK);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
-#else
+#else // UFS91X
+/*******************************************************************
+ *
+ * micomInitialize: set default remote control code and model code.
+ *
+ */
 int micomInitialize(void)
 {  // set RC code to 1, model to 2
 	char buffer[8];
@@ -864,7 +931,7 @@ int micomInitialize(void)
 	dprintk(100, "%s >\n", __func__);
 
 	/* unknown command:
-	 * modifications of most of the values leads to a
+	 * modifications of most of the values lead to a
 	 * not working fp which can only be fixed by switching
 	 * the receiver off. value 0x46 can be modified and reset.
 	 * changing the values behind 0x46 has no effect for me.
@@ -875,17 +942,28 @@ int micomInitialize(void)
 	buffer[2] = 0x80;
 	buffer[3] = 0x48;
 	buffer[4] = 0x01;	// RC code 1 to 4
-	res = micomWriteCommand(0x55, buffer, 7, NO_ACK);
+	res = micomWriteCommand(CmdSetRCcode, buffer, 7, NO_ACK);
 
 	memset(buffer, 0, sizeof(buffer));
 	buffer[0] = 0x2;
-	res = micomWriteCommand(0x03, buffer, 7, NO_ACK);
+	res = micomWriteCommand(CmdSetModelcode, buffer, 7, NO_ACK);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 #endif
 
+/****************************************************************
+ *
+ * micomSetWakeUpTime: sets wake up time.
+ *
+ * Time format:
+ * [0] = MJD high
+ * [1] = MJD low
+ * [2] = hours (binary)
+ * [3] = minutes (binary)
+ * [4] = seconds (binary)
+ */
 int micomSetWakeUpTime(char *time)
 {
 	char buffer[8];
@@ -896,23 +974,35 @@ int micomSetWakeUpTime(char *time)
 	if (time[0] == '\0')
 	{
 		/* clear wakeup time */
-		res = micomWriteCommand(0x33, buffer, 7, NEED_ACK);
+		res = micomWriteCommand(CmdClearWakeUpTime, buffer, 7, NEED_ACK);
 	}
 	else
 	{
 		/* set wakeup time */
 		memcpy(buffer, time, 5);
-		res = micomWriteCommand(0x32, buffer, 7, NEED_ACK);
+		res = micomWriteCommand(CmdSetWakeUpTime, buffer, 7, NEED_ACK);
 	}
 	if (res < 0)
 	{
-		printk("%s < res %d \n", __func__, res);
+		dprintk(1, "%s < res %d \n", __func__, res);
 		return res;
 	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/****************************************************************
+ *
+ * micomSetStandby: sets wake up time and then switches
+ *                  receiver to deep standby.
+ *
+ * Time format:
+ * [0] = MJD high
+ * [1] = MJD low
+ * [2] = hours (binary)
+ * [3] = minutes (binary)
+ * [4] = seconds (binary)
+ */
 int micomSetStandby(char *time)
 {
 	char buffer[8];
@@ -924,28 +1014,39 @@ int micomSetStandby(char *time)
 //	if (time[0] == '\0')
 //	{
 //		/* clear wakeup time */
-//		res = micomWriteCommand(0x33, buffer, 7, NEED_ACK);
+//		res = micomWriteCommand(CmdClearWakeUpTime, buffer, 7, NEED_ACK);
 //	}
 //	else
 //	{
 //		/* set wakeup time */
 //		memcpy(buffer, time, 5);
-//		res = micomWriteCommand(0x32, buffer, 7, NEED_ACK);
+//		res = micomWriteCommand(CmdSetWakeUpTime, buffer, 7, NEED_ACK);
 //	}
 //	if (res < 0)
 //	{
-//		printk("%s < res %d \n", __func__, res);
+//		dprintk(100, "%s < res %d \n", __func__, res);
 //		return res;
 //	}
 	res = micomSetWakeUpTime(time);
 	/* enter standby */
 	memset(buffer, 0, sizeof(buffer));
-	res = micomWriteCommand(0x41, buffer, 7, NO_ACK);
+	res = micomWriteCommand(CmdSetDeepStandby, buffer, 7, NO_ACK);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/**************************************************
+ *
+ * micomSetTime: sets front panel clock time.
+ *
+ * Time format:
+ * [0] = MJD high
+ * [1] = MJD low
+ * [2] = hours (binary)
+ * [3] = minutes (binary)
+ * [4] = seconds (binary)
+ */
 int micomSetTime(char *time)
 {
 	char buffer[8];
@@ -955,19 +1056,27 @@ int micomSetTime(char *time)
 
 	memset(buffer, 0, sizeof(buffer));
 	memcpy(buffer, time, 5);
-	res = micomWriteCommand(0x31, buffer, 7, NEED_ACK);
+	res = micomWriteCommand(CmdSetTime, buffer, 7, NEED_ACK);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/*************************************************************
+ *
+ * micomSetDisplayOnOff: switch entire display on or off.
+ *
+ * Note: display off is achieved by setting brightness of
+ *       display and LEDs to zero.
+ *
+ */
 int micomSetDisplayOnOff(unsigned char level)
 {
 	int           res = 0;
 //	char          buffer[6];
 	unsigned char llevel = 0;
 
-	dprintk(100, "%s >\n", __func__);
+	dprintk(10, "%s >\n", __func__);
 
 	if (level != 0)
 	{
@@ -977,11 +1086,19 @@ int micomSetDisplayOnOff(unsigned char level)
 	res = micomSetBrightness(level);
 
 	res |= micomSetLedBrightness(llevel);
-
-	dprintk(100, "%s <\n", __func__);
+	lastdata.display_on = (level ? 1 : 0);
+	dprintk(10, "%s <\n", __func__);
 	return res;
 }
 
+/****************************************************************
+ *
+ * micomGetVersion: get version of front processor.
+ *
+ * Note: leaves version number in variables micom_ver,
+ *       micom_major and micom_minor.
+ *
+ */
 int micomGetVersion(void)
 {
 	char buffer[8];
@@ -991,28 +1108,41 @@ int micomGetVersion(void)
 
 	memset(buffer, 0, sizeof(buffer));
 	errorOccured   = 0;
-	res = micomWriteCommand(0x05, buffer, 7, NEED_ACK);
+	res = micomWriteCommand(CmdGetVersion, buffer, 7, NEED_ACK);
 
 	if (res < 0)
 	{
-		printk("[micom] %s < res %d\n", __func__, res);
+		dprintk(1, "%s < res %d\n", __func__, res);
 		return res;
 	}
 	if (errorOccured)
 	{
 		memset(ioctl_data, 0, sizeof(ioctl_data));
-		printk("[micom] %s: error\n", __func__);
+		dprintk(1, "%s: error\n", __func__);
 		res = -ETIMEDOUT;
 	}
-//	else
-//	{
+	else
+	{
 //		/* version received ->noop here */
 //		dprintk(1, "version received\n");
-//	}
+		dprintk(1, "Version data: 0x%02x 0x%02x 0x%02x\n", ioctl_data[0], ioctl_data[1], ioctl_data[2]);
+	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/*****************************************************
+ *
+ * micomGetTime: read front panel clock time.
+ *
+ * Returns 5 bytes:
+ * [0] = MJD high
+ * [1] = MJD low
+ * [2] = hours (binary)
+ * [3] = minutes (binary)
+ * [4] = seconds (binary)
+ *
+ */
 int micomGetTime(void)
 {
 	char buffer[8];
@@ -1023,24 +1153,26 @@ int micomGetTime(void)
 	memset(buffer, 0, sizeof(buffer));
 
 	errorOccured   = 0;
-	res = micomWriteCommand(0x39, buffer, 7, NEED_ACK);
+	res = micomWriteCommand(CmdGetTime, buffer, 7, NEED_ACK);
 
 	if (res < 0)
 	{
-		printk("[micom] %s < res %d\n", __func__, res);
+		dprintk(1, "%s < res %d\n", __func__, res);
 		return res;
 	}
 	if (errorOccured)
 	{
 		memset(ioctl_data, 0, 8);
-		printk("micom] %s: error\n", __func__);
+		dprintk(1, "%s: error\n", __func__);
 		res = -ETIMEDOUT;
 	}
-//	else
-//	{
+	else
+	{
 //		/* time received ->noop here */
 //		dprintk(1, "time received\n");
-//	}
+		dprintk(10, "FP/RTC time: %02x:%02x:%02x\n", (int)ioctl_data[2], (int)ioctl_data[1], (int)ioctl_data[0]);
+		dprintk(10, "FP/RTC date: %02x-%02x-20%02x\n", (int)ioctl_data[3], (int)ioctl_data[4], (int)ioctl_data[5]);
+	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
@@ -1050,37 +1182,86 @@ int micomGetTime(void)
  * 0xc3 = time
  * 0xc4 = ac ???
  */
-int micomGetWakeUpMode(void)
+/*************************************************************
+ *
+ * micomGetWakeUpMode: read wake up reason from front panel.
+ *
+ */
+int micomGetWakeUpMode(unsigned char *mode)
 {
 	char buffer[8];
 	int  res = 0;
+	unsigned char *wakeupreason[8] = { "Unknown", "Power on", "From deep standby", "Timer", "Power switch", "Unknown", "Unknown", "Unknown" };
 
 	dprintk(100, "%s >\n", __func__);
 
 	memset(buffer, 0, sizeof(buffer));
 	errorOccured   = 0;
-	res = micomWriteCommand(0x43, buffer, 7, NEED_ACK);
+	res = micomWriteCommand(CmdGetWakeUpMode, buffer, 7, NEED_ACK);
 	if (res < 0)
 	{
-		printk("[micom] %s < res %d\n", __func__, res);
+		dprintk(1, "%s < res %d\n", __func__, res);
 		return res;
 	}
 	if (errorOccured)
 	{
 		memset(ioctl_data, 0, sizeof(buffer));
-		printk("micom] %s: error\n", __func__);
+		dprintk(1, "%s: error\n", __func__);
 		res = -ETIMEDOUT;
 	}
-//	else
-//	{
+	else
+	{
 //		/* wakeup reason received ->noop here */
 //		dprintk(1, "wakeup reason received\n");
-//	}
+		/* 0xc1 = rcu power key
+		 * 0xc2 = front power key
+		 * 0xc3 = timer
+		 * 0xc4 = ac power on???
+		 */
+		dprintk(10, "Wakeup reason: 0x%02x (0x%02x, 0x%02x)\n", (int)ioctl_data[0], (int)ioctl_data[1], (int)ioctl_data[2]);
+#if 0
+		switch (ioctl_data[0])
+		{
+			case 0xc1:  // RC power key
+			case 0xc2:  // front panel
+			{
+				*mode = 4;
+				break;
+			}
+			case 0xc3:  // timer
+			{
+				*mode = 3;
+				break;
+			}
+			case 0xc4:  // AC power on
+			default:
+			{
+				*mode = 1;
+				break;
+			}
+			default:
+			{
+				*mode = 0;  // Unknown
+				break;
+			}
+		}
+		dprintk(20, "Wake up: %s\n", wakeupreason[*mode]);
+#else
+		*mode = ioctl_data[0]; // TODO: convert to standard values
+#endif
+	}
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
-int micomReboot(void)
+/****************************************************************
+ *
+ * micomReboot: reboots the receiver through the front panel
+ *              processor.
+ *
+ * Please note that this does not set the wakeup time.
+ *
+ */int micomReboot(void)
 {
 	char buffer[8];
 	int  res = 0;
@@ -1088,12 +1269,21 @@ int micomReboot(void)
 	dprintk(100, "%s >\n", __func__);
 
 	memset(buffer, 0, sizeof(buffer));
-	res = micomWriteCommand(0x46, buffer, 7, NO_ACK);
+	res = micomWriteCommand(CmdReboot, buffer, 7, NO_ACK);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/*****************************************************************
+ *
+ * micomWriteString: Display a text on the front panel display.
+ *
+ * Note: does not scroll; displays the first DISPLAY_WIDTH
+ *       characters. Scrolling is available by writing to
+ *       /dev/vfd: this scrolls a maximum of 64 characters once
+ *       if the text length exceeds DISPLAY_WIDTH.
+ */
 int micomWriteString(unsigned char *aBuf, int len)
 {
 	unsigned char bBuf[32];
@@ -1248,49 +1438,68 @@ int micomWriteString(unsigned char *aBuf, int len)
 		i++;
 		j = j + VFD_CHARSIZE;
 	}
-	res = micomWriteCommand(0x21, bBuf, VFD_LENGTH * VFD_CHARSIZE, NEED_ACK);
+	res = micomWriteCommand(CmdSetVFDText, bBuf, VFD_LENGTH * VFD_CHARSIZE, NEED_ACK);
 
 	dprintk(100, "%s <\n", __func__);
 	return res;
 }
 
+/****************************************************************
+ *
+ * micom_init_func: Initialize the driver.
+ *
+ */
 int micom_init_func(void)
 {
 	int vLoop;
+	int res = 0;
 
 	dprintk(100, "%s >\n", __func__);
 
 	sema_init(&write_sem, 1);
 
-#if defined(UFS922) || defined(UFC960)
+#if defined(UFC960)
+	printk("Kathrein UFC960 VFD/MICOM module initializing\n");
+	micomSetModel();
+#elif defined(UFS922)
 	printk("Kathrein UFS922 VFD/MICOM module initializing\n");
 	micomSetModel();
+#elif defined(UFS912)
+	printk("Kathrein UFS912 VFD/MICOM module initializing\n");
+	micomInitialize();
+#elif defined(UFS913)
+	printk("Kathrein UFS913 VFD/MICOM module initializing\n");
+	micomInitialize();
 #else
-	printk("Kathrein UFS912/913 VFD/MICOM module initializing\n");
+	printk("Kathrein VFD/MICOM module initializing\n");
 	micomInitialize();
 #endif
 	msleep(10);
-	micomSetBrightness(7);
+	res = micomSetBrightness(7);
 
 	msleep(10);
-	micomSetLedBrightness(0x50);
+	res |= micomSetLedBrightness(7);
 
 	msleep(10);
+#if defined(UFS922)
+	res |= micomSetLED(3, 0);  // power LED off
+	res |= micomSetLED(1, 1);  // AUX key on
+	res |= micomSetLED(4, 1);  // TV/R key on
+#endif
+
 //#if VFD_LENGTH < 16
-//	micomWriteString("SH4", strlen("SH4"));
+//	micomWriteString(" T D T  ", strlen(" T D T  "));
 //#else
-//	micomWriteString("SH4", strlen("SH4"));
+//	micomWriteString("Team Ducktales", strlen("Team Ducktales"));
 //#endif
 //	msleep(10);
 
-//#if defined(UFS922) || defined(UFC960)
 	for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX; vLoop++)
 	{
-		micomSetIcon(vLoop, 0);
+		res |= micomSetIcon(vLoop, 0);
 	}
-//#endif
 	dprintk(100, "%s <\n", __func__);
-	return 0;
+	return res;
 }
 
 /****************************************
@@ -1338,10 +1547,9 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	if (minor == -1)
 	{
-		printk("Error: Bad Minor\n");
+		dprintk(1, "Error: Bad Minor\n");
 		return -1; //FIXME
 	}
-
 	dprintk(70, "minor = %d\n", minor);
 
 	/* do not write to the remote control */
@@ -1353,7 +1561,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	if (kernel_buf == NULL)
 	{
-		printk("[micom] %s returns no mem <\n", __func__);
+		dprintk(1, "%s returns no mem <\n", __func__);
 		return -ENOMEM;
 	}
 
@@ -1379,7 +1587,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 		llen--;
 	}
 
-	if (llen <= VFD_LENGTH) //no scroll
+	if (llen <= VFD_LENGTH)  // no scroll
 	{
 		res = micomWriteString(kernel_buf, llen);
 	}
@@ -1409,7 +1617,6 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 				msleep(300);
 			}
 		}
-
 		res |= clear_display();
 
 		if (llen > 0)
@@ -1435,7 +1642,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 /****************************************
  *
- * code for reading from /dev/vfd
+ * Code for reading from /dev/vfd.
  *
  */
 static ssize_t MICOMdev_read(struct file *filp, char __user *buff, size_t len, loff_t *off)
@@ -1453,7 +1660,7 @@ static ssize_t MICOMdev_read(struct file *filp, char __user *buff, size_t len, l
 	}
 	if (minor == -1)
 	{
-		printk("[micom] %s: Error Bad Minor\n", __func__);
+		dprintk(1, "%s: Error: Bad Minor\n", __func__);
 		return -EUSERS;
 	}
 	dprintk(70, "minor = %d\n", minor);
@@ -1486,7 +1693,7 @@ static ssize_t MICOMdev_read(struct file *filp, char __user *buff, size_t len, l
 	/* copy the current display string to the user */
 	if (down_interruptible(&FrontPanelOpen[minor].sem))
 	{
-		printk("[micom] %s: res = erestartsys<\n", __func__);
+		dprintk(1, "%s < return = -ERESTARTSYS\n", __func__);
 		return -ERESTARTSYS;
 	}
 
@@ -1495,7 +1702,7 @@ static ssize_t MICOMdev_read(struct file *filp, char __user *buff, size_t len, l
 		FrontPanelOpen[minor].read = 0;
 
 		up(&FrontPanelOpen[minor].sem);
-		printk("[micom] %s: < res = 0\n", __func__);
+		dprintk(1, "%s: < res = 0\n", __func__);
 		return 0;
 	}
 
@@ -1504,9 +1711,9 @@ static ssize_t MICOMdev_read(struct file *filp, char __user *buff, size_t len, l
 		len = lastdata.length;
 	}
 	/* fixme: needs revision because of utf8! */
-	if (len > 16)
+	if (len > VFD_LENGTH)
 	{
-		len = 16;
+		len = VFD_LENGTH;
 	}
 	FrontPanelOpen[minor].read = len;
 	copy_to_user(buff, lastdata.data, len);
@@ -1517,13 +1724,18 @@ static ssize_t MICOMdev_read(struct file *filp, char __user *buff, size_t len, l
 	return len;
 }
 
+/***********************************************************
+ *
+ * Open /dev/vfd.
+ *
+ */
 int MICOMdev_open(struct inode *inode, struct file *filp)
 {
 	int minor;
 
 	dprintk(100, "%s >\n", __func__);
 
-	/* needed! otherwise a racecondition can occur */
+	/* needed! otherwise a race condition can occur */
 	if (down_interruptible(&write_sem))
 	{
 		return -ERESTARTSYS;
@@ -1541,11 +1753,15 @@ int MICOMdev_open(struct inode *inode, struct file *filp)
 	FrontPanelOpen[minor].fp = filp;
 	FrontPanelOpen[minor].read = 0;
 	up(&write_sem);
-
 	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
+/***********************************************************
+ *
+ * Close /dev/vfd.
+ *
+ */
 int MICOMdev_close(struct inode *inode, struct file *filp)
 {
 	int minor;
@@ -1563,16 +1779,20 @@ int MICOMdev_close(struct inode *inode, struct file *filp)
 	}
 	FrontPanelOpen[minor].fp = NULL;
 	FrontPanelOpen[minor].read = 0;
-
 	dprintk(100, "%s <\n", __func__);
 	return 0;
 }
 
+/****************************************
+ *
+ * IOCTL handling.
+ *
+ */
 static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int cmd, unsigned long arg)
 {
 	static int mode = 0;
 	struct micom_ioctl_data *micom = (struct micom_ioctl_data *)arg;
-	struct vfd_ioctl_data *data = (struct vfd_ioctl_data *) arg;
+	struct vfd_ioctl_data *data = (struct vfd_ioctl_data *)arg;
 	int res = 0;
 
 	dprintk(100, "%s > 0x%.8x\n", __func__, cmd);
@@ -1581,6 +1801,7 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 	{
 		return -ERESTARTSYS;
 	}
+
 	switch (cmd)
 	{
 		case VFDSETMODE:
@@ -1590,7 +1811,16 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDSETLED:
 		{
-			res = micomSetLED(micom->u.led.led_nr, micom->u.led.on);
+			if (mode == 0)
+			{
+//				dprintk(1, "VFDSETLED (mode 0): set LED %d to %s\n", data->start_address, (data->data[3] == 0 ? "Off" : "on"));
+				res = micomSetLED(data->start_address, data->data[3]);
+			}
+			else
+			{
+				res = micomSetLED(micom->u.led.led_nr, micom->u.led.on);
+			}
+			mode = 0;
 			break;
 		}
 		case VFDBRIGHTNESS:
@@ -1599,10 +1829,6 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			{
 				int level = data->start_address;
 
-//				/* scale level from 0 - 7 to a range from 5 - 1 (5 is off) */
-//				level = 7 - level;
-//
-//				level = ((level * 100) / 7 * 5) / 100 + 1;
 				res = micomSetBrightness(level);
 			}
 			else
@@ -1638,34 +1864,40 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 
 //			dprintk(10, "%s Set icon %d to %d (mode %d)\n", __func__, icon_nr, on, mode);
 
-			if (mode == 0)  // vfd mode
+			if (mode == 0 && icon_nr > 0xff)  // vfd mode
 			{
-				//  translate E2 icon numbers to own icon numbers (vfd mode only)	
+				//  Part one: translate E2 icon numbers to own icon numbers (vfd mode only)	
+				icon_nr >> 8;
 				switch (icon_nr)
 				{
-					case 0x13: // crypted
+					case 0x13:  // crypted
 					{
 						icon_nr = ICON_SCRAMBLED;
 						break;
 					}
-					case 0x17: // dolby
+					case 0x17:  // dolby
 					{
 						icon_nr = ICON_DOLBY;
 						break;
 					}
-					case 0x15: // MP3
+					case 0x15:  // MP3
 					{
 						icon_nr = ICON_MP3;
 						break;
 					}
-					case 0x11: // HD
+					case 0x11:  // HD
 					{
 						icon_nr = ICON_HD;
 						break;
 					}
-					case 0x1e: // record
+					case 0x1e:  // record
 					{
 						icon_nr = ICON_REC;
+						break;
+					}
+					case 0x1a:  // seekable (play)
+					{
+						icon_nr = ICON_PLAY;
 						break;
 					}
 					default:
@@ -1674,6 +1906,7 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 					}
 				}
 			}
+			// Part two: decide wether one icon or all
 			if (icon_nr == ICON_MAX)
 			{
 				int i;
@@ -1727,9 +1960,11 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 		}
 		case VFDGETWAKEUPMODE:
 		{
-			res = micomGetWakeUpMode();
-			dprintk(10, "Get wakeupmode info %02x\n", ioctl_data[1] & 0xff);
-			copy_to_user((void *)arg, &ioctl_data, sizeof(ioctl_data));
+			unsigned char *mode;
+
+			res = micomGetWakeUpMode(mode);
+			dprintk(10, "Get wakeupmode info: %02x\n", *mode);
+			copy_to_user((void *)arg, &mode, sizeof(mode));
 			break;
 		}
 		case VFDDISPLAYCHARS:
@@ -1737,11 +1972,11 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			if (mode == 0)
 			{
 				res = micomWriteString(data->data, data->length);
-//			}
+			}
 //			else
 //			{
-//				//not supported
-			}
+//				// not supported
+//			}
 			mode = 0;
 			break;
 		}
@@ -1755,11 +1990,11 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 				{
 					res = micomSetRCcode(rc_code);
 				}
-//			}
+			}
 //			else
 //			{
-//				//not supported
-			}
+//				// not supported
+//			}
 			mode = 0;
 			break;
 		}
@@ -1769,13 +2004,35 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			mode = 0;  // go back to vfd mode
 			break;
 		}
+#if defined(UFS922)
+		case VFDSETFAN:
+		{
+			if (micom->u.fan.speed > 255)
+			{
+				micom->u.fan.speed = 255;
+			}
+			if (micom->u.fan.speed < 0)
+			{
+				micom->u.fan.speed = 0;
+			}
+			// fan stops at about pwm=128 so:
+			micom->u.fan.speed = (micom->u.fan.speed / 2) + 128;
+//			dprintk(20, "Set fan speed to: %d\n", micom->u.fan.speed);
+			ctrl_outl(micom->u.fan.speed, fan_registers + 0x04);
+			res = 0;
+			mode = 0;
+			break;
+		}
+#endif
 		case 0x5305:
+		case VFDCGRAMWRITE1:
+		case VFDCGRAMWRITE2:
 		{
 			break;
 		}
 		default:
 		{
-			printk("VFD/MICOM: unknown IOCTL 0x%x\n", cmd);
+			dprintk(0, "Unknown IOCTL 0x%x\n", cmd);
 			mode = 0;
 			break;
 		}

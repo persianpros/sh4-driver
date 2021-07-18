@@ -26,20 +26,113 @@
  * Frontpanel river for Kathrein UFS910
  */
 
+extern short paramDebug;
+#define TAGDEBUG "[ufs910_fp] "
 
-#define VFD_MAJOR           147
+#ifndef dprintk
+#define dprintk(level, x...) do \
+{ \
+	if (((paramDebug) && (paramDebug >= level)) || level == 0) \
+	{ \
+		printk(TAGDEBUG x); \
+	} \
+} while (0)
+#endif
 
-#define SCP_TXD_BIT         6
-#define SCP_SCK_BIT         8
-#define SCP_ENABLE_BIT      5
-#define VFD_PORT            0
-#define SCP_DATA            3
-#define SCP_CLK             4
-#define SCP_CS              5
+#define VFD_MAJOR               147
+#define DISPLAY_WIDTH           16
+
+#define SCP_TXD_BIT             6
+#define SCP_SCK_BIT             8
+#define SCP_ENABLE_BIT          5
+#define VFD_PORT                0
+#define SCP_DATA                3
+#define SCP_CLK                 4
+#define SCP_CS                  5
+
+/****************************************************************************
+ *
+ * The built-in display controller has the following command set:
+ *
+ * Command                                         Data
+ * -------------------------------------------------------------------------
+ * CGRAMDATAWRITE    0x040 + CGRAM address (0-23)  5 bytes for dot pattern
+ * ADRAMDATAWRITE    0x060 + ADRAM address (0-23)  1 byte: #digits - 1
+ * URAMDATAWRITE     0x080 + URAM address (0-7)    2 bytes
+ * POWERTIMINGSET    0x0a0                         3 bytes: power mode for digits 0-23
+ * POWERMODESET      0x084 + CH/LP                 -
+ * DIGITSET          0x0e0                         1 byte:
+ * DIMMINGSET        0x0e4                         1 byte: brightness (0-255)
+ * DISPLAYLIGHTONOFF 0x0e8 + LS/HS                 - 
+ * STANDBYMODESET    0x0ec + ST                    -
+ *
+ * The command 0x40, 0x60 and 0x80 feature address auto increment
+ *
+ * LS HS (LS = 0x02, HS = 0x01)
+ * -------------------------------
+ *  0  0 Normal operation
+ *  1  0 All segments off
+ *  x  1 All segments on
+ *
+ * ST (ST = 0x01) 
+ * -------------------------------
+ *  0 Normal operation
+ *  1 Standby mode
+ *
+ * CH (CH=0x02)
+ * -------------------------------
+ *  0 Charge pump output off (CP pin is not used on UFS910)
+ *  1 Charge pump output on
+ *
+ * LP (CH=0x02)
+ * -------------------------------
+ *  0 Low power mode off
+ *  1 Low power mode on
+ */
+
+/****************************************************************************
+ *
+ * The built-in display controller has the following command set:
+ *
+ * Command                                         Data
+ * -------------------------------------------------------------------------
+ * DCRAMDATAWRITE    0x20 + DCRAM address (0-15)  1 byte (character data)
+ * CGRAMDATAWRITE    0x40 + CGRAM address (0-7)   5 bytes for dot pattern
+ * ADRAMDATAWRITE    0x60 + ADRAM address (0-23)  1 byte: #digits - 1
+ * URAMDATAWRITE     0x80 + URAM address (0-7)    2 bytes
+ * DIGITSET          0xe0                         1 byte:
+ * DIMMINGSET        0xe4                         1 byte: brightness (0-255)
+ * DISPLAYLIGHTONOFF 0xe8 + LS/HS                 - 
+ * STANDBYMODESET    0xec + ST                    -
+ *
+ * The commands 0x20, 0x40, 0x60 and 0x80 feature address auto increment
+ *
+ * LS HS (LS = 0x02, HS = 0x01)
+ * -------------------------------
+ *  0  0 Normal operation
+ *  1  0 All segments off
+ *  x  1 All segments on
+ *
+ * ST (ST = 0x01) 
+ * -------------------------------
+ *  0 Normal operation
+ *  1 Standby mode
+ *
+ * CH (CH=0x02)
+ * -------------------------------
+ *  0 Charge pump output off (CP pin is not used on UFS910)
+ *  1 Charge pump output on
+ *
+ * LP (CH=0x02)
+ * -------------------------------
+ *  0 Low power mode off
+ *  1 Low power mode on
+ */
+
 
 #define DCRAM_COMMAND           (0x20 & 0xf0)
 #define CGRAM_COMMAND           (0x40 & 0xf0)
-#define ADRAM_COMMAND           (0x60 & 0xf0)
+#define ADRAM_COMMAND           (0x60 & 0xf0)  // controls upper row (icons)
 #define NUM_DIGIT_COMMAND       (0xE0 & 0xf0)
 #define LIGHT_ON_COMMAND        (0xE8 & 0xFC)
 #define DIMMING_COMMAND         (0xE4 & 0xFC)

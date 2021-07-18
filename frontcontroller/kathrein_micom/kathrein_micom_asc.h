@@ -74,4 +74,5 @@ void serial_init(void);
 extern unsigned int InterruptLine;
 extern unsigned int ASCXBaseAddress;
 
-#endif
+#endif  // _kathrein_asc_h
+// vim:ts=4

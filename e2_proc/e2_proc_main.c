@@ -1056,14 +1056,8 @@ struct ProcStructure_s e2Proc[] =
 #if defined(ADB_BOX) \
  || defined(CUBEREVO) \
  || defined(CUBEREVO_9500HD) \
- || defined(CUBEREVO_3000HD) \
- || defined(CUBEREVO_2000HD) \
- || defined(CUBEREVO_MINI) \
- || defined(CUBEREVO_MINI2) \
- || defined(CUBEREVO_250HD) \
  || defined(FORTIS_HDBOX) \
  || defined(ATEVIO7500) \
- || defined(SPARK) \
  || defined(SPARK7162) \
  || defined(TF7700) \
  || defined(VITAMIN_HD5000) \
@@ -1075,6 +1069,10 @@ struct ProcStructure_s e2Proc[] =
 #endif
 #if defined(SPARK7162) \
  || defined(TF7700) \
+ || defined(UFS912) \
+ || defined(UFS913) \
+ || defined(UFS922) \
+ || defined(UFC960) \
  || defined(HL101) \
  || defined(VIP1_V1) \
  || defined(VIP1_V2) \
@@ -1346,16 +1344,21 @@ struct ProcStructure_s e2Proc[] =
 
 // Enigma2 implementation of fan control, doubles the historic various SH4 ones... (TODO: add these)
 #if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD) \
  || defined(IPBOX9900) \
  || defined(IPBOX99) \
  || defined(ADB_BOX) \
+ || defined(UFS922) \
  || defined(SAGEMCOM88) \
  || defined(PACE7241)
 	{cProcEntry, "stb/fp/fan",                                                       NULL, NULL, NULL, NULL, ""},
 #endif
 #if defined(ADB_BOX) \
+ || defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD) \
  || defined(IPBOX9900) \
- || defined(IPBOX99)
+ || defined(IPBOX99) \
+ || defined(UFS922)
 	{cProcEntry, "stb/fp/fan_pwm",                                                   NULL, NULL, NULL, NULL, ""},
 #endif
 

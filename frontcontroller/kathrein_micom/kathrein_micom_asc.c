@@ -65,8 +65,8 @@ void serial_init(void)
 {
 #if defined(UFS922) || defined(UFC960)
 	// Configure the PIO pins
-	stpio_request_pin(5, 0,  "ASC_TX", STPIO_ALT_OUT); /* Tx */
-	stpio_request_pin(5, 1,  "ASC_RX", STPIO_IN);      /* Rx */
+	stpio_request_pin(5, 0,  "ASC3_TX", STPIO_ALT_OUT); /* Tx */
+	stpio_request_pin(5, 1,  "ASC3_RX", STPIO_IN);      /* Rx */
 
 	*(unsigned int *)(PIO5BaseAddress + PIO_CLR_PnC0) = 0x07;
 	*(unsigned int *)(PIO5BaseAddress + PIO_CLR_PnC1) = 0x06;
@@ -101,4 +101,4 @@ int serial_putc(char Data)
 	*ASC_3_TX_BUFF = Data;
 	return 1;
 }
-
+// vim:ts=4

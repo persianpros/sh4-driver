@@ -34,6 +34,8 @@
  * 20210423 Audioniek       /proc/stb/lcd/symbol_timeshift support added.
  * 20210606 Audioniek       /proc/stb/lcd/symbol_circle support added.
  * 20210606 Audioniek       /proc/stb/power support added.
+ * 20210704 Audioniek       /proc/stb/fp_fan_pwm added (CubeRevo
+ *                          & 9500HD only).
  * 
  ****************************************************************************/
 
@@ -56,7 +58,8 @@
  *  /proc/stb/fp
  *             |
  *             +--- version (r)             SW version of front panel
- *             +--- fan (rw)                Control of fan (CUBEREVO & 9500HD only)
+ *             +--- fan (rw)                Control of fan (on/off) (CUBEREVO & 9500HD only)
+ *             +--- fan_pwm (rw)            Control of fan speed (CUBEREVO & 9500HD only)
  *             +--- rtc (rw)                RTC time (UTC, seconds since Unix epoch))
  *             +--- rtc_offset (rw)         RTC offset in seconds from UTC
  *             +--- wakeup_time (rw)        Next wakeup time (absolute, local, seconds since Unix epoch)
@@ -104,12 +107,16 @@ static u32 led1_pattern = 0;
 static int led_pattern_speed = 20;
 static int vfd_on = 1;
 #if defined(CUBEREVO_MINI) \
- ||   defined(CUBEREVO_MINI2) \
- ||   defined(CUBEREVO_2000HD) \
- ||   defined(CUBEREVO_3000HD) \
- ||   defined(CUBEREVO) \
- ||   defined(CUBEREVO_9500)
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO) \
+ || defined(CUBEREVO_9500)
 static int timeshift = 0;
+#endif
+#if defined(CUBEREVO) \
+ || defined(CUBEREVO_9500HD)
+static int fan_pwm = 128;
 static int spinner_speed = 0;
 #endif
 
@@ -172,7 +179,7 @@ static int symbol_circle_write(struct file *file, const char __user *buf, unsign
 		{
 			goto out;
 		}
-		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		myString = (char*)kmalloc(count + 1, GFP_KERNEL);
 		strncpy(myString, page, count);
 		myString[count - 1] = '\0';
 
@@ -863,7 +870,7 @@ static int fan_read(char *page, char **start, off_t off, int count, int *eof, vo
 static int fan_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
 	char *page;
-	long on;
+	int on;
 	int ret = -ENOMEM;
 
 	page = (char *)__get_free_page(GFP_KERNEL);
@@ -876,8 +883,54 @@ static int fan_write(struct file *file, const char __user *buf, unsigned long co
 		{
 			page[count - 1] = '\0';
 
-			on = simple_strtol(page, NULL, 10);
+			on = (simple_strtol(page, NULL, 10) == 0 ? 0 : 1);
 			micomSetFan((int)on);
+			ret = count;
+		}
+		free_page((unsigned long)page);
+	}
+	return ret;
+}
+
+static int fan_pwm_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+	char wtime[5];
+	int	w_time;
+
+	// Note: On CubeRevo & 9500HD the fan can only be switched on or off;
+    //       the frontprocessor however automatically controls the speed.
+	//       This functions always returns the value written before, although
+    //       this does not control the actual fan speed.
+	if (NULL != page)
+	{
+		
+		len = sprintf(page, "%d\n", fan_pwm);
+	}
+	return len;
+}
+
+static int fan_pwm_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char *page;
+	int ret = -ENOMEM;
+
+	page = (char *)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+
+		if (copy_from_user(page, buf, count) == 0)
+		{
+			page[count - 1] = '\0';
+
+			// Note: On CubeRevo & 9500HD the fan can only be switched on or off;
+		    //       the frontprocessor however automatically controls the speed.
+			//       This functions always returns the value written before, although
+		    //       this does not control the actual fan speed.
+			fan_pwm = simple_strtol(page, NULL, 10);
+			micomSetFan(fan_pwm == 0 ? 0 : 1);
 			ret = count;
 		}
 		free_page((unsigned long)page);
@@ -902,8 +955,9 @@ struct fp_procs
 {
 	{ "progress", progress_read, progress_write },
 #if defined(CUBEREVO) \
- || defined(CUBEREVO_9500)
+ || defined(CUBEREVO_9500HD)
 	{ "stb/fp/fan", fan_read, fan_write },
+	{ "stb/fp/fan_pwm", fan_pwm_read, fan_pwm_write },
 #endif
 	{ "stb/fp/rtc", read_rtc, write_rtc },
 	{ "stb/fp/rtc_offset", read_rtc_offset, write_rtc_offset },

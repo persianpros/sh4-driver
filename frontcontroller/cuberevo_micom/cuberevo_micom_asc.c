@@ -122,19 +122,19 @@ void serial_init(void)
 	/* not sure how to determine the baudrate ... */
 	if (direct_asc_read_version() == 0)
 	{
-		dprintk(1, "front panel not detected at baudrate 0x028a...\n");
+		dprintk(1, "front panel not detected at baudrate 650...\n");
 
 		// Configure the asc input/output settings
 		*(unsigned int *)(ASCXBaseAddress + ASC_INT_EN)   = 0x00000000;
 		*(unsigned int *)(ASCXBaseAddress + ASC_CTRL)     = 0x00000589;
 		*(unsigned int *)(ASCXBaseAddress + ASC_TIMEOUT)  = 0x00000014;  // 10
-		*(unsigned int *)(ASCXBaseAddress + ASC_BAUDRATE) = 0x21c;
+		*(unsigned int *)(ASCXBaseAddress + ASC_BAUDRATE) = 0x0000021c;
 		*(unsigned int *)(ASCXBaseAddress + ASC_TX_RST)   = 0;
 		*(unsigned int *)(ASCXBaseAddress + ASC_RX_RST)   = 0;
 
 		if (direct_asc_read_version() == 0)
 		{
-			dprintk(1, "front panel not detected at baudrate 0x21c :( :( :(\n");
+			dprintk(1, "front panel not detected at baudrate 540 :( :( :(\n");
 		}
 	}
 }

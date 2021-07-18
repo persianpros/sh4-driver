@@ -39,70 +39,65 @@
 
 #include <linux/dvb/version.h>
 
-#ifdef STLINUX20
-#include "dvb_new_frontend.h"
-#endif
-
 #define MAX_DVB_ADAPTERS 4
 #define MAX_TUNERS_PER_ADAPTER 4
 
 /* The Demod/Tuner can't easily provide these, we cache them */
 struct cx24116_tuning
 {
-	u32 			frequency;
-	u32 			symbol_rate;
+	u32                     frequency;
+	u32                     symbol_rate;
 	fe_spectral_inversion_t inversion;
-#if DVB_API_VERSION < 5
-	enum dvbfe_fec 		fec;
-	enum dvbfe_modulation	modulation;
+#if 0 //DVB_API_VERSION < 5
+	enum dvbfe_fec          fec;
+	enum dvbfe_modulation   modulation;
 
-	enum dvbfe_delsys 	delivery;
-	enum dvbfe_rolloff 	rolloff;
+	enum dvbfe_delsys       delivery;
+	enum dvbfe_rolloff      rolloff;
 
-	int		 	pilot; // 0: off, 1: on (only used for S2)
+	int                     pilot; // 0: off, 1: on (only used for S2)
 #else
-	fe_code_rate_t		 fec;
-	fe_delivery_system_t delsys;
-	fe_modulation_t      modulation;
-	fe_pilot_t           pilot;
-	fe_rolloff_t 	     rolloff;
+	fe_code_rate_t          fec;
+	fe_delivery_system_t    delsys;
+	fe_modulation_t         modulation;
+	fe_pilot_t              pilot;
+	fe_rolloff_t 	        rolloff;
 #endif
 
 	/* Demod values */
-	u8 			fec_val;
-	u8 			fec_mask;
-	u8 			inversion_val;
-	u8			fec_numb;
-	u8			U1[6];
+	u8                      fec_val;
+	u8 	                    fec_mask;
+	u8                      inversion_val;
+	u8                      fec_numb;
+	u8                      U1[6];
 
 #if DVB_API_VERSION >= 5
-	u8 pilot_val;
-	u8 rolloff_val;
+	u8                      pilot_val;
+	u8                      rolloff_val;
 #endif
 };
 
 struct cx24116_config
 {
-	struct i2c_adapter	*i2c_adap; /* i2c bus of the tuner */
-	u8			i2c_addr; /* i2c address of the tuner */
-	u8			i2c_bus;
-	u8			i2c_addr_lnb_supply; /* i2c address of the lnb_supply */
-	u8			vertical; /* i2c value */
-	u8			horizontal; /* i2c value */
-	struct stpio_pin	*tuner_enable_pin;
-	struct stpio_pin	*lnb_enable_pin;
-	struct stpio_pin	*lnb_vsel_pin;
-	u8			tuner_enable_act; /* active state of the pin */
-	u8			lnb_enable_act; /* active state of the pin */
-	u8			lnb_vsel_act; /* active state of the pin */
+	struct i2c_adapter *i2c_adap;            /* i2c bus of the tuner */
+	u8                 i2c_addr;             /* i2c address of the demodulator */
+	u8                 i2c_bus;              /* i2c bus of both the frontend and LNB power controller */
+	u8                 i2c_addr_lnb_supply;  /* i2c address of the LNB power controller */
+	u8                 disable;              /* i2c value for LNB power off   */
+	u8                 vertical;             /* i2c value for LNB voltage 13V */
+	u8                 horizontal;           /* i2c value for LNB voltage 18V */
+	struct stpio_pin   *tuner_enable_pin;
+	struct stpio_pin   *lnb_enable_pin;
+	struct stpio_pin   *lnb_vsel_pin;
+	u8                 tuner_enable_act;     /* active state of the pin */
+	u8                 lnb_enable_act;       /* active state of the pin */
+	u8                 lnb_vsel_act;         /* active state of the pin */
 };
-
 
 struct cx24116_core
 {
-	struct dvb_adapter		*dvb_adap;
-
-	struct dvb_frontend		*frontend[MAX_TUNERS_PER_ADAPTER];
+	struct dvb_adapter  *dvb_adap;
+	struct dvb_frontend *frontend[MAX_TUNERS_PER_ADAPTER];
 };
 
 enum cmds
@@ -120,8 +115,8 @@ enum cmds
 	CMD_UPDFWVERS   = 0x35,
 	CMD_TUNERSLEEP  = 0x36,
 	CMD_AGCCONTROL  = 0x3b,
-	CMD_U1		= 0x16,
-	CMD_U2		= 0x17,
+	CMD_U1          = 0x16,
+	CMD_U2          = 0x17,
 	CMD_MAX         = 0xFF
 };
 
@@ -129,38 +124,37 @@ enum cmds
 struct cx24116_cmd
 {
 	enum cmds id;
-	u8 len;
-	u8 args[0x1e];
+	u8        len;
+	u8        args[0x1e];
 };
 
 struct cx24116_state
 {
-	struct dvb_frontend_ops 		ops;
-	struct dvb_frontend 			frontend;
+	struct dvb_frontend_ops  ops;
+	struct dvb_frontend      frontend;
 
-	const struct cx24116_config 		*config;
+	struct cx24116_config    *config;
 
-	struct cx24116_tuning 			dcur;
-	struct cx24116_tuning 			dnxt;
+	struct cx24116_tuning    dcur;
+	struct cx24116_tuning    dnxt;
 
-	struct semaphore			fw_load_sem;
+	struct semaphore         fw_load_sem;
 	/* FIXME: remove thread_id if not using loader thread */
-	int					thread_id;
+	int                      thread_id;
 
-	struct cx24116_cmd 			dsec_cmd;
+	struct cx24116_cmd       dsec_cmd;
 
-	int				       	not_responding;
+	int                      not_responding;
 
 #if defined(TUNER_PROCFS)
-	struct proc_dir_entry			*proc_tuner;
-	u8					value[5];
+	struct proc_dir_entry    *proc_tuner;
+	u8                       value[5];
 #endif
 };
 
 extern void cx24116_register_frontend(struct dvb_adapter *dvb_adap);
-
 #if defined(QBOXHD) || defined(QBOXHD_MINI)
 int cx24116_set_voltage(struct dvb_frontend* fe, fe_sec_voltage_t voltage);
 #endif
-
 #endif // _CX24116_H_
+// vim:ts=4
