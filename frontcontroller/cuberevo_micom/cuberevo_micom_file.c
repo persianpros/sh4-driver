@@ -30,7 +30,7 @@
  * Early CubeRevo / AB IPBox 9000HD / Vizyon revolution 8000HD PVR: 13 character 14 segment VFD (13grid)
  * Late CubeRevo / AB IPBox 9000HD / Vizyon revolution 8000HD PVR: 12 character dot matrix VFD (12dotmatrix)
  * CubeRevo 2000HD: 14 character dot matrix VFD (14seg) NOT TESTED!
- * CubeRevo 3000HD: 14 character dot matrix VFD (14seg) NOT TESTED!
+ * CubeRevo 3000HD: 14 character dot matrix VFD (14seg)
  * CubeRevo 7000HD: 12 character dot matrix VFD (12dotmatrix) NOT TESTED!
  * CubeRevo 9500HD: 12 character dot matrix VFD (12dotmatrix) NOT TESTED!
  *
@@ -78,6 +78,16 @@
  * 20210607 Audioniek       Icon processing overhauled, add all icons on/off,
  *                          Separate play icon and add new spinner icon on
  *                          12dotmatrix.
+ * 20210705 Audioniek       Fix trailing rubbish on some texts on 14 character
+ *                          displays.
+ * 20210706 Audioniek       Fix trailing rubbish on some texts on 14 character
+ *                          displays (2nd attempt).
+ * 20210706 Audioniek       Fix crash on clearing icon 7 on 14 character models
+ *                          with paramDebug > 49.
+ * 20210707 Audioniek       Centered display debugged and simplified; now
+ *                          working as intended.
+ * 20210707 Audioniek       12 and 14 character models now use calculated
+ *                          character values in stead of tables.
  */
 
 #include <asm/io.h>
@@ -111,7 +121,6 @@ extern void micom_putc(unsigned char data);
 struct semaphore write_sem;
 
 int errorOccured = 0;
-//int scrolling = 0;  // flag: switch off scroll display in /dev/vfd
 int currentDisplayTime = 0;  // flag to indicate display time mode
 static char ioctl_data[20];
 
@@ -147,7 +156,7 @@ static int special2seg_size;
  *
  * Character definitions.
  *
- * FIXME/TODO: As all models now have full ASCII support, code is
+ * FIXME/TODO: As all models now have full ASCII support, some code is
  *             needlessly complicated; it is possible to have one
  *             conversion table per display type now.
  *
@@ -314,240 +323,6 @@ special_char_t special2seg_13grid[] =
 };
 #endif
 
-#if defined(CUBEREVO) \
- || defined(CUBEREVO_9500HD) \
- || defined(CUBEREVO_MINI) \
- || defined(CUBEREVO_MINI2) \
- || defined(CUBEREVO_2000HD) \
- || defined(CUBEREVO_3000HD)
-/***********************************************************
- *
- * The 12 and 14 character displays are very similar
- * technically speaking, as they share both the technology
- * (VFD) and driver chip (Princeton PT6302-003).
- * The characters on both displays are formed using 5x7
- * dot matrix pixel fields.
- * Differences are merely the number of characters and
- * the number of icons:
- * - The 12 character display has 35 icons and three colons
- *   positioned between the characters 6 & 7, 8 & 9 and
- *   10 & 11. In addition it should be noted that the 12
- *   character display has a striking similarity with the
- *   display used on the Fortis FS9000.
- * - The 14 character display has 8 icons and no colons.
- *
- * Due to the similar setup, the 12 and 14 character
- * displays share much code and the character tables.
- */
-unsigned short num2seg_pt6302[] =
-{  // table is ASCII minus 0x10
-	0x20,	// 0
-	0x21,	// 1
-	0x22,	// 2
-	0x23,	// 3
-	0x24,	// 4
-	0x25,	// 5
-	0x26,	// 6
-	0x27,	// 7
-	0x28,	// 8
-	0x29,	// 9
-};
-
-unsigned short Char2seg_pt6302[] =
-{  // table is ASCII minus 0x10
-	0x31,	// A
-	0x32,	// B
-	0x33,	// C
-	0x34,	// D
-	0x35,	// E
-	0x36,	// F
-	0x37,	// G
-	0x38,	// H
-	0x39,	// I
-	0x3a,	// J
-	0x3b,	// K
-	0x3c,	// L
-	0x3d,	// M
-	0x3e,	// N
-	0x3f,	// O
-	0x40,	// P
-	0x41,	// Q
-	0x42,	// R
-	0x43,	// S
-	0x44,	// T
-	0x45,	// U
-	0x46,	// V
-	0x47,	// W
-	0x48,	// X
-	0x49,	// Y
-	0x4a,	// Z
-};
-
-unsigned short LowerChar2seg_pt6302[] =
-{  // table is ASCII minus 0x10
-	0x51,	// a
-	0x52,	// b
-	0x53,	// c
-	0x54,	// d
-	0x55,	// e
-	0x56,	// f
-	0x57,	// g
-	0x58,	// h
-	0x59,	// i
-	0x5a,	// j
-	0x5b,	// k
-	0x5c,	// l
-	0x5d,	// m
-	0x5e,	// n
-	0x5f,	// o
-	0x60,	// p
-	0x61,	// q
-	0x62,	// r
-	0x63,	// s
-	0x64,	// t
-	0x65,	// u
-	0x66,	// v
-	0x67,	// w
-	0x68,	// x
-	0x69,	// y
-	0x6a,	// z
-};
-
-special_char_t special2seg_pt6302[] =
-{  // table is largely ASCII minus 0x10
-//	{ ' ',	0x10 },
-	{ '!',	0x11 },  // ->> ASCII - 0x10
-	{ '"',	0x12 },
-	{ '#',	0x13 },
-	{ '$',	0x14 },
-	{ '%',	0x15 },
-	{ '&',	0x16 },
-	{ 0x27,	0x17 },
-	{ '(',	0x18 },
-	{ ')',	0x19 },
-	{ '*',	0x1a },
-	{ '+',	0x1b },
-	{ ',',	0x1c },
-	{ '-',	0x1d },
-	{ '.',	0x1e },
-	{ '/',	0x1f },
-//	{ '0',	0x20 },
-//	{ '1',	0x21 },
-//	{ '2',	0x22 },
-//	{ '3',	0x23 },
-//	{ '4',	0x24 },
-//	{ '5',	0x25 },
-//	{ '6',	0x26 },
-//	{ '7',	0x27 },
-//	{ '8',	0x28 },
-//	{ '9',	0x29 },
-	{ ':',	0x2a },
-	{ ';',	0x2b },
-	{ '<',	0x2c },
-	{ '=',	0x2d },
-	{ '>',	0x2e },
-	{ '?',	0x2f },
-	{ '@',	0x30 },
-//	{ 'A',	0x31 }
-//	     |       
-//	{ 'Z',	0x4a },
-	{ '[',	0x4b },
-	{ 0x5c, 0x90 }, 
-	{ ']',	0x4d },
-	{ '^',	0x4e },
-	{ '_',	0x4f },
-
-	{ '`',	0x50 },  // back quote
-//	{ 'a',	0x51 },
-//	     |
-//	{ 'z',	0x6a },
-	{ '{',	0x6b },
-	{ '|',	0x6c },
-	{ '}',	0x6d },
-	{ '~',	0x6e },
-	{ 0x7f,	0x6f },  // DEL, full block  // end of ASCII - 0x10
-
-//	{ '?',  0x70 },  // large alpha
-//       |
-//	{ '?',	0x7e },  // large omega
-//	{ '?',	0x7f },  // large epsilon
-
-// Special characters, as present in PT6302-003
-// Uncommented ones are used in UTF-8 conversions
-	{ 0x80,	0x80 },  // pound sign
-	{ 0x81,	0x81 },  // paragraph
-//	{ '?',	0x82 },  // large IE diacritic
-//	{ '?',	0x83 },  // large IR diacritic
-//	{ '?',	0x84 },  // integral sign
-//	{ '?',	0x85 },  // invert x
-//	{ '?',	0x86 },  // A accent dot
-//	{ '?',	0x87 },  // power of -1
-	{ 0x88,	0x88 },  // power of 2
-	{ 0x89,	0x89 },  // power of 3
-//	{ '?',	0x8a },  // power of x
-//	{ '?',	0x8b },  // 1/2 -> c2 bd
-//	{ '?',	0x8c },  // 1/ 
-//	{ '?',	0x8d },  // square root
-	{ 0x8e,	0x8e },  // +/-
-//	{ '?',	0x8f },  // paragraph
-
-	{ '\'',	0x90 },
-//	{ '?',	0x91 },  // katakana
-//	     |
-//	{ '?',	0xce },  // katakana
-	{ 0xcf,	0xcf },  // degree sign
-//	{ '?',	0xd0 },  // arrow up
-//	{ '?',	0xd1 },  // arrow down
-//	{ '?',	0xd2 },  // arrow left
-//	{ '?',	0xd3 },  // arrow right
-//	{ '?',	0xd4 },  // arrow top left
-//	{ '?',	0xd5 },  // arrow top right
-//	{ '?',	0xd6 },  // arrow bottom right
-//	{ '?',	0xd7 },  // arrow bottom left
-//	{ '?',	0xd8 },  // left end measurement
-//	{ '?',	0xd9 },  // right end measurement
-//	{ '?',	0xda },  // superscript mu
-//	{ '?',	0xdb },  // inverted superscript mu
-	{ 0xdc,	0xdc },  // fat <
-	{ 0xdd,	0xdd },  // fat >
-//	{ '?',	0xde },  // three dots up
-//	{ '?',	0xdf },  // three dots down
-//	{ '?',	0xe0 },  // smaller or equal than
-//	{ '?',	0xe1 },  // greater or equal than
-//	{ '?',	0xe2 },  // unequal sign
-//	{ '?',	0xe3 },  // equal sign with dots
-//	{ '?',	0xe4 },  // two vertical bars
-//	{ '?',	0xe5 },  // single vertical bar
-//	{ '?',	0xe6 },  // inverted T
-//	{ '?',	0xe7 },  // infinite sign
-//	{ '?',	0xe8 },  // infinite sign open
-//	{ '?',	0xe9 },  // inverted tilde
-//	{ '?',	0xea },  // AC symbol
-//	{ '?',	0xeb },  // three horizontal lines
-//	{ '?',	0xec },  // Ground symbol inverted
-//	{ '?',	0xed },  // buzzer
-//	{ '?',	0xee },  // ?
-//	{ '?',	0xef },  // collapsed 8
-//	{ '?',	0xf0 },  // small 1
-//	{ '?',	0xf1 },  // small 2
-//	{ '?',	0xf2 },  // small 3
-//	{ '?',	0xf3 },  // small 4
-//	{ '?',	0xf4 },  // small 5
-//	{ '?',	0xf5 },  // small 6
-//	{ '?',	0xf6 },  // small 7
-//	{ '?',	0xf7 },  // small 8
-//	{ '?',	0xf8 },  // small 9
-//	{ '?',	0xf9 },  // small 10
-//	{ '?',	0xfa },  // small 11
-//	{ '?',	0xfb },  // small 12
-//	{ '?',	0xfc },  // small 13
-//	{ '?',	0xfd },  // small 14
-//	{ '?',	0xfe },  // small 15
-//	{ '?',	0xff },  // small 16
-	{ ' ',	0x10 }   // space (EOT)
-};
-#endif
-
 #if defined(CUBEREVO_250HD) \
  || defined(CUBEREVO_MINI_FTA)
 /***************************************************************************
@@ -658,45 +433,49 @@ unsigned short LowerChar2seg_7seg[] =
 
 special_char_t special2seg_7seg[] =
 {
-	{ '!',	0x7e },
-	{ '"',	0xdd },
-	{ '#',	0xa3 },
-	{ '$',	0x92 },
-	{ '%',	0xad },
-	{ '&',	0x82 },
-	{ 0x27,	0xfd },  // single quote
-	{ '(',	0xc6 },
-	{ ')',	0xf0 },
-	{ '*',	0x89 },
-	{ '+',	0xb9 },
-	{ ',',	0xf3 },
-	{ '-',	0xbf },
-	{ '.',	0x7f },
-	{ '/',	0xad },
-	{ ':',	0xef },
-	{ ';',	0xf3 },
-	{ '<',	0xa7 },
-	{ '=',	0xb7 },
-	{ '>',	0xb3 },
-	{ '?',	0xac },
-	{ '[',	0xc6 },
-	{ 0x5c,	0x9b },  // backslash
-	{ ']',	0xf0 },
-	{ '^',	0xdc },
-	{ '_',	0xf7 },
-	{ '`',	0xdf },
-	{ '{',	0xc6 },
-	{ '|',	0xf0 },
-	{ '}',	0xf0 },
-	{ '~',	0xbf },
-	{ 0x7f,	0xa3 },  // DEL
-	{ ' ',	0xff }   // space (EOT)
+	{ '!',  0x7e },
+	{ '"',  0xdd },
+	{ '#',  0xa3 },
+	{ '$',  0x92 },
+	{ '%',  0xad },
+	{ '&',  0x82 },
+	{ 0x27, 0xfd },  // single quote
+	{ '(',  0xc6 },
+	{ ')',  0xf0 },
+	{ '*',  0x89 },
+	{ '+',  0xb9 },
+	{ ',',  0xf3 },
+	{ '-',  0xbf },
+	{ '.',  0x7f },
+	{ '/',  0xad },
+	{ ':',  0xef },
+	{ ';',  0xf3 },
+	{ '<',  0xa7 },
+	{ '=',  0xb7 },
+	{ '>',  0xb3 },
+	{ '?',  0xac },
+	{ '[',  0xc6 },
+	{ 0x5c, 0x9b },  // backslash
+	{ ']',  0xf0 },
+	{ '^',  0xdc },
+	{ '_',  0xf7 },
+	{ '`',  0xdf },
+	{ '{',  0xc6 },
+	{ '|',  0xf0 },
+	{ '}',  0xf0 },
+	{ '~',  0xbf },
+	{ 0x7f, 0xa3 },  // DEL
+	{ ' ',  0xff }   // space (EOT)
 };
 #endif
 
+/*****************************************************************************
+ *
+ * Icon definitions.
+ *
+ */
 #if defined(CUBEREVO) \
  || defined(CUBEREVO_9500)
- // for 12 character dot matrix
 /*****************************************************************************
  *
  * Icon definitions for 12dotmatrix
@@ -745,7 +524,7 @@ struct iconToInternal micomIcons[] =
 	{ "ICON_1080p",     ICON_1080p,      0x05, 0x01, 1,   0xff, 0xff, 1 },  // 33
 //	{ "ICON_COLON1",    ICON_COLON1,     0xff, 0x06, 1,   0xff, 0xff, 1 },  // (34)  // TODO: find values
 //	{ "ICON_COLON2",    ICON_COLON2,     0xff, 0x08, 1,   0xff, 0xff, 1 },  // (35)  // TODO: find values
-//	{ "ICON_COLON3",    ICON_COLON3,     0xff, 0x0a, 1,   0xff, 0xff, 1 },  // (36) // TODO: find values
+//	{ "ICON_COLON3",    ICON_COLON3,     0xff, 0x0a, 1,   0xff, 0xff, 1 },  // (36)  // TODO: find values
 	{ "ICON_TV",        ICON_TV,         0x02, 0x03, 1,   0xff, 0xff, 1 },  // 34 (37)
 	{ "ICON_RADIO",     ICON_RADIO,      0x02, 0x04, 1,   0xff, 0xff, 1 }   // 35 (38)
 };
@@ -755,7 +534,11 @@ struct iconToInternal micomIcons[] =
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_3000HD)
-// for 14 character dot matrix
+/*****************************************************************************
+ *
+ * Icon definitions for 14seg
+ *
+ */
 struct iconToInternal micom_14seg_Icons[] =
 {
 	/*- Name------------ Number --------- msb   lsb   sgm -----*/
@@ -918,7 +701,7 @@ int micomSetFan(int on)
 	unsigned char buffer[5];
 	int res = 0;
 
-	dprintk(100, "%s > %d\n", __func__, on);
+	dprintk(10, "%s > %d\n", __func__, on);
 
 	memset(buffer, 0, sizeof(buffer));
 
@@ -926,7 +709,7 @@ int micomSetFan(int on)
 	 * 0 = off
 	 * 1 = on
 	 */
-	if (on == 1)
+	if (on)
 	{
 		buffer[0] = VFD_SETFANON;
 	}
@@ -935,8 +718,10 @@ int micomSetFan(int on)
 		buffer[0] = VFD_SETFANOFF;
 	}
 	res = micomWriteCommand(buffer, 5, 0);
+	msleep(10);
+	res |= micomWriteCommand(buffer, 5, 0);
 	lastdata.fan = (on ? 1 : 0);
-	dprintk(100, "%s < %d\n", __func__, res);
+	dprintk(10, "%s < %d\n", __func__, res);
 	return res;
 }
 #else
@@ -983,7 +768,7 @@ int micomSetIcon(int which, int on)
 	lastdata.icon_state[which] = on;
 #if defined(CUBEREVO) \
  || defined(CUBEREVO_9500HD)
-	dprintk(50, "Setting icon number %s (%d) to %s\n", micomIcons[which].name, which, (on ? "on" : "off"));
+	dprintk(50, "Setting icon %s (number %d) to %s\n", micomIcons[which].name, which, (on ? "on" : "off"));
 	if (which == ICON_PLAY)
 	{
 		/* handle play symbol */
@@ -1031,7 +816,7 @@ int micomSetIcon(int which, int on)
  || defined(CUBEREVO_MINI2) \
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_3000HD)
-	dprintk(50, "Setting icon number %s (%d) to %s\n", micom_14seg_Icons[which].name, which, (on ? "on" : "off"));
+	dprintk(50, "Setting icon %s (number %d) to %s\n", micom_14seg_Icons[which - 1].name, which, (on ? "on" : "off"));
 	for (vLoop = 0; vLoop < ARRAY_SIZE(micom_14seg_Icons); vLoop++)
 	{
 		if ((which & 0xff) == micom_14seg_Icons[vLoop].icon)
@@ -1182,7 +967,8 @@ int micomSetDisplayTime(int on)
 	return res;
 }
 
-// ! Still there for historic reasons, CubeRevos do not have an RF modulator
+// Still here as the frontprocessor has commands for switching
+// an RF modulator on or off. CubeRevos do not have an RF modulator.
 // # if 0
 /*******************************************************************
  *
@@ -1387,7 +1173,7 @@ int micomReboot(void)
 #if 0
 	if (front_seg_num != 4)
 	{
-		res = micomWriteString("Reboot", strlen("Reboot"), 0);
+		res = micomWriteString("Reboot", strlen("Reboot"), 1);
 	}
 	else
 	{
@@ -1544,7 +1330,7 @@ int micomGetWakeUpTime(unsigned char *time)
 	}
 	else
 	{
-		dprintk(1, "Wake up time received\n");
+		dprintk(70, "Wake up time received\n");
 		dprintk(10, "Wake up time: %02x:%02x:%02x %02x-%02x-20%02x\n",
 			(int)ioctl_data[2], (int)ioctl_data[1], (int)ioctl_data[0],
 			(int)ioctl_data[3], (int)ioctl_data[4], (int)ioctl_data[5]);
@@ -1569,8 +1355,7 @@ int micomGetVersion(void)
 
 	dprintk(100, "%s >\n", __func__);
 
-#if defined(CUBEREVO_3000HD) \
- || defined(CUBEREVO_2000HD)
+#if defined(CUBEREVO_2000HD)  // TODO: leave this out?
 	micom_ver   = 8;
 	micom_major = 4;
 	micom_minor = 0;
@@ -1617,11 +1402,6 @@ int micomGetVersion(void)
  || defined(CUBEREVO_2000HD) \
  || defined(CUBEREVO_3000HD)
 	front_seg_num    = 14;
-	num2seg          = num2seg_pt6302;
-	Char2seg         = Char2seg_pt6302;
-	LowerChar2seg    = LowerChar2seg_pt6302;
-	special2seg      = special2seg_pt6302;
-	special2seg_size = ARRAY_SIZE(special2seg_pt6302);
 #elif defined(CUBEREVO_9500HD)
 	if ((micom_ver == 8) && (micom_major == 4 || micom_major == 6))  // TODO: check values
 	{  // early ?
@@ -1635,12 +1415,7 @@ int micomGetVersion(void)
 	else if ((micom_ver == 8) && (micom_major == 3))  // TODO: check values
 	{  // late ?
 		front_seg_num    = 12;
-		num2seg          = num2seg_pt6302;
-		Char2seg         = Char2seg_pt6302;
-		LowerChar2seg    = LowerChar2seg_pt6302;
-		special2seg      = special2seg_pt6302;
-		special2seg_size = ARRAY_SIZE(special2seg_pt6302);
-//	}
+	}
 #else  // CUBEREVO
 	if ((micom_ver == 7) && (micom_major == 7 || micom_major == 6))
 	{  // early, no icons
@@ -1652,13 +1427,8 @@ int micomGetVersion(void)
 		special2seg_size = ARRAY_SIZE(special2seg_13grid);
 	}
 	else if ((micom_ver == 8) && (micom_major == 3))
-	{ // late, version 2
+	{ // late, revision 2
 		front_seg_num    = 12;
-		num2seg          = num2seg_pt6302;
-		Char2seg         = Char2seg_pt6302;
-		LowerChar2seg    = LowerChar2seg_pt6302;
-		special2seg      = special2seg_pt6302;
-		special2seg_size = ARRAY_SIZE(special2seg_pt6302);
 	}
 #endif
 	dprintk(100, "%s < %d (front panel width = %d)\n", __func__, res, front_seg_num);
@@ -1749,7 +1519,7 @@ int micomVfdTest(unsigned char *data)
 	{
 		/* error */
 		memset(data + 1, 0, sizeof(data) - 1);
-		printk("[micom] Error in function %s\n", __func__);
+		dprintk(0, "Error in function %s\n", __func__);
 		res = data[0] = -ETIMEDOUT;
 	}
 	else
@@ -1825,8 +1595,11 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 	aBuf[len] = '\0';  // terminate string
 	dprintk(100, "%s > String: [%s] (len = %d)\n", __func__, aBuf, len);
 
-#if !defined(CUBEREVO_250HD) \
- && !defined(CUBEREVO_MINI_FTA)
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO)
 	if (front_seg_num == 12 || front_seg_num == 14)
 	{
 		UTF8_C2_table = UTF8_C2_mini;
@@ -1839,7 +1612,7 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 	UTF8_C2_table = UTF8_C2;
 #endif
 	/* The front processors cannot display accented letters.
-	 * The following code traces for UTF8 sequences for these and
+	 * The following code traces for UTF-8 sequences for these and
 	 * replaces them with the corresponding letter without any accent;
 	 * On 12 and 14 character models some UTF-8 encoded characters are
 	 * displayed correctly, as far as the character generator in the
@@ -1854,18 +1627,20 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 	// process aBuf byte by byte
 	for (i = 0; i < len; i++)
 	{
-//		if (front_seg_num == 12 || front_seg_num == 14)
-//		{
-//			if (aBuf[i] == 0x5c)  // handle backslash
-//			{
-//				bBuf[j] = 0xa0;
-//				j++;
-//			}
-//		}
-//		else if (aBuf[i] < 0x80)
 		if (aBuf[i] < 0x80)
 		{
-			bBuf[j] = aBuf[i];
+			// handle backslash on PT6302-003
+			if (front_seg_num == 12 || front_seg_num == 14)
+			{
+				if (aBuf[i] == 0x5c)
+				{
+					bBuf[j] = 0xa0;
+				}
+				else
+				{
+					bBuf[j] = aBuf[i];
+				}
+			}
 			j++;
 		}
 		else if (aBuf[i] < 0xd0)  // if between 0x80 and 0xcf
@@ -1894,7 +1669,7 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 				}
 				default:
 				{
-					dprintk(1, "%s Unsupported extension 0x%02x found\n", __func__, aBuf[i]);
+					dprintk(1, "%s Unsupported UTF-8 lead-in 0x%02x found\n", __func__, aBuf[i]);
 					UTF_Char_Table = NULL;
 				}
 			}
@@ -1911,6 +1686,10 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 					dprintk(1, "%s UTF-8 character is unprintable, ignore.\n", __func__);
 					i++;  // skip character
 				}
+			}
+			else
+			{
+				i++;  // if UTF-8 lead-in unknown, skip character
 			}
 		}
 		else
@@ -1931,7 +1710,7 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 			{
 				i += 5;  // skip 5 bytes
 			}
-			bBuf[j] = 0x20;  // else put a space
+			bBuf[j] = 0x20;  // and put a space
 			j++;
 		}
 	}		
@@ -1946,49 +1725,28 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 
 //	if (scrolling == 0)
 //	{
-		len = trimTrailingBlanks(aBuf, len);
+//		len = trimTrailingBlanks(aBuf, len);
 //	}
 
-	pos = front_seg_num - len;  // get # of empty characters / trailing spaces
 #if defined(CENTERED_DISPLAY) 
 	// centered display
 	if (center_flag)
 	{
-		pos /= 2;
-
-		for (i = 0; i < pos; i++)
-		{
-			bBuf[i] = ' ';
-		}
-		for (j = 0; j < len && pos < front_seg_num; pos++, i++, j++)
-		{
-			bBuf[i] = aBuf[j];
-		}
-		for (; pos < front_seg_num; pos++, i++)
-		{
-			bBuf[i] = ' ';
-		}
+		pos = (front_seg_num - len) >> 1;  // get # of leading spaces
+		memset(bBuf, ' ', front_seg_num);
+		memcpy(bBuf + pos, aBuf, len);
+		len = front_seg_num;
 	}
-#else
-	// left aligned display
-	memcpy(bBuf, aBuf, len);
-	memset(bBuf + len, ' ', pos);
+	else
 #endif
-	len = front_seg_num;
-
-	/* nonprintable chars will be replaced by spaces */
-	for (j = 0; j < special2seg_size; j++)
 	{
-		if (special2seg[j].ch == ' ')
-		{
-			break;
-		}
+		// left aligned display
+		memset(bBuf, ' ', front_seg_num);
+		memcpy(bBuf, aBuf, len);
 	}
-	space = special2seg[j].value;
-
-	/* set text character by character */
 	bBuf[len] = '\0';  // terminate string
-	dprintk(50, "Final text: [%s] (len = %d)\n", bBuf, len);
+
+//	dprintk(50, "Final text: [%s] (len = %d)\n", bBuf, len);
 
 	// save final text
 	memcpy(lastdata.data, bBuf, len);
@@ -1999,6 +1757,8 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 		dprintk(10, "%s: Display in time mode -> ignoring display text\n", __func__);
 		return 0;
 	}
+
+	/* set text character by character */
 	for (i = 0; i < len; i++)
 	{
 		unsigned short data;
@@ -2012,23 +1772,24 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 	{
 		// colon found on position 2
 		dprintk(50, "Colon on position 2 found\n");
+#if 0  // TODO control center colon on display
 		buffer[0] = VFD_SETCHAR;
 		buffer[1] = 4;  /* position */
 		buffer[2] = 0xff;
 		buffer[3] = 0;
 		res = micomWriteCommand(buffer, 5, 0);
-
+#endif
 		// remove colon from text
 		len --;
-		memcpy(bBuf + 2, bBuf + 3, len);
+		memcpy(bBuf + 2, bBuf + 3, len - 2);
 		bBuf[len] = '\0';
-		dprintk(1, "New text: [%s] (len=%d)\n", bBuf, len);
+		dprintk(50, "New text: [%s] (len=%d)\n", bBuf, len);
 	}
 #endif
 		buffer[0] = VFD_SETCHAR;
 		buffer[1] = i & 0xff;  /* position */
 
-		if (front_seg_num == 14)
+		if (front_seg_num == 12 || front_seg_num == 14)
 		{
 			data = bBuf[i] - 0x10;  // get character from input and convert to display value
 		}
@@ -2045,7 +1806,7 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 				}
 				case 'a' ... 'z':  // lower case letter
 				{
-					if (LowerChar2seg == NULL)  // and no table defined (LED models)
+					if (LowerChar2seg == NULL)  // and no table defined
 					{
 						data = Char2seg[ch - 'a'];  // get uppercase letter from table
 					}
@@ -2086,7 +1847,7 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 		dprintk(150, "%s data 0x%x \n", __func__, data);
 
 		buffer[2] = data & 0xff;
-		buffer[3] = (data >> 8) & 0xff;
+		buffer[3] = (front_seg_num == 14 ? 0 : ((data >> 8) & 0xff));
 		res = micomWriteCommand(buffer, 5, 0);
 	}
 	memset(buffer, 0, sizeof(buffer));
@@ -2153,17 +1914,13 @@ int micom_init_func(void)
 //	res |= micomWriteString("T.Ducktales", strlen("T.Ducktales"), 0);
 
 	/* disable all icons at startup */
-#if defined(CUBEREVO_MINI) \
- || defined(CUBEREVO_MINI2) \
- || defined(CUBEREVO_2000HD) \
- || defined(CUBEREVO_3000HD) \
- || defined(CUBEREVO) \
- || defined(CUBEREVO_9500HD)
-	for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX - 1; vLoop++)
+	if (front_seg_num != 13 && front_seg_num != 4)
 	{
-		micomSetIcon(vLoop, 0);
+		for (vLoop = ICON_MIN + 1; vLoop < ICON_MAX; vLoop++)
+		{
+			micomSetIcon(vLoop, 0);
+		}
 	}
-#endif
 
 	// Handle initial GMT offset (may be changed by writing to /proc/stb/fp/rtc_offset)
 	res = strict_strtol(gmt_offset, 10, (long *)&rtc_offset);
@@ -2224,10 +1981,10 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 	}
 	if (minor == -1)
 	{
-		printk("Error Bad Minor\n");
+		dprintk(1, "%s < Error: bad Minor\n", __func__);
 		return -1;  //FIXME
 	}
-	dprintk(70, "minor = %d\n", minor);
+	dprintk(70, "%s: minor = %d\n", __func__, minor);
 
 	/* do not write to the remote control */
 	if (minor == FRONTPANEL_MINOR_RC)
@@ -2238,7 +1995,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	if (kernel_buf == NULL)
 	{
-		printk("%s return no memory <\n", __func__);
+		dprintk(1, "%s < return -ENOMEM\n", __func__);
 		return -ENOMEM;
 	}
 	copy_from_user(kernel_buf, buff, len);
@@ -2278,7 +2035,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 		offset = 3;
 		memcpy(buf + offset, kernel_buf, llen);
 		llen += offset;
-		buf[llen + front_seg_num - 1] = '\0';  // terminate string
+		buf[llen + front_seg_num] = '\0';  // terminate string
 
 		for (pos = 1; pos < llen; pos++)
 		{
@@ -2288,15 +2045,11 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 		}
 		// final display
 		clear_display();
-#if defined(CENTERED_DISPLAY)
-		res |= micomWriteString(kernel_buf, front_seg_num, 1);
-#else
 		res |= micomWriteString(kernel_buf, front_seg_num, 0);
-#endif
 	}
 	kfree(kernel_buf);
 	write_sem_up();
-	dprintk(70, "%s < res %d len %d\n", __func__, res, len);
+	dprintk(100, "%s < res %d len %d\n", __func__, res, len);
 
 	if (res < 0)
 	{
@@ -2337,10 +2090,10 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 	}
 	if (minor == -1)
 	{
-		printk("Error: Bad Minor\n");
+		dprintk(1, "%s < Error: Bad Minor\n", __func__);
 		return -1;  //FIXME
 	}
-	dprintk(70, "minor = %d\n", minor);
+	dprintk(70, "%s minor = %d\n", __func__, minor);
 
 	/* do not write to the remote control */
 	if (minor == FRONTPANEL_MINOR_RC)
@@ -2351,7 +2104,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	if (kernel_buf == NULL)
 	{
-		dprintk(1, "%s return no memory <\n", __func__);
+		dprintk(1, "%s < return -ENOMEM\n", __func__);
 		return -ENOMEM;
 	}
 	copy_from_user(kernel_buf, buff, len);
@@ -2428,10 +2181,10 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 	}
 	if (minor == -1)
 	{
-		printk("Error: Bad Minor\n");
+		dprintk(0, "%s < Error: Bad Minor\n", __func__);
 		return -1;  //FIXME
 	}
-	dprintk(70, "minor = %d\n", minor);
+	dprintk(70, "%s: minor = %d\n", __func__, minor);
 
 	/* do not write to the remote control */
 	if (minor == FRONTPANEL_MINOR_RC)
@@ -2442,7 +2195,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	if (kernel_buf == NULL)
 	{
-		dprintk(1, "%s return no memory <\n", __func__);
+		dprintk(1, "%s < return -ENOMEM\n", __func__);
 		return -ENOMEM;
 	}
 	copy_from_user(kernel_buf, buff, len);
@@ -2458,13 +2211,13 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 	i = sscanf(myString, "%x %x %x %x", &value, &arg1, &arg2, &arg3);
 	dprintk("CMD (%d): 0x%x 0x%x 0x%x 0x%x\n", i, value, arg1, arg2, arg3);
 
-	if ((value != 0xd2)  //VFD_SETD2
-	&&  (value != 0xd3)  //VFD_SETD3
-	&&  (value != 0xd4)  //VFD_SETD4
-	&&  (value != 0xd6)  //VFD_SETD6
-	&&  (value != 0xcb)  //VFD_SETCB
-	&&  (value != 0xa0)  //VFD_GETA0
-	&&  (value != 0xa2))  //VFD_GETA2
+	if ((value != 0xd2)   // VFD_SETD2
+	&&  (value != 0xd3)   // VFD_SETD3
+	&&  (value != 0xd4)   // VFD_SETD4
+	&&  (value != 0xd6)   // VFD_SETD6
+	&&  (value != 0xcb)   // VFD_SETCB
+	&&  (value != 0xa0)   // VFD_GETA0
+	&&  (value != 0xa2))  // VFD_GETA2
 	{
 		write_sem_up();
 		return len;
@@ -2497,7 +2250,7 @@ static ssize_t MICOMdev_write(struct file *filp, const char *buff, size_t len, l
 
 	write_sem_up();
 
-	dprintk(70, "%s < res %d len %d\n", __func__, res, len);
+	dprintk(100, "%s < res %d len %d\n", __func__, res, len);
 
 	if (res < 0)
 	{
@@ -2568,7 +2321,7 @@ static ssize_t MICOMdev_read(struct file *filp, char __user *buff, size_t len, l
 	/* copy the current display string to the user */
 	if (down_interruptible(&FrontPanelOpen[minor].sem))
 	{
-		dprintk(1, "%s < return erestartsys\n", __func__);
+		dprintk(1, "%s < Return -ERESTARTSYS\n", __func__);
 		return -ERESTARTSYS;
 	}
 	if (FrontPanelOpen[minor].read == lastdata.length)
@@ -2918,11 +2671,7 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			if (mode == 0)
 			{
 				struct vfd_ioctl_data *data = (struct vfd_ioctl_data *) arg;
-//#if defined(CENTERED_DISPLAY)
-//				res = micomWriteString(data->data, data->length, 1);
-//#else
 				res = micomWriteString(data->data, data->length, 0);
-//#endif
 			}
 			else
 			{
@@ -2950,7 +2699,7 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 			}
 			break;
 		}
-		case VFDGETVERSION:  // currently return most significant version number only
+		case VFDGETVERSION:  // currently returns most significant version numbers only
 		{
 //			dprintk(20, "Front panel SW version: %d.%02d.%02d\n", micom_ver, micom_major, micom_minor);
 			dprintk(20, "Front panel SW version: %d.%02d\n", micom_ver, micom_major);

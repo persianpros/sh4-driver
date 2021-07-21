@@ -4,6 +4,7 @@
  *
  * Translate from UFT8 offset to offset into
  * ML9208 character generator
+ *
  */
 
 unsigned char *UTF_Char_Table = NULL;
