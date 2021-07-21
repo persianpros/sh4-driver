@@ -1830,7 +1830,15 @@ int micomWriteString(unsigned char *aBuf, int len, int center_flag)
 
 	if (front_seg_num == 12 || front_seg_num == 14)
 	{
+#if defined(CUBEREVO_MINI) \
+ || defined(CUBEREVO_MINI2) \
+ || defined(CUBEREVO_2000HD) \
+ || defined(CUBEREVO_3000HD) \
+ || defined(CUBEREVO)
 		UTF8_C2_table = UTF8_C2_mini;
+#else
+		UTF8_C2_table = UTF8_C2;
+#endif
 	}
 	else
 	{
