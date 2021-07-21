@@ -1026,6 +1026,7 @@ struct ProcStructure_s e2Proc[] =
  || defined(HS7819) \
  || defined(SPARK) \
  || defined(SPARK7162) \
+ || defined(UFS910) \
  || defined(FOREVER_NANOSMART) \
  || defined(FOREVER_9898HD) \
  || defined(DP7001) \
@@ -1195,11 +1196,16 @@ struct ProcStructure_s e2Proc[] =
 	{cProcEntry, "stb/fp/aotom",                                                     NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/displaytype",                                               NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/fp/timemode",                                                  NULL, NULL, NULL, NULL, ""},
+#endif
 	{cProcDir,   "stb/power",                                                        NULL, NULL, NULL, NULL, ""},
+	{cProcEntry, "stb/power/vfd",                                                    NULL, NULL, NULL, NULL, ""},
+#if defined(SPARK) \
+ || defined(SPARK7162) \
+ || defined(VIP1_V1) \
+ || defined(VIP1_V2) \
+ || defined(VIP2)
 	{cProcEntry, "stb/power/standbyled",                                             NULL, NULL, NULL, NULL, ""},
 #endif
-   	{cProcEntry, "stb/power/vfd",                                                    NULL, NULL, NULL, NULL, ""},
-
    	{cProcDir,   "stb/tsmux",                                                        NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/tsmux/input0",                                                 NULL, NULL, NULL, NULL, ""},
 	{cProcEntry, "stb/tsmux/input1",                                                 NULL, NULL, NULL, NULL, ""},
