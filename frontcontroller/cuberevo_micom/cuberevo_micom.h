@@ -183,12 +183,11 @@ enum  // for 12 character dot matrix
 	ICON_MAX,        // 36 (39)
 	ICON_SPINNER     // 37 (40)
 };
-#endif  // CUBEREVO
 
-#if defined(CUBEREVO_MINI) \
- || defined(CUBEREVO_MINI2) \
- || defined(CUBEREVO_2000HD) \
- || defined(CUBEREVO_3000HD)
+#elif defined(CUBEREVO_MINI) \
+ ||   defined(CUBEREVO_MINI2) \
+ ||   defined(CUBEREVO_2000HD) \
+ ||   defined(CUBEREVO_3000HD)
 enum  // for 14 character dot matrix
 {
 	ICON_MIN = 0,  // 0
@@ -200,6 +199,12 @@ enum  // for 14 character dot matrix
 	ICON_HD,  // 6
 	ICON_DOLBY,
 	ICON_MAX  // 8
+};
+#else
+enum  // for LED models
+{
+	ICON_MIN = 0,  // 0
+	ICON_MAX = 0
 };
 #endif
 
