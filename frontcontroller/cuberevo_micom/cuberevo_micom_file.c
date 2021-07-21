@@ -2165,7 +2165,8 @@ int micom_init_func(void)
 	res |= micomSetTimeMode(1);  // 24h mode
 	res |= micomSetDisplayTime(0);  // mode = display text
 //	res |= micomWriteString("T.Ducktales", strlen("T.Ducktales"), 0);
-
+#if !defined(CUBEREVO_250HD) \
+ && !defined(CUBEREVO_MINI_FTA)
 	/* disable all icons at startup */
 	if (front_seg_num != 13 && front_seg_num != 2)
 	{
@@ -2174,7 +2175,7 @@ int micom_init_func(void)
 			micomSetIcon(vLoop, 0);
 		}
 	}
-
+#endif
 	// Handle initial GMT offset (may be changed by writing to /proc/stb/fp/rtc_offset)
 	res = strict_strtol(gmt_offset, 10, (long *)&rtc_offset);
 	if (res && gmt_offset[0] == '+')
@@ -2808,12 +2809,15 @@ static int MICOMdev_ioctl(struct inode *Inode, struct file *File, unsigned int c
 						}
 						//fall through to:
 #endif
+#if !defined(CUBEREVO_250HD) \
+ && !defined(CUBEREVO_MINI_FTA)
 						for (i = ICON_MIN + 1; i < ICON_MAX; i++)
 						{
 							res |= micomSetIcon(i, on);
 							msleep(1);  // allow the fp some time
 						}
 						break;
+#endif
 					}
 #endif
 					default:  // (re)set a single icon
