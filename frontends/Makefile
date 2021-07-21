@@ -279,7 +279,7 @@ avl2108-objs += avl2108/avl2108.o
 avl2108-objs += avl2108/stv6110a.o
 avl2108-objs += avl2108/stv6306.o
 avl2108-objs += avl2108/lnb_pio.o
-avl2108-objs += avl2108/lnbh221.o
+avl2108-objs += avl2108/lnbh23.o
 obj-m += avl2108.o
 avl2108_platform-objs += avl2108/avl2108_platform.o
 obj-m += avl2108_platform.o
@@ -311,6 +311,7 @@ avl2108-objs += avl2108/stv6110a.o
 avl2108-objs += avl2108/stv6306.o
 avl2108-objs += avl2108/lnb_pio.o
 avl2108-objs += avl2108/lnbh221.o
+avl2108-objs += avl2108/lnbh23.o
 obj-m += avl2108.o
 
 avl2108_platform-objs += avl2108/avl2108_platform.o

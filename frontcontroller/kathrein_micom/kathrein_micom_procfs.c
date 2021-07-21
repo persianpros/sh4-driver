@@ -29,6 +29,8 @@
  * Date     By              Description
  * --------------------------------------------------------------------------
  * 20170313 Audioniek       Initial version based on tffpprocfs.c.
+ * 20210614 Audioniek       Add /proc/stb/lcd/symbol_hdd.
+ * 20210703 Audioniek       Add /proc/stb/fp/fan and fan_pwm (ufs922 only).
  * 
  ****************************************************************************/
 
@@ -36,21 +38,33 @@
 #include <asm/uaccess.h>        /* copy_from_user */
 #include <linux/time.h>
 #include <linux/kernel.h>
+//#include <linux/version.h>
+#include <asm/io.h>
 #include "kathrein_micom.h"
 
 /*
  *  /proc/stb/fp
  *             |
- *             +--- version (r)             SW version of front processor (hundreds = major, ten/units = minor)
- *             +--- rtc (rw)                RTC time (UTC, seconds since Unix epoch))
- *             +--- rtc_offset (rw)         RTC offset in seconds from UTC
- *             +--- wakeup_time (rw)        Next wakeup time (absolute, local, seconds since Unix epoch)
- *             +--- was_timer_wakeup (r)    Wakeup reason (1 = timer, 0 = other)
+ *             +--- fan (rw)                Fan on/off (ufs922 only)
+ *             +--- fan_pwn (rw)            Fan speed (ufs922 only)
  *             +--- led0_pattern (rw)       Blink pattern for LED 1 (currently limited to on (0xffffffff) or off (0))
  *             +--- led1_pattern (rw)       Blink pattern for LED 2 (currently limited to on (0xffffffff) or off (0))
  *             +--- led_patternspeed (rw)   Blink speed for pattern (not implemented)
  *             +--- oled_brightness (w)     Direct control of display brightness
+ *             +--- rtc (rw)                RTC time (UTC, seconds since Unix epoch))
+ *             +--- rtc_offset (rw)         RTC offset in seconds from UTC
  *             +--- text (w)                Direct writing of display text
+ *             +--- version (r)             SW version of front processor (hundreds = major, ten/units = minor)
+ *             +--- wakeup_time (rw)        Next wakeup time (absolute, local, seconds since Unix epoch)
+ *             +--- was_timer_wakeup (r)    Wakeup reason (1 = timer, 0 = other)
+ *
+ *  /proc/stb/lcd/
+ *             |
+ *             +--- symbol_hdd (rw)         Control of hdd icon (not on UFS910)
+ *
+ *  /proc/stb/power
+ *             |
+ *             +--- vfd (rw)                Front panel display on/off
  */
 
 /* from e2procfs */
@@ -58,8 +72,6 @@ extern int install_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *wr
 extern int remove_e2_procs(char *name, read_proc_t *read_proc, write_proc_t *write_proc);
 
 /* from other micom modules */
-//extern int micomSetIcon(int which, int on);
-//extern void VFD_set_all_icons(int onoff);
 extern int micomWriteString(char *buf, size_t len);
 extern int micomSetBrightness(int level);
 extern void clear_display(void);
@@ -70,14 +82,125 @@ extern int micomSetTime(char *time);
 extern int micomSetLED(int which, int level);
 //extern int micomGetWakeUpTime(char *time);
 extern int micomSetWakeUpTime(char *time);
+extern int micomSetIcon(int which, int on);
+extern int micomSetDisplayOnOff(unsigned char level);
 
 /* Globals */
-static int rtc_offset = 3600;
-//static int progress = 0;
-//static int progress_done = 0;
+extern int rtc_offset;
+#if defined(UFS922)
+static u32 fan_onoff = 1;
+static u32 fan_pwm = 128;
+extern unsigned long fan_registers;
+#endif
 static u32 led0_pattern = 0;
 static u32 led1_pattern = 0;
 static int led_pattern_speed = 20;
+#if !defined(UFS910)
+static int symbol_hdd = 0;
+#endif
+static int vfd_on = 1;
+
+#if !defined(UFS910)
+static int symbol_hdd_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+	int i = 0;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &symbol_hdd);
+		kfree(myString);
+
+		symbol_hdd = (symbol_hdd == 0 ? 0 : 1);
+		ret = micomSetIcon(ICON_HDD, symbol_hdd);
+		if (ret)
+		{
+			goto out;
+		}
+		/* always return count to avoid endless loop */
+		ret = count;
+		goto out;
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int symbol_hdd_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page,"%d", symbol_hdd);
+	}
+	return len;
+}
+#endif
+
+static int vfd_onoff_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char* page;
+	ssize_t ret = -ENOMEM;
+	char* myString;
+	int i = 0;
+
+	page = (char*)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+		if (copy_from_user(page, buf, count))
+		{
+			goto out;
+		}
+		myString = (char*) kmalloc(count + 1, GFP_KERNEL);
+		strncpy(myString, page, count);
+		myString[count - 1] = '\0';
+
+		sscanf(myString, "%d", &vfd_on);
+		kfree(myString);
+
+		vfd_on = (vfd_on == 0 ? 0 : 1);
+		ret = micomSetDisplayOnOff((char)vfd_on);
+		if (ret)
+		{
+			goto out;
+		}
+		/* always return count to avoid endless loop */
+		ret = count;
+		goto out;
+	}
+
+out:
+	free_page((unsigned long)page);
+	return ret;
+}
+
+static int vfd_onoff_read(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d", lastdata.display_on);
+	}
+	return len;
+}
 
 static int text_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
@@ -104,22 +227,24 @@ static int text_write(struct file *file, const char __user *buf, unsigned long c
 
 /* Time subroutines */
 /*
-struct tm {
-int	tm_sec      //seconds after the minute 0-61*
-int	tm_min      //minutes after the hour   0-59
-int	tm_hour     //hours since midnight     0-23
-int	tm_mday     //day of the month         1-31
-int	tm_mon      //months since January     0-11
-int	tm_year     //years since 1900
-int	tm_wday     //days since Sunday        0-6
-int	tm_yday   	//days since January 1     0-365
+struct tm
+{
+	int	tm_sec      //seconds after the minute 0-61*
+	int	tm_min      //minutes after the hour   0-59
+	int	tm_hour     //hours since midnight     0-23
+	int	tm_mday     //day of the month         1-31
+	int	tm_mon      //months since January     0-11
+	int	tm_year     //years since 1900
+	int	tm_wday     //days since Sunday        0-6
+	int	tm_yday   	//days since January 1     0-365
+	* leap second is provided for
 }
 
-time_t long seconds //UTC since epoch  
+time_t long seconds // UTC since epoch  
 */
 
 time_t calcGetMicomTime(char *time)
-{ //mjd hh:mm:ss -> seconds since epoch
+{  // mjd hh:mm:ss -> seconds since epoch
 	unsigned int    mjd     = ((time[1] & 0xff) * 256) + (time[2] & 0xff);
 	unsigned long   epoch   = ((mjd - 40587) * 86400);
 	unsigned int    hour    = time[3] & 0xff;
@@ -127,7 +252,7 @@ time_t calcGetMicomTime(char *time)
 	unsigned int    sec     = time[5] & 0xff;
 
 	epoch += (hour * 3600 + min * 60 + sec);
-	dprintk(10, "Converting time (MJD=) %d - %02d:%02d:%02d to %d seconds\n", (time[1] & 0xff) * 256 + (time[2] & 0xff),
+	dprintk(20, "Converting time (MJD=) %d - %02d:%02d:%02d to %d seconds\n", (time[1] & 0xff) * 256 + (time[2] & 0xff),
 				time[3], time[4], time[5], epoch);
 	return epoch;
 }
@@ -170,7 +295,6 @@ static struct tm * gmtime(register const time_t time)
 	fptime.tm_mday = dayno;
 //	fptime.tm_isdst = -1;
 //	dprintk(10, "%s < Converted time: %02d:%02d:%02d %02d-%02d-%04d\n", __func__, fptime.tm_hour, fptime.tm_min, fptime.tm_sec, fptime.tm_mday, fptime.tm_mon + 1, fptime.tm_year + 1900);
-
 	return &fptime;
 }
 
@@ -192,13 +316,12 @@ int getMJD(struct tm *theTime)
 	}
 	mjd += theTime->tm_yday;
 	mjd += 40587;  // mjd starts on midnight 17-11-1858 which is 40587 days before unix epoch
-//	dprintk(10, "%s < MJD = %d\n", __func__, mjd);
-
+//	dprintk(100, "%s < MJD = %d\n", __func__, mjd);
 	return mjd;
 }
 
 void calcSetMicomTime(time_t theTime, char *destString)
-{ //seconds since epoch -> mjd h:m:s
+{  // seconds since epoch -> mjd h:m:s
 	struct tm *now_tm;
 	int mjd;
 
@@ -268,7 +391,7 @@ static int write_rtc(struct file *file, const char __user *buffer, unsigned long
 out:
 	free_page((unsigned long)page);
 	kfree(myString);
-	dprintk(10, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return ret;
 }
 
@@ -310,7 +433,7 @@ static int write_rtc_offset(struct file *file, const char __user *buffer, unsign
 out:
 	free_page((unsigned long)page);
 	kfree(myString);
-	dprintk(10, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return ret;
 }
 
@@ -335,7 +458,7 @@ static int wakeup_time_write(struct file *file, const char __user *buffer, unsig
 		}
 		strncpy(myString, page, count);
 		myString[count] = '\0';
-		dprintk(10, "%s > %s\n", __func__, myString);
+		dprintk(100, "%s > %s\n", __func__, myString);
 
 		test = sscanf(myString, "%u", (unsigned int *)&wakeup_time);
 
@@ -351,7 +474,7 @@ static int wakeup_time_write(struct file *file, const char __user *buffer, unsig
 out:
 	free_page((unsigned long)page);
 	kfree(myString);
-	dprintk(10, "%s <\n", __func__);
+	dprintk(100, "%s <\n", __func__);
 	return ret;
 }
 
@@ -369,7 +492,7 @@ static int wakeup_time_read(char *page, char **start, off_t off, int count, int 
 		w_time = calcGetMicomTime(wtime);
 
 //		len = sprintf(page, "%u\n", w_time - rtc_offset);
-		len = sprintf(page, "%u\n", w_time); //Micom FP uses UTC
+		len = sprintf(page, "%u\n", w_time);  // Micom FP uses UTC
 	}
 	return len;
 }
@@ -387,8 +510,8 @@ static int was_timer_wakeup_read(char *page, char **start, off_t off, int count,
 
 		if (res == 0)
 		{
-			dprintk(10, "%s > wakeup_mode= %02x\n", __func__, ioctl_data[1] & 0xff);
-			if (ioctl_data[1] & 0xff == 0xc3) // if timer wakeup
+			dprintk(10, "%s > wakeup_mode= 0x%02x\n", __func__, ioctl_data[1] & 0xff);
+			if (ioctl_data[1] & 0x0f == 0x03)  // if timer wakeup
 			{
 				wakeup_mode = 1;
 			}
@@ -442,10 +565,8 @@ static int led_pattern_write(struct file *file, const char __user *buf, unsigned
 			{
 				led0_pattern = pattern;
 			}
-
 //TODO: Not implemented completely; only the cases 0 and 0xffffffff (ever off/on) are handled
-//Other patterns are blink patterned in time, so handling those should be done in a timer
-
+//Other patterns are blink patterned in time, so handling those should be done in a timed thread
 			if (pattern == 0)
 			{
 				micomSetLED(which + 2, 0);
@@ -551,6 +672,95 @@ static int oled_brightness_write(struct file *file, const char __user *buf, unsi
 	return ret;
 }
 
+#if defined(UFS922)
+static int fan_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char *page;
+	int ret = -ENOMEM;
+
+	page = (char *)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+
+		if (copy_from_user(page, buf, count) == 0)
+		{
+			page[count - 1] = '\0';
+			fan_onoff = (int)simple_strtol(page, NULL, 10);
+
+			if (fan_onoff)
+			{
+				ctrl_outl(fan_pwm, fan_registers + 0x04);  // restore speed
+			}
+			else
+			{
+				ctrl_outl(0, fan_registers + 0x04);
+			}
+			ret = count;
+		}
+		free_page((unsigned long)page);
+	}
+	return ret;
+}
+
+static int fan_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d\n", fan_onoff);
+	}
+	return len;
+}
+
+static int fan_pwm_write(struct file *file, const char __user *buf, unsigned long count, void *data)
+{
+	char *page;
+	int ret = -ENOMEM;
+
+	page = (char *)__get_free_page(GFP_KERNEL);
+
+	if (page)
+	{
+		ret = -EFAULT;
+
+		if (copy_from_user(page, buf, count) == 0)
+		{
+			page[count - 1] = '\0';
+
+			fan_pwm = (int)simple_strtol(page, NULL, 10);
+			if (fan_pwm > 255)
+			{
+				fan_pwm = 255;
+			}
+			if (fan_pwm < 0)
+			{
+				fan_pwm = 0;
+			}
+			// fan stops at about pwm=128 so:
+			fan_pwm = (fan_pwm / 2) + 128;
+			ctrl_outl(fan_pwm, fan_registers + 0x04);
+			ret = count;
+		}
+		free_page((unsigned long)page);
+	}
+	return ret;
+}
+
+static int fan_pwm_read(char *page, char **start, off_t off, int count, int *eof, void *data_unused)
+{
+	int len = 0;
+
+	if (NULL != page)
+	{
+		len = sprintf(page, "%d\n", fan_pwm);
+	}
+	return len;
+}
+#endif
+
 /*
 static int null_write(struct file *file, const char __user *buf, unsigned long count, void *data)
 {
@@ -567,6 +777,10 @@ struct fp_procs
 {
 	{ "stb/fp/rtc", read_rtc, write_rtc },
 	{ "stb/fp/rtc_offset", read_rtc_offset, write_rtc_offset },
+#if defined(UFS922)
+	{ "stb/fp/fan", fan_read, fan_write },
+	{ "stb/fp/fan_pwm", fan_pwm_read, fan_pwm_write },
+#endif
 	{ "stb/fp/led0_pattern", led0_pattern_read, led0_pattern_write },
 	{ "stb/fp/led1_pattern", led1_pattern_read, led1_pattern_write },
 	{ "stb/fp/led_pattern_speed", led_pattern_speed_read, led_pattern_speed_write },
@@ -576,6 +790,10 @@ struct fp_procs
 	{ "stb/fp/wakeup_time", NULL, wakeup_time_write },
 	{ "stb/fp/was_timer_wakeup", was_timer_wakeup_read, NULL },
 	{ "stb/fp/version", fp_version_read, NULL },
+#if !defined(UFS910)
+	{ "stb/lcd/symbol_hdd", symbol_hdd_read, symbol_hdd_write },
+#endif
+	{ "stb/power/vfd", vfd_onoff_read, vfd_onoff_write }
 };
 
 void create_proc_fp(void)

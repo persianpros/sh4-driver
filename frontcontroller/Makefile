@@ -15,7 +15,7 @@ CFLAGS += $(CCFLAGSY)
 endif
 
 ifdef UFS910
-obj-y += vfd/
+obj-y += ufs910_fp/
 endif
 
 ifdef HOMECAST5101
